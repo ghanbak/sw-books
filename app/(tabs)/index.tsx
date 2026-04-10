@@ -1,98 +1,193 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import {
+	ActivityIndicator,
+	FlatList,
+	Pressable,
+	StyleSheet,
+	Text,
+	TextInput,
+	View,
+} from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { BookCard } from '@/components/book-card';
+import type { Book } from '@/lib/hooks';
+import { useBooks } from '@/lib/hooks';
 
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+type CanonFilter = 'all' | 'Canon' | 'Legends';
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+export default function CatalogScreen() {
+	const { books, loading, error, refetch } = useBooks();
+	const [search, setSearch] = useState('');
+	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
+
+	const filteredBooks = useMemo(() => {
+		let result = books;
+
+		if (canonFilter !== 'all') {
+			result = result.filter((b) => b.canon === canonFilter);
+		}
+
+		if (search.trim()) {
+			const q = search.toLowerCase();
+			result = result.filter(
+				(b) =>
+					b.title.toLowerCase().includes(q) ||
+					b.author.some((a) => a.toLowerCase().includes(q)) ||
+					b.series_name?.toLowerCase().includes(q),
+			);
+		}
+
+		return result;
+	}, [books, search, canonFilter]);
+
+	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
+	const keyExtractor = useCallback((item: Book) => item.id, []);
+
+	if (loading) {
+		return (
+			<View style={styles.center}>
+				<ActivityIndicator size="large" />
+			</View>
+		);
+	}
+
+	if (error) {
+		return (
+			<View style={styles.center}>
+				<Text style={styles.errorText}>Failed to load books</Text>
+				<Text style={styles.errorDetail}>{error}</Text>
+				<Pressable style={styles.retryButton} onPress={refetch}>
+					<Text style={styles.retryText}>Retry</Text>
+				</Pressable>
+			</View>
+		);
+	}
+
+	return (
+		<View style={styles.container}>
+			<View style={styles.searchBar}>
+				<TextInput
+					style={styles.searchInput}
+					placeholder="Search by title, author, or series..."
+					value={search}
+					onChangeText={setSearch}
+					clearButtonMode="while-editing"
+					autoCapitalize="none"
+					autoCorrect={false}
+				/>
+			</View>
+
+			<View style={styles.filterRow}>
+				{(['all', 'Canon', 'Legends'] as const).map((filter) => (
+					<Pressable
+						key={filter}
+						style={[styles.filterChip, canonFilter === filter && styles.filterChipActive]}
+						onPress={() => setCanonFilter(filter)}
+					>
+						<Text
+							style={[
+								styles.filterChipText,
+								canonFilter === filter && styles.filterChipTextActive,
+							]}
+						>
+							{filter === 'all' ? 'All' : filter}
+						</Text>
+					</Pressable>
+				))}
+				<Text style={styles.count}>{filteredBooks.length} books</Text>
+			</View>
+
+			<FlatList
+				data={filteredBooks}
+				renderItem={renderItem}
+				keyExtractor={keyExtractor}
+				refreshing={loading}
+				onRefresh={refetch}
+				contentContainerStyle={filteredBooks.length === 0 ? styles.emptyContainer : undefined}
+				ListEmptyComponent={
+					<View style={styles.center}>
+						<Text style={styles.emptyText}>No books match your search</Text>
+					</View>
+				}
+			/>
+		</View>
+	);
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+	container: {
+		flex: 1,
+	},
+	center: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center',
+		padding: 24,
+	},
+	searchBar: {
+		paddingHorizontal: 12,
+		paddingVertical: 8,
+	},
+	searchInput: {
+		height: 40,
+		borderRadius: 8,
+		backgroundColor: '#f0f0f0',
+		paddingHorizontal: 12,
+		fontSize: 15,
+	},
+	filterRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		paddingHorizontal: 12,
+		paddingBottom: 8,
+		gap: 8,
+	},
+	filterChip: {
+		paddingHorizontal: 12,
+		paddingVertical: 6,
+		borderRadius: 16,
+		backgroundColor: '#f0f0f0',
+	},
+	filterChipActive: {
+		backgroundColor: '#1a3a5c',
+	},
+	filterChipText: {
+		fontSize: 13,
+		fontWeight: '500',
+	},
+	filterChipTextActive: {
+		color: '#fff',
+	},
+	count: {
+		marginLeft: 'auto',
+		fontSize: 12,
+		opacity: 0.5,
+	},
+	emptyContainer: {
+		flex: 1,
+	},
+	emptyText: {
+		fontSize: 15,
+		opacity: 0.5,
+	},
+	errorText: {
+		fontSize: 17,
+		fontWeight: '600',
+		marginBottom: 8,
+	},
+	errorDetail: {
+		fontSize: 13,
+		opacity: 0.5,
+		marginBottom: 16,
+	},
+	retryButton: {
+		paddingHorizontal: 20,
+		paddingVertical: 10,
+		borderRadius: 8,
+		backgroundColor: '#1a3a5c',
+	},
+	retryText: {
+		color: '#fff',
+		fontWeight: '600',
+	},
 });
