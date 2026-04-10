@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Book3D } from '@/components/Book3D';
+import { Book3DViewer } from '@/components/Book3DViewer';
 import type { Book } from '@/lib/hooks';
 import { useUserBooks } from '@/lib/hooks';
 import { supabase } from '@/lib/supabase';
@@ -11,6 +12,7 @@ export default function BookDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const [book, setBook] = useState<Book | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [viewerOpen, setViewerOpen] = useState(false);
 	const { userBooks, toggleShelf } = useUserBooks();
 	const shelfEntry = book ? userBooks.get(book.id) : undefined;
 
@@ -49,9 +51,18 @@ export default function BookDetailScreen() {
 					width={180}
 					height={270}
 					spineWidth={18}
-					accessibilityLabel={`Book cover: ${book.title} by ${book.author.join(', ')}`}
+					onPress={() => setViewerOpen(true)}
+					accessibilityLabel={`Book cover: ${book.title} by ${book.author.join(', ')}. Tap to inspect in 3D.`}
 				/>
 			</View>
+
+			<Book3DViewer
+				visible={viewerOpen}
+				onClose={() => setViewerOpen(false)}
+				coverUri={book.cover_image}
+				title={book.title}
+				author={book.author}
+			/>
 
 			<Text style={styles.title}>{book.title}</Text>
 			<Text style={styles.author}>{book.author.join(', ')}</Text>
