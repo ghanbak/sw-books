@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { Book } from '@/lib/hooks';
+import { useUserBooks } from '@/lib/hooks';
 import { supabase } from '@/lib/supabase';
 
 const COVER_COLORS = [
@@ -25,6 +26,8 @@ export default function BookDetailScreen() {
 	const [book, setBook] = useState<Book | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [imageError, setImageError] = useState(false);
+	const { userBooks, toggleShelf } = useUserBooks();
+	const shelfEntry = book ? userBooks.get(book.id) : undefined;
 
 	useEffect(() => {
 		async function fetchBook() {
@@ -116,13 +119,24 @@ export default function BookDetailScreen() {
 				</View>
 			)}
 
-			{/* Shelf toggles will be wired in the bookshelf task */}
 			<View style={styles.shelfSection}>
 				<Text style={styles.shelfLabel}>Add to Shelf</Text>
 				<View style={styles.shelfButtons}>
-					<ShelfButton label="Owned" active={false} onPress={() => {}} />
-					<ShelfButton label="Read" active={false} onPress={() => {}} />
-					<ShelfButton label="Want to Read" active={false} onPress={() => {}} />
+					<ShelfButton
+						label="Owned"
+						active={shelfEntry?.owned ?? false}
+						onPress={() => toggleShelf(book.id, 'owned')}
+					/>
+					<ShelfButton
+						label="Read"
+						active={shelfEntry?.read ?? false}
+						onPress={() => toggleShelf(book.id, 'read')}
+					/>
+					<ShelfButton
+						label="Want to Read"
+						active={shelfEntry?.want_to_read ?? false}
+						onPress={() => toggleShelf(book.id, 'want_to_read')}
+					/>
 				</View>
 			</View>
 		</ScrollView>
