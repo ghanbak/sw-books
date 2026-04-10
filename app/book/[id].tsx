@@ -1,31 +1,16 @@
-import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Book3D } from '@/components/Book3D';
 import type { Book } from '@/lib/hooks';
 import { useUserBooks } from '@/lib/hooks';
 import { supabase } from '@/lib/supabase';
-
-const COVER_COLORS = [
-	'#8B0000', '#1a3a5c', '#2d4a22', '#4a2545', '#5c3a1a',
-	'#1a4a4a', '#3d2b1f', '#4a1a1a', '#1a2a4a', '#3a1a4a',
-];
-
-function getCoverColor(title: string): string {
-	let hash = 0;
-	for (let i = 0; i < title.length; i++) {
-		hash = (hash << 5) - hash + title.charCodeAt(i);
-		hash |= 0;
-	}
-	return COVER_COLORS[Math.abs(hash) % COVER_COLORS.length];
-}
 
 export default function BookDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const [book, setBook] = useState<Book | null>(null);
 	const [loading, setLoading] = useState(true);
-	const [imageError, setImageError] = useState(false);
 	const { userBooks, toggleShelf } = useUserBooks();
 	const shelfEntry = book ? userBooks.get(book.id) : undefined;
 
@@ -54,28 +39,18 @@ export default function BookDetailScreen() {
 		);
 	}
 
-	const showFallback = !book.cover_image || imageError;
-
 	return (
 		<ScrollView style={styles.container} contentContainerStyle={styles.content}>
 			<View style={styles.coverWrapper}>
-				{showFallback ? (
-					<View style={[styles.cover, { backgroundColor: getCoverColor(book.title) }]}>
-						<Text style={styles.fallbackTitle} numberOfLines={4}>
-							{book.title}
-						</Text>
-						<Text style={styles.fallbackAuthor} numberOfLines={2}>
-							{book.author.join(', ')}
-						</Text>
-					</View>
-				) : (
-					<Image
-						source={{ uri: book.cover_image! }}
-						style={styles.cover}
-						contentFit="cover"
-						onError={() => setImageError(true)}
-					/>
-				)}
+				<Book3D
+					coverUri={book.cover_image}
+					title={book.title}
+					author={book.author}
+					width={180}
+					height={270}
+					spineWidth={18}
+					accessibilityLabel={`Book cover: ${book.title} by ${book.author.join(', ')}`}
+				/>
 			</View>
 
 			<Text style={styles.title}>{book.title}</Text>
@@ -174,32 +149,7 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 	},
 	coverWrapper: {
-		shadowColor: '#000',
-		shadowOffset: { width: 4, height: 8 },
-		shadowOpacity: 0.3,
-		shadowRadius: 12,
-		elevation: 8,
 		marginBottom: 20,
-	},
-	cover: {
-		width: 180,
-		height: 270,
-		borderRadius: 6,
-		justifyContent: 'center',
-		alignItems: 'center',
-		padding: 16,
-	},
-	fallbackTitle: {
-		color: '#fff',
-		fontSize: 16,
-		fontWeight: '700',
-		textAlign: 'center',
-	},
-	fallbackAuthor: {
-		color: 'rgba(255,255,255,0.6)',
-		fontSize: 12,
-		textAlign: 'center',
-		marginTop: 8,
 	},
 	title: {
 		fontSize: 22,
