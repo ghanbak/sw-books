@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "sw-books-scaffold",
-    "slug": "sw-books-scaffold",
+    "name": "SW Books",
+    "slug": "sw-books",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "swbooksscaffold",
+    "scheme": "swbooks",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -27,6 +27,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow SW Books to scan book barcodes",
+          "barcodeScannerEnabled": true
+        }
+      ],
       [
         "expo-splash-screen",
         {
