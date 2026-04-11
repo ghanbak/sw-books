@@ -126,7 +126,7 @@ async function main() {
 			canon: fields[col('canon')], // "Canon" or "Legends"
 			date_published: parseDate(fields[col('date_published')]),
 			format: splitMultiValue(fields[col('format')]),
-			isbn: fields[col('isbn')] || null,
+			isbn: fields[col('isbn')] ? [fields[col('isbn')]] : [],
 			language: fields[col('language')] || 'English',
 			publisher: fields[col('publisher')] || null,
 			series_name: seriesName,

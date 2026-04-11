@@ -45,7 +45,7 @@ export type Database = {
           era: string | null
           format: string[] | null
           id: string
-          isbn: string | null
+          isbn: string[] | null
           language: string | null
           publisher: string | null
           series_name: string | null
@@ -67,7 +67,7 @@ export type Database = {
           era?: string | null
           format?: string[] | null
           id?: string
-          isbn?: string | null
+          isbn?: string[] | null
           language?: string | null
           publisher?: string | null
           series_name?: string | null
@@ -89,7 +89,7 @@ export type Database = {
           era?: string | null
           format?: string[] | null
           id?: string
-          isbn?: string | null
+          isbn?: string[] | null
           language?: string | null
           publisher?: string | null
           series_name?: string | null

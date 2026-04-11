@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase';
 
 type ScanResult =
 	| { type: 'found'; book: Book }
-	| { type: 'not_found' }
+	| { type: 'not_found'; isbn: string }
 	| { type: 'invalid' }
 	| null;
 
@@ -35,22 +35,29 @@ export default function ScanScreen() {
 			setScanning(true);
 
 			const isbn = normalizeIsbn(data);
+			if (__DEV__) {
+				console.log(`[Scanner] Raw: "${data}" → Normalized: "${isbn}"`);
+			}
 			if (!isbn) {
 				setResult({ type: 'invalid' });
 				setScanning(false);
 				return;
 			}
 
-			const { data: books } = await supabase
+			const { data: books, error } = await supabase
 				.from('books')
 				.select('*')
-				.eq('isbn', isbn)
+				.contains('isbn', [isbn])
 				.limit(1);
+
+			if (__DEV__) {
+				console.log(`[Scanner] Query isbn=${isbn}, found=${books?.length ?? 0}, error=${error?.message ?? 'none'}`);
+			}
 
 			if (books && books.length > 0) {
 				setResult({ type: 'found', book: books[0] });
 			} else {
-				setResult({ type: 'not_found' });
+				setResult({ type: 'not_found', isbn });
 			}
 			setScanning(false);
 		},
@@ -165,6 +172,7 @@ export default function ScanScreen() {
 							<Text style={styles.messageText}>
 								This book isn't in our catalog yet.
 							</Text>
+							<Text style={styles.messageIsbn}>ISBN: {result.isbn}</Text>
 						</View>
 					)}
 
@@ -348,6 +356,12 @@ const styles = StyleSheet.create({
 		color: 'rgba(255,255,255,0.6)',
 		fontSize: 14,
 		textAlign: 'center',
+	},
+	messageIsbn: {
+		color: 'rgba(255,255,255,0.3)',
+		fontSize: 12,
+		fontFamily: 'monospace',
+		marginTop: 8,
 	},
 	dismissButton: {
 		marginTop: 24,

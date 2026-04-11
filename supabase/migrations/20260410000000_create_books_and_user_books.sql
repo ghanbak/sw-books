@@ -9,7 +9,7 @@ CREATE TABLE books (
   canon text NOT NULL CHECK (canon IN ('Canon', 'Legends')),
   date_published date,
   format text[] DEFAULT '{}',
-  isbn text,
+  isbn text[] DEFAULT '{}',
   language text DEFAULT 'English',
   publisher text,
   series_name text,
@@ -23,7 +23,7 @@ CREATE TABLE books (
   updated_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX idx_books_isbn ON books (isbn);
+CREATE INDEX idx_books_isbn ON books USING gin (isbn);
 CREATE INDEX idx_books_canon ON books (canon);
 CREATE INDEX idx_books_series_name ON books (series_name) WHERE series_name IS NOT NULL;
 
@@ -66,6 +66,12 @@ ALTER TABLE user_books ENABLE ROW LEVEL SECURITY;
 -- Books: all authenticated users can read the full catalog
 CREATE POLICY "authenticated_read_books" ON books
   FOR SELECT TO authenticated
+  USING (true);
+
+-- Allow unauthenticated reads for development (anon key can browse catalog)
+-- Remove this policy before production if you want to require sign-in to browse
+CREATE POLICY "anon_read_books" ON books
+  FOR SELECT TO anon
   USING (true);
 
 -- User books: fully user-scoped CRUD
