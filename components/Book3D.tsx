@@ -3,7 +3,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-	type SharedValue,
 	useAnimatedStyle,
 	useSharedValue,
 	withSpring,
@@ -22,7 +21,7 @@ const COVER_COLORS = [
 	'#3a1a4a',
 ];
 
-function getCoverColor(title: string): string {
+export function getCoverColor(title: string): string {
 	let hash = 0;
 	for (let i = 0; i < title.length; i++) {
 		hash = (hash << 5) - hash + title.charCodeAt(i);
@@ -37,42 +36,30 @@ export interface Book3DProps {
 	author: string[];
 	width: number;
 	height: number;
-	spineWidth?: number;
-	spineColor?: string;
-	rotateY?: SharedValue<number>;
 	onPress?: () => void;
 	accessibilityLabel: string;
 }
 
+/**
+ * Static 3D book cover for use in lists and detail screens.
+ * Fixed -15deg angle with spine indent gradient and lighting.
+ * No rotation interaction — that's only in Book3DViewer.
+ */
 export function Book3D({
 	coverUri,
 	title,
 	author,
 	width,
 	height,
-	spineWidth = 14,
-	spineColor = '#2c1810',
-	rotateY: externalRotateY,
 	onPress,
 	accessibilityLabel,
 }: Book3DProps) {
 	const [imageError, setImageError] = useState(false);
 	const showFallback = !coverUri || imageError;
 	const isPressed = useSharedValue(false);
-	const defaultRotateY = useSharedValue(-15);
-	const rotateY = externalRotateY ?? defaultRotateY;
 
 	const pressStyle = useAnimatedStyle(() => ({
 		transform: [{ scale: withSpring(isPressed.value ? 0.96 : 1, { damping: 15 }) }],
-	}));
-
-	const bookStyle = useAnimatedStyle(() => ({
-		transform: [
-			{ perspective: 800 },
-			{ translateX: -width / 2 },
-			{ rotateY: `${rotateY.value}deg` },
-			{ translateX: width / 2 },
-		],
 	}));
 
 	return (
@@ -88,38 +75,29 @@ export function Book3D({
 			accessibilityRole="button"
 		>
 			<Animated.View style={pressStyle}>
-				<Animated.View
-					style={[
-						{
-							width,
-							height,
-							shadowColor: '#000',
-							shadowOffset: { width: 4, height: 6 },
-							shadowOpacity: 0.25,
-							shadowRadius: 12,
-							elevation: 8,
-						},
-						bookStyle,
-					]}
+				<View
+					style={{
+						width,
+						height,
+						shadowColor: '#000',
+						shadowOffset: { width: 3, height: 5 },
+						shadowOpacity: 0.25,
+						shadowRadius: 10,
+						elevation: 8,
+						borderRadius: 4,
+						overflow: 'hidden',
+						transform: [
+							{ perspective: 800 },
+							{ translateX: -width / 2 },
+							{ rotateY: '-15deg' },
+							{ translateX: width / 2 },
+						],
+					}}
 				>
-					{/* Spine strip */}
-					<View
-						style={[
-							styles.spine,
-							{
-								width: spineWidth,
-								backgroundColor: spineColor,
-							},
-						]}
-					/>
-
 					{/* Cover content */}
 					{showFallback ? (
 						<View
-							style={[
-								styles.coverFill,
-								{ borderRadius: 4, backgroundColor: getCoverColor(title) },
-							]}
+							style={[styles.coverFill, { backgroundColor: getCoverColor(title) }]}
 						>
 							<View style={styles.fallbackContent}>
 								<Text style={styles.fallbackTitle} numberOfLines={3}>
@@ -133,39 +111,45 @@ export function Book3D({
 					) : (
 						<Image
 							source={{ uri: coverUri }}
-							style={[styles.coverFill, { borderRadius: 4 }]}
+							style={styles.coverFill}
 							contentFit="cover"
 							onError={() => setImageError(true)}
 						/>
 					)}
 
-					{/* Light gradient overlay */}
+					{/* Spine indent gradient — Apple Books style crease effect */}
 					<LinearGradient
 						colors={[
-							'rgba(255,255,255,0.15)',
+							'rgba(0,0,0,0.2)',
+							'rgba(0,0,0,0.08)',
+							'rgba(255,255,255,0.35)',
+							'rgba(255,255,255,0.1)',
 							'transparent',
-							'rgba(0,0,0,0.12)',
+						]}
+						locations={[0, 0.15, 0.3, 0.5, 1]}
+						start={{ x: 0, y: 0 }}
+						end={{ x: 1, y: 0 }}
+						style={[StyleSheet.absoluteFill, { width: width * 0.15 }]}
+					/>
+
+					{/* Overall light gradient — subtle directional light */}
+					<LinearGradient
+						colors={[
+							'rgba(255,255,255,0.08)',
+							'transparent',
+							'rgba(0,0,0,0.1)',
 						]}
 						start={{ x: 0, y: 0 }}
 						end={{ x: 1, y: 0 }}
-						style={[StyleSheet.absoluteFill, { borderRadius: 4 }]}
+						style={StyleSheet.absoluteFill}
 					/>
-				</Animated.View>
+				</View>
 			</Animated.View>
 		</Pressable>
 	);
 }
 
 const styles = StyleSheet.create({
-	spine: {
-		position: 'absolute',
-		left: 0,
-		top: 0,
-		bottom: 0,
-		zIndex: 1,
-		borderTopLeftRadius: 2,
-		borderBottomLeftRadius: 2,
-	},
 	coverFill: {
 		...StyleSheet.absoluteFillObject,
 	},

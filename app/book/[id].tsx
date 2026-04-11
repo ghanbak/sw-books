@@ -50,7 +50,6 @@ export default function BookDetailScreen() {
 					author={book.author}
 					width={180}
 					height={270}
-					spineWidth={18}
 					onPress={() => setViewerOpen(true)}
 					accessibilityLabel={`Book cover: ${book.title} by ${book.author.join(', ')}. Tap to inspect in 3D.`}
 				/>

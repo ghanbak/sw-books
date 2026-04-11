@@ -12,30 +12,10 @@ import Animated, {
 	useSharedValue,
 	withDecay,
 } from 'react-native-reanimated';
+import { getCoverColor } from './Book3D';
 
 const DEGREES_PER_PIXEL = 0.3;
-
-const COVER_COLORS = [
-	'#8B0000',
-	'#1a3a5c',
-	'#2d4a22',
-	'#4a2545',
-	'#5c3a1a',
-	'#1a4a4a',
-	'#3d2b1f',
-	'#4a1a1a',
-	'#1a2a4a',
-	'#3a1a4a',
-];
-
-function getCoverColor(title: string): string {
-	let hash = 0;
-	for (let i = 0; i < title.length; i++) {
-		hash = (hash << 5) - hash + title.charCodeAt(i);
-		hash |= 0;
-	}
-	return COVER_COLORS[Math.abs(hash) % COVER_COLORS.length];
-}
+const BOOK_DEPTH = 28; // thickness of book spine in px
 
 interface Book3DViewerProps {
 	visible: boolean;
@@ -55,7 +35,6 @@ export function Book3DViewer({
 	const { width: screenWidth } = useWindowDimensions();
 	const bookWidth = Math.min(screenWidth * 0.55, 240);
 	const bookHeight = bookWidth * 1.5;
-	const spineWidth = 20;
 
 	const [imageError, setImageError] = useState(false);
 	const showFallback = !coverUri || imageError;
@@ -92,31 +71,55 @@ export function Book3DViewer({
 			});
 		});
 
+	// Main book rotation (front cover)
 	const bookStyle = useAnimatedStyle(() => ({
 		transform: [
-			{ perspective: 800 },
-			{ translateX: -bookWidth / 2 },
-			{ rotateY: `${rotationY.value}deg` },
-			{ translateX: bookWidth / 2 },
+			{ perspective: 1000 },
 			{ rotateX: `${rotationX.value}deg` },
+			{ rotateY: `${rotationY.value}deg` },
 		],
 	}));
 
+	// Spine: visible width based on rotation angle
+	// When facing straight on (0deg), spine is invisible (edge-on)
+	// When rotated, spine becomes visible
+	const spineStyle = useAnimatedStyle(() => {
+		const absAngle = Math.abs(rotationY.value);
+		// Spine visible width increases with rotation
+		const visibleWidth = interpolate(absAngle, [0, 90], [0, BOOK_DEPTH], 'clamp');
+		// Spine appears on the leading edge based on rotation direction
+		const spineOpacity = interpolate(absAngle, [0, 10, 90], [0, 1, 1], 'clamp');
+
+		return {
+			width: visibleWidth,
+			opacity: spineOpacity,
+		};
+	});
+
+	// Page edges on the right side — visible at angles
+	const pageEdgeStyle = useAnimatedStyle(() => {
+		const absAngle = Math.abs(rotationY.value);
+		const visibleWidth = interpolate(absAngle, [0, 90], [0, BOOK_DEPTH], 'clamp');
+		const pageOpacity = interpolate(absAngle, [0, 10, 90], [0, 0.8, 1], 'clamp');
+
+		return {
+			width: visibleWidth,
+			opacity: pageOpacity,
+		};
+	});
+
+	// Dynamic lighting overlay
 	const lightStyle = useAnimatedStyle(() => ({
-		opacity: interpolate(Math.abs(rotationY.value), [0, 30, 60], [0.1, 0.2, 0.35]),
-		transform: [
-			{
-				translateX: interpolate(
-					rotationY.value,
-					[-60, 0, 60],
-					[-bookWidth / 2, 0, bookWidth / 2],
-				),
-			},
-		],
+		opacity: interpolate(Math.abs(rotationY.value), [0, 30, 60], [0.05, 0.15, 0.3]),
 	}));
+
+	// Light position shifts with rotation
+	const lightGradientStart = useAnimatedStyle(() => {
+		const x = interpolate(rotationY.value, [-60, 0, 60], [1, 0.3, 0]);
+		return { opacity: 1, left: `${x * 100}%` as unknown as number };
+	});
 
 	const handleClose = () => {
-		// Reset rotation for next open
 		rotationY.value = -15;
 		rotationX.value = 0;
 		savedRotY.value = -15;
@@ -124,12 +127,23 @@ export function Book3DViewer({
 		onClose();
 	};
 
+	const fallbackColor = getCoverColor(title);
+
 	return (
 		<Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
 			<GestureHandlerRootView style={styles.gestureRoot}>
-				<Animated.View style={styles.overlay} entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)}>
+				<Animated.View
+					style={styles.overlay}
+					entering={FadeIn.duration(200)}
+					exiting={FadeOut.duration(200)}
+				>
 					{/* Close button */}
-					<Pressable style={styles.closeButton} onPress={handleClose} accessibilityLabel="Close" accessibilityRole="button">
+					<Pressable
+						style={styles.closeButton}
+						onPress={handleClose}
+						accessibilityLabel="Close"
+						accessibilityRole="button"
+					>
 						<Text style={styles.closeText}>✕</Text>
 					</Pressable>
 
@@ -142,56 +156,123 @@ export function Book3DViewer({
 									height: bookHeight,
 									shadowColor: '#000',
 									shadowOffset: { width: 6, height: 10 },
-									shadowOpacity: 0.4,
-									shadowRadius: 20,
-									elevation: 12,
+									shadowOpacity: 0.5,
+									shadowRadius: 24,
+									elevation: 16,
 								},
 								bookStyle,
 							]}
 						>
-							{/* Spine */}
-							<View
-								style={[
-									styles.spine,
-									{ width: spineWidth, backgroundColor: '#2c1810' },
-								]}
-							/>
-
-							{/* Cover */}
-							{showFallback ? (
-								<View
-									style={[
-										styles.coverFill,
-										{ borderRadius: 6, backgroundColor: getCoverColor(title) },
-									]}
-								>
-									<View style={styles.fallbackContent}>
-										<Text style={styles.fallbackTitle} numberOfLines={4}>
-											{title}
-										</Text>
-										<Text style={styles.fallbackAuthor} numberOfLines={2}>
-											{author.join(', ')}
-										</Text>
-									</View>
-								</View>
-							) : (
-								<Image
-									source={{ uri: coverUri }}
-									style={[styles.coverFill, { borderRadius: 6 }]}
-									contentFit="cover"
-									onError={() => setImageError(true)}
-								/>
-							)}
-
-							{/* Animated light overlay */}
+							{/* Spine — dark strip on the left, width driven by rotation */}
 							<Animated.View
-								style={[StyleSheet.absoluteFill, { borderRadius: 6, overflow: 'hidden' }, lightStyle]}
+								style={[
+									styles.spineFace,
+									{ height: bookHeight, backgroundColor: '#1a0f08' },
+									spineStyle,
+								]}
 							>
 								<LinearGradient
 									colors={[
+										'rgba(255,255,255,0.08)',
+										'rgba(0,0,0,0.1)',
+										'rgba(0,0,0,0.3)',
+									]}
+									start={{ x: 0, y: 0 }}
+									end={{ x: 1, y: 0 }}
+									style={StyleSheet.absoluteFill}
+								/>
+							</Animated.View>
+
+							{/* Front cover */}
+							<View
+								style={[
+									styles.coverFace,
+									{
+										width: bookWidth,
+										height: bookHeight,
+										borderRadius: 4,
+										overflow: 'hidden',
+									},
+								]}
+							>
+								{showFallback ? (
+									<View
+										style={[
+											StyleSheet.absoluteFillObject,
+											{ backgroundColor: fallbackColor },
+										]}
+									>
+										<View style={styles.fallbackContent}>
+											<Text style={styles.fallbackTitle} numberOfLines={4}>
+												{title}
+											</Text>
+											<Text style={styles.fallbackAuthor} numberOfLines={2}>
+												{author.join(', ')}
+											</Text>
+										</View>
+									</View>
+								) : (
+									<Image
+										source={{ uri: coverUri }}
+										style={StyleSheet.absoluteFillObject}
+										contentFit="cover"
+										onError={() => setImageError(true)}
+									/>
+								)}
+
+								{/* Spine indent on front cover — Apple Books crease */}
+								<LinearGradient
+									colors={[
+										'rgba(0,0,0,0.25)',
+										'rgba(0,0,0,0.08)',
 										'rgba(255,255,255,0.3)',
+										'rgba(255,255,255,0.05)',
 										'transparent',
-										'rgba(0,0,0,0.2)',
+									]}
+									locations={[0, 0.12, 0.25, 0.45, 1]}
+									start={{ x: 0, y: 0 }}
+									end={{ x: 1, y: 0 }}
+									style={[StyleSheet.absoluteFill, { width: bookWidth * 0.12 }]}
+								/>
+
+								{/* Dynamic light overlay */}
+								<Animated.View style={[StyleSheet.absoluteFill, lightStyle]}>
+									<LinearGradient
+										colors={[
+											'rgba(255,255,255,0.35)',
+											'transparent',
+											'rgba(0,0,0,0.2)',
+										]}
+										start={{ x: 0, y: 0 }}
+										end={{ x: 1, y: 0 }}
+										style={StyleSheet.absoluteFill}
+									/>
+								</Animated.View>
+							</View>
+
+							{/* Page edges — off-white strip on the right, width driven by rotation */}
+							<Animated.View
+								style={[
+									styles.pageEdgeFace,
+									{ height: bookHeight, backgroundColor: '#f0ebe0' },
+									pageEdgeStyle,
+								]}
+							>
+								{/* Horizontal lines to simulate page edges */}
+								{Array.from({ length: 12 }).map((_, i) => (
+									<View
+										key={i}
+										style={[
+											styles.pageLine,
+											{ top: (bookHeight / 13) * (i + 1) },
+										]}
+									/>
+								))}
+								<LinearGradient
+									colors={[
+										'rgba(0,0,0,0.15)',
+										'rgba(0,0,0,0.03)',
+										'rgba(255,255,255,0.1)',
 									]}
 									start={{ x: 0, y: 0 }}
 									end={{ x: 1, y: 0 }}
@@ -223,7 +304,7 @@ const styles = StyleSheet.create({
 	},
 	overlay: {
 		flex: 1,
-		backgroundColor: 'rgba(0,0,0,0.85)',
+		backgroundColor: 'rgba(0,0,0,0.88)',
 		justifyContent: 'center',
 		alignItems: 'center',
 	},
@@ -244,17 +325,36 @@ const styles = StyleSheet.create({
 		fontSize: 18,
 		fontWeight: '600',
 	},
-	spine: {
+	spineFace: {
 		position: 'absolute',
 		left: 0,
 		top: 0,
-		bottom: 0,
-		zIndex: 1,
+		zIndex: 0,
 		borderTopLeftRadius: 3,
 		borderBottomLeftRadius: 3,
+		overflow: 'hidden',
 	},
-	coverFill: {
-		...StyleSheet.absoluteFillObject,
+	coverFace: {
+		position: 'absolute',
+		left: 0,
+		top: 0,
+		zIndex: 1,
+	},
+	pageEdgeFace: {
+		position: 'absolute',
+		right: 0,
+		top: 0,
+		zIndex: 0,
+		overflow: 'hidden',
+		borderTopRightRadius: 2,
+		borderBottomRightRadius: 2,
+	},
+	pageLine: {
+		position: 'absolute',
+		left: 2,
+		right: 2,
+		height: StyleSheet.hairlineWidth,
+		backgroundColor: 'rgba(0,0,0,0.06)',
 	},
 	fallbackContent: {
 		flex: 1,
