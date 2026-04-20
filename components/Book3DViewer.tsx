@@ -12,6 +12,7 @@ import Animated, {
 	useSharedValue,
 	withDecay,
 } from 'react-native-reanimated';
+import { tokens } from '@/constants/tokens';
 import { getCoverColor } from './Book3D';
 
 const DEGREES_PER_PIXEL = 0.3;
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
 	},
 	overlay: {
 		flex: 1,
-		backgroundColor: 'rgba(0,0,0,0.88)',
+		backgroundColor: tokens.surface.overlay,
 		justifyContent: 'center',
 		alignItems: 'center',
 	},

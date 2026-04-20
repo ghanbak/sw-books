@@ -2,17 +2,23 @@ import { Tabs } from 'expo-router';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { tokens } from '@/constants/tokens';
 
 export default function TabLayout() {
-	const colorScheme = useColorScheme();
-
 	return (
 		<Tabs
 			screenOptions={{
-				tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-				headerShown: true,
+				tabBarActiveTintColor: tokens.accent.primary,
+				tabBarInactiveTintColor: tokens.text.hint,
+				tabBarStyle: {
+					backgroundColor: tokens.surface.background,
+					borderTopColor: tokens.border.subtle,
+				},
+				headerStyle: {
+					backgroundColor: tokens.surface.background,
+				},
+				headerTintColor: tokens.text.primary,
+				headerShadowVisible: false,
 				tabBarButton: HapticTab,
 			}}
 		>
@@ -36,6 +42,7 @@ export default function TabLayout() {
 				name="scan"
 				options={{
 					title: 'Scan',
+					headerShown: false,
 					tabBarIcon: ({ color }) => (
 						<IconSymbol size={28} name="barcode.viewfinder" color={color} />
 					),

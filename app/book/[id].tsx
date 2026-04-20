@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 
 import { Book3D } from '@/components/Book3D';
 import { Book3DViewer } from '@/components/Book3DViewer';
+import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 import { useUserBooks } from '@/lib/hooks';
 import { supabase } from '@/lib/supabase';
@@ -28,7 +29,7 @@ export default function BookDetailScreen() {
 	if (loading) {
 		return (
 			<View style={styles.center}>
-				<ActivityIndicator size="large" />
+				<ActivityIndicator size="large" color={tokens.accent.primary} />
 			</View>
 		);
 	}
@@ -36,20 +37,21 @@ export default function BookDetailScreen() {
 	if (!book) {
 		return (
 			<View style={styles.center}>
-				<Text>Book not found</Text>
+				<Text style={styles.notFoundText}>Book not found</Text>
 			</View>
 		);
 	}
 
 	return (
 		<ScrollView style={styles.container} contentContainerStyle={styles.content}>
+			{/* Hero cover */}
 			<View style={styles.coverWrapper}>
 				<Book3D
 					coverUri={book.cover_image}
 					title={book.title}
 					author={book.author}
-					width={180}
-					height={270}
+					width={200}
+					height={300}
 					onPress={() => setViewerOpen(true)}
 					accessibilityLabel={`Book cover: ${book.title} by ${book.author.join(', ')}. Tap to inspect in 3D.`}
 				/>
@@ -63,47 +65,61 @@ export default function BookDetailScreen() {
 				author={book.author}
 			/>
 
+			{/* Title + Author */}
 			<Text style={styles.title}>{book.title}</Text>
 			<Text style={styles.author}>{book.author.join(', ')}</Text>
 
-			<View style={styles.meta}>
-				<View
-					style={[
-						styles.badge,
-						book.canon === 'Canon' ? styles.canonBadge : styles.legendsBadge,
-					]}
-				>
-					<Text style={styles.badgeText}>{book.canon}</Text>
+			{/* Metadata card */}
+			<View style={styles.metaCard}>
+				<View style={styles.metaRow}>
+					<View
+						style={[
+							styles.badge,
+							book.canon === 'Canon' ? styles.canonBadge : styles.legendsBadge,
+						]}
+					>
+						<Text style={styles.badgeText}>{book.canon}</Text>
+					</View>
+					<Text style={styles.metaText}>{book.type}</Text>
+					{book.publisher && <Text style={styles.metaText}>{book.publisher}</Text>}
 				</View>
-				<Text style={styles.metaText}>{book.type}</Text>
-				{book.publisher && <Text style={styles.metaText}>{book.publisher}</Text>}
+
+				{book.series_name && (
+					<Text style={styles.seriesInfo}>
+						{book.series_name}
+						{book.series_order ? ` (#${book.series_order})` : ''}
+					</Text>
+				)}
+
+				{book.date_published && (
+					<Text style={styles.date}>
+						{new Date(book.date_published).toLocaleDateString('en-US', {
+							year: 'numeric',
+							month: 'long',
+							day: 'numeric',
+						})}
+					</Text>
+				)}
+
+				{book.format && book.format.length > 0 && (
+					<View style={styles.formats}>
+						{book.format.map((f) => (
+							<View key={f} style={styles.formatChip}>
+								<Text style={styles.formatText}>{f}</Text>
+							</View>
+						))}
+					</View>
+				)}
 			</View>
 
-			{book.series_name && (
-				<Text style={styles.seriesInfo}>
-					{book.series_name}
-					{book.series_order ? ` (#${book.series_order})` : ''}
-				</Text>
-			)}
-
-			{book.date_published && (
-				<Text style={styles.date}>
-					Published: {new Date(book.date_published).toLocaleDateString()}
-				</Text>
-			)}
-
-			{book.synopsis && <Text style={styles.synopsis}>{book.synopsis}</Text>}
-
-			{book.format && book.format.length > 0 && (
-				<View style={styles.formats}>
-					{book.format.map((f) => (
-						<View key={f} style={styles.formatChip}>
-							<Text style={styles.formatText}>{f}</Text>
-						</View>
-					))}
+			{/* Synopsis */}
+			{book.synopsis && (
+				<View style={styles.synopsisSection}>
+					<Text style={styles.synopsis}>{book.synopsis}</Text>
 				</View>
 			)}
 
+			{/* Shelf actions */}
 			<View style={styles.shelfSection}>
 				<Text style={styles.shelfLabel}>Add to Shelf</Text>
 				<View style={styles.shelfButtons}>
@@ -148,38 +164,55 @@ function ShelfButton({
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
+		backgroundColor: tokens.surface.background,
 	},
 	content: {
 		padding: 20,
 		alignItems: 'center',
+		paddingBottom: 40,
 	},
 	center: {
 		flex: 1,
 		justifyContent: 'center',
 		alignItems: 'center',
+		backgroundColor: tokens.surface.background,
+	},
+	notFoundText: {
+		color: tokens.text.hint,
+		fontSize: 16,
 	},
 	coverWrapper: {
-		marginBottom: 20,
+		marginBottom: 24,
+		marginTop: 8,
 	},
 	title: {
-		fontSize: 22,
+		fontSize: 24,
 		fontWeight: '700',
 		textAlign: 'center',
 		marginBottom: 4,
+		color: tokens.text.primary,
 	},
 	author: {
 		fontSize: 16,
-		opacity: 0.7,
 		textAlign: 'center',
-		marginBottom: 12,
+		marginBottom: 16,
+		color: tokens.text.secondary,
 	},
-	meta: {
+	metaCard: {
+		width: '100%',
+		backgroundColor: tokens.surface.card,
+		borderRadius: 12,
+		padding: 16,
+		gap: 8,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: tokens.border.subtle,
+		marginBottom: 16,
+	},
+	metaRow: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		gap: 10,
-		marginBottom: 8,
 		flexWrap: 'wrap',
-		justifyContent: 'center',
 	},
 	badge: {
 		paddingHorizontal: 8,
@@ -187,10 +220,10 @@ const styles = StyleSheet.create({
 		borderRadius: 4,
 	},
 	canonBadge: {
-		backgroundColor: '#1a3a5c',
+		backgroundColor: tokens.badge.canon,
 	},
 	legendsBadge: {
-		backgroundColor: '#5c3a1a',
+		backgroundColor: tokens.badge.legends,
 	},
 	badgeText: {
 		color: '#fff',
@@ -199,47 +232,52 @@ const styles = StyleSheet.create({
 	},
 	metaText: {
 		fontSize: 13,
-		opacity: 0.6,
+		color: tokens.text.hint,
 	},
 	seriesInfo: {
 		fontSize: 14,
 		fontStyle: 'italic',
-		opacity: 0.7,
-		marginBottom: 4,
+		color: tokens.text.secondary,
 	},
 	date: {
 		fontSize: 13,
-		opacity: 0.5,
-		marginBottom: 16,
-	},
-	synopsis: {
-		fontSize: 15,
-		lineHeight: 22,
-		marginBottom: 20,
+		color: tokens.text.hint,
 	},
 	formats: {
 		flexDirection: 'row',
 		flexWrap: 'wrap',
 		gap: 6,
-		marginBottom: 24,
+		marginTop: 4,
 	},
 	formatChip: {
 		paddingHorizontal: 10,
 		paddingVertical: 4,
 		borderRadius: 12,
-		backgroundColor: '#f0f0f0',
+		backgroundColor: tokens.surface.background,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: tokens.border.subtle,
 	},
 	formatText: {
 		fontSize: 12,
+		color: tokens.text.secondary,
+	},
+	synopsisSection: {
+		width: '100%',
+		marginBottom: 20,
+	},
+	synopsis: {
+		fontSize: 15,
+		lineHeight: 23,
+		color: tokens.text.primary,
 	},
 	shelfSection: {
 		width: '100%',
-		marginTop: 8,
 	},
 	shelfLabel: {
-		fontSize: 16,
-		fontWeight: '600',
-		marginBottom: 10,
+		fontSize: 17,
+		fontWeight: '700',
+		marginBottom: 12,
+		color: tokens.text.primary,
 	},
 	shelfButtons: {
 		flexDirection: 'row',
@@ -249,17 +287,21 @@ const styles = StyleSheet.create({
 		flex: 1,
 		paddingVertical: 12,
 		borderRadius: 8,
-		backgroundColor: '#f0f0f0',
+		backgroundColor: tokens.surface.card,
+		borderWidth: 1,
+		borderColor: tokens.border.subtle,
 		alignItems: 'center',
 	},
 	shelfButtonActive: {
-		backgroundColor: '#1a3a5c',
+		backgroundColor: tokens.accent.primary,
+		borderColor: tokens.accent.primary,
 	},
 	shelfButtonText: {
 		fontSize: 13,
 		fontWeight: '600',
+		color: tokens.text.secondary,
 	},
 	shelfButtonTextActive: {
-		color: '#fff',
+		color: tokens.text.inverse,
 	},
 });

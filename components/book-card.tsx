@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Book3D } from '@/components/Book3D';
+import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 
 interface BookCardProps {
@@ -64,10 +65,11 @@ const styles = StyleSheet.create({
 	title: {
 		fontSize: 16,
 		fontWeight: '600',
+		color: tokens.text.primary,
 	},
 	author: {
 		fontSize: 13,
-		opacity: 0.7,
+		color: tokens.text.secondary,
 	},
 	badges: {
 		flexDirection: 'row',
@@ -81,10 +83,10 @@ const styles = StyleSheet.create({
 		borderRadius: 4,
 	},
 	canonBadge: {
-		backgroundColor: '#1a3a5c',
+		backgroundColor: tokens.badge.canon,
 	},
 	legendsBadge: {
-		backgroundColor: '#5c3a1a',
+		backgroundColor: tokens.badge.legends,
 	},
 	badgeText: {
 		color: '#fff',
@@ -93,7 +95,7 @@ const styles = StyleSheet.create({
 	},
 	series: {
 		fontSize: 11,
-		opacity: 0.5,
+		color: tokens.text.hint,
 		flex: 1,
 	},
 });

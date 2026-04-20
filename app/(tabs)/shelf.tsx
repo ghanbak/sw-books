@@ -3,6 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { BookCard } from '@/components/book-card';
+import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 import { useBooks, useUserBooks } from '@/lib/hooks';
 
@@ -52,24 +53,27 @@ export default function ShelfScreen() {
 
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
+	const separator = useCallback(
+		() => <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: tokens.border.subtle, marginHorizontal: 12 }} />,
+		[],
+	);
 
 	if (counts.all === 0 && !loading) {
 		return (
 			<View style={styles.emptyContainer}>
-				<Text style={styles.emptyEmoji}>📚</Text>
-				<Text style={styles.emptyTitle}>Your bookshelf is empty</Text>
+				<Text style={styles.emptyTitle}>Your collection awaits</Text>
 				<Text style={styles.emptySubtitle}>
-					Browse the catalog or scan a barcode to add books.
+					Browse the catalog or scan a barcode to start building your Star Wars library.
 				</Text>
 				<View style={styles.emptyActions}>
 					<Pressable style={styles.ctaButton} onPress={() => router.push('/(tabs)')}>
-						<Text style={styles.ctaText}>Browse catalog</Text>
+						<Text style={styles.ctaText}>Browse Catalog</Text>
 					</Pressable>
 					<Pressable
-						style={[styles.ctaButton, styles.ctaSecondary]}
+						style={styles.ctaSecondary}
 						onPress={() => router.push('/(tabs)/scan')}
 					>
-						<Text style={[styles.ctaText, styles.ctaSecondaryText]}>Scan a barcode</Text>
+						<Text style={styles.ctaSecondaryText}>Scan a Barcode</Text>
 					</Pressable>
 				</View>
 			</View>
@@ -79,28 +83,27 @@ export default function ShelfScreen() {
 	return (
 		<View style={styles.container}>
 			<View style={styles.filterRow}>
-				{FILTERS.map(({ key, label }) => (
-					<Pressable
-						key={key}
-						style={[styles.filterChip, filter === key && styles.filterChipActive]}
-						onPress={() => setFilter(key)}
-					>
-						<Text
-							style={[
-								styles.filterChipText,
-								filter === key && styles.filterChipTextActive,
-							]}
+				{FILTERS.map(({ key, label }) => {
+					const active = filter === key;
+					return (
+						<Pressable
+							key={key}
+							style={[styles.filterChip, active && styles.filterChipActive]}
+							onPress={() => setFilter(key)}
 						>
-							{label} ({counts[key]})
-						</Text>
-					</Pressable>
-				))}
+							<Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+								{label} ({counts[key]})
+							</Text>
+						</Pressable>
+					);
+				})}
 			</View>
 
 			<FlatList
 				data={shelvedBooks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
+				ItemSeparatorComponent={separator}
 				refreshing={loading}
 				onRefresh={refetch}
 				contentContainerStyle={shelvedBooks.length === 0 ? styles.emptyList : undefined}
@@ -117,6 +120,7 @@ export default function ShelfScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
+		backgroundColor: tokens.surface.background,
 	},
 	filterRow: {
 		flexDirection: 'row',
@@ -129,38 +133,40 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 12,
 		paddingVertical: 6,
 		borderRadius: 16,
-		backgroundColor: '#f0f0f0',
+		borderWidth: 1,
+		borderColor: tokens.border.subtle,
 	},
 	filterChipActive: {
-		backgroundColor: '#1a3a5c',
+		backgroundColor: tokens.accent.primary,
+		borderColor: tokens.accent.primary,
 	},
 	filterChipText: {
 		fontSize: 13,
 		fontWeight: '500',
+		color: tokens.text.secondary,
 	},
 	filterChipTextActive: {
-		color: '#fff',
+		color: tokens.text.inverse,
 	},
 	emptyContainer: {
 		flex: 1,
 		justifyContent: 'center',
 		alignItems: 'center',
 		padding: 32,
-	},
-	emptyEmoji: {
-		fontSize: 48,
-		marginBottom: 16,
+		backgroundColor: tokens.surface.background,
 	},
 	emptyTitle: {
-		fontSize: 20,
-		fontWeight: '600',
-		marginBottom: 8,
+		fontSize: 22,
+		fontWeight: '700',
+		marginBottom: 10,
+		color: tokens.text.primary,
 	},
 	emptySubtitle: {
-		fontSize: 14,
-		opacity: 0.5,
+		fontSize: 15,
+		color: tokens.text.secondary,
 		textAlign: 'center',
-		marginBottom: 24,
+		marginBottom: 28,
+		lineHeight: 22,
 	},
 	emptyActions: {
 		gap: 12,
@@ -169,19 +175,25 @@ const styles = StyleSheet.create({
 	ctaButton: {
 		paddingVertical: 14,
 		borderRadius: 8,
-		backgroundColor: '#1a3a5c',
+		backgroundColor: tokens.accent.primary,
 		alignItems: 'center',
 	},
-	ctaSecondary: {
-		backgroundColor: '#f0f0f0',
-	},
 	ctaText: {
-		color: '#fff',
+		color: tokens.text.inverse,
 		fontSize: 15,
 		fontWeight: '600',
 	},
+	ctaSecondary: {
+		paddingVertical: 14,
+		borderRadius: 8,
+		borderWidth: 1,
+		borderColor: tokens.border.subtle,
+		alignItems: 'center',
+	},
 	ctaSecondaryText: {
-		color: '#333',
+		color: tokens.text.secondary,
+		fontSize: 15,
+		fontWeight: '600',
 	},
 	emptyList: {
 		flex: 1,
@@ -191,6 +203,6 @@ const styles = StyleSheet.create({
 	},
 	emptyFilterText: {
 		fontSize: 15,
-		opacity: 0.5,
+		color: tokens.text.hint,
 	},
 });

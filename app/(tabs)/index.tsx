@@ -10,8 +10,10 @@ import {
 } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
+import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 type CanonFilter = 'all' | 'Canon' | 'Legends';
 
@@ -42,11 +44,15 @@ export default function CatalogScreen() {
 
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
+	const separator = useCallback(
+		() => <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: tokens.border.subtle, marginHorizontal: 12 }} />,
+		[],
+	);
 
 	if (loading) {
 		return (
 			<View style={styles.center}>
-				<ActivityIndicator size="large" />
+				<ActivityIndicator size="large" color={tokens.accent.primary} />
 			</View>
 		);
 	}
@@ -66,34 +72,36 @@ export default function CatalogScreen() {
 	return (
 		<View style={styles.container}>
 			<View style={styles.searchBar}>
-				<TextInput
-					style={styles.searchInput}
-					placeholder="Search by title, author, or series..."
-					value={search}
-					onChangeText={setSearch}
-					clearButtonMode="while-editing"
-					autoCapitalize="none"
-					autoCorrect={false}
-				/>
+				<View style={styles.searchInputWrapper}>
+					<IconSymbol name="magnifyingglass" size={16} color={tokens.text.hint} />
+					<TextInput
+						style={styles.searchInput}
+						placeholder="Search by title, author, or series..."
+						placeholderTextColor={tokens.text.hint}
+						value={search}
+						onChangeText={setSearch}
+						clearButtonMode="while-editing"
+						autoCapitalize="none"
+						autoCorrect={false}
+					/>
+				</View>
 			</View>
 
 			<View style={styles.filterRow}>
-				{(['all', 'Canon', 'Legends'] as const).map((filter) => (
-					<Pressable
-						key={filter}
-						style={[styles.filterChip, canonFilter === filter && styles.filterChipActive]}
-						onPress={() => setCanonFilter(filter)}
-					>
-						<Text
-							style={[
-								styles.filterChipText,
-								canonFilter === filter && styles.filterChipTextActive,
-							]}
+				{(['all', 'Canon', 'Legends'] as const).map((filter) => {
+					const active = canonFilter === filter;
+					return (
+						<Pressable
+							key={filter}
+							style={[styles.filterChip, active && styles.filterChipActive]}
+							onPress={() => setCanonFilter(filter)}
 						>
-							{filter === 'all' ? 'All' : filter}
-						</Text>
-					</Pressable>
-				))}
+							<Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+								{filter === 'all' ? 'All' : filter}
+							</Text>
+						</Pressable>
+					);
+				})}
 				<Text style={styles.count}>{filteredBooks.length} books</Text>
 			</View>
 
@@ -101,6 +109,7 @@ export default function CatalogScreen() {
 				data={filteredBooks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
+				ItemSeparatorComponent={separator}
 				refreshing={loading}
 				onRefresh={refetch}
 				contentContainerStyle={filteredBooks.length === 0 ? styles.emptyContainer : undefined}
@@ -117,23 +126,34 @@ export default function CatalogScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
+		backgroundColor: tokens.surface.background,
 	},
 	center: {
 		flex: 1,
 		justifyContent: 'center',
 		alignItems: 'center',
 		padding: 24,
+		backgroundColor: tokens.surface.background,
 	},
 	searchBar: {
 		paddingHorizontal: 12,
 		paddingVertical: 8,
 	},
-	searchInput: {
+	searchInputWrapper: {
+		flexDirection: 'row',
+		alignItems: 'center',
 		height: 40,
-		borderRadius: 8,
-		backgroundColor: '#f0f0f0',
+		borderRadius: 10,
+		backgroundColor: tokens.surface.card,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: tokens.border.subtle,
 		paddingHorizontal: 12,
+		gap: 8,
+	},
+	searchInput: {
+		flex: 1,
 		fontSize: 15,
+		color: tokens.text.primary,
 	},
 	filterRow: {
 		flexDirection: 'row',
@@ -146,48 +166,52 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 12,
 		paddingVertical: 6,
 		borderRadius: 16,
-		backgroundColor: '#f0f0f0',
+		borderWidth: 1,
+		borderColor: tokens.border.subtle,
 	},
 	filterChipActive: {
-		backgroundColor: '#1a3a5c',
+		backgroundColor: tokens.accent.primary,
+		borderColor: tokens.accent.primary,
 	},
 	filterChipText: {
 		fontSize: 13,
 		fontWeight: '500',
+		color: tokens.text.secondary,
 	},
 	filterChipTextActive: {
-		color: '#fff',
+		color: tokens.text.inverse,
 	},
 	count: {
 		marginLeft: 'auto',
 		fontSize: 12,
-		opacity: 0.5,
+		color: tokens.text.hint,
 	},
 	emptyContainer: {
 		flex: 1,
 	},
 	emptyText: {
 		fontSize: 15,
-		opacity: 0.5,
+		color: tokens.text.hint,
 	},
 	errorText: {
 		fontSize: 17,
 		fontWeight: '600',
+		color: tokens.text.primary,
 		marginBottom: 8,
 	},
 	errorDetail: {
 		fontSize: 13,
-		opacity: 0.5,
+		color: tokens.text.hint,
 		marginBottom: 16,
 	},
 	retryButton: {
 		paddingHorizontal: 20,
 		paddingVertical: 10,
 		borderRadius: 8,
-		backgroundColor: '#1a3a5c',
+		backgroundColor: tokens.accent.primary,
 	},
 	retryText: {
-		color: '#fff',
+		color: tokens.text.inverse,
 		fontWeight: '600',
 	},
 });

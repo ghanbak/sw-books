@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { tokens } from '@/constants/tokens';
+
 export default function ProfileScreen() {
 	return (
 		<View style={styles.container}>
@@ -21,34 +23,38 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		padding: 20,
+		backgroundColor: tokens.surface.background,
 	},
 	section: {
 		marginBottom: 24,
 	},
 	label: {
 		fontSize: 13,
-		opacity: 0.5,
+		color: tokens.text.hint,
 		marginBottom: 4,
 	},
 	value: {
 		fontSize: 17,
 		fontWeight: '500',
+		color: tokens.text.primary,
 	},
 	signOutButton: {
 		paddingVertical: 14,
 		borderRadius: 8,
-		backgroundColor: '#f0f0f0',
+		backgroundColor: tokens.surface.card,
+		borderWidth: 1,
+		borderColor: tokens.border.subtle,
 		alignItems: 'center',
 		marginBottom: 24,
 	},
 	signOutText: {
 		fontSize: 15,
 		fontWeight: '600',
-		color: '#c00',
+		color: tokens.status.error,
 	},
 	version: {
 		fontSize: 12,
-		opacity: 0.3,
+		color: tokens.text.hint,
 		textAlign: 'center',
 		marginTop: 'auto',
 	},

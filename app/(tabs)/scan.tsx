@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { Book3D } from '@/components/Book3D';
+import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 import { normalizeIsbn } from '@/lib/isbn';
 import { supabase } from '@/lib/supabase';
@@ -309,7 +310,7 @@ const styles = StyleSheet.create({
 	},
 	resultCard: {
 		flexDirection: 'row',
-		backgroundColor: 'rgba(255,255,255,0.08)',
+		backgroundColor: tokens.surface.card,
 		borderRadius: 12,
 		padding: 16,
 		gap: 16,
