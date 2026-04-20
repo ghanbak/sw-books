@@ -1,3 +1,4 @@
+import { LogOut } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { tokens } from '@/constants/tokens';
@@ -11,6 +12,7 @@ export default function ProfileScreen() {
 			</View>
 
 			<Pressable style={styles.signOutButton} onPress={() => {}}>
+				<LogOut size={16} color={tokens.status.error} strokeWidth={2} />
 				<Text style={styles.signOutText}>Sign Out</Text>
 			</Pressable>
 
@@ -29,8 +31,11 @@ const styles = StyleSheet.create({
 		marginBottom: 24,
 	},
 	label: {
-		fontSize: 13,
+		fontSize: 11,
+		fontWeight: '600',
 		color: tokens.text.hint,
+		textTransform: 'uppercase',
+		letterSpacing: 1.2,
 		marginBottom: 4,
 	},
 	value: {
@@ -39,12 +44,15 @@ const styles = StyleSheet.create({
 		color: tokens.text.primary,
 	},
 	signOutButton: {
+		flexDirection: 'row',
+		gap: 8,
 		paddingVertical: 14,
 		borderRadius: 8,
 		backgroundColor: tokens.surface.card,
 		borderWidth: 1,
 		borderColor: tokens.border.subtle,
 		alignItems: 'center',
+		justifyContent: 'center',
 		marginBottom: 24,
 	},
 	signOutText: {
@@ -57,5 +65,6 @@ const styles = StyleSheet.create({
 		color: tokens.text.hint,
 		textAlign: 'center',
 		marginTop: 'auto',
+		fontFamily: 'monospace',
 	},
 });

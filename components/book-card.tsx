@@ -1,5 +1,6 @@
+import { ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Book3D } from '@/components/Book3D';
 import { tokens } from '@/constants/tokens';
@@ -13,15 +14,19 @@ export function BookCard({ book }: BookCardProps) {
 	const router = useRouter();
 
 	return (
-		<View style={styles.container}>
+		<Pressable
+			style={({ pressed }) => [styles.container, pressed && styles.pressed]}
+			onPress={() => router.push(`/book/${book.id}`)}
+			accessibilityLabel={`${book.title} by ${book.author.join(', ')}`}
+			accessibilityRole="button"
+		>
 			<Book3D
 				coverUri={book.cover_image}
 				title={book.title}
 				author={book.author}
-				width={80}
-				height={120}
-				onPress={() => router.push(`/book/${book.id}`)}
-				accessibilityLabel={`Book cover: ${book.title} by ${book.author.join(', ')}`}
+				width={72}
+				height={108}
+				accessibilityLabel=""
 			/>
 			<View style={styles.info}>
 				<Text style={styles.title} numberOfLines={2}>
@@ -30,7 +35,7 @@ export function BookCard({ book }: BookCardProps) {
 				<Text style={styles.author} numberOfLines={1}>
 					{book.author.join(', ')}
 				</Text>
-				<View style={styles.badges}>
+				<View style={styles.metaRow}>
 					<View
 						style={[
 							styles.badge,
@@ -46,24 +51,29 @@ export function BookCard({ book }: BookCardProps) {
 					)}
 				</View>
 			</View>
-		</View>
+			<ChevronRight size={16} color={tokens.text.hint} strokeWidth={2} />
+		</Pressable>
 	);
 }
 
 const styles = StyleSheet.create({
 	container: {
 		flexDirection: 'row',
-		padding: 12,
-		gap: 16,
+		paddingVertical: 10,
+		paddingHorizontal: 12,
+		gap: 14,
 		alignItems: 'center',
+	},
+	pressed: {
+		backgroundColor: tokens.surface.card,
 	},
 	info: {
 		flex: 1,
 		justifyContent: 'center',
-		gap: 4,
+		gap: 3,
 	},
 	title: {
-		fontSize: 16,
+		fontSize: 15,
 		fontWeight: '600',
 		color: tokens.text.primary,
 	},
@@ -71,11 +81,11 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 		color: tokens.text.secondary,
 	},
-	badges: {
+	metaRow: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		gap: 8,
-		marginTop: 4,
+		marginTop: 3,
 	},
 	badge: {
 		paddingHorizontal: 6,

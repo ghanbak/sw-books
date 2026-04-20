@@ -2,6 +2,7 @@ import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import 'react-native-reanimated';
 
 import { tokens } from '@/constants/tokens';
@@ -30,16 +31,27 @@ export default function RootLayout() {
 
 	return (
 		<ThemeProvider value={appDarkTheme}>
-			<Stack>
+			<Stack
+				screenOptions={{
+					headerShadowVisible: false,
+					...(Platform.OS === 'ios'
+						? {
+								headerTransparent: true,
+								headerBlurEffect: 'systemMaterial',
+								headerLargeStyle: { backgroundColor: tokens.surface.background },
+							}
+						: {
+								headerStyle: { backgroundColor: tokens.surface.background },
+							}),
+					headerTintColor: tokens.text.primary,
+				}}
+			>
 				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 				<Stack.Screen
 					name="book/[id]"
 					options={{
 						title: 'Book Details',
 						headerBackTitle: 'Back',
-						headerStyle: { backgroundColor: tokens.surface.background },
-						headerTintColor: tokens.text.primary,
-						headerShadowVisible: false,
 					}}
 				/>
 			</Stack>

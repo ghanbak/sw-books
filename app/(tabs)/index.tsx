@@ -1,3 +1,4 @@
+import { Search } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import {
 	ActivityIndicator,
@@ -13,7 +14,6 @@ import { BookCard } from '@/components/book-card';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 
 type CanonFilter = 'all' | 'Canon' | 'Legends';
 
@@ -45,7 +45,16 @@ export default function CatalogScreen() {
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 	const separator = useCallback(
-		() => <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: tokens.border.subtle, marginHorizontal: 12 }} />,
+		() => (
+			<View
+				style={{
+					height: StyleSheet.hairlineWidth,
+					backgroundColor: tokens.border.subtle,
+					marginLeft: 108,
+					marginRight: 12,
+				}}
+			/>
+		),
 		[],
 	);
 
@@ -73,10 +82,10 @@ export default function CatalogScreen() {
 		<View style={styles.container}>
 			<View style={styles.searchBar}>
 				<View style={styles.searchInputWrapper}>
-					<IconSymbol name="magnifyingglass" size={16} color={tokens.text.hint} />
+					<Search size={16} color={tokens.text.hint} strokeWidth={2} />
 					<TextInput
 						style={styles.searchInput}
-						placeholder="Search by title, author, or series..."
+						placeholder="Search title, author, or series..."
 						placeholderTextColor={tokens.text.hint}
 						value={search}
 						onChangeText={setSearch}
@@ -96,7 +105,9 @@ export default function CatalogScreen() {
 							style={[styles.filterChip, active && styles.filterChipActive]}
 							onPress={() => setCanonFilter(filter)}
 						>
-							<Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+							<Text
+								style={[styles.filterChipText, active && styles.filterChipTextActive]}
+							>
 								{filter === 'all' ? 'All' : filter}
 							</Text>
 						</Pressable>
@@ -185,6 +196,7 @@ const styles = StyleSheet.create({
 		marginLeft: 'auto',
 		fontSize: 12,
 		color: tokens.text.hint,
+		fontFamily: 'monospace',
 	},
 	emptyContainer: {
 		flex: 1,

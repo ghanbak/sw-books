@@ -1,7 +1,9 @@
 import { Tabs } from 'expo-router';
+import { Platform } from 'react-native';
+
+import { BookOpen, Library, ScanBarcode, User } from 'lucide-react-native';
 
 import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { tokens } from '@/constants/tokens';
 
 export default function TabLayout() {
@@ -10,12 +12,20 @@ export default function TabLayout() {
 			screenOptions={{
 				tabBarActiveTintColor: tokens.accent.primary,
 				tabBarInactiveTintColor: tokens.text.hint,
-				tabBarStyle: {
-					backgroundColor: tokens.surface.background,
-					borderTopColor: tokens.border.subtle,
-				},
+				tabBarStyle: Platform.select({
+					// iOS 26: let Liquid Glass show through — no opaque background
+					ios: {
+						position: 'absolute',
+						borderTopWidth: 0,
+					},
+					// Android: keep dark surface
+					default: {
+						backgroundColor: tokens.surface.background,
+						borderTopColor: tokens.border.subtle,
+					},
+				}),
 				headerStyle: {
-					backgroundColor: tokens.surface.background,
+					backgroundColor: Platform.OS === 'ios' ? 'transparent' : tokens.surface.background,
 				},
 				headerTintColor: tokens.text.primary,
 				headerShadowVisible: false,
@@ -26,16 +36,14 @@ export default function TabLayout() {
 				name="index"
 				options={{
 					title: 'Catalog',
-					tabBarIcon: ({ color }) => <IconSymbol size={28} name="book.fill" color={color} />,
+					tabBarIcon: ({ color, size }) => <BookOpen size={size} color={color} />,
 				}}
 			/>
 			<Tabs.Screen
 				name="shelf"
 				options={{
 					title: 'Bookshelf',
-					tabBarIcon: ({ color }) => (
-						<IconSymbol size={28} name="books.vertical.fill" color={color} />
-					),
+					tabBarIcon: ({ color, size }) => <Library size={size} color={color} />,
 				}}
 			/>
 			<Tabs.Screen
@@ -43,18 +51,14 @@ export default function TabLayout() {
 				options={{
 					title: 'Scan',
 					headerShown: false,
-					tabBarIcon: ({ color }) => (
-						<IconSymbol size={28} name="barcode.viewfinder" color={color} />
-					),
+					tabBarIcon: ({ color, size }) => <ScanBarcode size={size} color={color} />,
 				}}
 			/>
 			<Tabs.Screen
 				name="profile"
 				options={{
 					title: 'Profile',
-					tabBarIcon: ({ color }) => (
-						<IconSymbol size={28} name="person.fill" color={color} />
-					),
+					tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
 				}}
 			/>
 		</Tabs>
