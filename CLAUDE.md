@@ -46,3 +46,23 @@ Star Wars book tracker mobile app built with Expo (React Native) + Supabase.
 - Column names match the CSV headers
 - RLS enforced: authenticated users read all books, CRUD own user_books only
 - Admin manages catalog via Supabase Studio
+
+## Design Context
+
+**Personality:** Bold, Playful, Galactic — but grounded. Star Wars datapad feel without literal theming.
+
+**Aesthetic:** Dark mode cinematic + skeuomorphic book covers. Dark surfaces, books are the visual heroes. Inspiration: Apple Books shelf UI + official Star Wars app datapad aesthetic.
+
+**Color tokens (design for theming):**
+- Primary accent: Lightsaber blue (`#4A90D9`) — buttons, active states, toggles
+- Secondary accent: Star Wars yellow (`#FFE81F`) — scanner, badges, emphasis only
+- Canon badge: `#1a3a5c` / Legends badge: `#5c3a1a`
+- Background: `#0A0A0C` / Card: `#1A1A1E` / Border: `rgba(255,255,255,0.08)`
+- Text primary: `#ECEDEE` / Secondary: `rgba(255,255,255,0.6)` / Hint: `rgba(255,255,255,0.3)`
+
+**Principles:**
+1. Books are the hero — UI recedes, covers pop
+2. Tactile, not theatrical — skeuomorphism serves function
+3. Collector's pride — make users feel good about their collection
+4. Galactic identity without cosplay — Star Wars through color and confidence
+5. Design for theming — colors are tokens, Jedi blue default, other themes planned
