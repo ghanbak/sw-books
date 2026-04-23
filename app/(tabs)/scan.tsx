@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { Book3D } from '@/components/Book3D';
@@ -88,14 +88,22 @@ export default function ScanScreen() {
 
 	// Permission denied
 	if (!permission.granted) {
+		const canAsk = permission.canAskAgain;
 		return (
 			<View style={styles.center}>
 				<Text style={styles.permissionTitle}>Camera Access Needed</Text>
 				<Text style={styles.permissionText}>
-					SW Books needs camera access to scan book barcodes.
+					{canAsk
+						? 'SW Books needs camera access to scan book barcodes.'
+						: 'Camera access was denied. Enable it in Settings to scan barcodes.'}
 				</Text>
-				<Pressable style={styles.permissionButton} onPress={requestPermission}>
-					<Text style={styles.permissionButtonText}>Grant Access</Text>
+				<Pressable
+					style={styles.permissionButton}
+					onPress={canAsk ? requestPermission : () => Linking.openSettings()}
+				>
+					<Text style={styles.permissionButtonText}>
+						{canAsk ? 'Grant Access' : 'Open Settings'}
+					</Text>
 				</Pressable>
 			</View>
 		);
