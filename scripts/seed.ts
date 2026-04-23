@@ -80,10 +80,23 @@ function splitMultiValue(val: string): string[] {
 		.filter((v, i, a) => a.indexOf(v) === i); // dedupe
 }
 
+// Load multi-format ISBN overrides (change-set produced by source-isbns.ts).
+// Each entry replaces the single CSV ISBN with the full array of editions for
+// that book. Books not in the override file keep their single CSV ISBN.
+function loadIsbnOverrides(): Record<string, string[]> {
+	const path = resolve(__dirname, '..', 'data', 'isbn-overrides.json');
+	try {
+		return JSON.parse(readFileSync(path, 'utf-8')) as Record<string, string[]>;
+	} catch {
+		return {};
+	}
+}
+
 // --- Main ---
 
 async function main() {
 	const csvPath = resolve(__dirname, '..', 'data', 'books.csv');
+	const isbnOverrides = loadIsbnOverrides();
 	const raw = readFileSync(csvPath, 'utf-8').replace(/^\uFEFF/, ''); // strip BOM
 
 	const lines = raw.split('\n').filter((l) => l.trim());
@@ -126,7 +139,7 @@ async function main() {
 			canon: fields[col('canon')], // "Canon" or "Legends"
 			date_published: parseDate(fields[col('date_published')]),
 			format: splitMultiValue(fields[col('format')]),
-			isbn: fields[col('isbn')] ? [fields[col('isbn')]] : [],
+			isbn: isbnOverrides[slug] ?? (fields[col('isbn')] ? [fields[col('isbn')]] : []),
 			language: fields[col('language')] || 'English',
 			publisher: fields[col('publisher')] || null,
 			series_name: seriesName,
