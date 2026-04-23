@@ -30,12 +30,21 @@ export default function CatalogScreen() {
 		}
 
 		if (search.trim()) {
-			const q = search.toLowerCase();
+			// Normalize by lowercasing and stripping non-alphanumerics so punctuation
+			// in titles ("I, Jedi") doesn't block substring matches for queries like
+			// "i jedi", "ijedi", or the slug "i-jedi".
+			const norm = (s: string) =>
+				s
+					.toLowerCase()
+					.replace(/[^a-z0-9]+/g, ' ')
+					.trim();
+			const q = norm(search);
 			result = result.filter(
 				(b) =>
-					b.title.toLowerCase().includes(q) ||
-					b.author.some((a) => a.toLowerCase().includes(q)) ||
-					b.series_name?.toLowerCase().includes(q),
+					norm(b.title).includes(q) ||
+					b.author.some((a) => norm(a).includes(q)) ||
+					(b.series_name ? norm(b.series_name).includes(q) : false) ||
+					norm(b.slug).includes(q),
 			);
 		}
 
@@ -105,9 +114,7 @@ export default function CatalogScreen() {
 							style={[styles.filterChip, active && styles.filterChipActive]}
 							onPress={() => setCanonFilter(filter)}
 						>
-							<Text
-								style={[styles.filterChipText, active && styles.filterChipTextActive]}
-							>
+							<Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
 								{filter === 'all' ? 'All' : filter}
 							</Text>
 						</Pressable>

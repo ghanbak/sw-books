@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from 'expo-router';
 import {
 	BookOpen,
 	Bookmark,
@@ -9,7 +10,6 @@ import {
 	Library,
 	Package,
 } from 'lucide-react-native';
-import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
 	ActivityIndicator,
@@ -106,19 +106,37 @@ export default function BookDetailScreen() {
 			{/* Shelf actions */}
 			<View style={styles.shelfButtons}>
 				<ShelfButton
-					icon={<Library size={16} color={shelfEntry?.owned ? tokens.text.inverse : tokens.text.secondary} strokeWidth={2} />}
+					icon={
+						<Library
+							size={16}
+							color={shelfEntry?.owned ? tokens.text.inverse : tokens.text.secondary}
+							strokeWidth={2}
+						/>
+					}
 					label="Owned"
 					active={shelfEntry?.owned ?? false}
 					onPress={() => toggleShelf(book.id, 'owned')}
 				/>
 				<ShelfButton
-					icon={<BookOpen size={16} color={shelfEntry?.read ? tokens.text.inverse : tokens.text.secondary} strokeWidth={2} />}
+					icon={
+						<BookOpen
+							size={16}
+							color={shelfEntry?.read ? tokens.text.inverse : tokens.text.secondary}
+							strokeWidth={2}
+						/>
+					}
 					label="Read"
 					active={shelfEntry?.read ?? false}
 					onPress={() => toggleShelf(book.id, 'read')}
 				/>
 				<ShelfButton
-					icon={<Bookmark size={16} color={shelfEntry?.want_to_read ? tokens.text.inverse : tokens.text.secondary} strokeWidth={2} />}
+					icon={
+						<Bookmark
+							size={16}
+							color={shelfEntry?.want_to_read ? tokens.text.inverse : tokens.text.secondary}
+							strokeWidth={2}
+						/>
+					}
 					label="Want to Read"
 					active={shelfEntry?.want_to_read ?? false}
 					onPress={() => toggleShelf(book.id, 'want_to_read')}
@@ -160,8 +178,17 @@ export default function BookDetailScreen() {
 						value={publishedDate}
 					/>
 				)}
-				{book.language && (
-					<DetailRow label="Language" value={book.language} />
+				{book.language && <DetailRow label="Language" value={book.language} />}
+				{book.timeline_order != null && (
+					<DetailRow
+						label="Timeline"
+						value={
+							book.timeline_order < 0
+								? `${Math.abs(book.timeline_order)} BBY`
+								: `${book.timeline_order} ABY`
+						}
+						mono
+					/>
 				)}
 			</View>
 
@@ -176,9 +203,6 @@ export default function BookDetailScreen() {
 							label="Book"
 							value={`#${book.series_order}`}
 						/>
-					)}
-					{book.timeline_order != null && (
-						<DetailRow label="Timeline" value={`${book.timeline_order} BBY`} mono />
 					)}
 				</View>
 			)}
@@ -207,25 +231,13 @@ export default function BookDetailScreen() {
 					{book.asin && (
 						<Pressable
 							style={styles.detailRowPressable}
-							onPress={() =>
-								Linking.openURL(`https://www.amazon.com/dp/${book.asin}`)
-							}
+							onPress={() => Linking.openURL(`https://www.amazon.com/dp/${book.asin}`)}
 						>
 							<View style={styles.detailRow}>
-								<ExternalLink
-									size={14}
-									color={tokens.text.hint}
-									strokeWidth={2}
-								/>
+								<ExternalLink size={14} color={tokens.text.hint} strokeWidth={2} />
 								<Text style={styles.detailLabel}>ASIN</Text>
-								<Text style={[styles.detailValue, styles.mono, styles.link]}>
-									{book.asin}
-								</Text>
-								<ChevronRight
-									size={12}
-									color={tokens.text.hint}
-									strokeWidth={2}
-								/>
+								<Text style={[styles.detailValue, styles.mono, styles.link]}>{book.asin}</Text>
+								<ChevronRight size={12} color={tokens.text.hint} strokeWidth={2} />
 							</View>
 						</Pressable>
 					)}
@@ -275,14 +287,9 @@ function ShelfButton({
 	onPress: () => void;
 }) {
 	return (
-		<Pressable
-			style={[styles.shelfButton, active && styles.shelfButtonActive]}
-			onPress={onPress}
-		>
+		<Pressable style={[styles.shelfButton, active && styles.shelfButtonActive]} onPress={onPress}>
 			{icon}
-			<Text style={[styles.shelfButtonText, active && styles.shelfButtonTextActive]}>
-				{label}
-			</Text>
+			<Text style={[styles.shelfButtonText, active && styles.shelfButtonTextActive]}>{label}</Text>
 		</Pressable>
 	);
 }
