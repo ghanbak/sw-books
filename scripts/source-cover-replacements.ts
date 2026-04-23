@@ -14,8 +14,8 @@
  *   npx tsx scripts/source-cover-replacements.ts
  */
 
-import { readFileSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const AUDIT_PATH = resolve(__dirname, 'cover-audit-report.json');
 const CSV_PATH = resolve(__dirname, '..', 'data', 'books.csv');
@@ -90,7 +90,12 @@ async function headOkOnce(url: string): Promise<boolean> {
 		const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
 		try {
 			// default=false returns 404 when OL has no image (otherwise it returns a 1x1).
-			const res = await fetch(url, { method: 'GET', signal: ctrl.signal, redirect: 'follow', headers: { Range: 'bytes=0-0' } });
+			const res = await fetch(url, {
+				method: 'GET',
+				signal: ctrl.signal,
+				redirect: 'follow',
+				headers: { Range: 'bytes=0-0' },
+			});
 			return res.status >= 200 && res.status < 300;
 		} finally {
 			clearTimeout(timer);
@@ -121,9 +126,13 @@ async function tryGoogleBooks(isbn: string): Promise<string | null> {
 			fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&maxResults=1`),
 		);
 		const j = (await res.json()) as {
-			items?: Array<{ volumeInfo?: { imageLinks?: { thumbnail?: string; smallThumbnail?: string } } }>;
+			items?: Array<{
+				volumeInfo?: { imageLinks?: { thumbnail?: string; smallThumbnail?: string } };
+			}>;
 		};
-		const raw = j.items?.[0]?.volumeInfo?.imageLinks?.thumbnail ?? j.items?.[0]?.volumeInfo?.imageLinks?.smallThumbnail;
+		const raw =
+			j.items?.[0]?.volumeInfo?.imageLinks?.thumbnail ??
+			j.items?.[0]?.volumeInfo?.imageLinks?.smallThumbnail;
 		if (!raw) return null;
 		// Force https, strip edge=curl which makes the image 'torn-page' looking, and drop zoom to get a larger img.
 		const url = raw
@@ -163,7 +172,10 @@ function normIsbn(s: string): string {
 }
 
 function norm(s: string | undefined): string {
-	return (s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+	return (s ?? '')
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, ' ')
+		.trim();
 }
 
 async function tryOpenLibrarySearch(
@@ -229,7 +241,9 @@ async function main() {
 
 		// 1. Open Library covers by ISBN
 		let url = await tryOpenLibraryByIsbn(isbn);
-		let source: Replacement['source'] = url ? 'ol-isbn-cover' : 'none';
+		// Source describes only the "resolved" case. When url is null at the end,
+		// we build a fresh "none" Replacement below and this value is unused.
+		let source: Extract<Replacement, { newUrl: string }>['source'] = 'ol-isbn-cover';
 		await sleep(POLITE_DELAY_MS);
 
 		// 2. Open Library Books API by ISBN
@@ -268,20 +282,24 @@ async function main() {
 			ok++;
 			process.stdout.write(`  ✓ ${source}: ${url}\n\n`);
 		} else {
-			out[b.slug] = { newUrl: null, source: 'none', note: 'OL has no cover via ISBN or title+author search' };
+			out[b.slug] = {
+				newUrl: null,
+				source: 'none',
+				note: 'OL has no cover via ISBN or title+author search',
+			};
 			miss++;
-			process.stdout.write(`  ✗ no OL cover found\n\n`);
+			process.stdout.write('  ✗ no OL cover found\n\n');
 		}
 	}
 
 	writeFileSync(OUT_PATH, JSON.stringify(out, null, 2));
-	process.stdout.write(`\n=== Summary ===\n`);
+	process.stdout.write('\n=== Summary ===\n');
 	process.stdout.write(`  resolved : ${ok}\n`);
 	process.stdout.write(`  missing  : ${miss}\n`);
 	process.stdout.write(`  written  : ${OUT_PATH}\n`);
 
 	if (miss > 0) {
-		process.stdout.write(`\nMissing (manual upload or alternate source needed):\n`);
+		process.stdout.write('\nMissing (manual upload or alternate source needed):\n');
 		for (const [slug, rep] of Object.entries(out)) {
 			if (rep.newUrl === null) process.stdout.write(`  - ${slug}\n`);
 		}

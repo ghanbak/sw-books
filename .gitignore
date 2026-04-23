@@ -36,6 +36,7 @@ yarn-error.log*
 
 # scripts — transient outputs (regenerable; cached API responses or audit reports)
 scripts/cover-audit-report.json
+scripts/placeholder-report.json
 scripts/isbn-cache.json
 scripts/isbn-report.txt
 

@@ -1,0 +1,491 @@
+{
+  "ran_at": "2026-04-23T07:15:57.691Z",
+  "total": 184,
+  "kept": 112,
+  "changed": 64,
+  "missing": 8,
+  "changes": [
+    {
+      "slug": "the-fallen-star",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780593158432",
+      "newUrl": "https://books.google.com/books/content?id=kWeCyQEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "bd563482cfbf6da6ab24908f4d10f195"
+    },
+    {
+      "slug": "convergence",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780593358566",
+      "newUrl": "https://covers.openlibrary.org/b/id/14809390-L.jpg?default=false",
+      "source": "ol-search-title",
+      "md5": "a2ab94f40e17cbd65080f3a66e02e6bd"
+    },
+    {
+      "slug": "the-eye-of-darkness",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780593598528",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780593598528-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "0bd7f0f6e2365eb53a9405df01516e2c"
+    },
+    {
+      "slug": "defy-the-storm",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9781368093941",
+      "newUrl": "https://books.google.com/books/content?id=WiauEQAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "dbaecce4485ba69f72c4f657a522a05e"
+    },
+    {
+      "slug": "temptation-of-the-force",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780593598535",
+      "newUrl": "https://books.google.com/books/content?id=MKxnEAAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "ea1b314fc398316e94e53c12f1c7c93a"
+    },
+    {
+      "slug": "trials-of-the-jedi",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780593598542",
+      "newUrl": "https://books.google.com/books/content?id=sz7REAAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "ab2092e5211a2f0c1a6d667064caab1c"
+    },
+    {
+      "slug": "acolyte-crystal-crown",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9781368099123",
+      "newUrl": "https://books.google.com/books/content?id=DjIP0AEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "8633b2bda2b1823d6380956def954eb2"
+    },
+    {
+      "slug": "tarkin",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345511522",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345511522-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "7a4e9b433eef0ae67123a3308459c09e"
+    },
+    {
+      "slug": "battlefront-ii-inferno-squad",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780525479543",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780525479543-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "bf77c41bc74851d088f3ccf51f8432c7"
+    },
+    {
+      "slug": "battlefront-twilight-company",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345511287",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345511287-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "b691f7f2c8b75d8d291c00f437a18b85"
+    },
+    {
+      "slug": "aftermath-empires-end",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345511645",
+      "newUrl": "https://covers.openlibrary.org/b/id/15191492-L.jpg?default=false",
+      "source": "ol-search-title",
+      "md5": "20ff4a85daf6562ca44d192e546913c0"
+    },
+    {
+      "slug": "darth-bane-rule-of-two",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477491",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345477491-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "1bb9c216d7c9e818d53a9397361196f2"
+    },
+    {
+      "slug": "darth-bane-dynasty-of-evil",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345511560",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345511560-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "0b3e5f06da6bfd0bfcc48a7d088ac651"
+    },
+    {
+      "slug": "darth-plagueis",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345511287",
+      "newUrl": "https://books.google.com/books/content?id=0Dz8LghGzcUC&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "a19cc807049a430df5f9018144967eac"
+    },
+    {
+      "slug": "rogue-planet",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345435392",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345435392-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "88d9883ff89ab73895736aed01e07310"
+    },
+    {
+      "slug": "outbound-flight",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345456830",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345456830-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "3ecfe6146416861cd2862472bf0b609e"
+    },
+    {
+      "slug": "labyrinth-of-evil",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345475725",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345475725-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "0784757fa28c27c20ac8363cf499c0c5"
+    },
+    {
+      "slug": "dark-lord-rise-of-darth-vader",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477323",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345477323-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "b3a6a7588df0019bdcec3a1886c20796"
+    },
+    {
+      "slug": "coruscant-nights-i-jedi-twilight",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477521",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345477521-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "387b13f00544e5e4307b805e99e7134c"
+    },
+    {
+      "slug": "coruscant-nights-ii-street-of-shadows",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477545",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345477545-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "b6282619b8f391f96cc4b86c26597e65"
+    },
+    {
+      "slug": "coruscant-nights-iii-patterns-of-force",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477569",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345477569-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "2c6fd6356fb7391ef02be7611e2660e1"
+    },
+    {
+      "slug": "kenobi",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345546838",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345546838-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "b1385092ef8413ff69ae5235de7894a9"
+    },
+    {
+      "slug": "death-star",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477422",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345477422-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "6003ceb5568c8fad1d1d6f46e836d3b4"
+    },
+    {
+      "slug": "han-solo-at-stars-end",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345296641",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345296641-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "8260412ee988c7b702dfe31aad310a3f"
+    },
+    {
+      "slug": "han-solos-revenge",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345287571",
+      "newUrl": "https://books.google.com/books/content?id=STBBAAAAIAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "c70394cb3421251c0999ac61d2242ca7"
+    },
+    {
+      "slug": "han-solo-and-the-lost-legacy",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345290618",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345290618-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "d3ea17cf4b06dfceb185ad89d4f0c12f"
+    },
+    {
+      "slug": "lando-calrissian-mindharp",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345312945",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345312945-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "6f0827e43879f7d2c045c80a2701917d"
+    },
+    {
+      "slug": "lando-calrissian-flamewind",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345312952",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345312952-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "c7c0e7ca2b89adf88c7c54f135c4bd32"
+    },
+    {
+      "slug": "lando-calrissian-starcave",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345312969",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345312969-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "238585cee9bf85cf512c28b726faa178"
+    },
+    {
+      "slug": "empire-strikes-back-novelization",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345283924",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345283924-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "4f9d4cd503457e3eaa6b58f9c4ec5318"
+    },
+    {
+      "slug": "luke-skywalker-shadows-of-mindor",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477453",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345477453-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "c6141e43e6e3eaaa2df25505e3f83527"
+    },
+    {
+      "slug": "allegiance",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477385",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345477385-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "13104e5d38fb09456a686e54806dbb32"
+    },
+    {
+      "slug": "razor-s-edge",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345545251",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345545251-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "34664fad41c41a3a7977472979e8cbba"
+    },
+    {
+      "slug": "honor-among-thieves",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345546852",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345546852-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "238c71c8c5ff46dd9b4402302e81338a"
+    },
+    {
+      "slug": "x-wing-rogue-squadron",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780553570043",
+      "newUrl": "https://books.google.com/books/content?id=sQQDo8B6_VgC&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "8e41fde48afc034cdf93d6cb622cdf9e"
+    },
+    {
+      "slug": "x-wing-wedges-gamble",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780553570050",
+      "newUrl": "https://books.google.com/books/content?id=e1JFl_E5kK4C&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "fac5982fc4648fa7f87d6243e90cd7c1"
+    },
+    {
+      "slug": "x-wing-krytos-trap",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780553570067",
+      "newUrl": "https://books.google.com/books/content?id=omrWAAAAMAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "51ee84a840a9764d252392e82b56836f"
+    },
+    {
+      "slug": "x-wing-bacta-war",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780553570074",
+      "newUrl": "https://books.google.com/books/content?id=ZepHnqy4PkUC&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "a39d435823584744542129685b1b9798"
+    },
+    {
+      "slug": "x-wing-wraith-squadron",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780553570081",
+      "newUrl": "https://books.google.com/books/content?id=7Z7U-weu5o4C&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "1da50f27e38b0efd4bf0895d7cdde2bb"
+    },
+    {
+      "slug": "x-wing-iron-fist",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780553570098",
+      "newUrl": "https://books.google.com/books/content?id=ZhUrKG3dwCEC&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "f83e57def7d0d2aad8d28f22dd682ef9"
+    },
+    {
+      "slug": "x-wing-solo-command",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780553570104",
+      "newUrl": "https://books.google.com/books/content?id=D6cAAAAACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "9bd2d5a2bd951ae033024339d067cfab"
+    },
+    {
+      "slug": "i-jedi",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780553108200",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780553108200-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "4f0691dd2991f4f3500700953f00e586"
+    },
+    {
+      "slug": "courtship-of-princess-leia",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780553564570",
+      "newUrl": "https://books.google.com/books/content?id=NIc0t_BRC_wC&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "44d72777171cb052061d67b6e3c7184a"
+    },
+    {
+      "slug": "corellian-trilogy-ambush",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780553572832",
+      "newUrl": "https://books.google.com/books/content?id=kgmOEAAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "c1deb04778b37f9fd716b9dc7882c5e3"
+    },
+    {
+      "slug": "corellian-trilogy-assault",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780553572849",
+      "newUrl": "https://books.google.com/books/content?id=Y_pvDwAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "d7839b0d518050835b454776bb69a41b"
+    },
+    {
+      "slug": "corellian-trilogy-showdown",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780553572856",
+      "newUrl": "https://books.google.com/books/content?id=01XKgiuFbMAC&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "d8c96164e592cae4d53df589bcca6ee8"
+    },
+    {
+      "slug": "hand-of-thrawn-vision",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780553572993",
+      "newUrl": "https://books.google.com/books/content?id=hAmG8fdJJv4C&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "40fee13f16587d6496b9bab7c208c5df"
+    },
+    {
+      "slug": "njo-agents-of-chaos-heros-trial",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345428578",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345428578-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "dbdc82514057810842ca5558e01f3667"
+    },
+    {
+      "slug": "njo-edge-of-victory-rebirth",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345428653",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345428653-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "88f2daa051c410f57259c1719a822d81"
+    },
+    {
+      "slug": "njo-enemy-lines-rebel-stand",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345428707",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345428707-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "898439752a5d4b7428a1c5f99d543e4f"
+    },
+    {
+      "slug": "njo-traitor",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345428653",
+      "newUrl": "https://books.google.com/books/content?id=jDLTCwAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "96ad1cf255bb56c6dec0f03019639400"
+    },
+    {
+      "slug": "njo-force-heretic-remnant",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345428707",
+      "newUrl": "https://books.google.com/books/content?id=A79Cq3w0c8oC&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "f3b71f47d1eba3bd47121356b1e561e4"
+    },
+    {
+      "slug": "njo-unifying-force",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345428523",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345428523-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "9640c33413d487b52d9cdbccd6e6300d"
+    },
+    {
+      "slug": "lotf-betrayal",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477453",
+      "newUrl": "https://books.google.com/books/content?id=Sg2NEAAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "b3172bca029f9b96d7fec06234ba926a"
+    },
+    {
+      "slug": "lotf-bloodlines",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477484",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345477484-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "99a92f297decfbc7c7fd77f1de88b183"
+    },
+    {
+      "slug": "lotf-tempest",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477460",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345477460-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "2a69b791ab15f27cdbd09b82c5802a42"
+    },
+    {
+      "slug": "lotf-sacrifice",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477491",
+      "newUrl": "https://books.google.com/books/content?id=UhLTCwAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "eac9aa1ca3899f22259487ca0343fcea"
+    },
+    {
+      "slug": "lotf-revelation",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477521",
+      "newUrl": "https://covers.openlibrary.org/b/id/11175206-L.jpg",
+      "source": "ol-books-api",
+      "md5": "10206b56197562a8a6cb89b6412c9940"
+    },
+    {
+      "slug": "fotj-outcast",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477545",
+      "newUrl": "https://books.google.com/books/content?id=Iw_TCwAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "cb55df4d7e7a49e9d9ad5d1a2b537c08"
+    },
+    {
+      "slug": "fotj-abyss",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477569",
+      "newUrl": "https://covers.openlibrary.org/b/id/11175224-L.jpg",
+      "source": "ol-books-api",
+      "md5": "ed648d383b9b54edead4d847b54ee56e"
+    },
+    {
+      "slug": "shadows-of-mindor",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345477446",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345477446-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "9ef942302fde2798ead70d6e3dbe9fee"
+    },
+    {
+      "slug": "death-troopers",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345509628",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345509628-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "c2accefa9c5c3b5af113295212c753de"
+    },
+    {
+      "slug": "millennium-falcon",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345507006",
+      "newUrl": "https://covers.openlibrary.org/b/isbn/9780345507006-L.jpg?default=false",
+      "source": "ol-isbn",
+      "md5": "2eef24c44cc24e681545c3fb8e37c6b7"
+    },
+    {
+      "slug": "scourge",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345511522",
+      "newUrl": "https://books.google.com/books/content?id=LxPTCwAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books",
+      "md5": "b2d11950a9ae0b1e410a3e92917b8d6d"
+    }
+  ],
+  "missing_list": [
+    {
+      "slug": "path-of-deceit",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9781368076869"
+    },
+    {
+      "slug": "tears-of-the-nameless",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9781368093958"
+    },
+    {
+      "slug": "into-the-light",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9781368093965"
+    },
+    {
+      "slug": "the-living-force",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780593598559"
+    },
+    {
+      "slug": "queens-peril",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9781368057325"
+    },
+    {
+      "slug": "queens-shadow",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9781368025461"
+    },
+    {
+      "slug": "most-wanted",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9781368016636"
+    },
+    {
+      "slug": "njo-destinys-way",
+      "oldUrl": "https://images2.penguinrandomhouse.com/cover/9780345428738"
+    }
+  ]
+}
