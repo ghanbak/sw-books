@@ -1,0 +1,64 @@
+{
+  "x-wing-wedges-gamble": {
+    "newUrl": "https://images2.penguinrandomhouse.com/cover/9780553570050",
+    "source": "prh"
+  },
+  "x-wing-krytos-trap": {
+    "newUrl": "https://images2.penguinrandomhouse.com/cover/9780553570067",
+    "source": "prh"
+  },
+  "x-wing-bacta-war": {
+    "newUrl": "https://images2.penguinrandomhouse.com/cover/9780553570074",
+    "source": "prh"
+  },
+  "x-wing-wraith-squadron": {
+    "newUrl": "https://images2.penguinrandomhouse.com/cover/9780553570081",
+    "source": "prh"
+  },
+  "x-wing-iron-fist": {
+    "newUrl": "https://images2.penguinrandomhouse.com/cover/9780553570098",
+    "source": "prh"
+  },
+  "x-wing-solo-command": {
+    "newUrl": "https://images2.penguinrandomhouse.com/cover/9780553570104",
+    "source": "prh"
+  },
+  "jedi-academy-dark-apprentice": {
+    "newUrl": "https://covers.openlibrary.org/b/isbn/9780553568004-L.jpg?default=false",
+    "source": "ol-isbn-cover"
+  },
+  "jedi-academy-jedi-search": {
+    "newUrl": "https://covers.openlibrary.org/b/isbn/9780553567991-L.jpg?default=false",
+    "source": "ol-isbn-cover"
+  },
+  "jedi-academy-champions-of-the-force": {
+    "newUrl": "https://covers.openlibrary.org/b/isbn/9780553568011-L.jpg?default=false",
+    "source": "ol-isbn-cover"
+  },
+  "i-jedi": {
+    "newUrl": "https://images2.penguinrandomhouse.com/cover/9780553108200",
+    "source": "prh",
+    "note": "ISBN corrected from bogus 9780553572986 to 9780553108200 (Stackpole, Bantam 1998 hc)"
+  },
+  "courtship-of-princess-leia": {
+    "newUrl": "https://images2.penguinrandomhouse.com/cover/9780553564570",
+    "source": "prh"
+  },
+  "corellian-trilogy-assault": {
+    "newUrl": "https://images2.penguinrandomhouse.com/cover/9780553572849",
+    "source": "prh"
+  },
+  "corellian-trilogy-showdown": {
+    "newUrl": "https://images2.penguinrandomhouse.com/cover/9780553572856",
+    "source": "prh"
+  },
+  "hand-of-thrawn-specter": {
+    "newUrl": "https://images2.penguinrandomhouse.com/cover/9780553298048",
+    "source": "prh",
+    "note": "ISBN corrected from bogus 9780553572986 to 9780553298048 (Zahn, Bantam 1997 pb)"
+  },
+  "hand-of-thrawn-vision": {
+    "newUrl": "https://images2.penguinrandomhouse.com/cover/9780553572993",
+    "source": "prh"
+  }
+}
