@@ -16,26 +16,18 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 });
 
 /**
- * Signs in a dev test user, creating the account if it doesn't exist.
- * Only runs in development mode (__DEV__).
- * Call this once on app startup.
+ * Dev-only fallback used by the login screen until Google/Apple sign-in is wired.
+ * Returns null on success, or an error message on failure.
  */
-export async function ensureDevUser() {
-	if (!__DEV__) return;
-
-	const { data: { session } } = await supabase.auth.getSession();
-	if (session) return; // already signed in
+export async function signInAsDevUser(): Promise<string | null> {
+	if (!__DEV__) return 'Dev sign-in is disabled in production builds.';
 
 	const email = 'dev@swbooks.local';
 	const password = 'devpassword123';
 
-	// Try sign in first
 	const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-	if (!signInError) return;
+	if (!signInError) return null;
 
-	// If sign-in failed, create the account
 	const { error: signUpError } = await supabase.auth.signUp({ email, password });
-	if (signUpError) {
-		console.warn('[Dev Auth] Failed to create dev user:', signUpError.message);
-	}
+	return signUpError ? signUpError.message : null;
 }

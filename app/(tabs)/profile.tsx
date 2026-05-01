@@ -1,17 +1,38 @@
 import { LogOut } from 'lucide-react-native';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { tokens } from '@/constants/tokens';
+import { useAuth } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 
 export default function ProfileScreen() {
+	const { user } = useAuth();
+
+	const displayName =
+		(user?.user_metadata?.full_name as string | undefined) ??
+		(user?.user_metadata?.name as string | undefined) ??
+		user?.email ??
+		'Unknown';
+	const email = user?.email;
+	const provider = user?.app_metadata?.provider ?? 'email';
+
+	async function handleSignOut() {
+		const { error } = await supabase.auth.signOut();
+		if (error) {
+			Alert.alert('Sign-out failed', error.message);
+		}
+	}
+
 	return (
 		<View style={styles.container}>
 			<View style={styles.section}>
 				<Text style={styles.label}>Signed in as</Text>
-				<Text style={styles.value}>Dev User (auth bypassed)</Text>
+				<Text style={styles.value}>{displayName}</Text>
+				{email && email !== displayName && <Text style={styles.email}>{email}</Text>}
+				<Text style={styles.provider}>via {provider}</Text>
 			</View>
 
-			<Pressable style={styles.signOutButton} onPress={() => {}}>
+			<Pressable style={styles.signOutButton} onPress={handleSignOut}>
 				<LogOut size={16} color={tokens.status.error} strokeWidth={2} />
 				<Text style={styles.signOutText}>Sign Out</Text>
 			</Pressable>
@@ -42,6 +63,17 @@ const styles = StyleSheet.create({
 		fontSize: 17,
 		fontWeight: '500',
 		color: tokens.text.primary,
+	},
+	email: {
+		fontSize: 14,
+		color: tokens.text.secondary,
+		marginTop: 2,
+	},
+	provider: {
+		fontSize: 12,
+		color: tokens.text.hint,
+		marginTop: 4,
+		textTransform: 'capitalize',
 	},
 	signOutButton: {
 		flexDirection: 'row',

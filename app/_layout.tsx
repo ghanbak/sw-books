@@ -1,12 +1,12 @@
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { type ReactNode, useEffect } from 'react';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { tokens } from '@/constants/tokens';
-import { ensureDevUser } from '@/lib/supabase';
+import { AuthProvider, useAuth } from '@/lib/auth';
 
 const appDarkTheme = {
 	...DarkTheme,
@@ -25,37 +25,71 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-	useEffect(() => {
-		ensureDevUser();
-	}, []);
-
 	return (
-		<ThemeProvider value={appDarkTheme}>
-			<Stack
-				screenOptions={{
-					headerShadowVisible: false,
-					...(Platform.OS === 'ios'
-						? {
-								headerTransparent: true,
-								headerBlurEffect: 'systemMaterial',
-								headerLargeStyle: { backgroundColor: tokens.surface.background },
-							}
-						: {
-								headerStyle: { backgroundColor: tokens.surface.background },
-							}),
-					headerTintColor: tokens.text.primary,
+		<AuthProvider>
+			<ThemeProvider value={appDarkTheme}>
+				<AuthGate>
+					<Stack
+						screenOptions={{
+							headerShadowVisible: false,
+							...(Platform.OS === 'ios'
+								? {
+										headerTransparent: true,
+										headerBlurEffect: 'systemMaterial',
+										headerLargeStyle: { backgroundColor: tokens.surface.background },
+									}
+								: {
+										headerStyle: { backgroundColor: tokens.surface.background },
+									}),
+							headerTintColor: tokens.text.primary,
+						}}
+					>
+						<Stack.Screen name="(auth)" options={{ headerShown: false }} />
+						<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+						<Stack.Screen
+							name="book/[id]"
+							options={{
+								title: 'Book Details',
+								headerBackTitle: 'Back',
+							}}
+						/>
+					</Stack>
+				</AuthGate>
+				<StatusBar style="light" />
+			</ThemeProvider>
+		</AuthProvider>
+	);
+}
+
+function AuthGate({ children }: { children: ReactNode }) {
+	const { session, loading } = useAuth();
+	const segments = useSegments();
+	const router = useRouter();
+
+	useEffect(() => {
+		if (loading) return;
+		const inAuthGroup = segments[0] === '(auth)';
+		if (!session && !inAuthGroup) {
+			router.replace('/(auth)/login');
+		} else if (session && inAuthGroup) {
+			router.replace('/(tabs)');
+		}
+	}, [session, loading, segments, router]);
+
+	if (loading) {
+		return (
+			<View
+				style={{
+					flex: 1,
+					alignItems: 'center',
+					justifyContent: 'center',
+					backgroundColor: tokens.surface.background,
 				}}
 			>
-				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-				<Stack.Screen
-					name="book/[id]"
-					options={{
-						title: 'Book Details',
-						headerBackTitle: 'Back',
-					}}
-				/>
-			</Stack>
-			<StatusBar style="light" />
-		</ThemeProvider>
-	);
+				<ActivityIndicator color={tokens.accent.primary} />
+			</View>
+		);
+	}
+
+	return <>{children}</>;
 }
