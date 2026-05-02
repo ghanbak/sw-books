@@ -2,21 +2,25 @@ import { Apple } from 'lucide-react-native';
 import { Alert, Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { tokens } from '@/constants/tokens';
+import { signInWithApple, signInWithGoogle } from '@/lib/auth';
 import { signInAsDevUser } from '@/lib/supabase';
 
 export default function LoginScreen() {
 	async function handleGoogle() {
-		Alert.alert(
-			'Google Sign-In not configured',
-			'Complete the Google Cloud Console setup in docs/plans/2026-04-29-auth-setup-checklist.md, then this button will sign you in.',
-		);
+		try {
+			await signInWithGoogle();
+		} catch (error) {
+			Alert.alert('Google sign-in failed', errorMessage(error));
+		}
 	}
 
 	async function handleApple() {
-		Alert.alert(
-			'Apple Sign-In not configured',
-			'Complete the Apple Developer setup in docs/plans/2026-04-29-auth-setup-checklist.md, then this button will sign you in.',
-		);
+		try {
+			await signInWithApple();
+		} catch (error) {
+			if (isAppleCancellation(error)) return;
+			Alert.alert('Apple sign-in failed', errorMessage(error));
+		}
 	}
 
 	async function handleDev() {
@@ -60,6 +64,19 @@ export default function LoginScreen() {
 				By continuing, you agree to use this app for personal book tracking.
 			</Text>
 		</View>
+	);
+}
+
+function errorMessage(error: unknown) {
+	return error instanceof Error ? error.message : String(error);
+}
+
+function isAppleCancellation(error: unknown) {
+	return (
+		typeof error === 'object' &&
+		error !== null &&
+		'code' in error &&
+		(error as { code: unknown }).code === 'ERR_REQUEST_CANCELED'
 	);
 }
 
