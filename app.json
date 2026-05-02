@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "Archives of Ossus",
-    "slug": "sw-books",
+    "name": "OssusArchives",
+    "slug": "ossus-archives",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "swbooks",
+    "scheme": "ossusarchives",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ghanbak.swbooks"
+      "bundleIdentifier": "com.ghanbak.ossusarchives"
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +27,7 @@
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.ghanbak.swbooks"
+      "package": "com.ghanbak.ossusarchives"
     },
     "web": {
       "output": "static",
@@ -38,7 +38,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow SW Books to scan book barcodes",
+          "cameraPermission": "Allow OssusArchives to scan book barcodes",
           "barcodeScannerEnabled": true
         }
       ],

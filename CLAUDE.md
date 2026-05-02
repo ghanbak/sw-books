@@ -1,4 +1,4 @@
-# SW Books
+# OssusArchives
 
 Star Wars book tracker mobile app built with Expo (React Native) + Supabase.
 

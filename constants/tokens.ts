@@ -1,5 +1,5 @@
 /**
- * Design tokens for the SW Books app.
+ * Design tokens for the OssusArchives app.
  *
  * All UI colors should reference these tokens — no hardcoded hex values
  * in screen or component files. This enables future theming

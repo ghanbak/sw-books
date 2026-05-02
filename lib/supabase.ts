@@ -22,7 +22,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 export async function signInAsDevUser(): Promise<string | null> {
 	if (!__DEV__) return 'Dev sign-in is disabled in production builds.';
 
-	const email = 'dev@swbooks.local';
+	const email = 'dev@ossusarchives.local';
 	const password = 'devpassword123';
 
 	const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });

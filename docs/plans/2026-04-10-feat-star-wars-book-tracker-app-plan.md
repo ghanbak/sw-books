@@ -52,7 +52,7 @@ The Expo app talks directly to Supabase for catalog reads and shelf writes (RLS-
 ### Project Structure
 
 ```
-sw-books/
+ossus-archives/
 ├─ app/                         # Expo Router file-based routes
 │  ├─ _layout.tsx               # Root Stack layout
 │  ├─ (auth)/
@@ -332,7 +332,7 @@ After dismissing a result, camera resumes for the next scan. Scans are debounced
 **Goal:** Working app where users can sign in, browse the catalog, and save books to shelves.
 
 **Foundation:**
-- [x] Scaffold Expo app: `npx create-expo-app sw-books --template default`
+- [x] Scaffold Expo app: `npx create-expo-app ossus-archives --template default`
 - [x] Add `biome.json` at root
 - [x] Write `CLAUDE.md` with project conventions
 - [x] Update `.gitignore` for Expo + Supabase (remove Next.js entries)

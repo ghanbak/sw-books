@@ -37,7 +37,7 @@ export default function ProfileScreen() {
 				<Text style={styles.signOutText}>Sign Out</Text>
 			</Pressable>
 
-			<Text style={styles.version}>SW Books v1.0.0</Text>
+			<Text style={styles.version}>OssusArchives v1.0.0</Text>
 		</View>
 	);
 }

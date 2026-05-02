@@ -94,7 +94,7 @@ export default function ScanScreen() {
 				<Text style={styles.permissionTitle}>Camera Access Needed</Text>
 				<Text style={styles.permissionText}>
 					{canAsk
-						? 'SW Books needs camera access to scan book barcodes.'
+						? 'OssusArchives needs camera access to scan book barcodes.'
 						: 'Camera access was denied. Enable it in Settings to scan barcodes.'}
 				</Text>
 				<Pressable
