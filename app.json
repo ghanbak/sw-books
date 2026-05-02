@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "SW Books",
+    "name": "Archives of Ossus",
     "slug": "sw-books",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -23,8 +23,11 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "package": "com.ghanbak.swbooks"
     },
     "web": {
       "output": "static",
