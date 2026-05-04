@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="#0A0A0C"/>
+  <!-- Outer hexagon — holocron shell -->
+  <polygon points="512,192 789.13,352 789.13,672 512,832 234.87,672 234.87,352"
+           fill="none" stroke="#4A90D9" stroke-width="14" stroke-linejoin="round"/>
+  <!-- Y connectors — isometric cube projection -->
+  <line x1="512" y1="512" x2="512" y2="192" stroke="#4A90D9" stroke-width="14" stroke-linecap="round"/>
+  <line x1="512" y1="512" x2="789.13" y2="672" stroke="#4A90D9" stroke-width="14" stroke-linecap="round"/>
+  <line x1="512" y1="512" x2="234.87" y2="672" stroke="#4A90D9" stroke-width="14" stroke-linecap="round"/>
+  <!-- Inner hexagon — data lattice -->
+  <polygon points="512,372 633.24,442 633.24,582 512,652 390.76,582 390.76,442"
+           fill="none" stroke="#4A90D9" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Data core -->
+  <circle cx="512" cy="512" r="18" fill="#FFE81F"/>
+</svg>
