@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import type { Session, User } from '@supabase/supabase-js';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -10,6 +11,11 @@ GoogleSignin.configure({
 	webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
 	iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
 });
+
+// Apple only returns fullName on the very first sign-in for a given Apple ID + app.
+// We persist it locally before the Supabase round-trip so a crash or network failure
+// between Supabase auth and the metadata write doesn't lose the name forever.
+const PENDING_APPLE_NAME_KEY = 'pendingAppleName';
 
 type AuthContextValue = {
 	session: Session | null;
@@ -31,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 		supabase.auth.getSession().then(({ data }) => {
 			setSession(data.session);
 			setLoading(false);
+			if (data.session) flushPendingAppleName().catch(() => {});
 		});
 
 		const {
@@ -88,6 +95,15 @@ export async function signInWithApple() {
 		throw new Error('Apple did not return an identity token.');
 	}
 
+	const fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+		.filter(Boolean)
+		.join(' ');
+
+	// Persist before the Supabase call — Apple won't return this again.
+	if (fullName) {
+		await AsyncStorage.setItem(PENDING_APPLE_NAME_KEY, fullName);
+	}
+
 	const { error } = await supabase.auth.signInWithIdToken({
 		provider: 'apple',
 		token: credential.identityToken,
@@ -95,11 +111,25 @@ export async function signInWithApple() {
 	});
 	if (error) throw error;
 
-	const fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
-		.filter(Boolean)
-		.join(' ');
+	await flushPendingAppleName();
+}
 
-	if (fullName) {
-		await supabase.auth.updateUser({ data: { full_name: fullName } });
+async function flushPendingAppleName() {
+	const pending = await AsyncStorage.getItem(PENDING_APPLE_NAME_KEY);
+	if (!pending) return;
+
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+	if (!user) return;
+
+	if (user.user_metadata?.full_name) {
+		await AsyncStorage.removeItem(PENDING_APPLE_NAME_KEY);
+		return;
+	}
+
+	const { error } = await supabase.auth.updateUser({ data: { full_name: pending } });
+	if (!error) {
+		await AsyncStorage.removeItem(PENDING_APPLE_NAME_KEY);
 	}
 }
