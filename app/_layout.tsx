@@ -1,5 +1,10 @@
+import {
+	SpaceGrotesk_500Medium,
+	useFonts,
+} from '@expo-google-fonts/space-grotesk';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { type ReactNode, useEffect } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
@@ -8,6 +13,8 @@ import 'react-native-reanimated';
 import { tokens } from '@/constants/tokens';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { UserBooksProvider } from '@/lib/hooks';
+
+SplashScreen.preventAutoHideAsync();
 
 const appDarkTheme = {
 	...DarkTheme,
@@ -26,6 +33,16 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
+	const [fontsLoaded, fontError] = useFonts({ SpaceGrotesk_500Medium });
+
+	useEffect(() => {
+		if (fontsLoaded || fontError) {
+			SplashScreen.hideAsync();
+		}
+	}, [fontsLoaded, fontError]);
+
+	if (!fontsLoaded && !fontError) return null;
+
 	return (
 		<AuthProvider>
 			<UserBooksProvider>
@@ -44,6 +61,9 @@ export default function RootLayout() {
 										headerStyle: { backgroundColor: tokens.surface.background },
 									}),
 							headerTintColor: tokens.text.primary,
+							headerTitleStyle: {
+								fontFamily: 'SpaceGrotesk_500Medium',
+							},
 						}}
 					>
 						<Stack.Screen name="(auth)" options={{ headerShown: false }} />

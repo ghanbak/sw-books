@@ -144,6 +144,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "700",
+    fontFamily: "SpaceGrotesk_500Medium",
+    letterSpacing: 1.5,
     color: tokens.text.primary,
     marginBottom: 8,
     textAlign: "center",

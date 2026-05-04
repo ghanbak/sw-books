@@ -159,6 +159,8 @@ const styles = StyleSheet.create({
 	emptyTitle: {
 		fontSize: 22,
 		fontWeight: '700',
+		fontFamily: 'SpaceGrotesk_500Medium',
+		letterSpacing: 1,
 		marginBottom: 10,
 		color: tokens.text.primary,
 	},
