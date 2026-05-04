@@ -8,6 +8,8 @@ import Animated, {
 	withSpring,
 } from 'react-native-reanimated';
 
+import { tokens } from '@/constants/tokens';
+
 const COVER_COLORS = [
 	'#8B0000',
 	'#1a3a5c',
@@ -160,13 +162,13 @@ const styles = StyleSheet.create({
 		padding: 12,
 	},
 	fallbackTitle: {
-		color: '#fff',
+		color: tokens.text.primary,
 		fontWeight: '700',
 		textAlign: 'center',
 		fontSize: 13,
 	},
 	fallbackAuthor: {
-		color: 'rgba(255,255,255,0.6)',
+		color: tokens.text.secondary,
 		textAlign: 'center',
 		fontSize: 10,
 		marginTop: 4,

@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
 		zIndex: 10,
 	},
 	closeText: {
-		color: '#fff',
+		color: tokens.text.primary,
 		fontSize: 18,
 		fontWeight: '600',
 	},
@@ -364,13 +364,13 @@ const styles = StyleSheet.create({
 		padding: 20,
 	},
 	fallbackTitle: {
-		color: '#fff',
+		color: tokens.text.primary,
 		fontWeight: '700',
 		textAlign: 'center',
 		fontSize: 18,
 	},
 	fallbackAuthor: {
-		color: 'rgba(255,255,255,0.6)',
+		color: tokens.text.secondary,
 		textAlign: 'center',
 		fontSize: 13,
 		marginTop: 8,
@@ -381,18 +381,18 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 32,
 	},
 	title: {
-		color: '#fff',
+		color: tokens.text.primary,
 		fontSize: 20,
 		fontWeight: '700',
 		textAlign: 'center',
 	},
 	author: {
-		color: 'rgba(255,255,255,0.6)',
+		color: tokens.text.secondary,
 		fontSize: 15,
 		marginTop: 6,
 	},
 	hint: {
-		color: 'rgba(255,255,255,0.3)',
+		color: tokens.text.hint,
 		fontSize: 12,
 		marginTop: 16,
 	},

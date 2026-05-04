@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.badge.legends,
 	},
 	badgeText: {
-		color: '#fff',
+		color: tokens.text.primary,
 		fontSize: 10,
 		fontWeight: '600',
 	},

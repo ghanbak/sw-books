@@ -203,14 +203,17 @@ export default function ScanScreen() {
 	);
 }
 
+// Scanner-specialized: lighter than tokens.surface.overlay so the camera feed
+// remains partially visible behind the viewfinder mask.
 const OVERLAY_COLOR = 'rgba(0,0,0,0.55)';
 const CORNER_SIZE = 24;
 const CORNER_WIDTH = 3;
-const ACCENT = '#FFE81F'; // Star Wars yellow
 
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
+		// True black for the camera frame — tokens.surface.background is near-black
+		// and reads slightly off against the camera feed.
 		backgroundColor: '#000',
 	},
 	center: {
@@ -221,13 +224,13 @@ const styles = StyleSheet.create({
 		backgroundColor: '#000',
 	},
 	permissionTitle: {
-		color: '#fff',
+		color: tokens.text.primary,
 		fontSize: 20,
 		fontWeight: '600',
 		marginBottom: 8,
 	},
 	permissionText: {
-		color: 'rgba(255,255,255,0.6)',
+		color: tokens.text.secondary,
 		fontSize: 14,
 		textAlign: 'center',
 		marginBottom: 24,
@@ -236,9 +239,10 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 24,
 		paddingVertical: 12,
 		borderRadius: 8,
-		backgroundColor: ACCENT,
+		backgroundColor: tokens.accent.secondary,
 	},
 	permissionButtonText: {
+		// True black for max contrast on yellow.
 		color: '#000',
 		fontSize: 15,
 		fontWeight: '600',
@@ -270,7 +274,7 @@ const styles = StyleSheet.create({
 		paddingTop: 24,
 	},
 	viewfinderHint: {
-		color: '#fff',
+		color: tokens.text.primary,
 		fontSize: 14,
 		opacity: 0.8,
 	},
@@ -285,33 +289,33 @@ const styles = StyleSheet.create({
 		left: 0,
 		borderTopWidth: CORNER_WIDTH,
 		borderLeftWidth: CORNER_WIDTH,
-		borderColor: ACCENT,
+		borderColor: tokens.accent.secondary,
 	},
 	cornerTR: {
 		top: 0,
 		right: 0,
 		borderTopWidth: CORNER_WIDTH,
 		borderRightWidth: CORNER_WIDTH,
-		borderColor: ACCENT,
+		borderColor: tokens.accent.secondary,
 	},
 	cornerBL: {
 		bottom: 0,
 		left: 0,
 		borderBottomWidth: CORNER_WIDTH,
 		borderLeftWidth: CORNER_WIDTH,
-		borderColor: ACCENT,
+		borderColor: tokens.accent.secondary,
 	},
 	cornerBR: {
 		bottom: 0,
 		right: 0,
 		borderBottomWidth: CORNER_WIDTH,
 		borderRightWidth: CORNER_WIDTH,
-		borderColor: ACCENT,
+		borderColor: tokens.accent.secondary,
 	},
 	// Result overlay
 	resultOverlay: {
 		...StyleSheet.absoluteFillObject,
-		backgroundColor: 'rgba(0,0,0,0.85)',
+		backgroundColor: tokens.surface.overlay,
 		justifyContent: 'center',
 		alignItems: 'center',
 		padding: 24,
@@ -331,12 +335,12 @@ const styles = StyleSheet.create({
 		gap: 6,
 	},
 	resultTitle: {
-		color: '#fff',
+		color: tokens.text.primary,
 		fontSize: 17,
 		fontWeight: '600',
 	},
 	resultAuthor: {
-		color: 'rgba(255,255,255,0.6)',
+		color: tokens.text.secondary,
 		fontSize: 13,
 	},
 	resultButton: {
@@ -344,10 +348,11 @@ const styles = StyleSheet.create({
 		paddingVertical: 10,
 		paddingHorizontal: 16,
 		borderRadius: 8,
-		backgroundColor: ACCENT,
+		backgroundColor: tokens.accent.secondary,
 		alignSelf: 'flex-start',
 	},
 	resultButtonText: {
+		// True black for max contrast on yellow.
 		color: '#000',
 		fontSize: 14,
 		fontWeight: '600',
@@ -357,17 +362,17 @@ const styles = StyleSheet.create({
 		gap: 8,
 	},
 	messageTitle: {
-		color: '#fff',
+		color: tokens.text.primary,
 		fontSize: 20,
 		fontWeight: '600',
 	},
 	messageText: {
-		color: 'rgba(255,255,255,0.6)',
+		color: tokens.text.secondary,
 		fontSize: 14,
 		textAlign: 'center',
 	},
 	messageIsbn: {
-		color: 'rgba(255,255,255,0.3)',
+		color: tokens.text.hint,
 		fontSize: 12,
 		fontFamily: 'monospace',
 		marginTop: 8,
@@ -380,7 +385,7 @@ const styles = StyleSheet.create({
 		backgroundColor: 'rgba(255,255,255,0.12)',
 	},
 	dismissText: {
-		color: '#fff',
+		color: tokens.text.primary,
 		fontSize: 14,
 		fontWeight: '500',
 	},
