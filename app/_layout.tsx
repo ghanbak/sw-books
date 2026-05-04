@@ -7,6 +7,7 @@ import 'react-native-reanimated';
 
 import { tokens } from '@/constants/tokens';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { UserBooksProvider } from '@/lib/hooks';
 
 const appDarkTheme = {
 	...DarkTheme,
@@ -27,8 +28,9 @@ export const unstable_settings = {
 export default function RootLayout() {
 	return (
 		<AuthProvider>
-			<ThemeProvider value={appDarkTheme}>
-				<AuthGate>
+			<UserBooksProvider>
+				<ThemeProvider value={appDarkTheme}>
+					<AuthGate>
 					<Stack
 						screenOptions={{
 							headerShadowVisible: false,
@@ -57,7 +59,8 @@ export default function RootLayout() {
 				</AuthGate>
 				<StatusBar style="light" />
 			</ThemeProvider>
-		</AuthProvider>
+		</UserBooksProvider>
+	</AuthProvider>
 	);
 }
 
