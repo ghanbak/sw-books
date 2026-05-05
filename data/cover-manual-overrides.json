@@ -1,0 +1,6 @@
+{
+  "_comment": "Manual cover overrides — survive pipeline regeneration. Use slug → URL.",
+  "aftermath": "https://covers.openlibrary.org/b/id/8760685-L.jpg",
+  "aftermath-life-debt": "https://covers.openlibrary.org/b/id/8776682-L.jpg",
+  "aftermath-empires-end": "https://covers.openlibrary.org/b/id/8722039-L.jpg"
+}

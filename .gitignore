@@ -39,6 +39,7 @@ scripts/cover-audit-report.json
 scripts/placeholder-report.json
 scripts/isbn-cache.json
 scripts/isbn-report.txt
+scripts/primary-isbn-verification.txt
 
 # testing
 coverage/

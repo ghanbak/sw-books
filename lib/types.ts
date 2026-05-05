@@ -46,6 +46,7 @@ export type Database = {
           id: string
           isbn: string[] | null
           language: string | null
+          primary_isbn: string | null
           publisher: string | null
           series_name: string | null
           series_order: number | null
@@ -67,6 +68,7 @@ export type Database = {
           id?: string
           isbn?: string[] | null
           language?: string | null
+          primary_isbn?: string | null
           publisher?: string | null
           series_name?: string | null
           series_order?: number | null
@@ -88,6 +90,7 @@ export type Database = {
           id?: string
           isbn?: string[] | null
           language?: string | null
+          primary_isbn?: string | null
           publisher?: string | null
           series_name?: string | null
           series_order?: number | null

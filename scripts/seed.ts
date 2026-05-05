@@ -8,15 +8,13 @@
  * or defaults to local Supabase (http://127.0.0.1:54321).
  */
 
-import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const SUPABASE_KEY =
-	process.env.SUPABASE_SERVICE_ROLE_KEY ??
-	process.env.SUPABASE_SERVICE_KEY ??
-	'';
+	process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY ?? '';
 
 if (!SUPABASE_KEY) {
 	// Try reading from .env file
@@ -80,23 +78,73 @@ function splitMultiValue(val: string): string[] {
 		.filter((v, i, a) => a.indexOf(v) === i); // dedupe
 }
 
-// Load multi-format ISBN overrides (change-set produced by source-isbns.ts).
-// Each entry replaces the single CSV ISBN with the full array of editions for
-// that book. Books not in the override file keep their single CSV ISBN.
-function loadIsbnOverrides(): Record<string, string[]> {
-	const path = resolve(__dirname, '..', 'data', 'isbn-overrides.json');
+// Load JSON override file produced by scripts/source-isbns.ts. Returns an empty
+// object if the file is missing or invalid — seed degrades to CSV-only.
+function loadOverrideFile<T>(filename: string): T {
+	const path = resolve(__dirname, '..', 'data', filename);
 	try {
-		return JSON.parse(readFileSync(path, 'utf-8')) as Record<string, string[]>;
+		return JSON.parse(readFileSync(path, 'utf-8')) as T;
 	} catch {
-		return {};
+		return {} as T;
 	}
+}
+
+// Manual overrides win over pipeline-generated ones. Same shape, merged shallow.
+function mergeOverrides<T>(
+	generated: Record<string, T>,
+	manual: Record<string, T>,
+): Record<string, T> {
+	return { ...generated, ...manual };
+}
+
+// Publisher-direct URLs (penguin, scholastic, etc.) are usually higher-fidelity
+// than the OL/Google Books fallbacks the pipeline emits. When the CSV already
+// holds one, keep it. The pipeline's URL is reserved for slugs whose CSV cover
+// is missing or is itself a generic OL/Google URL.
+const PIPELINE_HOSTS = ['covers.openlibrary.org', 'books.google.com', 'books.googleusercontent.com'];
+
+function isPipelineHostedCover(url: string | null | undefined): boolean {
+	if (!url) return true;
+	return PIPELINE_HOSTS.some((host) => url.includes(host));
+}
+
+function pickCoverImage(
+	manualUrl: string | undefined,
+	csvUrl: string | null,
+	pipelineUrl: string | undefined,
+): string | null {
+	if (manualUrl) return manualUrl;
+	if (csvUrl && !isPipelineHostedCover(csvUrl)) return csvUrl;
+	// CSV's URL is itself an OL/Google one — don't fall back to it when the
+	// pipeline produced no override. Better to render no cover than a known-
+	// untrustworthy one. The user can fix specific cases via cover-manual-overrides.json.
+	return pipelineUrl ?? null;
 }
 
 // --- Main ---
 
 async function main() {
 	const csvPath = resolve(__dirname, '..', 'data', 'books.csv');
-	const isbnOverrides = loadIsbnOverrides();
+
+	const isbnOverrides = mergeOverrides(
+		loadOverrideFile<Record<string, string[]>>('isbn-overrides.json'),
+		loadOverrideFile<Record<string, string[]>>('isbn-manual-overrides.json'),
+	);
+	const primaryIsbn = mergeOverrides(
+		loadOverrideFile<Record<string, string>>('primary-isbn.json'),
+		loadOverrideFile<Record<string, string>>('primary-isbn-manual-overrides.json'),
+	);
+	const pipelineCovers = loadOverrideFile<Record<string, string>>('cover-overrides.json');
+	const manualCovers = loadOverrideFile<Record<string, string>>('cover-manual-overrides.json');
+	// Slugs whose CSV ISBN OL has filed under a different book — pipeline
+	// substituted the right ISBN by title-search, so the CSV's cover URL (often
+	// keyed off the wrong CSV ISBN) shouldn't be preferred over the pipeline's.
+	const rejectedSlugs = new Set(loadOverrideFile<string[] | Record<string, never>>('csv-isbn-rejected.json') as string[]);
+	// format-overrides.json is emitted by the pipeline for inspection only — it
+	// only sees formats OL tagged, which is sparser than CSV's curated list.
+	// Manual overrides still apply for explicit corrections.
+	const manualFormats = loadOverrideFile<Record<string, string[]>>('format-manual-overrides.json');
+
 	const raw = readFileSync(csvPath, 'utf-8').replace(/^\uFEFF/, ''); // strip BOM
 
 	const lines = raw.split('\n').filter((l) => l.trim());
@@ -131,15 +179,23 @@ async function main() {
 		const seriesOrder = fields[col('series_order')];
 		const timelineOrder = fields[col('timeline_order')];
 
+		const csvIsbn = fields[col('isbn')];
+		const isbnList = isbnOverrides[slug] ?? (csvIsbn ? [csvIsbn] : []);
+
+		const csvCover = fields[col('cover_image')] || null;
+		// When the CSV ISBN itself is wrong, its keyed cover URL is also untrusted.
+		const trustedCsvCover = rejectedSlugs.has(slug) ? null : csvCover;
+
 		books.push({
 			title: fields[col('title')],
 			slug,
 			author: splitMultiValue(fields[col('author')].replace(/;/g, ';')),
-			cover_image: fields[col('cover_image')] || null,
+			cover_image: pickCoverImage(manualCovers[slug], trustedCsvCover, pipelineCovers[slug]),
 			canon: fields[col('canon')], // "Canon" or "Legends"
 			date_published: parseDate(fields[col('date_published')]),
-			format: splitMultiValue(fields[col('format')]),
-			isbn: isbnOverrides[slug] ?? (fields[col('isbn')] ? [fields[col('isbn')]] : []),
+			format: manualFormats[slug] ?? splitMultiValue(fields[col('format')]),
+			isbn: isbnList,
+			primary_isbn: primaryIsbn[slug] ?? isbnList[0] ?? null,
 			language: fields[col('language')] || 'English',
 			publisher: fields[col('publisher')] || null,
 			series_name: seriesName,
