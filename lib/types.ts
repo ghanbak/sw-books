@@ -36,7 +36,6 @@ export type Database = {
     Tables: {
       books: {
         Row: {
-          asin: string | null
           author: string[]
           canon: string
           cover_image: string | null
@@ -58,7 +57,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          asin?: string | null
           author?: string[]
           canon: string
           cover_image?: string | null
@@ -80,7 +78,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          asin?: string | null
           author?: string[]
           canon?: string
           cover_image?: string | null
