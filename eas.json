@@ -24,5 +24,14 @@
         "resourceClass": "m-medium"
       }
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "ghanbak@gmail.com",
+        "ascAppId": "6766580620",
+        "appleTeamId": "CFRQCUM2P9"
+      }
+    }
   }
 }
