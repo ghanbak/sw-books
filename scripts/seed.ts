@@ -147,7 +147,6 @@ async function main() {
 			timeline_order: timelineOrder ? Number.parseFloat(timelineOrder) : null,
 			synopsis: fields[col('synopsis')] || null,
 			type: fields[col('type')], // "Adult Novel", "YA Novel", "Middle Grade Novel"
-			asin: fields[col('asin')] || null,
 			era: fields[col('era')] || null,
 		});
 	}

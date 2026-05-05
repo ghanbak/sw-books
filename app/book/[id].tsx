@@ -3,8 +3,6 @@ import {
 	BookOpen,
 	Bookmark,
 	Calendar,
-	ChevronRight,
-	ExternalLink,
 	Hash,
 	Layers,
 	Library,
@@ -12,7 +10,6 @@ import {
 } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import {
-	Linking,
 	Platform,
 	Pressable,
 	ScrollView,
@@ -247,25 +244,12 @@ export default function BookDetailScreen() {
 			)}
 
 			{/* Identifiers card */}
-			{(isbns.length > 0 || book.asin) && (
+			{isbns.length > 0 && (
 				<View style={styles.card}>
 					<Text style={styles.cardTitle}>Identifiers</Text>
 					{isbns.map((isbn) => (
 						<DetailRow key={isbn} label="ISBN" value={isbn} mono />
 					))}
-					{book.asin && (
-						<Pressable
-							style={styles.detailRowPressable}
-							onPress={() => Linking.openURL(`https://www.amazon.com/dp/${book.asin}`)}
-						>
-							<View style={styles.detailRow}>
-								<ExternalLink size={14} color={tokens.text.hint} strokeWidth={2} />
-								<Text style={styles.detailLabel}>ASIN</Text>
-								<Text style={[styles.detailValue, styles.mono, styles.link]}>{book.asin}</Text>
-								<ChevronRight size={12} color={tokens.text.hint} strokeWidth={2} />
-							</View>
-						</Pressable>
-					)}
 				</View>
 			)}
 
