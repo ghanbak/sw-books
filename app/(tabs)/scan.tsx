@@ -177,9 +177,9 @@ export default function ScanScreen() {
 
 					{result.type === 'not_found' && (
 						<View style={styles.resultMessage}>
-							<Text style={styles.messageTitle}>Not in Catalog</Text>
+							<Text style={styles.messageTitle}>Not in the Archive</Text>
 							<Text style={styles.messageText}>
-								This book isn't in our catalog yet.
+								If an item does not appear in our records, it does not exist!
 							</Text>
 							<Text style={styles.messageIsbn}>ISBN: {result.isbn}</Text>
 						</View>

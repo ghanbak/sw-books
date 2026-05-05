@@ -10,7 +10,7 @@ import {
 	Library,
 	Package,
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
 	ActivityIndicator,
 	Linking,
@@ -24,6 +24,7 @@ import {
 
 import { Book3D } from '@/components/Book3D';
 import { Book3DViewer } from '@/components/Book3DViewer';
+import { ErrorState } from '@/components/error-state';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 import { useUserBooks } from '@/lib/hooks';
@@ -33,18 +34,31 @@ export default function BookDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const [book, setBook] = useState<Book | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 	const [viewerOpen, setViewerOpen] = useState(false);
 	const { userBooks, toggleShelf } = useUserBooks();
 	const shelfEntry = book ? userBooks.get(book.id) : undefined;
 
-	useEffect(() => {
-		async function fetchBook() {
-			const { data } = await supabase.from('books').select('*').eq('id', id).single();
+	const fetchBook = useCallback(async () => {
+		setLoading(true);
+		setError(null);
+		const { data, error: fetchError } = await supabase
+			.from('books')
+			.select('*')
+			.eq('id', id)
+			.maybeSingle();
+		if (fetchError) {
+			setError(fetchError.message);
+			setBook(null);
+		} else {
 			setBook(data);
-			setLoading(false);
 		}
-		fetchBook();
+		setLoading(false);
 	}, [id]);
+
+	useEffect(() => {
+		fetchBook();
+	}, [fetchBook]);
 
 	if (loading) {
 		return (
@@ -54,10 +68,14 @@ export default function BookDetailScreen() {
 		);
 	}
 
+	if (error) {
+		return <ErrorState title="Couldn't load this book" message={error} onRetry={fetchBook} />;
+	}
+
 	if (!book) {
 		return (
 			<View style={styles.center}>
-				<Text style={styles.notFoundText}>Book not found</Text>
+				<Text style={styles.notFoundText}>If an item does not appear in our records, it does not exist.</Text>
 			</View>
 		);
 	}

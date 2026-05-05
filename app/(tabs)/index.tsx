@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
+import { ErrorState } from '@/components/error-state';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
@@ -76,15 +77,7 @@ export default function CatalogScreen() {
 	}
 
 	if (error) {
-		return (
-			<View style={styles.center}>
-				<Text style={styles.errorText}>Failed to load books</Text>
-				<Text style={styles.errorDetail}>{error}</Text>
-				<Pressable style={styles.retryButton} onPress={refetch}>
-					<Text style={styles.retryText}>Retry</Text>
-				</Pressable>
-			</View>
-		);
+		return <ErrorState title="Couldn't load the archive" message={error} onRetry={refetch} />;
 	}
 
 	return (
@@ -211,26 +204,5 @@ const styles = StyleSheet.create({
 	emptyText: {
 		fontSize: 15,
 		color: tokens.text.hint,
-	},
-	errorText: {
-		fontSize: 17,
-		fontWeight: '600',
-		color: tokens.text.primary,
-		marginBottom: 8,
-	},
-	errorDetail: {
-		fontSize: 13,
-		color: tokens.text.hint,
-		marginBottom: 16,
-	},
-	retryButton: {
-		paddingHorizontal: 20,
-		paddingVertical: 10,
-		borderRadius: 8,
-		backgroundColor: tokens.accent.primary,
-	},
-	retryText: {
-		color: tokens.text.inverse,
-		fontWeight: '600',
 	},
 });

@@ -4,6 +4,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { BookCard } from '@/components/book-card';
+import { ErrorState } from '@/components/error-state';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 import { useBooks, useUserBooks } from '@/lib/hooks';
@@ -18,7 +19,7 @@ const FILTERS: { key: ShelfFilter; label: string }[] = [
 ];
 
 export default function ShelfScreen() {
-	const { books } = useBooks();
+	const { books, error: catalogError, refetch: refetchCatalog } = useBooks();
 	const { userBooks, loading, refetch } = useUserBooks();
 	const [filter, setFilter] = useState<ShelfFilter>('all');
 	const router = useRouter();
@@ -58,6 +59,16 @@ export default function ShelfScreen() {
 		() => <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: tokens.border.subtle, marginHorizontal: 12 }} />,
 		[],
 	);
+
+	if (catalogError) {
+		return (
+			<ErrorState
+				title="Couldn't load the archive"
+				message={catalogError}
+				onRetry={refetchCatalog}
+			/>
+		);
+	}
 
 	if (counts.all === 0 && !loading) {
 		return (
