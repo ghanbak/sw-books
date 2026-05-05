@@ -20,12 +20,16 @@ import {
 	Text,
 	View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AffiliateDisclosureSheet } from '@/components/affiliate-disclosure-sheet';
 import { Book3D } from '@/components/Book3D';
 import { Book3DViewer } from '@/components/Book3DViewer';
 import { BookDetailSkeleton } from '@/components/book-detail-skeleton';
+import { BuyOnAmazonButton } from '@/components/buy-on-amazon-button';
 import { ErrorState } from '@/components/error-state';
 import { tokens } from '@/constants/tokens';
+import { buildAmazonSearchUrl } from '@/lib/amazon';
 import type { Book } from '@/lib/hooks';
 import { useUserBooks } from '@/lib/hooks';
 import { supabase } from '@/lib/supabase';
@@ -36,8 +40,11 @@ export default function BookDetailScreen() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [viewerOpen, setViewerOpen] = useState(false);
+	const [disclosureOpen, setDisclosureOpen] = useState(false);
 	const { userBooks, toggleShelf } = useUserBooks();
+	const insets = useSafeAreaInsets();
 	const shelfEntry = book ? userBooks.get(book.id) : undefined;
+	const amazonUrl = book ? buildAmazonSearchUrl(book.isbn?.[0]) : null;
 
 	const fetchBook = useCallback(async () => {
 		setLoading(true);
@@ -85,11 +92,15 @@ export default function BookDetailScreen() {
 		: null;
 
 	const isbns = book.isbn ?? [];
+	// Reserve space at the bottom of the scroll content so the floating
+	// "Find on Amazon" button doesn't permanently obscure the last cards.
+	const scrollPaddingBottom = amazonUrl ? 96 + insets.bottom : 48;
 
 	return (
+		<View style={styles.container}>
 		<ScrollView
 			style={styles.container}
-			contentContainerStyle={styles.content}
+			contentContainerStyle={[styles.content, { paddingBottom: scrollPaddingBottom }]}
 			contentInsetAdjustmentBehavior="automatic"
 		>
 			{/* Hero cover */}
@@ -266,6 +277,26 @@ export default function BookDetailScreen() {
 				</View>
 			)}
 		</ScrollView>
+
+		{amazonUrl && (
+			<View
+				style={[
+					styles.floatingContainer,
+					{ paddingBottom: 12 + insets.bottom },
+				]}
+			>
+				<BuyOnAmazonButton
+					url={amazonUrl}
+					onInfoPress={() => setDisclosureOpen(true)}
+				/>
+			</View>
+		)}
+
+		<AffiliateDisclosureSheet
+			visible={disclosureOpen}
+			onClose={() => setDisclosureOpen(false)}
+		/>
+		</View>
 	);
 }
 
@@ -328,6 +359,19 @@ const styles = StyleSheet.create({
 	notFoundText: {
 		color: tokens.text.hint,
 		fontSize: 16,
+	},
+
+	// Floating Amazon button container — pinned to bottom, safe-area-aware
+	floatingContainer: {
+		position: 'absolute',
+		left: 0,
+		right: 0,
+		bottom: 0,
+		paddingHorizontal: 20,
+		paddingTop: 12,
+		backgroundColor: tokens.surface.background,
+		borderTopWidth: StyleSheet.hairlineWidth,
+		borderTopColor: tokens.border.subtle,
 	},
 
 	// Hero
