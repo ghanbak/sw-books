@@ -1,0 +1,578 @@
+{
+  "a-new-dawn": [
+    "paperback",
+    "audiobook",
+    "hardcover"
+  ],
+  "a-new-hope-novelization": [
+    "mass market paperback",
+    "paperback",
+    "hardcover"
+  ],
+  "a-test-of-courage": [
+    "paperback",
+    "hardcover"
+  ],
+  "allegiance": [
+    "hardcover",
+    "mass market paperback"
+  ],
+  "alphabet-squadron": [
+    "paperback",
+    "hardcover",
+    "audiobook",
+    "mass market paperback"
+  ],
+  "battlefront-ii-inferno-squad": [
+    "hardcover",
+    "audiobook",
+    "paperback"
+  ],
+  "battlefront-twilight-company": [
+    "hardcover",
+    "paperback"
+  ],
+  "brotherhood": [
+    "hardcover",
+    "paperback"
+  ],
+  "catalyst": [
+    "hardcover",
+    "audiobook",
+    "paperback"
+  ],
+  "choices-of-one": [
+    "mass market paperback"
+  ],
+  "cloak-of-deception": [
+    "paperback",
+    "mass market paperback",
+    "hardcover"
+  ],
+  "coruscant-nights-i-jedi-twilight": [
+    "paperback"
+  ],
+  "coruscant-nights-iii-patterns-of-force": [
+    "paperback"
+  ],
+  "crimson-climb": [
+    "hardcover"
+  ],
+  "crosscurrent": [
+    "mass market paperback"
+  ],
+  "crucible": [
+    "hardcover"
+  ],
+  "dark-disciple": [
+    "library binding",
+    "hardcover",
+    "paperback",
+    "audiobook"
+  ],
+  "dark-force-rising": [
+    "paperback"
+  ],
+  "dark-lord-rise-of-darth-vader": [
+    "mass market paperback",
+    "paperback",
+    "audiobook"
+  ],
+  "darth-bane-dynasty-of-evil": [
+    "hardcover",
+    "mass market paperback"
+  ],
+  "darth-bane-path-of-destruction": [
+    "paperback",
+    "mass market paperback",
+    "hardcover"
+  ],
+  "darth-bane-rule-of-two": [
+    "hardcover"
+  ],
+  "darth-maul-shadow-hunter": [
+    "hardcover",
+    "mass market paperback",
+    "paperback"
+  ],
+  "darth-plagueis": [
+    "paperback"
+  ],
+  "death-star": [
+    "hardcover"
+  ],
+  "death-troopers": [
+    "hardcover",
+    "mass market paperback"
+  ],
+  "dooku-jedi-lost": [
+    "ebook",
+    "paperback",
+    "hardcover"
+  ],
+  "empire-strikes-back-novelization": [
+    "mass market paperback",
+    "paperback",
+    "hardcover"
+  ],
+  "force-collector": [
+    "hardcover"
+  ],
+  "fotj-abyss": [
+    "hardcover",
+    "paperback",
+    "ebook"
+  ],
+  "fotj-allies": [
+    "ebook",
+    "audiobook"
+  ],
+  "fotj-apocalypse": [
+    "hardcover"
+  ],
+  "fotj-ascension": [
+    "audiobook"
+  ],
+  "fotj-backlash": [
+    "ebook",
+    "hardcover"
+  ],
+  "fotj-conviction": [
+    "paperback"
+  ],
+  "fotj-omen": [
+    "paperback",
+    "ebook"
+  ],
+  "fotj-outcast": [
+    "ebook"
+  ],
+  "fotj-vortex": [
+    "paperback",
+    "audiobook"
+  ],
+  "han-solo-and-the-lost-legacy": [
+    "paperback",
+    "mass market paperback"
+  ],
+  "han-solo-at-stars-end": [
+    "mass market paperback",
+    "paperback"
+  ],
+  "hand-of-thrawn-specter": [
+    "paperback",
+    "mass market paperback",
+    "hardcover"
+  ],
+  "heir-to-the-empire": [
+    "mass market paperback",
+    "paperback",
+    "audiobook",
+    "library binding",
+    "hardcover"
+  ],
+  "heir-to-the-jedi": [
+    "audiobook"
+  ],
+  "honor-among-thieves": [
+    "audiobook",
+    "hardcover",
+    "paperback"
+  ],
+  "i-jedi": [
+    "mass market paperback",
+    "paperback"
+  ],
+  "inquisitor-rise-of-the-red-blade": [
+    "hardcover"
+  ],
+  "into-the-dark": [
+    "hardcover"
+  ],
+  "jedi-academy-dark-apprentice": [
+    "paperback"
+  ],
+  "jedi-academy-jedi-search": [
+    "mass market paperback",
+    "library binding",
+    "paperback"
+  ],
+  "jedi-battle-scars": [
+    "hardcover"
+  ],
+  "jedi-trial": [
+    "ebook",
+    "mass market paperback",
+    "audiobook",
+    "paperback"
+  ],
+  "kenobi": [
+    "audiobook"
+  ],
+  "labyrinth-of-evil": [
+    "paperback",
+    "audiobook",
+    "mass market paperback",
+    "hardcover"
+  ],
+  "lando-calrissian-flamewind": [
+    "mass market paperback",
+    "paperback"
+  ],
+  "lando-calrissian-mindharp": [
+    "mass market paperback",
+    "paperback"
+  ],
+  "lando-calrissian-starcave": [
+    "mass market paperback"
+  ],
+  "legacy-of-the-jedi-secrets-of-the-jedi": [
+    "library binding"
+  ],
+  "leia-princess-of-alderaan": [
+    "paperback"
+  ],
+  "light-of-the-jedi": [
+    "paperback",
+    "hardcover",
+    "audiobook"
+  ],
+  "lords-of-the-sith": [
+    "paperback",
+    "library binding"
+  ],
+  "lost-stars": [
+    "paperback"
+  ],
+  "lost-tribe-of-the-sith-collected": [
+    "mass market paperback"
+  ],
+  "lotf-betrayal": [
+    "hardcover",
+    "mass market paperback",
+    "audiobook"
+  ],
+  "lotf-bloodlines": [
+    "paperback",
+    "hardcover",
+    "audiobook"
+  ],
+  "lotf-exile": [
+    "ebook",
+    "mass market paperback",
+    "audiobook",
+    "hardcover"
+  ],
+  "lotf-fury": [
+    "ebook",
+    "mass market paperback",
+    "audiobook"
+  ],
+  "lotf-inferno": [
+    "paperback",
+    "audiobook",
+    "mass market paperback"
+  ],
+  "lotf-invincible": [
+    "audiobook",
+    "hardcover",
+    "ebook",
+    "mass market paperback"
+  ],
+  "lotf-revelation": [
+    "ebook",
+    "audiobook",
+    "mass market paperback"
+  ],
+  "lotf-sacrifice": [
+    "ebook",
+    "hardcover",
+    "mass market paperback",
+    "audiobook"
+  ],
+  "lotf-tempest": [
+    "hardcover",
+    "mass market paperback",
+    "audiobook"
+  ],
+  "master-and-apprentice": [
+    "audiobook",
+    "paperback",
+    "hardcover"
+  ],
+  "maul-lockdown": [
+    "hardcover"
+  ],
+  "medstar-i-battle-surgeons": [
+    "ebook",
+    "paperback",
+    "audiobook"
+  ],
+  "medstar-ii-jedi-healer": [
+    "ebook",
+    "mass market paperback",
+    "audiobook",
+    "paperback"
+  ],
+  "midnight-horizon": [
+    "hardcover"
+  ],
+  "millennium-falcon": [
+    "mass market paperback",
+    "ebook"
+  ],
+  "mission-to-disaster": [
+    "hardcover"
+  ],
+  "njo-agents-of-chaos-heros-trial": [
+    "mass market paperback",
+    "paperback"
+  ],
+  "njo-agents-of-chaos-jedi-eclipse": [
+    "paperback",
+    "mass market paperback"
+  ],
+  "njo-balance-point": [
+    "paperback",
+    "hardcover"
+  ],
+  "njo-dark-journey": [
+    "mass market paperback",
+    "paperback"
+  ],
+  "njo-dark-tide-onslaught": [
+    "ebook",
+    "paperback",
+    "mass market paperback"
+  ],
+  "njo-dark-tide-ruin": [
+    "paperback",
+    "mass market paperback",
+    "ebook"
+  ],
+  "njo-edge-of-victory-conquest": [
+    "mass market paperback"
+  ],
+  "njo-edge-of-victory-rebirth": [
+    "paperback"
+  ],
+  "njo-final-prophecy": [
+    "paperback",
+    "audiobook"
+  ],
+  "njo-force-heretic-refugee": [
+    "mass market paperback",
+    "audiobook",
+    "paperback"
+  ],
+  "njo-force-heretic-remnant": [
+    "paperback",
+    "mass market paperback",
+    "audiobook"
+  ],
+  "njo-star-by-star": [
+    "paperback",
+    "mass market paperback"
+  ],
+  "njo-traitor": [
+    "paperback",
+    "audiobook"
+  ],
+  "njo-unifying-force": [
+    "library binding",
+    "hardcover",
+    "paperback",
+    "audiobook"
+  ],
+  "njo-vector-prime": [
+    "hardcover",
+    "library binding",
+    "mass market paperback",
+    "ebook",
+    "paperback"
+  ],
+  "out-of-the-shadows": [
+    "hardcover"
+  ],
+  "outbound-flight": [
+    "hardcover",
+    "mass market paperback",
+    "audiobook"
+  ],
+  "padawan": [
+    "hardcover"
+  ],
+  "path-of-deceit": [
+    "hardcover"
+  ],
+  "phasma": [
+    "hardcover",
+    "paperback",
+    "library binding"
+  ],
+  "race-to-crashpoint-tower": [
+    "paperback",
+    "hardcover"
+  ],
+  "razor-s-edge": [
+    "audiobook",
+    "hardcover",
+    "paperback"
+  ],
+  "rebel-rising": [
+    "hardcover"
+  ],
+  "resistance-reborn": [
+    "hardcover"
+  ],
+  "return-of-the-jedi-novelization": [
+    "paperback",
+    "mass market paperback",
+    "hardcover",
+    "library binding"
+  ],
+  "revenge-of-the-sith-novelization": [
+    "mass market paperback",
+    "audiobook",
+    "hardcover",
+    "paperback"
+  ],
+  "rogue-one-novelization": [
+    "paperback",
+    "hardcover",
+    "audiobook"
+  ],
+  "rogue-planet": [
+    "ebook",
+    "hardcover",
+    "mass market paperback",
+    "paperback"
+  ],
+  "scoundrels": [
+    "paperback"
+  ],
+  "shadow-fall": [
+    "paperback",
+    "audiobook",
+    "hardcover"
+  ],
+  "shadow-of-the-sith": [
+    "hardcover"
+  ],
+  "shadows-of-the-empire": [
+    "library binding",
+    "mass market paperback",
+    "hardcover",
+    "paperback"
+  ],
+  "shatterpoint": [
+    "hardcover",
+    "mass market paperback",
+    "paperback",
+    "audiobook"
+  ],
+  "splinter-of-the-minds-eye": [
+    "paperback",
+    "hardcover",
+    "mass market paperback"
+  ],
+  "tarkin": [
+    "audiobook",
+    "paperback",
+    "hardcover"
+  ],
+  "the-approaching-storm": [
+    "hardcover",
+    "audiobook",
+    "mass market paperback",
+    "paperback"
+  ],
+  "the-cestus-deception": [
+    "ebook",
+    "library binding",
+    "paperback",
+    "hardcover",
+    "mass market paperback"
+  ],
+  "the-eye-of-darkness": [
+    "hardcover"
+  ],
+  "the-fallen-star": [
+    "paperback",
+    "hardcover"
+  ],
+  "the-han-solo-trilogy-hutt-gambit": [
+    "paperback"
+  ],
+  "the-han-solo-trilogy-paradise-snare": [
+    "paperback"
+  ],
+  "the-han-solo-trilogy-rebel-dawn": [
+    "mass market paperback",
+    "hardcover"
+  ],
+  "the-last-command": [
+    "paperback"
+  ],
+  "the-last-jedi-legends": [
+    "paperback"
+  ],
+  "the-old-republic-annihilation": [
+    "hardcover",
+    "audiobook",
+    "mass market paperback"
+  ],
+  "the-old-republic-deceived": [
+    "mass market paperback",
+    "audiobook",
+    "hardcover"
+  ],
+  "the-old-republic-fatal-alliance": [
+    "paperback",
+    "hardcover",
+    "audiobook"
+  ],
+  "the-old-republic-revan": [
+    "mass market paperback",
+    "audiobook"
+  ],
+  "the-rising-storm": [
+    "paperback",
+    "hardcover",
+    "audiobook"
+  ],
+  "the-truce-at-bakura": [
+    "paperback",
+    "hardcover"
+  ],
+  "thrawn": [
+    "library binding",
+    "mass market paperback",
+    "hardcover",
+    "audiobook"
+  ],
+  "thrawn-alliances": [
+    "paperback",
+    "hardcover",
+    "audiobook",
+    "mass market paperback"
+  ],
+  "thrawn-ascendancy-lesser-evil": [
+    "hardcover"
+  ],
+  "thrawn-treason": [
+    "paperback",
+    "hardcover",
+    "audiobook"
+  ],
+  "victorys-price": [
+    "paperback",
+    "hardcover"
+  ],
+  "yoda-dark-rendezvous": [
+    "paperback",
+    "hardcover",
+    "audiobook",
+    "ebook"
+  ]
+}
