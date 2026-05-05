@@ -12,7 +12,6 @@ import {
 } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import {
-	ActivityIndicator,
 	Linking,
 	Platform,
 	Pressable,
@@ -24,6 +23,7 @@ import {
 
 import { Book3D } from '@/components/Book3D';
 import { Book3DViewer } from '@/components/Book3DViewer';
+import { BookDetailSkeleton } from '@/components/book-detail-skeleton';
 import { ErrorState } from '@/components/error-state';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
@@ -61,11 +61,7 @@ export default function BookDetailScreen() {
 	}, [fetchBook]);
 
 	if (loading) {
-		return (
-			<View style={styles.center}>
-				<ActivityIndicator size="large" color={tokens.accent.primary} />
-			</View>
-		);
+		return <BookDetailSkeleton />;
 	}
 
 	if (error) {
