@@ -1,19 +1,18 @@
 import { FlashList } from '@shopify/flash-list';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { useRouter } from 'expo-router';
 import { BookOpen, ScanBarcode } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
 import { tokens } from '@/constants/tokens';
+import { GlassView, liquidGlassAvailable } from '@/lib/glass';
 import type { Book } from '@/lib/hooks';
 import { useBooks, useUserBooks } from '@/lib/hooks';
 
 type ShelfFilter = 'all' | 'owned' | 'read' | 'want_to_read';
-
-const useLiquidGlass = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
 const FILTERS: { key: ShelfFilter; label: string }[] = [
 	{ key: 'all', label: 'All' },
@@ -27,6 +26,7 @@ export default function ShelfScreen() {
 	const { userBooks, loading, refetch } = useUserBooks();
 	const [filter, setFilter] = useState<ShelfFilter>('all');
 	const router = useRouter();
+	const insets = useSafeAreaInsets();
 
 	const shelvedBooks = useMemo(() => {
 		const result: Book[] = [];
@@ -84,7 +84,7 @@ export default function ShelfScreen() {
 
 	if (counts.all === 0 && !loading) {
 		return (
-			<View style={styles.emptyContainer}>
+			<View style={[styles.emptyContainer, { paddingTop: insets.top }]}>
 				<Text style={styles.emptyTitle}>Your collection awaits</Text>
 				<Text style={styles.emptySubtitle}>
 					Browse the catalog or scan a barcode to start building your Star Wars library.
@@ -102,7 +102,7 @@ export default function ShelfScreen() {
 	}
 
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container, { paddingTop: insets.top }]}>
 			<View style={styles.filterRow}>
 				{FILTERS.map(({ key, label }) => {
 					const active = filter === key;
@@ -112,7 +112,7 @@ export default function ShelfScreen() {
 							style={[styles.filterChip, active && styles.filterChipActive]}
 							onPress={() => setFilter(key)}
 						>
-							{!active && useLiquidGlass && <GlassView style={StyleSheet.absoluteFill} />}
+							{!active && liquidGlassAvailable && <GlassView style={StyleSheet.absoluteFill} />}
 							<Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
 								{label} ({counts[key]})
 							</Text>

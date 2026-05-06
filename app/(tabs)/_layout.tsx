@@ -1,76 +1,38 @@
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
-import { Tabs } from 'expo-router';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 
-import { BookOpen, Library, ScanBarcode, User } from 'lucide-react-native';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { tokens } from '@/constants/tokens';
-
-// iOS 26+: Liquid Glass material behind the tab items.
-// Older iOS / Android: opaque dark surface.
-function TabBarBackground() {
-	if (Platform.OS === 'ios' && isLiquidGlassAvailable()) {
-		return <GlassView style={StyleSheet.absoluteFill} />;
-	}
-	return <View style={[StyleSheet.absoluteFill, { backgroundColor: tokens.surface.background }]} />;
-}
-
+// Native tab bar — UIKit on iOS, Material 3 on Android.
+//
+// On iOS 26+ this becomes the floating Liquid Glass capsule automatically.
+// `role="search"` on the scan tab gives it the separated circular affordance
+// (like the magnifying glass in Apple News). `role="bookmarks"` is a semantic
+// hint for the user's saved-books shelf.
+//
+// Icons are SF Symbols on iOS only. Android currently shows tab labels without
+// icons — add `androidSrc` PNGs or a VectorIcon family when we ship Android.
 export default function TabLayout() {
 	return (
-		<Tabs
-			screenOptions={{
-				tabBarActiveTintColor: tokens.accent.primary,
-				tabBarInactiveTintColor: tokens.text.hint,
-				tabBarStyle: Platform.select({
-					ios: {
-						position: 'absolute',
-						borderTopWidth: 0,
-						backgroundColor: 'transparent',
-					},
-					default: {
-						backgroundColor: tokens.surface.background,
-						borderTopColor: tokens.border.subtle,
-					},
-				}),
-				tabBarBackground: () => <TabBarBackground />,
-				headerStyle: {
-					backgroundColor: Platform.OS === 'ios' ? 'transparent' : tokens.surface.background,
-				},
-				headerTintColor: tokens.text.primary,
-				headerShadowVisible: false,
-				tabBarButton: HapticTab,
-			}}
-		>
-			<Tabs.Screen
-				name="index"
-				options={{
-					title: 'Archives',
-					tabBarIcon: ({ color, size }) => <BookOpen size={size} color={color} />,
-				}}
-			/>
-			<Tabs.Screen
-				name="shelf"
-				options={{
-					title: 'Shelves',
-					tabBarIcon: ({ color, size }) => <Library size={size} color={color} />,
-				}}
-			/>
-			<Tabs.Screen
-				name="scan"
-				options={{
-					title: 'Scan',
-					headerShown: false,
-					tabBarIcon: ({ color, size }) => <ScanBarcode size={size} color={color} />,
-				}}
-			/>
-			<Tabs.Screen
-				name="profile"
-				options={{
-					title: 'Profile',
-					tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
-				}}
-			/>
-		</Tabs>
+		<NativeTabs>
+			<NativeTabs.Trigger name="index">
+				<Icon sf="books.vertical.fill" />
+				<Label>Archives</Label>
+			</NativeTabs.Trigger>
+
+			{/* biome-ignore lint/a11y/useValidAriaRole: NativeTabsTabBarItemRole, not ARIA */}
+			<NativeTabs.Trigger name="shelf" role="bookmarks">
+				<Icon sf="bookmark.fill" />
+				<Label>Shelves</Label>
+			</NativeTabs.Trigger>
+
+			{/* biome-ignore lint/a11y/useSemanticElements: NativeTabsTabBarItemRole, not ARIA */}
+			<NativeTabs.Trigger name="scan" role="search">
+				<Icon sf="barcode.viewfinder" />
+				<Label>Scan</Label>
+			</NativeTabs.Trigger>
+
+			<NativeTabs.Trigger name="profile">
+				<Icon sf="person.crop.circle.fill" />
+				<Label>Profile</Label>
+			</NativeTabs.Trigger>
+		</NativeTabs>
 	);
 }

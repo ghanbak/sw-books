@@ -1,20 +1,18 @@
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { X } from 'lucide-react-native';
-import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { tokens } from '@/constants/tokens';
+import { GlassView, liquidGlassAvailable } from '@/lib/glass';
 
 type Props = {
 	visible: boolean;
 	onClose: () => void;
 };
 
-const useLiquidGlass = Platform.OS === 'ios' && isLiquidGlassAvailable();
-
 export function AffiliateDisclosureSheet({ visible, onClose }: Props) {
 	const insets = useSafeAreaInsets();
-	const Surface = useLiquidGlass ? GlassView : View;
+	const Surface = liquidGlassAvailable ? GlassView : View;
 
 	return (
 		<Modal
@@ -26,7 +24,7 @@ export function AffiliateDisclosureSheet({ visible, onClose }: Props) {
 			<Surface
 				style={[
 					styles.container,
-					!useLiquidGlass && styles.containerFallback,
+					!liquidGlassAvailable && styles.containerFallback,
 					{ paddingTop: insets.top + 16 },
 				]}
 			>

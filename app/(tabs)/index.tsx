@@ -1,31 +1,23 @@
 import { FlashList } from '@shopify/flash-list';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Search } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import {
-	ActivityIndicator,
-	Platform,
-	Pressable,
-	StyleSheet,
-	Text,
-	TextInput,
-	View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
 import { tokens } from '@/constants/tokens';
+import { GlassView, liquidGlassAvailable } from '@/lib/glass';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
 
 type CanonFilter = 'all' | 'Canon' | 'Legends';
 
-const useLiquidGlass = Platform.OS === 'ios' && isLiquidGlassAvailable();
-
 export default function CatalogScreen() {
 	const { books, loading, error, refetch } = useBooks();
 	const [search, setSearch] = useState('');
 	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
+	const insets = useSafeAreaInsets();
 
 	const filteredBooks = useMemo(() => {
 		let result = books;
@@ -85,7 +77,7 @@ export default function CatalogScreen() {
 	}
 
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container, { paddingTop: insets.top }]}>
 			<View style={styles.searchBar}>
 				<View style={styles.searchInputWrapper}>
 					<Search size={16} color={tokens.text.hint} strokeWidth={2} />
@@ -111,7 +103,7 @@ export default function CatalogScreen() {
 							style={[styles.filterChip, active && styles.filterChipActive]}
 							onPress={() => setCanonFilter(filter)}
 						>
-							{!active && useLiquidGlass && <GlassView style={StyleSheet.absoluteFill} />}
+							{!active && liquidGlassAvailable && <GlassView style={StyleSheet.absoluteFill} />}
 							<Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
 								{filter === 'all' ? 'All' : filter}
 							</Text>
