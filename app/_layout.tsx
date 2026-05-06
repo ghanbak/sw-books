@@ -85,9 +85,13 @@ function AuthGate({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		if (loading) return;
 		const inAuthGroup = topSegment === '(auth)';
+		// topSegment is undefined when the URL is the root `/` (cold launch
+		// from a deep link with no path). Treat that as needing a redirect for
+		// signed-in users so they don't see the "Unmatched Route" page.
+		const atRoot = topSegment === undefined;
 		if (!session && !inAuthGroup) {
 			router.replace('/(auth)/login');
-		} else if (session && inAuthGroup) {
+		} else if (session && (inAuthGroup || atRoot)) {
 			router.replace('/(tabs)');
 		}
 	}, [session, loading, topSegment, router]);
