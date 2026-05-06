@@ -42,11 +42,14 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <View style={styles.heroSection}>
         <View style={styles.logoCircle}>
-          <Text style={styles.logoText}>OA</Text>
+          <Image
+            source={require("@/assets/images/icon.png")}
+            style={{ width: 96, height: 96, borderRadius: 16 }}
+          />
         </View>
         <Text style={styles.title}>Ossus Archives</Text>
         <Text style={styles.subtitle}>
-          Track every novel across canon and Legends.
+          Discover and track your favorite novels from a galaxy far, far away.
         </Text>
       </View>
 
@@ -144,7 +147,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "700",
-    fontFamily: "SpaceGrotesk_500Medium",
     letterSpacing: 1.5,
     color: tokens.text.primary,
     marginBottom: 8,

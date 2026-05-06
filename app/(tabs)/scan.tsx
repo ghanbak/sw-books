@@ -1,3 +1,4 @@
+import { useIsFocused } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -24,6 +25,7 @@ export default function ScanScreen() {
 	const [scanning, setScanning] = useState(false);
 	const lastScanTime = useRef(0);
 	const router = useRouter();
+	const isFocused = useIsFocused();
 
 	const handleBarcodeScanned = useCallback(
 		async ({ data }: { type: string; data: string }) => {
@@ -52,7 +54,9 @@ export default function ScanScreen() {
 				.limit(1);
 
 			if (__DEV__) {
-				console.log(`[Scanner] Query isbn=${isbn}, found=${books?.length ?? 0}, error=${error?.message ?? 'none'}`);
+				console.log(
+					`[Scanner] Query isbn=${isbn}, found=${books?.length ?? 0}, error=${error?.message ?? 'none'}`,
+				);
 			}
 
 			if (books && books.length > 0) {
@@ -111,15 +115,17 @@ export default function ScanScreen() {
 
 	return (
 		<View style={styles.container}>
-			{/* Camera */}
-			<CameraView
-				style={StyleSheet.absoluteFill}
-				facing="back"
-				barcodeScannerSettings={{
-					barcodeTypes: ['ean13', 'upc_a'],
-				}}
-				onBarcodeScanned={result ? undefined : handleBarcodeScanned}
-			/>
+			{/* Camera — unmount when tab loses focus to release the hardware and battery */}
+			{isFocused && (
+				<CameraView
+					style={StyleSheet.absoluteFill}
+					facing="back"
+					barcodeScannerSettings={{
+						barcodeTypes: ['ean13', 'upc_a'],
+					}}
+					onBarcodeScanned={result ? undefined : handleBarcodeScanned}
+				/>
+			)}
 
 			{/* Viewfinder overlay */}
 			<View style={styles.viewfinder}>
@@ -165,10 +171,7 @@ export default function ScanScreen() {
 								<Text style={styles.resultAuthor} numberOfLines={1}>
 									{result.book.author.join(', ')}
 								</Text>
-								<Pressable
-									style={styles.resultButton}
-									onPress={() => goToBook(result.book.id)}
-								>
+								<Pressable style={styles.resultButton} onPress={() => goToBook(result.book.id)}>
 									<Text style={styles.resultButtonText}>View Book</Text>
 								</Pressable>
 							</View>
@@ -188,9 +191,7 @@ export default function ScanScreen() {
 					{result.type === 'invalid' && (
 						<View style={styles.resultMessage}>
 							<Text style={styles.messageTitle}>Invalid Barcode</Text>
-							<Text style={styles.messageText}>
-								Couldn't read a valid ISBN from that barcode.
-							</Text>
+							<Text style={styles.messageText}>Couldn't read a valid ISBN from that barcode.</Text>
 						</View>
 					)}
 

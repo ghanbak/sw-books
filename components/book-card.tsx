@@ -1,5 +1,6 @@
-import { ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { ChevronRight } from 'lucide-react-native';
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Book3D } from '@/components/Book3D';
@@ -10,7 +11,7 @@ interface BookCardProps {
 	book: Book;
 }
 
-export function BookCard({ book }: BookCardProps) {
+export const BookCard = memo(function BookCard({ book }: BookCardProps) {
 	const router = useRouter();
 
 	return (
@@ -37,10 +38,7 @@ export function BookCard({ book }: BookCardProps) {
 				</Text>
 				<View style={styles.metaRow}>
 					<View
-						style={[
-							styles.badge,
-							book.canon === 'Canon' ? styles.canonBadge : styles.legendsBadge,
-						]}
+						style={[styles.badge, book.canon === 'Canon' ? styles.canonBadge : styles.legendsBadge]}
 					>
 						<Text style={styles.badgeText}>{book.canon}</Text>
 					</View>
@@ -54,7 +52,7 @@ export function BookCard({ book }: BookCardProps) {
 			<ChevronRight size={16} color={tokens.text.hint} strokeWidth={2} />
 		</Pressable>
 	);
-}
+});
 
 const styles = StyleSheet.create({
 	container: {

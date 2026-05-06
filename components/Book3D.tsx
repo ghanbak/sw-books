@@ -2,11 +2,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-	useAnimatedStyle,
-	useSharedValue,
-	withSpring,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { tokens } from '@/constants/tokens';
 
@@ -78,29 +74,23 @@ export function Book3D({
 		>
 			<Animated.View style={pressStyle}>
 				<View
-					style={{
-						width,
-						height,
-						shadowColor: '#000',
-						shadowOffset: { width: 3, height: 5 },
-						shadowOpacity: 0.25,
-						shadowRadius: 10,
-						elevation: 8,
-						borderRadius: 4,
-						overflow: 'hidden',
-						transform: [
-							{ perspective: 800 },
-							{ translateX: -width / 2 },
-							{ rotateY: '-15deg' },
-							{ translateX: width / 2 },
-						],
-					}}
+					style={[
+						styles.cover,
+						{
+							width,
+							height,
+							transform: [
+								{ perspective: 800 },
+								{ translateX: -width / 2 },
+								{ rotateY: '-15deg' },
+								{ translateX: width / 2 },
+							],
+						},
+					]}
 				>
 					{/* Cover content */}
 					{showFallback ? (
-						<View
-							style={[styles.coverFill, { backgroundColor: getCoverColor(title) }]}
-						>
+						<View style={[styles.coverFill, { backgroundColor: getCoverColor(title) }]}>
 							<View style={styles.fallbackContent}>
 								<Text style={styles.fallbackTitle} numberOfLines={3}>
 									{title}
@@ -136,11 +126,7 @@ export function Book3D({
 
 					{/* Overall light gradient — subtle directional light */}
 					<LinearGradient
-						colors={[
-							'rgba(255,255,255,0.08)',
-							'transparent',
-							'rgba(0,0,0,0.1)',
-						]}
+						colors={['rgba(255,255,255,0.08)', 'transparent', 'rgba(0,0,0,0.1)']}
 						start={{ x: 0, y: 0 }}
 						end={{ x: 1, y: 0 }}
 						style={StyleSheet.absoluteFill}
@@ -152,6 +138,15 @@ export function Book3D({
 }
 
 const styles = StyleSheet.create({
+	cover: {
+		shadowColor: '#000',
+		shadowOffset: { width: 3, height: 5 },
+		shadowOpacity: 0.25,
+		shadowRadius: 10,
+		elevation: 8,
+		borderRadius: 4,
+		overflow: 'hidden',
+	},
 	coverFill: {
 		...StyleSheet.absoluteFillObject,
 	},

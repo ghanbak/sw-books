@@ -1,7 +1,3 @@
-import {
-	SpaceGrotesk_500Medium,
-	useFonts,
-} from '@expo-google-fonts/space-grotesk';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -12,7 +8,7 @@ import 'react-native-reanimated';
 
 import { tokens } from '@/constants/tokens';
 import { AuthProvider, useAuth } from '@/lib/auth';
-import { UserBooksProvider } from '@/lib/hooks';
+import { BooksProvider, UserBooksProvider } from '@/lib/hooks';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -33,54 +29,47 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-	const [fontsLoaded, fontError] = useFonts({ SpaceGrotesk_500Medium });
-
 	useEffect(() => {
-		if (fontsLoaded || fontError) {
-			SplashScreen.hideAsync();
-		}
-	}, [fontsLoaded, fontError]);
-
-	if (!fontsLoaded && !fontError) return null;
+		SplashScreen.hideAsync();
+	}, []);
 
 	return (
 		<AuthProvider>
-			<UserBooksProvider>
-				<ThemeProvider value={appDarkTheme}>
-					<AuthGate>
-					<Stack
-						screenOptions={{
-							headerShadowVisible: false,
-							...(Platform.OS === 'ios'
-								? {
-										headerTransparent: true,
-										headerBlurEffect: 'systemMaterial',
-										headerLargeStyle: { backgroundColor: tokens.surface.background },
-									}
-								: {
-										headerStyle: { backgroundColor: tokens.surface.background },
-									}),
-							headerTintColor: tokens.text.primary,
-							headerTitleStyle: {
-								fontFamily: 'SpaceGrotesk_500Medium',
-							},
-						}}
-					>
-						<Stack.Screen name="(auth)" options={{ headerShown: false }} />
-						<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-						<Stack.Screen
-							name="book/[id]"
-							options={{
-								title: 'Book Details',
-								headerBackTitle: 'Back',
-							}}
-						/>
-					</Stack>
-				</AuthGate>
-				<StatusBar style="light" />
-			</ThemeProvider>
-		</UserBooksProvider>
-	</AuthProvider>
+			<BooksProvider>
+				<UserBooksProvider>
+					<ThemeProvider value={appDarkTheme}>
+						<AuthGate>
+							<Stack
+								screenOptions={{
+									headerShadowVisible: false,
+									...(Platform.OS === 'ios'
+										? {
+												headerTransparent: true,
+												headerBlurEffect: 'systemMaterial',
+												headerLargeStyle: { backgroundColor: tokens.surface.background },
+											}
+										: {
+												headerStyle: { backgroundColor: tokens.surface.background },
+											}),
+									headerTintColor: tokens.text.primary,
+								}}
+							>
+								<Stack.Screen name="(auth)" options={{ headerShown: false }} />
+								<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+								<Stack.Screen
+									name="book/[id]"
+									options={{
+										title: 'Book Details',
+										headerBackTitle: 'Back',
+									}}
+								/>
+							</Stack>
+						</AuthGate>
+						<StatusBar style="light" />
+					</ThemeProvider>
+				</UserBooksProvider>
+			</BooksProvider>
+		</AuthProvider>
 	);
 }
 
@@ -88,16 +77,20 @@ function AuthGate({ children }: { children: ReactNode }) {
 	const { session, loading } = useAuth();
 	const segments = useSegments();
 	const router = useRouter();
+	// Only the top-level group matters for the auth redirect — taking the whole
+	// segments array as a dep would re-run on every nested route change since
+	// useSegments returns a new array each render.
+	const topSegment = segments[0];
 
 	useEffect(() => {
 		if (loading) return;
-		const inAuthGroup = segments[0] === '(auth)';
+		const inAuthGroup = topSegment === '(auth)';
 		if (!session && !inAuthGroup) {
 			router.replace('/(auth)/login');
 		} else if (session && inAuthGroup) {
 			router.replace('/(tabs)');
 		}
-	}, [session, loading, segments, router]);
+	}, [session, loading, topSegment, router]);
 
 	if (loading) {
 		return (

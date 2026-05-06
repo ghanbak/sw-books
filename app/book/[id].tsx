@@ -1,40 +1,27 @@
 import { useLocalSearchParams } from 'expo-router';
-import {
-	BookOpen,
-	Bookmark,
-	Calendar,
-	Hash,
-	Layers,
-	Library,
-	Package,
-} from 'lucide-react-native';
-import { useCallback, useEffect, useState } from 'react';
-import {
-	Platform,
-	Pressable,
-	ScrollView,
-	StyleSheet,
-	Text,
-	View,
-} from 'react-native';
+import { BookOpen, Bookmark, Calendar, Hash, Layers, Library, Package } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AffiliateDisclosureSheet } from '@/components/affiliate-disclosure-sheet';
 import { Book3D } from '@/components/Book3D';
 import { Book3DViewer } from '@/components/Book3DViewer';
+import { AffiliateDisclosureSheet } from '@/components/affiliate-disclosure-sheet';
 import { BookDetailSkeleton } from '@/components/book-detail-skeleton';
 import { BuyOnAmazonButton } from '@/components/buy-on-amazon-button';
 import { ErrorState } from '@/components/error-state';
 import { tokens } from '@/constants/tokens';
 import { buildAmazonSearchUrl } from '@/lib/amazon';
 import type { Book } from '@/lib/hooks';
-import { useUserBooks } from '@/lib/hooks';
+import { useBooks, useUserBooks } from '@/lib/hooks';
 import { supabase } from '@/lib/supabase';
 
 export default function BookDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
-	const [book, setBook] = useState<Book | null>(null);
-	const [loading, setLoading] = useState(true);
+	const { books } = useBooks();
+	const cached = useMemo(() => books.find((b) => b.id === id) ?? null, [books, id]);
+	const [book, setBook] = useState<Book | null>(cached);
+	const [loading, setLoading] = useState(!cached);
 	const [error, setError] = useState<string | null>(null);
 	const [viewerOpen, setViewerOpen] = useState(false);
 	const [disclosureOpen, setDisclosureOpen] = useState(false);
@@ -61,8 +48,14 @@ export default function BookDetailScreen() {
 	}, [id]);
 
 	useEffect(() => {
+		// Use the catalog cache when available; only hit the network on cache miss.
+		if (cached) {
+			setBook(cached);
+			setLoading(false);
+			return;
+		}
 		fetchBook();
-	}, [fetchBook]);
+	}, [cached, fetchBook]);
 
 	if (loading) {
 		return <BookDetailSkeleton />;
@@ -75,18 +68,14 @@ export default function BookDetailScreen() {
 	if (!book) {
 		return (
 			<View style={styles.center}>
-				<Text style={styles.notFoundText}>If an item does not appear in our records, it does not exist.</Text>
+				<Text style={styles.notFoundText}>
+					If an item does not appear in our records, it does not exist.
+				</Text>
 			</View>
 		);
 	}
 
-	const publishedDate = book.date_published
-		? new Date(book.date_published).toLocaleDateString('en-US', {
-				year: 'numeric',
-				month: 'long',
-				day: 'numeric',
-			})
-		: null;
+	const publishedDate = formatPublishedDate(book.date_published);
 
 	const isbns = book.isbn ?? [];
 	// Reserve space at the bottom of the scroll content so the floating
@@ -95,193 +84,191 @@ export default function BookDetailScreen() {
 
 	return (
 		<View style={styles.container}>
-		<ScrollView
-			style={styles.container}
-			contentContainerStyle={[styles.content, { paddingBottom: scrollPaddingBottom }]}
-			contentInsetAdjustmentBehavior="automatic"
-		>
-			{/* Hero cover */}
-			<View style={styles.coverWrapper}>
-				<Book3D
+			<ScrollView
+				style={styles.container}
+				contentContainerStyle={[styles.content, { paddingBottom: scrollPaddingBottom }]}
+				contentInsetAdjustmentBehavior="automatic"
+			>
+				{/* Hero cover */}
+				<View style={styles.coverWrapper}>
+					<Book3D
+						coverUri={book.cover_image}
+						title={book.title}
+						author={book.author}
+						width={200}
+						height={300}
+						onPress={() => setViewerOpen(true)}
+						accessibilityLabel={`Book cover: ${book.title}. Tap to inspect in 3D.`}
+					/>
+				</View>
+
+				<Book3DViewer
+					visible={viewerOpen}
+					onClose={() => setViewerOpen(false)}
 					coverUri={book.cover_image}
 					title={book.title}
 					author={book.author}
-					width={200}
-					height={300}
-					onPress={() => setViewerOpen(true)}
-					accessibilityLabel={`Book cover: ${book.title}. Tap to inspect in 3D.`}
 				/>
-			</View>
 
-			<Book3DViewer
-				visible={viewerOpen}
-				onClose={() => setViewerOpen(false)}
-				coverUri={book.cover_image}
-				title={book.title}
-				author={book.author}
-			/>
+				{/* Title + Author */}
+				<Text style={styles.title}>{book.title}</Text>
+				<Text style={styles.author}>{book.author.join(', ')}</Text>
 
-			{/* Title + Author */}
-			<Text style={styles.title}>{book.title}</Text>
-			<Text style={styles.author}>{book.author.join(', ')}</Text>
-
-			{/* Shelf actions */}
-			<View style={styles.shelfButtons}>
-				<ShelfButton
-					icon={
-						<Library
-							size={16}
-							color={shelfEntry?.owned ? tokens.text.inverse : tokens.text.secondary}
-							strokeWidth={2}
-						/>
-					}
-					label="Owned"
-					active={shelfEntry?.owned ?? false}
-					onPress={() => toggleShelf(book.id, 'owned')}
-				/>
-				<ShelfButton
-					icon={
-						<BookOpen
-							size={16}
-							color={shelfEntry?.read ? tokens.text.inverse : tokens.text.secondary}
-							strokeWidth={2}
-						/>
-					}
-					label="Read"
-					active={shelfEntry?.read ?? false}
-					onPress={() => toggleShelf(book.id, 'read')}
-				/>
-				<ShelfButton
-					icon={
-						<Bookmark
-							size={16}
-							color={shelfEntry?.want_to_read ? tokens.text.inverse : tokens.text.secondary}
-							strokeWidth={2}
-						/>
-					}
-					label="Want to Read"
-					active={shelfEntry?.want_to_read ?? false}
-					onPress={() => toggleShelf(book.id, 'want_to_read')}
-				/>
-			</View>
-
-			{/* Synopsis */}
-			{book.synopsis && (
-				<View style={styles.section}>
-					<Text style={styles.synopsis}>{book.synopsis}</Text>
-				</View>
-			)}
-
-			{/* Details card */}
-			<View style={styles.card}>
-				<Text style={styles.cardTitle}>Details</Text>
-
-				<DetailRow
-					icon={<Layers size={14} color={tokens.text.hint} strokeWidth={2} />}
-					label="Continuity"
-					value={book.canon}
-				/>
-				<DetailRow
-					icon={<BookOpen size={14} color={tokens.text.hint} strokeWidth={2} />}
-					label="Type"
-					value={book.type}
-				/>
-				{book.publisher && (
-					<DetailRow
-						icon={<Package size={14} color={tokens.text.hint} strokeWidth={2} />}
-						label="Publisher"
-						value={book.publisher}
-					/>
-				)}
-				{publishedDate && (
-					<DetailRow
-						icon={<Calendar size={14} color={tokens.text.hint} strokeWidth={2} />}
-						label="Published"
-						value={publishedDate}
-					/>
-				)}
-				{book.language && <DetailRow label="Language" value={book.language} />}
-				{book.timeline_order != null && (
-					<DetailRow
-						label="Timeline"
-						value={
-							book.timeline_order < 0
-								? `${Math.abs(book.timeline_order)} BBY`
-								: `${book.timeline_order} ABY`
+				{/* Shelf actions */}
+				<View style={styles.shelfButtons}>
+					<ShelfButton
+						icon={
+							<Library
+								size={16}
+								color={shelfEntry?.owned ? tokens.text.inverse : tokens.text.secondary}
+								strokeWidth={2}
+							/>
 						}
-						mono
+						label="Owned"
+						active={shelfEntry?.owned ?? false}
+						onPress={() => toggleShelf(book.id, 'owned')}
 					/>
-				)}
-			</View>
+					<ShelfButton
+						icon={
+							<BookOpen
+								size={16}
+								color={shelfEntry?.read ? tokens.text.inverse : tokens.text.secondary}
+								strokeWidth={2}
+							/>
+						}
+						label="Read"
+						active={shelfEntry?.read ?? false}
+						onPress={() => toggleShelf(book.id, 'read')}
+					/>
+					<ShelfButton
+						icon={
+							<Bookmark
+								size={16}
+								color={shelfEntry?.want_to_read ? tokens.text.inverse : tokens.text.secondary}
+								strokeWidth={2}
+							/>
+						}
+						label="Want to Read"
+						active={shelfEntry?.want_to_read ?? false}
+						onPress={() => toggleShelf(book.id, 'want_to_read')}
+					/>
+				</View>
 
-			{/* Series card */}
-			{book.series_name && (
+				{/* Synopsis */}
+				{book.synopsis && (
+					<View style={styles.section}>
+						<Text style={styles.synopsis}>{book.synopsis}</Text>
+					</View>
+				)}
+
+				{/* Details card */}
 				<View style={styles.card}>
-					<Text style={styles.cardTitle}>Series</Text>
-					<DetailRow label="Name" value={book.series_name} />
-					{book.series_order != null && book.series_order > 0 && (
+					<Text style={styles.cardTitle}>Details</Text>
+
+					<DetailRow
+						icon={<Layers size={14} color={tokens.text.hint} strokeWidth={2} />}
+						label="Continuity"
+						value={book.canon}
+					/>
+					<DetailRow
+						icon={<BookOpen size={14} color={tokens.text.hint} strokeWidth={2} />}
+						label="Type"
+						value={book.type}
+					/>
+					{book.publisher && (
 						<DetailRow
-							icon={<Hash size={14} color={tokens.text.hint} strokeWidth={2} />}
-							label="Book"
-							value={`#${book.series_order}`}
+							icon={<Package size={14} color={tokens.text.hint} strokeWidth={2} />}
+							label="Publisher"
+							value={book.publisher}
+						/>
+					)}
+					{publishedDate && (
+						<DetailRow
+							icon={<Calendar size={14} color={tokens.text.hint} strokeWidth={2} />}
+							label="Published"
+							value={publishedDate}
+						/>
+					)}
+					{book.language && <DetailRow label="Language" value={book.language} />}
+					{book.timeline_order != null && (
+						<DetailRow
+							label="Timeline"
+							value={
+								book.timeline_order < 0
+									? `${Math.abs(book.timeline_order)} BBY`
+									: `${book.timeline_order} ABY`
+							}
+							mono
 						/>
 					)}
 				</View>
-			)}
 
-			{/* Formats card */}
-			{book.format && book.format.length > 0 && (
-				<View style={styles.card}>
-					<Text style={styles.cardTitle}>Formats</Text>
-					<View style={styles.formatRow}>
-						{book.format.map((f) => (
-							<View key={f} style={styles.formatChip}>
-								<Text style={styles.formatText}>{f}</Text>
-							</View>
+				{/* Series card */}
+				{book.series_name && (
+					<View style={styles.card}>
+						<Text style={styles.cardTitle}>Series</Text>
+						<DetailRow label="Name" value={book.series_name} />
+						{book.series_order != null && book.series_order > 0 && (
+							<DetailRow
+								icon={<Hash size={14} color={tokens.text.hint} strokeWidth={2} />}
+								label="Book"
+								value={`#${book.series_order}`}
+							/>
+						)}
+					</View>
+				)}
+
+				{/* Formats card */}
+				{book.format && book.format.length > 0 && (
+					<View style={styles.card}>
+						<Text style={styles.cardTitle}>Formats</Text>
+						<View style={styles.formatRow}>
+							{book.format.map((f) => (
+								<View key={f} style={styles.formatChip}>
+									<Text style={styles.formatText}>{f}</Text>
+								</View>
+							))}
+						</View>
+					</View>
+				)}
+
+				{/* Identifiers card */}
+				{isbns.length > 0 && (
+					<View style={styles.card}>
+						<Text style={styles.cardTitle}>Identifiers</Text>
+						{isbns.map((isbn) => (
+							<DetailRow key={isbn} label="ISBN" value={isbn} mono />
 						))}
 					</View>
+				)}
+
+				{/* Era (if available) */}
+				{book.era && (
+					<View style={styles.card}>
+						<Text style={styles.cardTitle}>Era</Text>
+						<DetailRow label="Timeline Era" value={book.era} />
+					</View>
+				)}
+			</ScrollView>
+
+			{amazonUrl && (
+				<View style={[styles.floatingContainer, { paddingBottom: 12 + insets.bottom }]}>
+					<BuyOnAmazonButton url={amazonUrl} onInfoPress={() => setDisclosureOpen(true)} />
 				</View>
 			)}
 
-			{/* Identifiers card */}
-			{isbns.length > 0 && (
-				<View style={styles.card}>
-					<Text style={styles.cardTitle}>Identifiers</Text>
-					{isbns.map((isbn) => (
-						<DetailRow key={isbn} label="ISBN" value={isbn} mono />
-					))}
-				</View>
-			)}
-
-			{/* Era (if available) */}
-			{book.era && (
-				<View style={styles.card}>
-					<Text style={styles.cardTitle}>Era</Text>
-					<DetailRow label="Timeline Era" value={book.era} />
-				</View>
-			)}
-		</ScrollView>
-
-		{amazonUrl && (
-			<View
-				style={[
-					styles.floatingContainer,
-					{ paddingBottom: 12 + insets.bottom },
-				]}
-			>
-				<BuyOnAmazonButton
-					url={amazonUrl}
-					onInfoPress={() => setDisclosureOpen(true)}
-				/>
-			</View>
-		)}
-
-		<AffiliateDisclosureSheet
-			visible={disclosureOpen}
-			onClose={() => setDisclosureOpen(false)}
-		/>
+			<AffiliateDisclosureSheet visible={disclosureOpen} onClose={() => setDisclosureOpen(false)} />
 		</View>
 	);
+}
+
+function formatPublishedDate(date: string | null): string | null {
+	if (!date) return null;
+	return new Date(date).toLocaleDateString('en-US', {
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric',
+	});
 }
 
 function DetailRow({

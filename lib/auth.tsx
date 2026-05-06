@@ -7,11 +7,6 @@ import { type ReactNode, createContext, useContext, useEffect, useState } from '
 
 import { supabase } from './supabase';
 
-GoogleSignin.configure({
-	webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-	iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-});
-
 // Apple only returns fullName on the very first sign-in for a given Apple ID + app.
 // We persist it locally before the Supabase round-trip so a crash or network failure
 // between Supabase auth and the metadata write doesn't lose the name forever.
@@ -34,6 +29,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
+		GoogleSignin.configure({
+			webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+			iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+		});
+
 		supabase.auth.getSession().then(({ data }) => {
 			setSession(data.session);
 			setLoading(false);
@@ -78,10 +78,7 @@ export async function signInWithGoogle() {
 
 export async function signInWithApple() {
 	const rawNonce = Crypto.randomUUID();
-	const hashedNonce = await Crypto.digestStringAsync(
-		Crypto.CryptoDigestAlgorithm.SHA256,
-		rawNonce,
-	);
+	const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
 
 	const credential = await AppleAuthentication.signInAsync({
 		requestedScopes: [

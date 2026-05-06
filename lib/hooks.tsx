@@ -4,6 +4,7 @@ import {
 	useCallback,
 	useContext,
 	useEffect,
+	useRef,
 	useState,
 } from 'react';
 import { useAuth } from './auth';
@@ -13,11 +14,25 @@ import type { Database } from './types';
 export type Book = Database['public']['Tables']['books']['Row'];
 export type UserBook = Database['public']['Tables']['user_books']['Row'];
 
+type BooksContextValue = {
+	books: Book[];
+	loading: boolean;
+	error: string | null;
+	refetch: () => Promise<void>;
+};
+
+const BooksContext = createContext<BooksContextValue>({
+	books: [],
+	loading: true,
+	error: null,
+	refetch: async () => {},
+});
+
 /**
- * Fetches the full book catalog from Supabase.
- * Returns all books sorted by timeline_order.
+ * Fetches the catalog once and shares it across every screen. Without this,
+ * each consumer of useBooks() would refetch the whole catalog on mount.
  */
-export function useBooks() {
+export function BooksProvider({ children }: { children: ReactNode }) {
 	const [books, setBooks] = useState<Book[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -43,7 +58,15 @@ export function useBooks() {
 		fetchBooks();
 	}, [fetchBooks]);
 
-	return { books, loading, error, refetch: fetchBooks };
+	return (
+		<BooksContext.Provider value={{ books, loading, error, refetch: fetchBooks }}>
+			{children}
+		</BooksContext.Provider>
+	);
+}
+
+export function useBooks() {
+	return useContext(BooksContext);
 }
 
 type UserBooksContextValue = {
@@ -70,6 +93,11 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 	const { user } = useAuth();
 	const [userBooks, setUserBooks] = useState<Map<string, UserBook>>(new Map());
 	const [loading, setLoading] = useState(true);
+
+	// Mirror of userBooks for reads inside toggleShelf without re-creating the
+	// callback on every shelf change (which would invalidate every memoized consumer).
+	const userBooksRef = useRef(userBooks);
+	userBooksRef.current = userBooks;
 
 	const fetchUserBooks = useCallback(async () => {
 		setLoading(true);
@@ -100,14 +128,13 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 		async (bookId: string, field: 'owned' | 'read' | 'want_to_read') => {
 			if (!user) return;
 
-			const existing = userBooks.get(bookId);
+			const existing = userBooksRef.current.get(bookId);
 
 			if (existing) {
 				const newValue = !existing[field];
 				const updated = { ...existing, [field]: newValue };
 				const allOff = !updated.owned && !updated.read && !updated.want_to_read;
 
-				// Optimistic update
 				setUserBooks((prev) => {
 					const next = new Map(prev);
 					if (allOff) {
@@ -165,7 +192,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 				}
 			}
 		},
-		[user, userBooks],
+		[user],
 	);
 
 	return (

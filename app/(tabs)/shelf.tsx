@@ -1,7 +1,8 @@
+import { FlashList } from '@shopify/flash-list';
+import { useRouter } from 'expo-router';
 import { BookOpen, ScanBarcode } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
@@ -56,7 +57,15 @@ export default function ShelfScreen() {
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 	const separator = useCallback(
-		() => <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: tokens.border.subtle, marginHorizontal: 12 }} />,
+		() => (
+			<View
+				style={{
+					height: StyleSheet.hairlineWidth,
+					backgroundColor: tokens.border.subtle,
+					marginHorizontal: 12,
+				}}
+			/>
+		),
 		[],
 	);
 
@@ -81,10 +90,7 @@ export default function ShelfScreen() {
 					<Pressable style={styles.ctaButton} onPress={() => router.push('/(tabs)')}>
 						<Text style={styles.ctaText}>Browse Catalog</Text>
 					</Pressable>
-					<Pressable
-						style={styles.ctaSecondary}
-						onPress={() => router.push('/(tabs)/scan')}
-					>
+					<Pressable style={styles.ctaSecondary} onPress={() => router.push('/(tabs)/scan')}>
 						<Text style={styles.ctaSecondaryText}>Scan a Barcode</Text>
 					</Pressable>
 				</View>
@@ -111,14 +117,13 @@ export default function ShelfScreen() {
 				})}
 			</View>
 
-			<FlatList
+			<FlashList
 				data={shelvedBooks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
 				ItemSeparatorComponent={separator}
 				refreshing={loading}
 				onRefresh={refetch}
-				contentContainerStyle={shelvedBooks.length === 0 ? styles.emptyList : undefined}
 				ListEmptyComponent={
 					<View style={styles.emptyList}>
 						<Text style={styles.emptyFilterText}>No books in this category</Text>
@@ -170,7 +175,6 @@ const styles = StyleSheet.create({
 	emptyTitle: {
 		fontSize: 22,
 		fontWeight: '700',
-		fontFamily: 'SpaceGrotesk_500Medium',
 		letterSpacing: 1,
 		marginBottom: 10,
 		color: tokens.text.primary,

@@ -1,14 +1,7 @@
+import { FlashList } from '@shopify/flash-list';
 import { Search } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import {
-	ActivityIndicator,
-	FlatList,
-	Pressable,
-	StyleSheet,
-	Text,
-	TextInput,
-	View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
@@ -116,14 +109,13 @@ export default function CatalogScreen() {
 				<Text style={styles.count}>{filteredBooks.length} books</Text>
 			</View>
 
-			<FlatList
+			<FlashList
 				data={filteredBooks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
 				ItemSeparatorComponent={separator}
 				refreshing={loading}
 				onRefresh={refetch}
-				contentContainerStyle={filteredBooks.length === 0 ? styles.emptyContainer : undefined}
 				ListEmptyComponent={
 					<View style={styles.center}>
 						<Text style={styles.emptyText}>No books match your search</Text>

@@ -63,7 +63,6 @@ const styles = StyleSheet.create({
 	title: {
 		fontSize: 20,
 		fontWeight: '700',
-		fontFamily: 'SpaceGrotesk_500Medium',
 		letterSpacing: 1,
 		color: tokens.text.primary,
 	},

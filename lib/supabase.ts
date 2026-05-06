@@ -28,6 +28,13 @@ export async function signInAsDevUser(): Promise<string | null> {
 	const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 	if (!signInError) return null;
 
+	// Only auto-create the dev user when the credentials are wrong (i.e. account
+	// doesn't exist yet). Network errors, rate-limits, etc. should surface, not
+	// silently trigger a signup.
+	if (signInError.code !== 'invalid_credentials') {
+		return signInError.message;
+	}
+
 	const { error: signUpError } = await supabase.auth.signUp({ email, password });
 	return signUpError ? signUpError.message : null;
 }
