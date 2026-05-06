@@ -1,4 +1,4 @@
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 
 // Native tab bar — UIKit on iOS, Material 3 on Android.
 //
@@ -10,29 +10,37 @@ import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 // Icons are SF Symbols on iOS only. Android currently shows tab labels without
 // icons — add `androidSrc` PNGs or a VectorIcon family when we ship Android.
 export default function TabLayout() {
-	return (
-		<NativeTabs>
-			<NativeTabs.Trigger name="index">
-				<Icon sf="books.vertical.fill" />
-				<Label>Archives</Label>
-			</NativeTabs.Trigger>
+  return (
+    <NativeTabs blurEffect="systemChromeMaterialDark">
+      <NativeTabs.Trigger name="index">
+        <Icon
+          sf={{ default: "externaldrive", selected: "externaldrive.fill" }}
+        />
+        <Label>Archives</Label>
+      </NativeTabs.Trigger>
 
-			{/* biome-ignore lint/a11y/useValidAriaRole: NativeTabsTabBarItemRole, not ARIA */}
-			<NativeTabs.Trigger name="shelf" role="bookmarks">
-				<Icon sf="bookmark.fill" />
-				<Label>Shelves</Label>
-			</NativeTabs.Trigger>
+      <NativeTabs.Trigger name="shelf">
+        <Icon
+          sf={{ default: "books.vertical", selected: "books.vertical.fill" }}
+        />
+        <Label>Shelves</Label>
+      </NativeTabs.Trigger>
 
-			{/* biome-ignore lint/a11y/useSemanticElements: NativeTabsTabBarItemRole, not ARIA */}
-			<NativeTabs.Trigger name="scan" role="search">
-				<Icon sf="barcode.viewfinder" />
-				<Label>Scan</Label>
-			</NativeTabs.Trigger>
+      {/* biome-ignore lint/a11y/useSemanticElements: NativeTabsTabBarItemRole, not ARIA */}
+      <NativeTabs.Trigger name="scan" role="search">
+        <Icon sf="barcode.viewfinder" />
+        <Label>Scan</Label>
+      </NativeTabs.Trigger>
 
-			<NativeTabs.Trigger name="profile">
-				<Icon sf="person.crop.circle.fill" />
-				<Label>Profile</Label>
-			</NativeTabs.Trigger>
-		</NativeTabs>
-	);
+      <NativeTabs.Trigger name="profile">
+        <Icon
+          sf={{
+            default: "person.crop.circle",
+            selected: "person.crop.circle.fill",
+          }}
+        />
+        <Label>Profile</Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
+  );
 }
