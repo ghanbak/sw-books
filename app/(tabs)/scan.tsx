@@ -1,8 +1,9 @@
 import { useIsFocused } from '@react-navigation/native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { openSettings } from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { Book3D } from '@/components/Book3D';
@@ -103,7 +104,7 @@ export default function ScanScreen() {
 				</Text>
 				<Pressable
 					style={styles.permissionButton}
-					onPress={canAsk ? requestPermission : () => Linking.openSettings()}
+					onPress={canAsk ? requestPermission : () => openSettings()}
 				>
 					<Text style={styles.permissionButtonText}>
 						{canAsk ? 'Grant Access' : 'Open Settings'}

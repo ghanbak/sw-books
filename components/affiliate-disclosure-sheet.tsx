@@ -1,5 +1,6 @@
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { X } from 'lucide-react-native';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { tokens } from '@/constants/tokens';
@@ -9,8 +10,11 @@ type Props = {
 	onClose: () => void;
 };
 
+const useLiquidGlass = Platform.OS === 'ios' && isLiquidGlassAvailable();
+
 export function AffiliateDisclosureSheet({ visible, onClose }: Props) {
 	const insets = useSafeAreaInsets();
+	const Surface = useLiquidGlass ? GlassView : View;
 
 	return (
 		<Modal
@@ -19,7 +23,13 @@ export function AffiliateDisclosureSheet({ visible, onClose }: Props) {
 			presentationStyle="pageSheet"
 			onRequestClose={onClose}
 		>
-			<View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+			<Surface
+				style={[
+					styles.container,
+					!useLiquidGlass && styles.containerFallback,
+					{ paddingTop: insets.top + 16 },
+				]}
+			>
 				<View style={styles.header}>
 					<Text style={styles.title}>Affiliate Disclosure</Text>
 					<Pressable
@@ -34,16 +44,16 @@ export function AffiliateDisclosureSheet({ visible, onClose }: Props) {
 				</View>
 
 				<Text style={styles.body}>
-					Ossus Archives is a participant in the Amazon Services LLC Associates Program.
-					Tapping "Find on Amazon" opens Amazon's website. As an Associate I earn from
-					qualifying purchases — at no extra cost to you.
+					Ossus Archives is a participant in the Amazon Services LLC Associates Program. Tapping
+					"Find on Amazon" opens Amazon's website. As an Associate I earn from qualifying purchases
+					— at no extra cost to you.
 				</Text>
 
 				<Text style={styles.footnote}>
 					You can read the full Amazon Associates terms at{' '}
 					<Text style={styles.link}>affiliate-program.amazon.com</Text>.
 				</Text>
-			</View>
+			</Surface>
 		</Modal>
 	);
 }
@@ -51,8 +61,10 @@ export function AffiliateDisclosureSheet({ visible, onClose }: Props) {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: tokens.surface.background,
 		paddingHorizontal: 24,
+	},
+	containerFallback: {
+		backgroundColor: tokens.surface.background,
 	},
 	header: {
 		flexDirection: 'row',

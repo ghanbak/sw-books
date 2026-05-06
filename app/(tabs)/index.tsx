@@ -1,7 +1,16 @@
 import { FlashList } from '@shopify/flash-list';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Search } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+	ActivityIndicator,
+	Platform,
+	Pressable,
+	StyleSheet,
+	Text,
+	TextInput,
+	View,
+} from 'react-native';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
@@ -10,6 +19,8 @@ import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
 
 type CanonFilter = 'all' | 'Canon' | 'Legends';
+
+const useLiquidGlass = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
 export default function CatalogScreen() {
 	const { books, loading, error, refetch } = useBooks();
@@ -100,6 +111,7 @@ export default function CatalogScreen() {
 							style={[styles.filterChip, active && styles.filterChipActive]}
 							onPress={() => setCanonFilter(filter)}
 						>
+							{!active && useLiquidGlass && <GlassView style={StyleSheet.absoluteFill} />}
 							<Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
 								{filter === 'all' ? 'All' : filter}
 							</Text>
@@ -171,6 +183,7 @@ const styles = StyleSheet.create({
 		borderRadius: 16,
 		borderWidth: 1,
 		borderColor: tokens.border.subtle,
+		overflow: 'hidden',
 	},
 	filterChipActive: {
 		backgroundColor: tokens.accent.primary,

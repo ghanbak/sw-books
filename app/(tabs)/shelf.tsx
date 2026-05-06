@@ -1,8 +1,9 @@
 import { FlashList } from '@shopify/flash-list';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { useRouter } from 'expo-router';
 import { BookOpen, ScanBarcode } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
@@ -11,6 +12,8 @@ import type { Book } from '@/lib/hooks';
 import { useBooks, useUserBooks } from '@/lib/hooks';
 
 type ShelfFilter = 'all' | 'owned' | 'read' | 'want_to_read';
+
+const useLiquidGlass = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
 const FILTERS: { key: ShelfFilter; label: string }[] = [
 	{ key: 'all', label: 'All' },
@@ -109,6 +112,7 @@ export default function ShelfScreen() {
 							style={[styles.filterChip, active && styles.filterChipActive]}
 							onPress={() => setFilter(key)}
 						>
+							{!active && useLiquidGlass && <GlassView style={StyleSheet.absoluteFill} />}
 							<Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
 								{label} ({counts[key]})
 							</Text>
@@ -152,6 +156,7 @@ const styles = StyleSheet.create({
 		borderRadius: 16,
 		borderWidth: 1,
 		borderColor: tokens.border.subtle,
+		overflow: 'hidden',
 	},
 	filterChipActive: {
 		backgroundColor: tokens.accent.primary,

@@ -1,13 +1,6 @@
+import { Image } from "expo-image";
 import { Apple } from "lucide-react-native";
-import {
-  Alert,
-  Image,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { tokens } from "@/constants/tokens";
 import { signInWithApple, signInWithGoogle } from "@/lib/auth";
@@ -109,7 +102,7 @@ function GoogleGlyph() {
         uri: "https://www.gstatic.com/marketing-cms/assets/images/d5/dc/cfe9ce8b4425b410b49b7f2dd3f3/g.webp=s48-fcrop64=1,00000000ffffffff-rw",
       }}
       style={{ width: 18, height: 18 }}
-      resizeMode="contain"
+      contentFit="contain"
     />
   );
 }
