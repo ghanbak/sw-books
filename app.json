@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ghanbak.ossusarchives",
+      "icon": "./assets/images/App-Icon.icon",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
