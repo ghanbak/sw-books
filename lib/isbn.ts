@@ -7,7 +7,7 @@ export function isbn10to13(isbn10: string): string {
 	const base = `978${isbn10.slice(0, 9)}`;
 	let sum = 0;
 	for (let i = 0; i < 12; i++) {
-		sum += Number.parseInt(base[i], 10) * (i % 2 === 0 ? 1 : 3);
+		sum += Number.parseInt(base[i] ?? '0', 10) * (i % 2 === 0 ? 1 : 3);
 	}
 	const check = (10 - (sum % 10)) % 10;
 	return `${base}${check}`;
@@ -20,10 +20,10 @@ export function isValidIsbn13(isbn: string): boolean {
 	if (!/^\d{13}$/.test(isbn)) return false;
 	let sum = 0;
 	for (let i = 0; i < 12; i++) {
-		sum += Number.parseInt(isbn[i], 10) * (i % 2 === 0 ? 1 : 3);
+		sum += Number.parseInt(isbn[i] ?? '0', 10) * (i % 2 === 0 ? 1 : 3);
 	}
 	const check = (10 - (sum % 10)) % 10;
-	return check === Number.parseInt(isbn[12], 10);
+	return check === Number.parseInt(isbn[12] ?? '0', 10);
 }
 
 /**
