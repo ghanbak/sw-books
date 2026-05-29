@@ -400,21 +400,22 @@ Land separately from the admin app to keep blast radius bounded.
 
 ### Phase 2 — Edit + per-row API lookup + diff/apply
 
-- [ ] `admin/app/_actions/books.ts`:
-  - `patchBook(id, patch) → Result<BookRow, Err>` — Zod-validated with explicit enum schemas + `primary_isbn ∈ isbn[]` refinement; `revalidateTag('books')`
-  - `lookupCandidates(slug) → Result<LookupResult, Err>` — calls OL + GB in parallel via `Promise.allSettled`; partial success returns whichever succeeded
-- [ ] Inline cell editing using `useOptimistic` for single cells; revert on `!ok`. 300ms debounce before commit.
-- [ ] `admin/app/books/[slug]/page.tsx`:
-  - 3 `Card` columns (Current | OL | GB), `CardDescription` shows provenance ("OL · fetched 2m ago")
-  - Per-field `RadioGroup` (3 items) inside `Field`; override via `Input` or `InputGroup`
-  - Cover candidates: `Card` row in `ScrollArea`, 2:3 aspect ~180px tall; `new Image()` preload before enabling Apply; `Dialog` to enlarge
-  - "Apply selected" `Button` in `CardFooter` with `AlertDialog` confirm; `useActionState` for pending
-  - "Fill all empty" `Checkbox` at top — pre-selects candidate fields where current is null/empty
-  - `pickPrimaryIsbn(newIsbn)` preview when ISBN array changes; user can override
-  - ISBN merge default = JS Set union; "Replace (destructive)" toggle requires typing the slug. Replace path writes a removal entry to `data/isbn-manual-overrides.json`.
-- [ ] Slug column is read-only in the table (non-editable cell)
+- [x] Server actions (**split across two files**: `_actions/books.ts` + `_actions/lookup.ts`):
+  - `patchBook(id, raw) → Result<BookRow>` — Zod with `canon`/`type` enums (real DB values), `primary_isbn ∈ isbn[]` refine, empty-patch guard; `revalidateTag('books')`
+  - `lookupCandidates(slug) → Result<LookupResult>` — OL + GB in parallel via `Promise.allSettled` (reuses `@app/sources` + `@app/isbn`); anchors on `primary_isbn ?? isbn[0]`, falls back to OL title/author search; partial success returns whichever succeeded
+- [x] Inline cell editing with `useOptimistic` + revert-on-`!ok` + sonner toast. **Scope:** scalar fields (title/publisher/era/date_published); arrays/enums/ISBN/cover edited on the detail page. Commit-on-blur/Enter rather than 300ms typing debounce.
+- [x] `admin/app/books/[slug]/page.tsx` + `_components/diff-view.tsx`:
+  - 3-source diff as **per-field radio rows** (Current | Open Library | Google Books) rather than 3 separate `Card`s — better for "apply selected fields"
+  - Cover thumbnails per source, click-to-enlarge `Dialog`
+  - "Apply selected" behind `AlertDialog` confirm; `useTransition` pending (not `useActionState`)
+  - "Fill all empty" pre-selects a candidate source for null/empty fields
+  - `primary_isbn` preview recomputed live when the ISBN selection changes
+  - ISBN additive Set-union default; "Replace (destructive)" toggle requires typing the slug. **Deferred:** writing a removal entry to `data/isbn-manual-overrides.json` — admin edits the DB directly; override-file reconciliation is Phase 4 (export) work.
+  - Manual override `Input` per field deferred (inline table editing covers manual scalar edits)
+- [x] Slug is read-only in the table
+- [x] Hardened `lib/isbn.ts` index access for the admin's `noUncheckedIndexedAccess` (behavior-neutral)
 
-**Acceptance:** edit any non-slug field inline; navigate to `/books/[slug]`, run lookup, see 3-column diff, apply selected fields. Two-tab last-write-wins is documented as accepted behavior.
+**Acceptance:** Build + type-check clean (`/books` and `/books/[slug]` both `ƒ` dynamic); secret-leak guard passes. **Run locally to confirm** the interactive flow: edit a scalar field inline → toast; open `/books/[slug]` → Run lookup → 3-column diff → Apply. Two-tab last-write-wins accepted (single user).
 
 ### Phase 3 — Issues queue + bulk ops
 
