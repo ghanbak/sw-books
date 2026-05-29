@@ -21,59 +21,38 @@
  *   npx tsx scripts/refresh-covers.ts
  */
 
-import { createHash } from 'crypto';
-import { readFileSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
+import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { parseCsv } from '../lib/csv/read';
+import { fetchJson, fetchWithRetry } from '../lib/sources/fetch-retry';
 
 const CSV_PATH = resolve(__dirname, '..', 'data', 'books.csv');
 const REPORT_PATH = resolve(__dirname, 'placeholder-report.json');
 const OUT_PATH = resolve(__dirname, 'cover-resource-map.json');
 const POLITE_DELAY_MS = 120;
-const TIMEOUT_MS = 12000;
 const MIN_BYTES = 2048; // anything smaller is almost certainly a placeholder
 
 type Row = { title: string; slug: string; isbn: string; author: string; url: string };
 type Fetched = { bytes: Buffer; contentType: string | null } | null;
 type Candidate = { url: string; source: string; bytes: Buffer; md5: string } | null;
 
-function parseCSVLine(line: string): string[] {
-	const out: string[] = [];
-	let cur = '';
-	let q = false;
-	for (let i = 0; i < line.length; i++) {
-		const c = line[i];
-		if (c === '"') q = !q;
-		else if (c === ',' && !q) {
-			out.push(cur.trim());
-			cur = '';
-		} else cur += c;
-	}
-	out.push(cur.trim());
-	return out;
-}
-
 function loadRows(): Row[] {
-	const raw = readFileSync(CSV_PATH, 'utf-8').replace(/^﻿/, '');
-	const lines = raw.split('\n').filter((l) => l.trim());
-	const headers = parseCSVLine(lines[0]).map((h) => h.replace(/^﻿/, ''));
-	const iTitle = headers.indexOf('title');
-	const iSlug = headers.indexOf('slug');
-	const iIsbn = headers.indexOf('isbn');
-	const iAuthor = headers.indexOf('author');
-	const iUrl = headers.indexOf('cover_image');
+	const records = parseCsv(readFileSync(CSV_PATH, 'utf-8'));
 	const rows: Row[] = [];
 	const seen = new Set<string>();
-	for (let i = 1; i < lines.length; i++) {
-		const f = parseCSVLine(lines[i]);
-		if (!f[iUrl]) continue;
-		if (seen.has(f[iSlug])) continue; // duplicate CSV rows — handled separately
-		seen.add(f[iSlug]);
+	for (const rec of records) {
+		const url = (rec.cover_image ?? '').trim();
+		if (!url) continue;
+		const slug = (rec.slug ?? '').trim();
+		if (seen.has(slug)) continue; // duplicate CSV rows — handled separately
+		seen.add(slug);
 		rows.push({
-			title: f[iTitle],
-			slug: f[iSlug],
-			isbn: (f[iIsbn] ?? '').replace(/[-\s]/g, ''),
-			author: f[iAuthor],
-			url: f[iUrl],
+			title: (rec.title ?? '').trim(),
+			slug,
+			isbn: (rec.isbn ?? '').replace(/[-\s]/g, ''),
+			author: (rec.author ?? '').trim(),
+			url,
 		});
 	}
 	return rows;
@@ -91,18 +70,14 @@ function sleep(ms: number) {
 }
 
 async function fetchBytes(url: string): Promise<Fetched> {
-	const ctrl = new AbortController();
-	const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
 	try {
-		const res = await fetch(url, { method: 'GET', signal: ctrl.signal, redirect: 'follow' });
+		const res = await fetchWithRetry(url, { redirect: 'follow' }, { retries: 2 });
 		if (!res.ok) return null;
 		const ct = res.headers.get('content-type');
 		const ab = await res.arrayBuffer();
 		return { bytes: Buffer.from(ab), contentType: ct };
 	} catch {
 		return null;
-	} finally {
-		clearTimeout(timer);
 	}
 }
 
@@ -110,7 +85,12 @@ function md5(b: Buffer): string {
 	return createHash('md5').update(b).digest('hex');
 }
 
-function isGoodImage(bytes: Buffer, ct: string | null, blacklist: Set<string>, used: Set<string>): boolean {
+function isGoodImage(
+	bytes: Buffer,
+	ct: string | null,
+	blacklist: Set<string>,
+	used: Set<string>,
+): boolean {
 	if (bytes.length < MIN_BYTES) return false;
 	if (ct && !/^image\//i.test(ct)) return false;
 	const hash = md5(bytes);
@@ -132,7 +112,10 @@ async function tryUrl(
 }
 
 function normalize(s: string): string {
-	return s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+	return s
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, ' ')
+		.trim();
 }
 
 async function olSearchForCover(
@@ -145,100 +128,86 @@ async function olSearchForCover(
 	const mainTitle = title.split(':')[0].trim();
 	const primaryAuthor = author.split(';')[0].split(',')[0].trim();
 	const q = new URLSearchParams({ title: mainTitle, author: primaryAuthor, limit: '10' });
-	try {
-		const ctrl = new AbortController();
-		const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-		const res = await fetch(`https://openlibrary.org/search.json?${q.toString()}`, { signal: ctrl.signal });
-		clearTimeout(timer);
-		const j = (await res.json()) as {
-			docs?: Array<{ cover_i?: number; title?: string; isbn?: string[] }>;
-		};
-		const docs = j.docs ?? [];
-		const target = isbn.toUpperCase();
-		const mainNorm = normalize(mainTitle);
+	const j = await fetchJson<{
+		docs?: Array<{ cover_i?: number; title?: string; isbn?: string[] }>;
+	}>(`https://openlibrary.org/search.json?${q.toString()}`);
+	const docs = j?.docs ?? [];
+	const target = isbn.toUpperCase();
+	const mainNorm = normalize(mainTitle);
 
-		// Prefer docs whose ISBN list contains the target.
-		for (const doc of docs) {
-			if (!doc.cover_i) continue;
-			const isbns = (doc.isbn ?? []).map((x) => x.replace(/[-\s]/g, '').toUpperCase());
-			if (target && isbns.includes(target)) {
-				const c = await tryUrl(
-					`https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg?default=false`,
-					'ol-search-isbn',
-					blacklist,
-					used,
-				);
-				if (c) return c;
-			}
+	// Prefer docs whose ISBN list contains the target.
+	for (const doc of docs) {
+		if (!doc.cover_i) continue;
+		const isbns = (doc.isbn ?? []).map((x) => x.replace(/[-\s]/g, '').toUpperCase());
+		if (target && isbns.includes(target)) {
+			const c = await tryUrl(
+				`https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg?default=false`,
+				'ol-search-isbn',
+				blacklist,
+				used,
+			);
+			if (c) return c;
 		}
-		// Fallback: title-start match.
-		for (const doc of docs) {
-			if (!doc.cover_i) continue;
-			const dn = normalize(doc.title ?? '');
-			if (dn === mainNorm || dn.startsWith(`${mainNorm} `)) {
-				const c = await tryUrl(
-					`https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg?default=false`,
-					'ol-search-title',
-					blacklist,
-					used,
-				);
-				if (c) return c;
-			}
+	}
+	// Fallback: title-start match.
+	for (const doc of docs) {
+		if (!doc.cover_i) continue;
+		const dn = normalize(doc.title ?? '');
+		if (dn === mainNorm || dn.startsWith(`${mainNorm} `)) {
+			const c = await tryUrl(
+				`https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg?default=false`,
+				'ol-search-title',
+				blacklist,
+				used,
+			);
+			if (c) return c;
 		}
-	} catch {
-		// fall through
 	}
 	return null;
 }
 
-async function googleBooksFor(isbn: string, blacklist: Set<string>, used: Set<string>): Promise<Candidate> {
+async function googleBooksFor(
+	isbn: string,
+	blacklist: Set<string>,
+	used: Set<string>,
+): Promise<Candidate> {
 	if (!isbn || isbn.length < 10) return null;
-	try {
-		const ctrl = new AbortController();
-		const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-		const res = await fetch(
-			`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&maxResults=1`,
-			{ signal: ctrl.signal },
-		);
-		clearTimeout(timer);
-		const j = (await res.json()) as {
-			items?: Array<{ volumeInfo?: { imageLinks?: { thumbnail?: string; smallThumbnail?: string } } }>;
-		};
-		const raw =
-			j.items?.[0]?.volumeInfo?.imageLinks?.thumbnail ??
-			j.items?.[0]?.volumeInfo?.imageLinks?.smallThumbnail;
-		if (!raw) return null;
-		const url = raw
-			.replace(/^http:\/\//, 'https://')
-			.replace(/&edge=curl/g, '')
-			.replace(/zoom=\d+/, 'zoom=1');
-		return await tryUrl(url, 'google-books', blacklist, used);
-	} catch {
-		return null;
-	}
+	const j = await fetchJson<{
+		items?: Array<{
+			volumeInfo?: { imageLinks?: { thumbnail?: string; smallThumbnail?: string } };
+		}>;
+	}>(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&maxResults=1`);
+	const raw =
+		j?.items?.[0]?.volumeInfo?.imageLinks?.thumbnail ??
+		j?.items?.[0]?.volumeInfo?.imageLinks?.smallThumbnail;
+	if (!raw) return null;
+	const url = raw
+		.replace(/^http:\/\//, 'https://')
+		.replace(/&edge=curl/g, '')
+		.replace(/zoom=\d+/, 'zoom=1');
+	return await tryUrl(url, 'google-books', blacklist, used);
 }
 
-async function olBooksApiFor(isbn: string, blacklist: Set<string>, used: Set<string>): Promise<Candidate> {
+async function olBooksApiFor(
+	isbn: string,
+	blacklist: Set<string>,
+	used: Set<string>,
+): Promise<Candidate> {
 	if (!isbn || isbn.length < 10) return null;
-	try {
-		const ctrl = new AbortController();
-		const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-		const res = await fetch(
-			`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`,
-			{ signal: ctrl.signal },
-		);
-		clearTimeout(timer);
-		const j = (await res.json()) as Record<string, { cover?: { large?: string; medium?: string } }>;
-		const entry = j[`ISBN:${isbn}`];
-		const u = entry?.cover?.large ?? entry?.cover?.medium;
-		if (!u) return null;
-		return await tryUrl(u, 'ol-books-api', blacklist, used);
-	} catch {
-		return null;
-	}
+	const j = await fetchJson<Record<string, { cover?: { large?: string; medium?: string } }>>(
+		`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`,
+	);
+	const entry = j?.[`ISBN:${isbn}`];
+	const u = entry?.cover?.large ?? entry?.cover?.medium;
+	if (!u) return null;
+	return await tryUrl(u, 'ol-books-api', blacklist, used);
 }
 
-async function sourceCover(row: Row, blacklist: Set<string>, used: Set<string>): Promise<Candidate> {
+async function sourceCover(
+	row: Row,
+	blacklist: Set<string>,
+	used: Set<string>,
+): Promise<Candidate> {
 	// 1. OL cover by ISBN
 	if (row.isbn.length >= 10) {
 		const c = await tryUrl(
@@ -280,7 +249,9 @@ async function main() {
 	const blacklist = loadBlacklist();
 	const used = new Set<string>();
 
-	process.stdout.write(`Refreshing ${rows.length} covers (blacklist has ${blacklist.size} hashes)\n\n`);
+	process.stdout.write(
+		`Refreshing ${rows.length} covers (blacklist has ${blacklist.size} hashes)\n\n`,
+	);
 
 	type Change = { slug: string; oldUrl: string; newUrl: string; source: string; md5: string };
 	const changes: Change[] = [];
@@ -309,8 +280,8 @@ async function main() {
 			const reasons = [
 				!ctGood && `ct=${current.contentType}`,
 				!bigEnough && `bytes=${current.bytes.length}`,
-				!notBlacklisted && `hash-blacklisted`,
-				!notAlreadyUsed && `hash-dup-in-run`,
+				!notBlacklisted && 'hash-blacklisted',
+				!notAlreadyUsed && 'hash-dup-in-run',
 			]
 				.filter(Boolean)
 				.join(', ');
@@ -322,11 +293,17 @@ async function main() {
 		const sourced = await sourceCover(row, blacklist, used);
 		if (sourced) {
 			used.add(sourced.md5);
-			changes.push({ slug: row.slug, oldUrl: row.url, newUrl: sourced.url, source: sourced.source, md5: sourced.md5 });
+			changes.push({
+				slug: row.slug,
+				oldUrl: row.url,
+				newUrl: sourced.url,
+				source: sourced.source,
+				md5: sourced.md5,
+			});
 			process.stdout.write(`  ✓ ${sourced.source}: ${sourced.url} (${sourced.bytes.length}B)\n`);
 		} else {
 			missing.push({ slug: row.slug, oldUrl: row.url });
-			process.stdout.write(`  ✗ no valid cover found\n`);
+			process.stdout.write('  ✗ no valid cover found\n');
 		}
 		await sleep(POLITE_DELAY_MS);
 	}

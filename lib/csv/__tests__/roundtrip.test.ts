@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { Database } from '../../types';
@@ -7,7 +8,8 @@ import { CSV_COLUMNS, stringifyBooksCsv, stringifyCsv } from '../write';
 
 type BookRow = Database['public']['Tables']['books']['Row'];
 
-const BOOKS_CSV = fileURLToPath(new URL('../../../data/books.csv', import.meta.url));
+const here = dirname(fileURLToPath(import.meta.url));
+const BOOKS_CSV = resolve(here, '../../../data/books.csv');
 
 // data/books.csv carries a UTF-8 BOM and mixed \r\n / \n endings. Those are
 // formatting concerns the writer normalizes deliberately; strip them on both

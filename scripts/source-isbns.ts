@@ -49,6 +49,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import pLimit from 'p-limit';
+import { parseCsv } from '../lib/csv/read';
 import {
 	type BookFormat,
 	type EditionRecord,
@@ -79,38 +80,16 @@ const COVER_HEAD_MIN_BYTES = 1024;
 type Row = { title: string; slug: string; authors: string[]; isbn: string };
 
 // --- CSV ---
-function parseCSVLine(line: string): string[] {
-	const out: string[] = [];
-	let cur = '';
-	let q = false;
-	for (const c of line) {
-		if (c === '"') q = !q;
-		else if (c === ',' && !q) {
-			out.push(cur);
-			cur = '';
-		} else cur += c;
-	}
-	out.push(cur);
-	return out;
-}
-
 function loadRows(): Row[] {
-	const raw = readFileSync(CSV_PATH, 'utf-8').replace(/^﻿/, '');
-	const lines = raw.split('\n').filter((l) => l.trim());
-	const h = parseCSVLine(lines[0]).map((x) => x.replace(/^﻿/, ''));
-	const iTitle = h.indexOf('title');
-	const iSlug = h.indexOf('slug');
-	const iAuthor = h.indexOf('author');
-	const iIsbn = h.indexOf('isbn');
+	const records = parseCsv(readFileSync(CSV_PATH, 'utf-8'));
 	const rows: Row[] = [];
-	for (let i = 1; i < lines.length; i++) {
-		const f = parseCSVLine(lines[i]);
-		const isbn = (f[iIsbn] ?? '').replace(/[-\s]/g, '').trim();
+	for (const rec of records) {
+		const isbn = (rec.isbn ?? '').replace(/[-\s]/g, '').trim();
 		if (!isbn) continue;
 		rows.push({
-			title: f[iTitle].trim(),
-			slug: f[iSlug].trim(),
-			authors: (f[iAuthor] ?? '')
+			title: (rec.title ?? '').trim(),
+			slug: (rec.slug ?? '').trim(),
+			authors: (rec.author ?? '')
 				.split(/[;,]/)
 				.map((s) => s.trim())
 				.filter(Boolean),
@@ -242,9 +221,7 @@ function olEditionMostLikelyEnglish(e: OLEdition): boolean {
 	if (langs.length > 0) return langs.some((l) => l.key === '/languages/eng');
 	const isbns = [...(e.isbn_13 ?? []), ...(e.isbn_10 ?? [])];
 	if (isbns.length === 0) return true; // record with no ISBNs at all — keep
-	const normalized = isbns
-		.map((s) => normalizeIsbn13(s))
-		.filter((s): s is string => s != null);
+	const normalized = isbns.map((s) => normalizeIsbn13(s)).filter((s): s is string => s != null);
 	if (normalized.length === 0) return true;
 	return normalized.some(isEnglishLanguageIsbn);
 }
@@ -987,7 +964,10 @@ async function main() {
 		if (slugs.length > 1) {
 			for (const slug of slugs) {
 				delete coverBySlug[slug];
-				report.cover_misses.push({ slug, reason: `dup-cover-shared-with-${slugs.length - 1}-others` });
+				report.cover_misses.push({
+					slug,
+					reason: `dup-cover-shared-with-${slugs.length - 1}-others`,
+				});
 			}
 			coverDupsDropped += slugs.length;
 			process.stdout.write(

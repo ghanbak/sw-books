@@ -39,7 +39,7 @@ export async function fetchWithRetry(
 			res = await fetch(url, {
 				...init,
 				signal: ctrl.signal,
-				headers: { 'User-Agent': UA, Accept: 'application/json', ...init.headers },
+				headers: { 'User-Agent': UA, ...init.headers },
 			});
 		} finally {
 			clearTimeout(timer);
@@ -69,7 +69,11 @@ export async function fetchJson<T = unknown>(
 	options: FetchRetryOptions = {},
 ): Promise<T | null> {
 	try {
-		const res = await fetchWithRetry(url, init, options);
+		const res = await fetchWithRetry(
+			url,
+			{ ...init, headers: { Accept: 'application/json', ...init.headers } },
+			options,
+		);
 		if (!res.ok) return null;
 		return (await res.json()) as T;
 	} catch {
