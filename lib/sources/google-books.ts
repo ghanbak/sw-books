@@ -21,5 +21,9 @@ export function fetchVolumes<T = unknown>(
 ): Promise<T | null> {
 	const maxResults = options.maxResults ?? 5;
 	const fields = options.fields ? `&fields=${encodeURIComponent(options.fields)}` : '';
-	return fetchJson<T>(`${BASE}?q=${q}&maxResults=${maxResults}${fields}`);
+	// Keyless access has ~0 daily quota; an API key (GOOGLE_BOOKS_API_KEY) lifts
+	// it. Optional — without it we still try keyless and degrade gracefully.
+	const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
+	const key = apiKey ? `&key=${encodeURIComponent(apiKey)}` : '';
+	return fetchJson<T>(`${BASE}?q=${q}&maxResults=${maxResults}${fields}${key}`);
 }

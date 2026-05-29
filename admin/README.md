@@ -82,3 +82,7 @@ edits from disk. If an export looks wrong, recover with `git checkout data/`.
   `admin/package.json` (`dev`/`start` scripts) and the root `admin` note.
 - **Edited the schema** — regenerate types with `npm run db:types` so the admin
   picks up new columns.
+- **Google Books returns nothing on lookup** — keyless Books API access is
+  quota-limited (HTTP 429, ~0/day). Set `GOOGLE_BOOKS_API_KEY` in
+  `admin/.env.local` (enable the "Books API" at console.cloud.google.com, make
+  an API key), then restart. Open Library has no such limit and works keyless.
