@@ -104,6 +104,17 @@ export async function fillEmpty(slug: string): Promise<FillResult> {
 	return { slug, status: 'updated', fields: Object.keys(patch) };
 }
 
+/**
+ * Probe whether Google Books is usable right now. Keyless access is quota-
+ * limited (HTTP 429), so the bulk ops that rely on GB warn when it's blocked.
+ * `keyed` reports whether GOOGLE_BOOKS_API_KEY is configured.
+ */
+export async function googleBooksStatus(): Promise<{ available: boolean; keyed: boolean }> {
+	const keyed = !!process.env.GOOGLE_BOOKS_API_KEY;
+	const probe = await fetchVolumes('isbn:9780593157718', { maxResults: 1 });
+	return { available: probe !== null, keyed };
+}
+
 /** Apply a set of patches sequentially. (Deviation from the plan's single
  * UPDATE…FROM VALUES — avoids a Postgres function/migration; fine at this scale.) */
 export async function batchPatch(

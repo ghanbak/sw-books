@@ -1,7 +1,7 @@
 'use client';
 
 import { patchBook } from '@/app/_actions/books';
-import { fillEmpty, refetchCover } from '@/app/_actions/bulk';
+import { fillEmpty, googleBooksStatus, refetchCover } from '@/app/_actions/bulk';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -374,7 +374,18 @@ export function BooksTable({
 		label: string,
 		items: T[],
 		fn: (item: T) => Promise<{ status: string; message?: string }>,
+		opts: { usesGoogleBooks?: boolean } = {},
 	) {
+		if (opts.usesGoogleBooks) {
+			const gb = await googleBooksStatus();
+			if (!gb.available) {
+				toast.warning(
+					gb.keyed
+						? 'Google Books unavailable (check GOOGLE_BOOKS_API_KEY / quota). Using Open Library only.'
+						: 'Google Books is quota-blocked (keyless). Set GOOGLE_BOOKS_API_KEY in admin/.env.local to include it — using Open Library only.',
+				);
+			}
+		}
 		setBulk({ label, done: 0, total: items.length });
 		let updated = 0;
 		const failures: string[] = [];
@@ -468,7 +479,9 @@ export function BooksTable({
 							size="sm"
 							disabled={running}
 							onClick={() =>
-								runSequential('Re-fetch covers', selectedRows, (r) => refetchCover(r.slug))
+								runSequential('Re-fetch covers', selectedRows, (r) => refetchCover(r.slug), {
+									usesGoogleBooks: true,
+								})
 							}
 						>
 							<ImageDown className="size-4" /> Re-fetch covers
@@ -480,7 +493,11 @@ export function BooksTable({
 							variant="secondary"
 							size="sm"
 							disabled={running}
-							onClick={() => runSequential('Fill empty', selectedRows, (r) => fillEmpty(r.slug))}
+							onClick={() =>
+								runSequential('Fill empty', selectedRows, (r) => fillEmpty(r.slug), {
+									usesGoogleBooks: true,
+								})
+							}
 						>
 							<Wand2 className="size-4" /> Fill empty
 						</Button>
