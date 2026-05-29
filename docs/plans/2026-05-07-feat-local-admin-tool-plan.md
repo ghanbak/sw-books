@@ -349,18 +349,18 @@ Inline. No views, no migration.
 
 Land separately from the admin app to keep blast radius bounded.
 
-- [ ] Add to root `package.json`: `vitest`, `csv-stringify`, `csv-parse`, `isbn3@^2.0.7`, `p-limit`, `zod`. Add `"test": "vitest run"`.
-- [ ] Create `lib/sources/types.ts` (BookPatch, BookCandidate derived; Pick-from-Pick relationship)
-- [ ] Create `lib/sources/fetch-retry.ts` (User-Agent + backoff)
-- [ ] Create `lib/sources/open-library.ts` — extract from `scripts/source-isbns.ts` + `scripts/refresh-covers.ts`. No caching here; caller decides.
-- [ ] Create `lib/sources/google-books.ts` — extract; add `?fields=…` partial response
-- [ ] Create `lib/sources/covers.ts` — HEAD check + dedup
-- [ ] **Extend** `lib/isbn.ts` with `isbn3` integration; preserve `normalizeIsbn` (barcode scanner contract)
-- [ ] Create `lib/csv/read.ts` (csv-parse) + `lib/csv/write.ts` (csv-stringify with explicit `CSV_COLUMNS`)
-- [ ] Create `lib/result.ts`
-- [ ] Update `scripts/source-isbns.ts`, `scripts/refresh-covers.ts`, `scripts/seed.ts`, `scripts/audit-covers.ts`, `scripts/detect-placeholder-covers.ts` to import from new `lib/` modules and use `fetchWithRetry`
-- [ ] Round-trip + JSON-emit determinism tests at `lib/csv/__tests__/`
-- [ ] Verification (byte-identical gate):
+- [x] Add to root `package.json`: `vitest`, `csv-stringify`, `csv-parse`, `isbn3@^2.0.7`, `p-limit`, `zod`. Add `"test": "vitest run"`. (`p-limit` already present; `isbn3` → dependencies since it's bundled via `lib/isbn.ts`, rest → devDependencies)
+- [x] Create `lib/sources/types.ts` (BookPatch, BookCandidate derived; Pick-from-Pick relationship)
+- [x] Create `lib/sources/fetch-retry.ts` (User-Agent + backoff; `Accept: application/json` lives in `fetchJson`, not `fetchWithRetry`, so byte fetches aren't forced to JSON)
+- [x] Create `lib/sources/open-library.ts` — extract from `scripts/source-isbns.ts` + `scripts/refresh-covers.ts`. No caching here; caller decides.
+- [x] Create `lib/sources/google-books.ts` — extract; `?fields=…` partial response opt-in (omitted by default to preserve exact legacy URLs)
+- [x] Create `lib/sources/covers.ts` — HEAD check + `findSharedValues` dedup helper
+- [x] **Extend** `lib/isbn.ts` with `isbn3` integration (`parseIsbn`, `isValidIsbn`, `toIsbn13`, `hyphenateIsbn`); preserve `normalizeIsbn` (barcode scanner contract). isbn3 verified node-builtin-free → Metro-safe.
+- [x] Create `lib/csv/read.ts` (csv-parse) + `lib/csv/write.ts` (csv-stringify with explicit `CSV_COLUMNS`)
+- [x] Create `lib/result.ts`
+- [x] Update `scripts/source-isbns.ts`, `scripts/refresh-covers.ts`, `scripts/seed.ts`, `scripts/audit-covers.ts`, `scripts/detect-placeholder-covers.ts` to import from new `lib/` modules. **Deviation:** `source-isbns.ts` swaps only its CSV reader to `lib/csv`; its fetch stays local because its tier-1/2 probes hit the network even on cache hits, so adding UA/retry there would change pipeline output and break the byte-identical gate. `fetchWithRetry` adoption lands in `refresh-covers` + `detect-placeholder-covers` (gate-excluded); `audit-covers` keeps raw status probing by design.
+- [x] Round-trip + JSON-emit determinism tests at `lib/csv/__tests__/` (11 tests: live `books.csv` byte round-trip modulo BOM/line-endings, quoting/escaping/NFC/array/date/null/enum fixtures). JSON-emit determinism is additionally proven by the byte-identical gate on the emitted override JSONs.
+- [x] Verification (byte-identical gate): **PASSED** — all 5 `data/*.json` + `scripts/isbn-collisions.json` byte-identical pre/post refactor; `npm test` 11/11; `tsc --noEmit` clean; seed parses identically (185 books). Live `db:reset && db:seed` not run in CI sandbox (Supabase CLI/instance unavailable) — run locally to complete the DB round-trip.
   1. On **pre-refactor** code, warm the cache by running the full pipeline once so `scripts/isbn-cache.json` exists (no cache today → first run is cold, ~10–15 min): `npx tsx scripts/source-isbns.ts`.
   2. Snapshot deterministic outputs preserving paths, and back up the cache so the after-run replays identical API responses:
      ```sh
