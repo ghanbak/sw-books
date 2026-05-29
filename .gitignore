@@ -24,6 +24,7 @@ supabase/.temp/
 .env
 .env.*
 !.env.example
+!.env.production.example
 !admin/.env.local.example
 
 # Next.js (admin tool)

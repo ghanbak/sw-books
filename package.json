@@ -14,6 +14,7 @@
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > lib/types.ts",
     "db:seed": "npx tsx scripts/seed.ts",
+    "db:seed:prod": "npx tsx scripts/seed.ts --production",
     "admin": "npm --prefix admin run dev",
     "admin:install": "npm --prefix admin install",
     "admin:predev": "npm run db:types"

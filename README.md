@@ -100,6 +100,12 @@ in bulk, then review `/diff` and **Export to CSV**. After export, re-run
 `npm run db:reset && npm run db:seed` to confirm the drift returns to 0. Full
 workflow + troubleshooting: [admin/README.md](admin/README.md).
 
+To push the catalog to production, copy `.env.production.example` →
+`.env.production` (prod URL + secret key from the Supabase dashboard) and run
+`npm run db:seed:prod`. It upserts on `slug` (existing IDs preserved, so shelves
+stay intact) and prompts for the project ref before writing. It does **not**
+delete books removed from the CSV — remove those in the dashboard.
+
 ## Identifiers
 
 | Field             | Value                                            |

@@ -1,47 +1,84 @@
 /**
- * One-time CSV seed script for the books table.
+ * CSV seed script for the books table (upsert on slug).
  *
- * Usage:
- *   npx tsx scripts/seed.ts
- *
- * Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY env vars,
- * or defaults to local Supabase (http://127.0.0.1:54321).
+ * Local (default):  npm run db:seed     (SUPABASE_SERVICE_ROLE_KEY in env)
+ * Production:        npm run db:seed:prod  (creds from .env.production; prompts
+ *                    for the project ref before writing to a non-local DB)
  */
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { createInterface } from 'node:readline/promises';
 import { createClient } from '@supabase/supabase-js';
 import { type CatalogOverrides, buildBookFields } from '../lib/catalog';
 import { parseCsv } from '../lib/csv/read';
 
-const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
-const SUPABASE_KEY =
-	process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY ?? '';
+const PROD = process.argv.includes('--production');
+const SKIP_CONFIRM = process.argv.includes('--yes') || process.env.SEED_CONFIRM === 'yes';
 
-if (!SUPABASE_KEY) {
-	// Try reading from .env file
-	const envPath = resolve(__dirname, '..', '.env');
+// Minimal KEY=VALUE parser (no dep). Ignores blanks and # comments.
+function parseEnvFile(path: string): Record<string, string> {
+	const out: Record<string, string> = {};
 	try {
-		const envContent = readFileSync(envPath, 'utf-8');
-		const match = envContent.match(/EXPO_PUBLIC_SUPABASE_ANON_KEY=(.+)/);
-		if (match) {
-			console.log(
-				'Warning: Using anon key from .env — this only works if RLS is disabled or you use service_role key.',
-			);
+		for (const line of readFileSync(path, 'utf-8').split('\n')) {
+			const t = line.trim();
+			if (!t || t.startsWith('#')) continue;
+			const i = t.indexOf('=');
+			if (i > 0) out[t.slice(0, i).trim()] = t.slice(i + 1).trim();
 		}
 	} catch {
-		// .env doesn't exist, that's fine
+		// file absent — fall through
 	}
-
-	console.error(
-		'Error: SUPABASE_SERVICE_ROLE_KEY not set.\n' +
-			'For local dev, run: supabase status\n' +
-			'Then: SUPABASE_SERVICE_ROLE_KEY=<secret_key> npx tsx scripts/seed.ts',
-	);
-	process.exit(1);
+	return out;
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+function isLocal(url: string): boolean {
+	return url.includes('127.0.0.1') || url.includes('localhost');
+}
+
+function resolveCredentials(): { url: string; key: string } {
+	if (PROD) {
+		const env = parseEnvFile(resolve(__dirname, '..', '.env.production'));
+		const url = env.SUPABASE_URL ?? process.env.SUPABASE_URL ?? '';
+		const key = env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+		if (!url || !key) {
+			console.error(
+				'Error: --production needs SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in .env.production.\n' +
+					'Copy .env.production.example and fill in the prod values (Supabase dashboard → Project Settings → API).',
+			);
+			process.exit(1);
+		}
+		return { url, key };
+	}
+	const url = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
+	const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY ?? '';
+	if (!key) {
+		console.error(
+			'Error: SUPABASE_SERVICE_ROLE_KEY not set.\n' +
+				'For local dev, run: supabase status\n' +
+				'Then: SUPABASE_SERVICE_ROLE_KEY=<secret_key> npm run db:seed',
+		);
+		process.exit(1);
+	}
+	return { url, key };
+}
+
+// Guard against accidentally writing to a remote database: require the operator
+// to type the project ref. Local targets and --yes/SEED_CONFIRM=yes skip it.
+async function confirmTarget(url: string): Promise<void> {
+	if (isLocal(url) || SKIP_CONFIRM) return;
+	const ref = url.match(/https?:\/\/([^.]+)\./)?.[1] ?? url;
+	const rl = createInterface({ input: process.stdin, output: process.stdout });
+	const answer = await rl.question(
+		`\n⚠️  About to seed a NON-LOCAL database:\n    ${url}\n` +
+			`Type the project ref "${ref}" to continue (anything else aborts): `,
+	);
+	rl.close();
+	if (answer.trim() !== ref) {
+		console.error('Aborted — no changes written.');
+		process.exit(1);
+	}
+}
 
 // Load JSON override file produced by scripts/source-isbns.ts. Returns an empty
 // object if the file is missing or invalid — seed degrades to CSV-only.
@@ -65,6 +102,11 @@ function mergeOverrides<T>(
 // --- Main ---
 
 async function main() {
+	const { url, key } = resolveCredentials();
+	await confirmTarget(url);
+	const supabase = createClient(url, key);
+	console.log(`Seeding ${isLocal(url) ? 'LOCAL' : 'PRODUCTION'}: ${url}\n`);
+
 	const csvPath = resolve(__dirname, '..', 'data', 'books.csv');
 
 	const overrides: CatalogOverrides = {

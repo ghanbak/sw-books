@@ -17,7 +17,8 @@ Star Wars book tracker mobile app built with Expo (React Native) + Supabase.
 - `npm run lint:fix` — Auto-fix lint issues
 - `npm run db:reset` — Reset local Supabase (apply migrations + seed)
 - `npm run db:types` — Regenerate TypeScript types from local Supabase
-- `npm run db:seed` — Run the CSV seed script
+- `npm run db:seed` — Seed the local DB from the CSV (upsert on slug)
+- `npm run db:seed:prod` — Seed **production** from the CSV (creds from gitignored `.env.production`; prompts for the project ref before writing)
 - `npm run admin` — Start the local catalog admin tool (Next.js, `127.0.0.1:3100`)
 - `npm run admin:install` — Install the admin app's dependencies
 
