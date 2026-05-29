@@ -1,17 +1,40 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { type IssueKey, ISSUE_DEFS, issuesFor } from '@/lib/issues';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { type BookListRow, BooksTable } from './_components/books-table';
 
 // Always read live from the local DB; never cache/pre-render the catalog.
 export const dynamic = 'force-dynamic';
 
+// Slugs whose cover hash landed in a duplicate cluster (placeholder detector).
+// The report is gitignored/optional — absent means the filter is simply empty.
+async function loadPlaceholderSlugs(): Promise<Set<string>> {
+	try {
+		const p = path.resolve(process.cwd(), '../scripts/placeholder-report.json');
+		const json = JSON.parse(await readFile(p, 'utf-8')) as {
+			duplicate_clusters?: Array<{ slugs?: string[] }>;
+		};
+		const set = new Set<string>();
+		for (const cluster of json.duplicate_clusters ?? []) {
+			for (const slug of cluster.slugs ?? []) set.add(slug);
+		}
+		return set;
+	} catch {
+		return new Set();
+	}
+}
+
 export default async function BooksPage() {
-	// Project only the columns the table renders — synopsis is large and unused here.
-	const { data, error } = await supabaseAdmin
-		.from('books')
-		.select(
-			'id, slug, title, author, canon, era, type, series_name, series_order, primary_isbn, isbn, format, publisher, date_published, cover_image',
-		)
-		.order('title', { ascending: true });
+	const [{ data, error }, placeholderSlugs] = await Promise.all([
+		supabaseAdmin
+			.from('books')
+			.select(
+				'id, slug, title, author, canon, era, type, series_name, series_order, primary_isbn, isbn, format, publisher, date_published, cover_image, synopsis',
+			)
+			.order('title', { ascending: true }),
+		loadPlaceholderSlugs(),
+	]);
 
 	if (error) {
 		return (
@@ -21,7 +44,17 @@ export default async function BooksPage() {
 		);
 	}
 
-	const rows = (data ?? []) as BookListRow[];
+	// Compute issues server-side, then drop the heavy synopsis text from the payload.
+	const rows = (data ?? []).map((b) => {
+		const { synopsis, ...rest } = b;
+		return {
+			...rest,
+			issues: issuesFor(b, placeholderSlugs),
+		} satisfies BookListRow & { issues: IssueKey[] };
+	});
+
+	const counts = Object.fromEntries(ISSUE_DEFS.map((d) => [d.key, 0])) as Record<IssueKey, number>;
+	for (const r of rows) for (const k of r.issues) counts[k]++;
 
 	return (
 		<main className="mx-auto max-w-[1600px] p-6">
@@ -31,7 +64,7 @@ export default async function BooksPage() {
 					{rows.length} books · sourced from <code className="text-saber-blue">data/books.csv</code>
 				</p>
 			</header>
-			<BooksTable rows={rows} />
+			<BooksTable rows={rows} counts={counts} />
 		</main>
 	);
 }
