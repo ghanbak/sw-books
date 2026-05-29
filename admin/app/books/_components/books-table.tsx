@@ -241,6 +241,30 @@ const columns = [
 			<span className="font-mono text-xs">{getValue() ?? <span className="text-muted-foreground">—</span>}</span>
 		),
 	}),
+	columnHelper.accessor('isbn', {
+		header: 'ISBNs',
+		enableSorting: false,
+		cell: ({ getValue, row }) => {
+			const list = getValue() ?? [];
+			if (list.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
+			return (
+				<div className="flex max-w-[220px] flex-wrap gap-1">
+					{list.map((isbn) => (
+						<Badge
+							key={isbn}
+							variant="outline"
+							className={cn(
+								'font-mono text-[10px]',
+								isbn === row.original.primary_isbn && 'border-saber-blue text-saber-blue',
+							)}
+						>
+							{isbn}
+						</Badge>
+					))}
+				</div>
+			);
+		},
+	}),
 	columnHelper.accessor('publisher', {
 		header: ({ column }) => <SortHeader column={column} label="Publisher" />,
 		cell: editableCell('publisher', { nullable: true }),
