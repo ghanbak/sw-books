@@ -9,57 +9,46 @@
  *   npx tsx scripts/detect-placeholder-covers.ts
  */
 
-import { createHash } from 'crypto';
-import { readFileSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
+import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { parseCsv } from '../lib/csv/read';
+import { fetchWithRetry } from '../lib/sources/fetch-retry';
 
 const CSV_PATH = resolve(__dirname, '..', 'data', 'books.csv');
 const OUT_PATH = resolve(__dirname, 'placeholder-report.json');
 const CONCURRENCY = 8;
-const TIMEOUT_MS = 12000;
 const SMALL_BYTES = 2048;
 
 type Row = { title: string; slug: string; isbn: string; url: string };
-type Result = Row & { bytes: number; md5: string | null; contentType: string | null; note?: string };
-
-function parseCSVLine(line: string): string[] {
-	const out: string[] = [];
-	let cur = '';
-	let q = false;
-	for (let i = 0; i < line.length; i++) {
-		const c = line[i];
-		if (c === '"') q = !q;
-		else if (c === ',' && !q) {
-			out.push(cur.trim());
-			cur = '';
-		} else cur += c;
-	}
-	out.push(cur.trim());
-	return out;
-}
+type Result = Row & {
+	bytes: number;
+	md5: string | null;
+	contentType: string | null;
+	note?: string;
+};
 
 function loadRows(): Row[] {
-	const raw = readFileSync(CSV_PATH, 'utf-8').replace(/^﻿/, '');
-	const lines = raw.split('\n').filter((l) => l.trim());
-	const headers = parseCSVLine(lines[0]).map((h) => h.replace(/^﻿/, ''));
-	const iTitle = headers.indexOf('title');
-	const iSlug = headers.indexOf('slug');
-	const iIsbn = headers.indexOf('isbn');
-	const iUrl = headers.indexOf('cover_image');
+	const records = parseCsv(readFileSync(CSV_PATH, 'utf-8'));
 	const rows: Row[] = [];
-	for (let i = 1; i < lines.length; i++) {
-		const f = parseCSVLine(lines[i]);
-		if (!f[iUrl]) continue;
-		rows.push({ title: f[iTitle], slug: f[iSlug], isbn: f[iIsbn] ?? '', url: f[iUrl] });
+	for (const rec of records) {
+		const url = (rec.cover_image ?? '').trim();
+		if (!url) continue;
+		rows.push({
+			title: (rec.title ?? '').trim(),
+			slug: (rec.slug ?? '').trim(),
+			isbn: (rec.isbn ?? '').trim(),
+			url,
+		});
 	}
 	return rows;
 }
 
-async function fetchBytes(url: string): Promise<{ bytes: Buffer | null; contentType: string | null; note?: string }> {
-	const ctrl = new AbortController();
-	const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+async function fetchBytes(
+	url: string,
+): Promise<{ bytes: Buffer | null; contentType: string | null; note?: string }> {
 	try {
-		const res = await fetch(url, { method: 'GET', signal: ctrl.signal, redirect: 'follow' });
+		const res = await fetchWithRetry(url, { redirect: 'follow' }, { retries: 2 });
 		const ct = res.headers.get('content-type');
 		if (!res.ok) {
 			return { bytes: null, contentType: ct, note: `HTTP ${res.status}` };
@@ -68,8 +57,6 @@ async function fetchBytes(url: string): Promise<{ bytes: Buffer | null; contentT
 		return { bytes: Buffer.from(ab), contentType: ct };
 	} catch (e) {
 		return { bytes: null, contentType: null, note: (e as Error).message };
-	} finally {
-		clearTimeout(timer);
 	}
 }
 
@@ -115,7 +102,12 @@ async function main() {
 
 	const duplicateClusters = [...byMd5.entries()]
 		.filter(([, list]) => list.length > 1)
-		.map(([md5, list]) => ({ md5, bytes: list[0].bytes, count: list.length, slugs: list.map((r) => r.slug) }))
+		.map(([md5, list]) => ({
+			md5,
+			bytes: list[0].bytes,
+			count: list.length,
+			slugs: list.map((r) => r.slug),
+		}))
 		.sort((a, b) => b.count - a.count);
 
 	const tinyPayloads = results.filter((r) => r.md5 && r.bytes > 0 && r.bytes < SMALL_BYTES);

@@ -1,0 +1,137 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Ossus Archives admin — dark cinematic datapad palette.
+ * Tokens mirror the mobile app's design system (see CLAUDE.md). The tool is
+ * dark-only, so :root and .dark carry the same values.
+ */
+:root {
+	--radius: 0.625rem;
+
+	--background: #0a0a0c;
+	--foreground: #ecedee;
+	--card: #1a1a1e;
+	--card-foreground: #ecedee;
+	--popover: #1a1a1e;
+	--popover-foreground: #ecedee;
+
+	/* Lightsaber blue — buttons, active states, focus rings */
+	--primary: #4a90d9;
+	--primary-foreground: #0a0a0c;
+
+	--secondary: #26262b;
+	--secondary-foreground: #ecedee;
+	--muted: #1a1a1e;
+	--muted-foreground: #9d9da1;
+	--accent: #1a3a5c;
+	--accent-foreground: #ecedee;
+	--destructive: #c0392b;
+	--destructive-foreground: #ecedee;
+
+	--border: rgba(255, 255, 255, 0.08);
+	--input: rgba(255, 255, 255, 0.12);
+	--ring: #4a90d9;
+
+	/* Star Wars accents — emphasis only */
+	--saber-blue: #4a90d9;
+	--saber-yellow: #ffe81f;
+	--canon: #1a3a5c;
+	--canon-foreground: #cfe2f5;
+	--legends: #5c3a1a;
+	--legends-foreground: #f5e0cf;
+
+	--sidebar: #1a1a1e;
+	--sidebar-foreground: #ecedee;
+	--sidebar-primary: #4a90d9;
+	--sidebar-primary-foreground: #0a0a0c;
+	--sidebar-accent: #26262b;
+	--sidebar-accent-foreground: #ecedee;
+	--sidebar-border: rgba(255, 255, 255, 0.08);
+	--sidebar-ring: #4a90d9;
+}
+
+.dark {
+	--background: #0a0a0c;
+	--foreground: #ecedee;
+	--card: #1a1a1e;
+	--card-foreground: #ecedee;
+	--popover: #1a1a1e;
+	--popover-foreground: #ecedee;
+	--primary: #4a90d9;
+	--primary-foreground: #0a0a0c;
+	--secondary: #26262b;
+	--secondary-foreground: #ecedee;
+	--muted: #1a1a1e;
+	--muted-foreground: #9d9da1;
+	--accent: #1a3a5c;
+	--accent-foreground: #ecedee;
+	--destructive: #c0392b;
+	--destructive-foreground: #ecedee;
+	--border: rgba(255, 255, 255, 0.08);
+	--input: rgba(255, 255, 255, 0.12);
+	--ring: #4a90d9;
+	--sidebar: #1a1a1e;
+	--sidebar-foreground: #ecedee;
+	--sidebar-primary: #4a90d9;
+	--sidebar-primary-foreground: #0a0a0c;
+	--sidebar-accent: #26262b;
+	--sidebar-accent-foreground: #ecedee;
+	--sidebar-border: rgba(255, 255, 255, 0.08);
+	--sidebar-ring: #4a90d9;
+}
+
+@theme inline {
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+
+	--color-saber-blue: var(--saber-blue);
+	--color-saber-yellow: var(--saber-yellow);
+	--color-canon: var(--canon);
+	--color-canon-foreground: var(--canon-foreground);
+	--color-legends: var(--legends);
+	--color-legends-foreground: var(--legends-foreground);
+
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+	* {
+		border-color: var(--border);
+	}
+	body {
+		background-color: var(--background);
+		color: var(--foreground);
+	}
+}

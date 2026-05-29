@@ -1,3 +1,5 @@
+import { asIsbn13, hyphenate, parse } from 'isbn3';
+
 /**
  * Convert ISBN-10 to ISBN-13 by prepending "978" and recalculating the check digit.
  */
@@ -5,7 +7,7 @@ export function isbn10to13(isbn10: string): string {
 	const base = `978${isbn10.slice(0, 9)}`;
 	let sum = 0;
 	for (let i = 0; i < 12; i++) {
-		sum += Number.parseInt(base[i], 10) * (i % 2 === 0 ? 1 : 3);
+		sum += Number.parseInt(base[i] ?? '0', 10) * (i % 2 === 0 ? 1 : 3);
 	}
 	const check = (10 - (sum % 10)) % 10;
 	return `${base}${check}`;
@@ -18,10 +20,10 @@ export function isValidIsbn13(isbn: string): boolean {
 	if (!/^\d{13}$/.test(isbn)) return false;
 	let sum = 0;
 	for (let i = 0; i < 12; i++) {
-		sum += Number.parseInt(isbn[i], 10) * (i % 2 === 0 ? 1 : 3);
+		sum += Number.parseInt(isbn[i] ?? '0', 10) * (i % 2 === 0 ? 1 : 3);
 	}
 	const check = (10 - (sum % 10)) % 10;
-	return check === Number.parseInt(isbn[12], 10);
+	return check === Number.parseInt(isbn[12] ?? '0', 10);
 }
 
 /**
@@ -42,4 +44,40 @@ export function normalizeIsbn(raw: string): string | null {
 	}
 
 	return null;
+}
+
+/**
+ * isbn3-backed helpers for catalog tooling (admin app + seed scripts). These
+ * handle ISBN-10/13, hyphens, spaces, and the `X` check digit, and validate
+ * registration-group ranges — richer than the barcode-scanner path above,
+ * which stays untouched.
+ */
+
+/** Full structured parse, or null when the string isn't a valid ISBN. */
+export function parseIsbn(raw: string): ReturnType<typeof parse> {
+	return parse(raw.trim());
+}
+
+/** True when `raw` is a valid ISBN-10 or ISBN-13 (any formatting). */
+export function isValidIsbn(raw: string): boolean {
+	return parse(raw.trim()) !== null;
+}
+
+/** Canonical 13-digit form (no hyphens), or null when invalid. */
+export function toIsbn13(raw: string): string | null {
+	return asIsbn13(raw.trim());
+}
+
+/** Hyphenated display form, or the trimmed input when it can't be parsed. */
+export function hyphenateIsbn(raw: string): string {
+	return hyphenate(raw.trim());
+}
+
+/**
+ * True when `raw` belongs to the English-language registration group (978-0 /
+ * 978-1 — US, UK, Canada, Australia, …). Used to filter foreign-edition ISBNs
+ * out of lookup candidates.
+ */
+export function isEnglishIsbn(raw: string): boolean {
+	return parse(raw.trim())?.groupname === 'English language';
 }

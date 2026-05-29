@@ -17,7 +17,10 @@ Star Wars book tracker mobile app built with Expo (React Native) + Supabase.
 - `npm run lint:fix` — Auto-fix lint issues
 - `npm run db:reset` — Reset local Supabase (apply migrations + seed)
 - `npm run db:types` — Regenerate TypeScript types from local Supabase
-- `npm run db:seed` — Run the CSV seed script
+- `npm run db:seed` — Seed the local DB from the CSV (upsert on slug)
+- `npm run db:seed:prod` — Seed **production** from the CSV (creds from gitignored `.env.production`; prompts for the project ref before writing)
+- `npm run admin` — Start the local catalog admin tool (Next.js, `127.0.0.1:3100`)
+- `npm run admin:install` — Install the admin app's dependencies
 
 ## Conventions
 
@@ -39,13 +42,20 @@ Star Wars book tracker mobile app built with Expo (React Native) + Supabase.
 - `supabase/` — Migrations, config, seed SQL
 - `data/` — Seed CSV data
 - `docs/` — Plans, brainstorms, guides
+- `admin/` — Local-only Next.js catalog admin tool (separate package; not part of the Expo app)
 
 ## Database
 
 - 2 tables: `books` (catalog) and `user_books` (personal shelves)
 - Column names match the CSV headers
 - RLS enforced: authenticated users read all books, CRUD own user_books only
-- Admin manages catalog via Supabase Studio
+
+## Catalog management
+
+- Edit the catalog with the local admin tool: `npm run admin` (see [admin/README.md](admin/README.md))
+- Review `/diff` and **Export to CSV** before committing changes to `data/`
+- Do not hand-edit `data/books.csv` except for slug renames (slugs are read-only in the tool)
+- The CSV→row mapping is shared in [lib/catalog.ts](lib/catalog.ts) (used by both `scripts/seed.ts` and the admin export)
 
 ## Design Context
 

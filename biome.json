@@ -28,7 +28,9 @@
       "node_modules",
       ".expo",
       "dist",
-      "lib/types.ts"
+      "lib/types.ts",
+      "admin",
+      "data/*.json"
     ]
   }
 }
