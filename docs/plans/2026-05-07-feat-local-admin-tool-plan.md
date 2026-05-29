@@ -396,7 +396,7 @@ Land separately from the admin app to keep blast radius bounded.
 - [x] `admin/app/books/_components/books-table.tsx` — client; `createColumnHelper<BookListRow>()`, sort/filter/multi-select via local state
 - [x] CI grep in `npm run lint` via `scripts/check-admin-bundle.sh`. **Updated patterns:** matches `sb_secret_` (current CLI key format) + `SUPABASE_SERVICE_ROLE_KEY`, dropped the plan's broad `eyJ` (false-positives on base64 / the safe anon JWT).
 
-**Acceptance:** Build + type-check pass (`next build` clean; `/books` is `ƒ` dynamic). Service-role key NOT in `.next/static` — **verified in sandbox** (built with a dummy key; guard + explicit grep both clean). `npm run admin` opening `http://127.0.0.1:3100/books` with live data, and the `lsof` loopback-only check, require the local Supabase stack — **run locally to confirm** (dev script binds `--hostname 127.0.0.1`).
+**Acceptance:** Build + type-check pass (`next build` clean; `/books` is `ƒ` dynamic). Service-role key NOT in `.next/static` — **verified in sandbox** (built with a dummy key; guard + explicit grep both clean). `npm run admin` (root wrapper) **confirmed locally**: `/books` renders the live catalog against local Supabase. Dev server binds `--hostname 127.0.0.1`; optional `lsof -iTCP -sTCP:LISTEN -P | grep 3100` confirms loopback-only. Note: env lives in `admin/.env.local`; a blank `SUPABASE_SERVICE_ROLE_KEY` surfaces as a `ZodError` at load (by design).
 
 ### Phase 2 — Edit + per-row API lookup + diff/apply
 
