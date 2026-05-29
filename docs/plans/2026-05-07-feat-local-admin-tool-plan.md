@@ -382,21 +382,21 @@ Land separately from the admin app to keep blast radius bounded.
 
 ### Phase 1 — Admin app skeleton
 
-- [ ] `admin/package.json` with `next@^15`, `react@^19`, `@supabase/supabase-js`, `@tanstack/react-table`, shadcn prerequisites, `csv-stringify`, `csv-parse`, `zod`, `p-limit`
-- [ ] `admin/next.config.ts` with `experimental.externalDir: true`
-- [ ] `admin/tsconfig.json` extending root with paths map + `noUncheckedIndexedAccess`
-- [ ] `admin/.env.local.example` documenting `SUPABASE_URL=http://127.0.0.1:54321` + `SUPABASE_SERVICE_ROLE_KEY` (from `supabase status`)
-- [ ] `admin/lib/env.ts`, `admin/lib/supabase-admin.ts`, `admin/lib/safe-fs.ts`
-- [ ] Root `package.json` scripts: `"admin"`, `"admin:install"`, `"admin:predev": "npm run db:types"`
-- [ ] `npx shadcn@latest init --preset radix-nova` from `admin/`
-- [ ] `npx shadcn@latest add @shadcn/data-table command badge checkbox dropdown-menu select input button table`
-- [ ] CSS variables in `admin/app/globals.css` for Star Wars tokens (lightsaber-blue, SW yellow, canon, legends, surfaces)
-- [ ] `admin/app/layout.tsx` with `<html class="dark">` default
-- [ ] `admin/app/books/page.tsx` — server component, `export const dynamic = 'force-dynamic'`, projects only displayed columns (drop `synopsis` from initial payload)
-- [ ] `admin/app/books/_components/books-table.tsx` — client; `createColumnHelper<BookRow>()`, sort/filter/multi-select via local state
-- [ ] CI grep in `npm run lint`: `! grep -r "SUPABASE_SERVICE_ROLE_KEY\|eyJ" admin/.next/static`
+- [x] `admin/package.json` with `next@^15`, `react@^19`, `@supabase/supabase-js`, `@tanstack/react-table`, shadcn prerequisites, `csv-stringify`, `csv-parse`, `zod`, `p-limit`. **Added `isbn3`** too — `externalDir` resolves `@app/isbn`'s `isbn3` import from `admin/node_modules`.
+- [x] `admin/next.config.ts` with `experimental.externalDir: true` (+ `outputFileTracingRoot` pinned to repo root to silence the multi-lockfile warning)
+- [x] `admin/tsconfig.json` with paths map + `noUncheckedIndexedAccess`. **Deviation: standalone, NOT extending root** — `expo/tsconfig.base` sets `jsx: react-native` + RN `customConditions`, which are fatal for Next. Root `tsconfig`/Biome now `exclude`/`ignore` `admin/` so they don't fight the Next app.
+- [x] `admin/.env.local.example` documenting `SUPABASE_URL=http://127.0.0.1:54321` + `SUPABASE_SERVICE_ROLE_KEY` (the "secret" key from `supabase status`). Added `!admin/.env.local.example` negation to `.gitignore`.
+- [x] `admin/lib/env.ts`, `admin/lib/supabase-admin.ts`, `admin/lib/safe-fs.ts`
+- [x] Root `package.json` scripts: `"admin"`, `"admin:install"`, `"admin:predev": "npm run db:types"`
+- [x] shadcn configured. **Deviation:** skipped `init --preset radix-nova` (that scaffolds a *new* project); instead hand-wrote `components.json` (new-york, radix base) into the existing app, then ran `shadcn add`.
+- [x] `npx shadcn@latest add button table badge checkbox input select dropdown-menu command` (pulled `dialog` too). No `data-table` block — the table is built directly on TanStack v8 per the books-table item below.
+- [x] CSS variables in `admin/app/globals.css` for Star Wars tokens (lightsaber-blue, SW yellow, canon, legends, surfaces) — Tailwind v4 `@theme` mapping
+- [x] `admin/app/layout.tsx` with `<html class="dark">` default
+- [x] `admin/app/books/page.tsx` — server component, `force-dynamic`, projects only displayed columns (drops `synopsis`)
+- [x] `admin/app/books/_components/books-table.tsx` — client; `createColumnHelper<BookListRow>()`, sort/filter/multi-select via local state
+- [x] CI grep in `npm run lint` via `scripts/check-admin-bundle.sh`. **Updated patterns:** matches `sb_secret_` (current CLI key format) + `SUPABASE_SERVICE_ROLE_KEY`, dropped the plan's broad `eyJ` (false-positives on base64 / the safe anon JWT).
 
-**Acceptance:** `npm run admin` opens `http://127.0.0.1:3100/books`. `lsof -iTCP -sTCP:LISTEN -P | grep 3100` shows `127.0.0.1:3100` only (not `*` and not `[::1]`). Service-role key not present in `.next/static`.
+**Acceptance:** Build + type-check pass (`next build` clean; `/books` is `ƒ` dynamic). Service-role key NOT in `.next/static` — **verified in sandbox** (built with a dummy key; guard + explicit grep both clean). `npm run admin` opening `http://127.0.0.1:3100/books` with live data, and the `lsof` loopback-only check, require the local Supabase stack — **run locally to confirm** (dev script binds `--hostname 127.0.0.1`).
 
 ### Phase 2 — Edit + per-row API lookup + diff/apply
 
