@@ -72,3 +72,12 @@ export function toIsbn13(raw: string): string | null {
 export function hyphenateIsbn(raw: string): string {
 	return hyphenate(raw.trim());
 }
+
+/**
+ * True when `raw` belongs to the English-language registration group (978-0 /
+ * 978-1 — US, UK, Canada, Australia, …). Used to filter foreign-edition ISBNs
+ * out of lookup candidates.
+ */
+export function isEnglishIsbn(raw: string): boolean {
+	return parse(raw.trim())?.groupname === 'English language';
+}

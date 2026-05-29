@@ -1,7 +1,7 @@
 'use server';
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { toIsbn13 } from '@app/isbn';
+import { isEnglishIsbn, toIsbn13 } from '@app/isbn';
 import { fetchVolumes } from '@app/sources/google-books';
 import {
 	coverByIdUrl,
@@ -69,7 +69,8 @@ function normalizeIsbns(values: Array<string | undefined>): string[] {
 	for (const v of values) {
 		if (!v) continue;
 		const norm = toIsbn13(v);
-		if (norm) out.add(norm);
+		// Keep English-group ISBNs only (US/UK/Canada/… audience).
+		if (norm && isEnglishIsbn(norm)) out.add(norm);
 	}
 	return [...out];
 }
