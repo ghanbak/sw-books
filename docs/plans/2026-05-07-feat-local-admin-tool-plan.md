@@ -360,7 +360,23 @@ Land separately from the admin app to keep blast radius bounded.
 - [ ] Create `lib/result.ts`
 - [ ] Update `scripts/source-isbns.ts`, `scripts/refresh-covers.ts`, `scripts/seed.ts`, `scripts/audit-covers.ts`, `scripts/detect-placeholder-covers.ts` to import from new `lib/` modules and use `fetchWithRetry`
 - [ ] Round-trip + JSON-emit determinism tests at `lib/csv/__tests__/`
-- [ ] Verification: snapshot `data/{books.csv, *-overrides.json, *-rejected.json}` to `/tmp/preref/`, `cp -r .cache/source-isbns /tmp/preref-cache/`, run `npm run db:reset` before and after, `diff -r /tmp/preref/ data/` must be empty, `npm test` passes, Expo app `npx expo start` still loads.
+- [ ] Verification (byte-identical gate):
+  1. On **pre-refactor** code, warm the cache by running the full pipeline once so `scripts/isbn-cache.json` exists (no cache today → first run is cold, ~10–15 min): `npx tsx scripts/source-isbns.ts`.
+  2. Snapshot deterministic outputs preserving paths, and back up the cache so the after-run replays identical API responses:
+     ```sh
+     mkdir -p /tmp/preref/data /tmp/preref/scripts
+     cp data/books.csv data/*.json /tmp/preref/data/
+     cp scripts/isbn-collisions.json /tmp/preref/scripts/
+     cp scripts/isbn-cache.json /tmp/preref-cache.json
+     ```
+  3. Apply the refactor, restore the cache (`cp /tmp/preref-cache.json scripts/isbn-cache.json`), then re-run `npx tsx scripts/source-isbns.ts`.
+  4. Diff must be empty:
+     ```sh
+     diff -r /tmp/preref/data data
+     diff /tmp/preref/scripts/isbn-collisions.json scripts/isbn-collisions.json
+     ```
+     Excluded from the diff because they embed timestamps (not byte-stable): `scripts/isbn-report.txt`, `scripts/isbn-cache.json`, `scripts/cover-resource-map.json`.
+  5. `npm run db:reset && npm run db:seed` succeeds, `npm test` passes, Expo app `npx expo start` still loads.
 
 **Acceptance:** byte-identical pipeline output before/after, all tests pass, Expo app unchanged.
 
