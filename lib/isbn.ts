@@ -1,3 +1,5 @@
+import { asIsbn13, hyphenate, parse } from 'isbn3';
+
 /**
  * Convert ISBN-10 to ISBN-13 by prepending "978" and recalculating the check digit.
  */
@@ -42,4 +44,31 @@ export function normalizeIsbn(raw: string): string | null {
 	}
 
 	return null;
+}
+
+/**
+ * isbn3-backed helpers for catalog tooling (admin app + seed scripts). These
+ * handle ISBN-10/13, hyphens, spaces, and the `X` check digit, and validate
+ * registration-group ranges — richer than the barcode-scanner path above,
+ * which stays untouched.
+ */
+
+/** Full structured parse, or null when the string isn't a valid ISBN. */
+export function parseIsbn(raw: string): ReturnType<typeof parse> {
+	return parse(raw.trim());
+}
+
+/** True when `raw` is a valid ISBN-10 or ISBN-13 (any formatting). */
+export function isValidIsbn(raw: string): boolean {
+	return parse(raw.trim()) !== null;
+}
+
+/** Canonical 13-digit form (no hyphens), or null when invalid. */
+export function toIsbn13(raw: string): string | null {
+	return asIsbn13(raw.trim());
+}
+
+/** Hyphenated display form, or the trimmed input when it can't be parsed. */
+export function hyphenateIsbn(raw: string): string {
+	return hyphenate(raw.trim());
 }
