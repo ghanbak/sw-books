@@ -127,7 +127,11 @@ async function buildOlCandidateFromSearch(title: string, author: string): Promis
 	const isbns = normalizeIsbns(doc.isbn ?? []);
 	const candidate: BookCandidate = {
 		isbn: isbns,
-		cover_image: doc.cover_i ? coverByIdUrl(doc.cover_i) : isbns[0] ? coverByIsbnUrl(isbns[0]) : null,
+		cover_image: doc.cover_i
+			? coverByIdUrl(doc.cover_i)
+			: isbns[0]
+				? coverByIsbnUrl(isbns[0])
+				: null,
 		publisher: doc.publisher?.[0] ?? null,
 		date_published: doc.first_publish_year ? `${doc.first_publish_year}-01-01` : null,
 		language: normalizeLanguage(doc.language?.[0]),
@@ -135,7 +139,8 @@ async function buildOlCandidateFromSearch(title: string, author: string): Promis
 	// Synopsis lives on the work record, not the search doc.
 	if (doc.key) {
 		const work = await fetchWork<OlWork>(doc.key);
-		const desc = typeof work?.description === 'string' ? work.description : work?.description?.value;
+		const desc =
+			typeof work?.description === 'string' ? work.description : work?.description?.value;
 		if (desc) candidate.synopsis = desc;
 	}
 	return candidate;
