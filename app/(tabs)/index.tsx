@@ -5,11 +5,13 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookCard } from '@/components/book-card';
+import { CatalogSortControl } from '@/components/catalog-sort-control';
 import { ErrorState } from '@/components/error-state';
 import { tokens } from '@/constants/tokens';
 import { GlassView, liquidGlassAvailable } from '@/lib/glass';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
+import { type CatalogSort, DEFAULT_SORT, sortBooks } from '@/lib/sort';
 
 type CanonFilter = 'all' | 'Canon' | 'Legends';
 
@@ -17,6 +19,7 @@ export default function CatalogScreen() {
 	const { books, loading, error, refetch } = useBooks();
 	const [search, setSearch] = useState('');
 	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
+	const [sort, setSort] = useState<CatalogSort>(DEFAULT_SORT);
 	const insets = useSafeAreaInsets();
 
 	const filteredBooks = useMemo(() => {
@@ -45,8 +48,8 @@ export default function CatalogScreen() {
 			);
 		}
 
-		return result;
-	}, [books, search, canonFilter]);
+		return sortBooks(result, sort);
+	}, [books, search, canonFilter, sort]);
 
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
@@ -110,7 +113,7 @@ export default function CatalogScreen() {
 						</Pressable>
 					);
 				})}
-				<Text style={styles.count}>{filteredBooks.length} books</Text>
+				<CatalogSortControl value={sort} onChange={setSort} />
 			</View>
 
 			<FlashList
@@ -188,12 +191,6 @@ const styles = StyleSheet.create({
 	},
 	filterChipTextActive: {
 		color: tokens.text.inverse,
-	},
-	count: {
-		marginLeft: 'auto',
-		fontSize: 12,
-		color: tokens.text.hint,
-		fontFamily: 'monospace',
 	},
 	emptyContainer: {
 		flex: 1,
