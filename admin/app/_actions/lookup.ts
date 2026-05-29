@@ -7,6 +7,7 @@ import {
 	coverByIdUrl,
 	coverByIsbnUrl,
 	fetchByIsbn,
+	fetchWork,
 	searchByTitleAuthor,
 } from '@app/sources/open-library';
 import type { BookCandidate, LookupResult } from '@app/sources/types';
@@ -27,6 +28,7 @@ type OlEdition = {
 
 type OlSearch = {
 	docs?: Array<{
+		key?: string;
 		cover_i?: number;
 		isbn?: string[];
 		publisher?: string[];
@@ -34,6 +36,8 @@ type OlSearch = {
 		language?: string[];
 	}>;
 };
+
+type OlWork = { description?: string | { value?: string } };
 
 type GbVolumeInfo = {
 	publisher?: string;
@@ -113,25 +117,33 @@ async function buildGbCandidate(isbn: string): Promise<BookCandidate> {
 
 // --- title/author builders (used when the book has no ISBN) ---
 async function buildOlCandidateFromSearch(title: string, author: string): Promise<BookCandidate> {
-	const search = await searchByTitleAuthor<OlSearch>(title, author);
+	const search = await searchByTitleAuthor<OlSearch>(title, author, {
+		// search.json omits these from its default response — request them explicitly.
+		fields: 'key,cover_i,isbn,publisher,first_publish_year,language',
+	});
 	const doc = search?.docs?.[0];
 	if (!doc) return {};
 	const isbns = normalizeIsbns(doc.isbn ?? []);
-	return {
+	const candidate: BookCandidate = {
 		isbn: isbns,
-		cover_image: doc.cover_i
-			? coverByIdUrl(doc.cover_i)
-			: isbns[0]
-				? coverByIsbnUrl(isbns[0])
-				: null,
+		cover_image: doc.cover_i ? coverByIdUrl(doc.cover_i) : isbns[0] ? coverByIsbnUrl(isbns[0]) : null,
 		publisher: doc.publisher?.[0] ?? null,
 		date_published: doc.first_publish_year ? `${doc.first_publish_year}-01-01` : null,
 		language: normalizeLanguage(doc.language?.[0]),
 	};
+	// Synopsis lives on the work record, not the search doc.
+	if (doc.key) {
+		const work = await fetchWork<OlWork>(doc.key);
+		const desc = typeof work?.description === 'string' ? work.description : work?.description?.value;
+		if (desc) candidate.synopsis = desc;
+	}
+	return candidate;
 }
 
 async function buildGbCandidateFromSearch(title: string, author: string): Promise<BookCandidate> {
-	const q = `intitle:${encodeURIComponent(title)}+inauthor:${encodeURIComponent(author)}`;
+	// Plain keyword search ranks better than intitle/inauthor for subtitled
+	// titles ("Aftermath: Empire's End") and titles with apostrophes.
+	const q = encodeURIComponent(`${title} ${author}`.trim());
 	const res = await fetchVolumes<GbVolumes>(q, { maxResults: 1 });
 	const info = res?.items?.[0]?.volumeInfo;
 	return info ? mapGbVolumeInfo(info) : {};

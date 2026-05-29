@@ -21,15 +21,26 @@ export function fetchEditionsByWork<T = unknown>(workKey: string, limit = 100): 
 	return fetchJson<T>(`${BASE}${workKey}/editions.json?limit=${limit}`);
 }
 
-/** GET /search.json?title=…&author=…&limit=N — work search. */
+/** GET {workKey}.json — work record (description, subjects, …). */
+export function fetchWork<T = unknown>(workKey: string): Promise<T | null> {
+	return fetchJson<T>(`${BASE}${workKey}.json`);
+}
+
+/**
+ * GET /search.json?title=…&author=…&limit=N — work search. `search.json`
+ * returns a trimmed default field set; pass `fields` (e.g.
+ * `key,cover_i,isbn,publisher,first_publish_year,language`) to get the rest.
+ */
 export function searchByTitleAuthor<T = unknown>(
 	title: string,
 	author: string,
-	limit = 10,
+	options: { limit?: number; fields?: string } = {},
 ): Promise<T | null> {
 	const t = encodeURIComponent(title);
 	const a = encodeURIComponent(author);
-	return fetchJson<T>(`${BASE}/search.json?title=${t}&author=${a}&limit=${limit}`);
+	const limit = options.limit ?? 10;
+	const fields = options.fields ? `&fields=${encodeURIComponent(options.fields)}` : '';
+	return fetchJson<T>(`${BASE}/search.json?title=${t}&author=${a}&limit=${limit}${fields}`);
 }
 
 /** GET /api/books?bibkeys=ISBN:{isbn}&format=json&jscmd=data — cover + metadata. */
