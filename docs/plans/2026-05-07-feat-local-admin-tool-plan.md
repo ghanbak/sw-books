@@ -435,11 +435,14 @@ Land separately from the admin app to keep blast radius bounded.
 - [ ] `admin/app/_actions/export.ts`:
   - `getDriftReport()` — reads `data/books.csv`, queries DB ordered by id, builds `Map<id, row>` for both sides, single-pass O(n) diff. Returns `{ changedRows, summary }`.
   - `exportToCsv()` — atomic temp+rename of `data/books.csv`, then per-field-diff patches to the four manual-override JSONs. No lock file. If export fails, `git checkout data/` is the recovery.
-- [ ] Header drift chip: `Badge` with `tabular-nums` count; updates via `revalidateTag('books')` after every mutation
-- [ ] `admin/app/diff/page.tsx` — paginated changed rows, field-level diff, "Export to CSV" `Button`
-- [ ] After-export verification doc in `admin/README.md`: "Run `npm run db:reset && npm run db:seed`. Drift should re-appear at 0."
+- [x] `admin/app/_actions/export.ts`:
+  - `getDriftReport()` — DB rows vs `buildBookFields(csvRecord, currentOverrides)` (shared `lib/catalog`), per-field diff → `{ changedRows, summary }`
+  - `exportToCsv()` — scalar fields written into `data/books.csv` (only changed cells; **BOM + CRLF preserved** via `stringifyCsv` options so the diff stays minimal); `isbn`/`primary_isbn`/`cover_image`/`format` reconciled into the four `*-manual-overrides.json` (entry written iff DB differs from the pipeline **baseline**; reverting to baseline deletes the entry — this is where the deferred Phase 2 destructive-replace removal lands). Atomic writes via `safe-fs`.
+- [x] Header drift chip: `Badge` on `/books` (`tabular-nums`), saber-yellow when >0, links to `/diff`; recomputed each load (force-dynamic).
+- [x] `admin/app/diff/page.tsx` — field-level from→to diff per changed row + "Export to CSV" behind an `AlertDialog`.
+- [x] Export/verify workflow documented in `admin/README.md`.
 
-**Acceptance:** make 3 edits → drift shows "3 unsaved" → export succeeds → drift = 0 → `git diff data/` shows minimal expected changes (only modified rows in CSV; only modified slugs in override JSONs).
+**Acceptance:** Build + type-check clean; 35 root tests pass (incl. 6 `lib/catalog` lock tests proving seed parity); secret-leak guard passes. **Run locally to confirm the round-trip** (sandbox can't): 3 edits → chip "3 unsaved" → export → `git diff data/` shows only changed cells/slugs → `db:reset && db:seed` → drift back to 0. Note: the export normalizes the 2 bare-`\n` trailing CSV rows to `\r\n` once (one-time, then stable).
 
 ### Phase 5 — Polish + docs
 
