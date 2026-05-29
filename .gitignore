@@ -24,6 +24,11 @@ supabase/.temp/
 .env
 .env.*
 !.env.example
+!admin/.env.local.example
+
+# Next.js (admin tool)
+admin/.next/
+admin/next-env.d.ts
 
 # misc
 .DS_Store

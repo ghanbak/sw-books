@@ -8,12 +8,15 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "biome check .",
+    "lint": "biome check . && bash scripts/check-admin-bundle.sh",
     "lint:fix": "biome check --write .",
     "test": "vitest run",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > lib/types.ts",
-    "db:seed": "npx tsx scripts/seed.ts"
+    "db:seed": "npx tsx scripts/seed.ts",
+    "admin": "npm --prefix admin run dev",
+    "admin:install": "npm --prefix admin install",
+    "admin:predev": "npm run db:types"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
