@@ -26,21 +26,24 @@ type OlEdition = {
 };
 
 type OlSearch = {
-	docs?: Array<{ cover_edition_key?: string; isbn?: string[] }>;
-};
-
-type GbVolumes = {
-	items?: Array<{
-		volumeInfo?: {
-			publisher?: string;
-			publishedDate?: string;
-			description?: string;
-			language?: string;
-			imageLinks?: { thumbnail?: string; medium?: string; large?: string; extraLarge?: string };
-			industryIdentifiers?: Array<{ type: string; identifier: string }>;
-		};
+	docs?: Array<{
+		cover_i?: number;
+		isbn?: string[];
+		publisher?: string[];
+		first_publish_year?: number;
+		language?: string[];
 	}>;
 };
+
+type GbVolumeInfo = {
+	publisher?: string;
+	publishedDate?: string;
+	description?: string;
+	language?: string;
+	imageLinks?: { thumbnail?: string; medium?: string; large?: string; extraLarge?: string };
+	industryIdentifiers?: Array<{ type: string; identifier: string }>;
+};
+type GbVolumes = { items?: Array<{ volumeInfo?: GbVolumeInfo }> };
 
 function toIsoDate(raw?: string | null): string | null {
 	if (!raw) return null;
@@ -67,6 +70,27 @@ function normalizeIsbns(values: Array<string | undefined>): string[] {
 	return [...out];
 }
 
+function mapGbVolumeInfo(info: GbVolumeInfo, extraIsbns: string[] = []): BookCandidate {
+	const raw =
+		info.imageLinks?.extraLarge ??
+		info.imageLinks?.large ??
+		info.imageLinks?.medium ??
+		info.imageLinks?.thumbnail;
+	const cover = raw ? raw.replace(/^http:/, 'https:').replace(/&edge=curl/g, '') : null;
+	return {
+		isbn: normalizeIsbns([
+			...(info.industryIdentifiers?.map((i) => i.identifier) ?? []),
+			...extraIsbns,
+		]),
+		cover_image: cover,
+		publisher: info.publisher ?? null,
+		date_published: toIsoDate(info.publishedDate),
+		language: normalizeLanguage(info.language),
+		synopsis: info.description ?? null,
+	};
+}
+
+// --- ISBN-anchored builders ---
 async function buildOlCandidate(isbn: string): Promise<BookCandidate> {
 	const edition = await fetchByIsbn<OlEdition>(isbn);
 	if (!edition) return {};
@@ -84,26 +108,51 @@ async function buildOlCandidate(isbn: string): Promise<BookCandidate> {
 async function buildGbCandidate(isbn: string): Promise<BookCandidate> {
 	const res = await fetchVolumes<GbVolumes>(`isbn:${isbn}`, { maxResults: 1 });
 	const info = res?.items?.[0]?.volumeInfo;
-	if (!info) return {};
-	const rawCover =
-		info.imageLinks?.extraLarge ??
-		info.imageLinks?.large ??
-		info.imageLinks?.medium ??
-		info.imageLinks?.thumbnail;
-	const cover = rawCover ? rawCover.replace(/^http:/, 'https:').replace(/&edge=curl/g, '') : null;
+	return info ? mapGbVolumeInfo(info, [isbn]) : {};
+}
+
+// --- title/author builders (used when the book has no ISBN) ---
+async function buildOlCandidateFromSearch(title: string, author: string): Promise<BookCandidate> {
+	const search = await searchByTitleAuthor<OlSearch>(title, author);
+	const doc = search?.docs?.[0];
+	if (!doc) return {};
+	const isbns = normalizeIsbns(doc.isbn ?? []);
 	return {
-		isbn: normalizeIsbns([...(info.industryIdentifiers?.map((i) => i.identifier) ?? []), isbn]),
-		cover_image: cover,
-		publisher: info.publisher ?? null,
-		date_published: toIsoDate(info.publishedDate),
-		language: normalizeLanguage(info.language),
-		synopsis: info.description ?? null,
+		isbn: isbns,
+		cover_image: doc.cover_i
+			? coverByIdUrl(doc.cover_i)
+			: isbns[0]
+				? coverByIsbnUrl(isbns[0])
+				: null,
+		publisher: doc.publisher?.[0] ?? null,
+		date_published: doc.first_publish_year ? `${doc.first_publish_year}-01-01` : null,
+		language: normalizeLanguage(doc.language?.[0]),
+	};
+}
+
+async function buildGbCandidateFromSearch(title: string, author: string): Promise<BookCandidate> {
+	const q = `intitle:${encodeURIComponent(title)}+inauthor:${encodeURIComponent(author)}`;
+	const res = await fetchVolumes<GbVolumes>(q, { maxResults: 1 });
+	const info = res?.items?.[0]?.volumeInfo;
+	return info ? mapGbVolumeInfo(info) : {};
+}
+
+function settled(
+	ol: PromiseSettledResult<BookCandidate>,
+	gb: PromiseSettledResult<BookCandidate>,
+): LookupResult {
+	return {
+		ol: ol.status === 'fulfilled' ? ol.value : {},
+		gb: gb.status === 'fulfilled' ? gb.value : {},
+		fetchedAt: new Date().toISOString(),
 	};
 }
 
 /**
- * Fetch Open Library + Google Books candidates for a book, in parallel.
- * Either source failing/empty still returns a result with whichever succeeded.
+ * Fetch Open Library + Google Books candidates for a book, in parallel. Anchors
+ * on the book's ISBN when present; otherwise searches both sources by
+ * title + author. Either source failing/empty still returns a result with
+ * whichever succeeded.
  */
 export async function lookupCandidates(slug: string): Promise<Result<LookupResult>> {
 	const { data: book, error } = await supabaseAdmin
@@ -119,30 +168,14 @@ export async function lookupCandidates(slug: string): Promise<Result<LookupResul
 	}
 
 	const probeIsbn = book.primary_isbn ?? book.isbn?.[0] ?? null;
-	if (!probeIsbn) {
-		// No ISBN to anchor on — resolve one via OL title/author search before giving up.
-		const search = await searchByTitleAuthor<OlSearch>(book.title, book.author?.[0] ?? '');
-		const found = search?.docs?.[0]?.isbn?.find((i) => toIsbn13(i));
-		if (!found) {
-			return {
-				ok: false,
-				error: { code: 'NO_ISBN', message: 'book has no ISBN and OL search found none' },
-			};
-		}
-		return runLookups(found);
-	}
+	const author = book.author?.[0] ?? '';
 
-	return runLookups(probeIsbn);
-}
+	const [ol, gb] = probeIsbn
+		? await Promise.allSettled([buildOlCandidate(probeIsbn), buildGbCandidate(probeIsbn)])
+		: await Promise.allSettled([
+				buildOlCandidateFromSearch(book.title, author),
+				buildGbCandidateFromSearch(book.title, author),
+			]);
 
-async function runLookups(isbn: string): Promise<Result<LookupResult>> {
-	const [ol, gb] = await Promise.allSettled([buildOlCandidate(isbn), buildGbCandidate(isbn)]);
-	return {
-		ok: true,
-		data: {
-			ol: ol.status === 'fulfilled' ? ol.value : {},
-			gb: gb.status === 'fulfilled' ? gb.value : {},
-			fetchedAt: new Date().toISOString(),
-		},
-	};
+	return { ok: true, data: settled(ol, gb) };
 }
