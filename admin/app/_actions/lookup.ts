@@ -7,6 +7,7 @@ import {
 	coverByIdUrl,
 	coverByIsbnUrl,
 	fetchByIsbn,
+	fetchEditionsByWork,
 	fetchWork,
 	searchByTitleAuthor,
 } from '@app/sources/open-library';
@@ -24,7 +25,10 @@ type OlEdition = {
 	isbn_13?: string[];
 	isbn_10?: string[];
 	physical_format?: string;
+	works?: Array<{ key?: string }>;
 };
+
+type OlEditions = { entries?: OlEdition[] };
 
 type OlSearch = {
 	docs?: Array<{
@@ -99,9 +103,22 @@ function mapGbVolumeInfo(info: GbVolumeInfo, extraIsbns: string[] = []): BookCan
 async function buildOlCandidate(isbn: string): Promise<BookCandidate> {
 	const edition = await fetchByIsbn<OlEdition>(isbn);
 	if (!edition) return {};
+
+	// Aggregate ISBNs across every edition of the work (hardcover, paperback,
+	// mass-market, …), not just the one we looked up. normalizeIsbns then keeps
+	// the English-group ones. Falls back to the single edition if no work key.
+	const isbnPool = [...(edition.isbn_13 ?? []), ...(edition.isbn_10 ?? []), isbn];
+	const workKey = edition.works?.[0]?.key;
+	if (workKey) {
+		const editions = await fetchEditionsByWork<OlEditions>(workKey, 100);
+		for (const e of editions?.entries ?? []) {
+			isbnPool.push(...(e.isbn_13 ?? []), ...(e.isbn_10 ?? []));
+		}
+	}
+
 	const coverId = edition.covers?.find((c) => c > 0);
 	return {
-		isbn: normalizeIsbns([...(edition.isbn_13 ?? []), ...(edition.isbn_10 ?? []), isbn]),
+		isbn: normalizeIsbns(isbnPool),
 		cover_image: coverId ? coverByIdUrl(coverId) : coverByIsbnUrl(isbn),
 		publisher: edition.publishers?.[0] ?? null,
 		date_published: toIsoDate(edition.publish_date),
