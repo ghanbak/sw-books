@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { type CatalogOverrides, buildBookFields, parseDate, pickCoverImage, splitMultiValue } from '../catalog';
+import {
+	type CatalogOverrides,
+	buildBookFields,
+	parseDate,
+	pickCoverImage,
+	splitMultiValue,
+} from '../catalog';
 
 const emptyOverrides: CatalogOverrides = {
 	isbn: {},

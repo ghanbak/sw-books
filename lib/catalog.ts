@@ -24,7 +24,11 @@ export type CatalogOverrides = {
 	manualFormats: Record<string, string[]>;
 };
 
-const PIPELINE_HOSTS = ['covers.openlibrary.org', 'books.google.com', 'books.googleusercontent.com'];
+const PIPELINE_HOSTS = [
+	'covers.openlibrary.org',
+	'books.google.com',
+	'books.googleusercontent.com',
+];
 
 export function parseDate(dateStr: string): string | null {
 	if (!dateStr) return null;

@@ -29,7 +29,8 @@
       ".expo",
       "dist",
       "lib/types.ts",
-      "admin"
+      "admin",
+      "data/*.json"
     ]
   }
 }
