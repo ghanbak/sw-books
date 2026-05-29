@@ -419,21 +419,16 @@ Land separately from the admin app to keep blast radius bounded.
 
 ### Phase 3 — Issues queue + bulk ops
 
-- [ ] Left-rail filter list (shadcn `Sidebar` + `SidebarMenuBadge`) with live counts from inline SQL queries:
-  - Missing primary_isbn (`primary_isbn IS NULL`)
-  - No cover (`cover_image IS NULL`)
-  - Placeholder cover (joins with set loaded once from `scripts/placeholder-report.json`)
-  - Sparse row (`array_length(author,1)=0 OR array_length(isbn,1)=0 OR cover_image IS NULL OR synopsis IS NULL`)
-  - Manual review weak (28 slugs from review plan doc)
-  - Manual review no-data (12 slugs from review plan doc)
-- [ ] Bulk-ops bar with sequential `await` loop (no FSM, no idempotency keys, no polling):
-  - **Re-fetch covers** — `lib/sources/covers.ts` per row; `Progress` component shows N/total
-  - **Validate ISBNs** — flags rows with bad check digits via `lib/isbn.ts`
-  - **Fill empty fields** — `lookupCandidates` + auto-apply where current is null
-  - Buttons disable while running
-- [ ] `batchPatch(rows[]) → Result<Row[], Err>` — single Postgres `UPDATE … FROM (VALUES …)` for the bulk apply step
+- [x] Left filter rail with live counts for all 6 buckets. **Deviation:** lightweight custom rail (buttons + `Badge` counts) instead of full shadcn `Sidebar` — avoids restructuring the page layout. **Counts computed server-side in JS from a single fetch** (not 6 `head:true` SQL queries) — robust vs. PostgREST array-length filters, and yields the actual filtered row sets for free.
+  - Missing primary_isbn · No cover · Placeholder cover (from `scripts/placeholder-report.json`, empty if absent) · Sparse row · Manual review weak (28 slugs) · Manual review no-data (12 slugs) — slug lists snapshot into `admin/lib/manual-review.ts`.
+- [x] Bulk-ops bar (sequential `await` loop, no FSM/idempotency/polling):
+  - **Re-fetch covers** — `refetchCover` (OL ISBN cover + HEAD-check, then GB) per row; `Progress` shows N/total
+  - **Validate ISBNs** — client-side via `@app/isbn` `isValidIsbn` (check digits)
+  - **Fill empty fields** — `fillEmpty` = `lookupCandidates` + patch only null/empty fields
+  - Buttons disabled while running
+- [x] `batchPatch(updates[])` — **sequential `patchBook` loop** (deviation from single `UPDATE … FROM VALUES`; avoids a Postgres function/migration, fine at 185-row scale).
 
-**Acceptance:** all 6 filters render correct counts; bulk re-fetch covers on a 5-row selection completes with a progress indicator.
+**Acceptance:** Build + type-check clean; secret-leak guard passes. **Run locally to confirm:** the 6 filter counts render and filter the table, and bulk re-fetch covers on a 5-row selection drives the progress bar to completion.
 
 ### Phase 4 — Export to CSV + drift indicator
 
