@@ -1,5 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import Link from 'next/link';
+import { getDriftReport } from '@/app/_actions/export';
+import { Badge } from '@/components/ui/badge';
 import { type IssueKey, ISSUE_DEFS, issuesFor } from '@/lib/issues';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { type BookListRow, BooksTable } from './_components/books-table';
@@ -56,13 +59,30 @@ export default async function BooksPage() {
 	const counts = Object.fromEntries(ISSUE_DEFS.map((d) => [d.key, 0])) as Record<IssueKey, number>;
 	for (const r of rows) for (const k of r.issues) counts[k]++;
 
+	const drift = await getDriftReport();
+	const driftRows = drift.ok ? drift.data.summary.rows : 0;
+
 	return (
 		<main className="mx-auto max-w-[1600px] p-6">
-			<header className="mb-6">
-				<h1 className="font-semibold text-2xl tracking-tight">Catalog</h1>
-				<p className="text-muted-foreground text-sm">
-					{rows.length} books · sourced from <code className="text-saber-blue">data/books.csv</code>
-				</p>
+			<header className="mb-6 flex items-start justify-between gap-4">
+				<div>
+					<h1 className="font-semibold text-2xl tracking-tight">Catalog</h1>
+					<p className="text-muted-foreground text-sm">
+						{rows.length} books · sourced from <code className="text-saber-blue">data/books.csv</code>
+					</p>
+				</div>
+				<Link href="/diff">
+					<Badge
+						variant="outline"
+						className={
+							driftRows > 0
+								? 'border-saber-yellow/40 bg-saber-yellow/10 text-saber-yellow tabular-nums'
+								: 'text-muted-foreground tabular-nums'
+						}
+					>
+						{driftRows > 0 ? `${driftRows} unsaved` : 'Synced to books.csv'}
+					</Badge>
+				</Link>
 			</header>
 			<BooksTable rows={rows} counts={counts} />
 		</main>

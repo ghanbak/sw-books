@@ -18,6 +18,7 @@
     "paths": {
       "@/*": ["./*"],
       "@app/types": ["../lib/types.ts"],
+      "@app/catalog": ["../lib/catalog.ts"],
       "@app/sources/*": ["../lib/sources/*"],
       "@app/csv/*": ["../lib/csv/*"],
       "@app/isbn": ["../lib/isbn.ts"],

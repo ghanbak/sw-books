@@ -39,26 +39,36 @@ export const CSV_COLUMNS = [
 
 const QUOTE_WHEN = /[",\n]/;
 
-function ensureTrailingNewline(out: string): string {
-	return out.endsWith('\n') ? out : `${out}\n`;
+export type StringifyOptions = {
+	/** Prepend a UTF-8 BOM (data/books.csv carries one). Default false. */
+	bom?: boolean;
+	/** Row terminator. Default '\n'; pass '\r\n' to match data/books.csv. */
+	recordDelimiter?: '\n' | '\r\n';
+};
+
+function ensureTrailingNewline(out: string, eol: string): string {
+	return out.endsWith(eol) ? out : `${out}${eol}`;
 }
 
 /**
  * Stringify opaque string records (e.g. from parseCsv) back to CSV. The inverse
- * of parseCsv modulo BOM and line-ending normalization.
+ * of parseCsv. Defaults emit no BOM and `\n`; pass options to round-trip the
+ * on-disk data/books.csv (BOM + `\r\n`) so an export touches only changed cells.
  */
 export function stringifyCsv(
 	records: CsvRecord[],
 	columns: readonly string[] = CSV_COLUMNS,
+	options: StringifyOptions = {},
 ): string {
+	const eol = options.recordDelimiter ?? '\n';
 	const out = stringify(records, {
 		columns: columns as string[],
 		header: true,
-		bom: false,
+		bom: options.bom ?? false,
 		quoted_match: QUOTE_WHEN,
-		record_delimiter: '\n',
+		record_delimiter: eol,
 	});
-	return ensureTrailingNewline(out);
+	return ensureTrailingNewline(out, eol);
 }
 
 /**
@@ -80,5 +90,5 @@ export function stringifyBooksCsv(rows: BookRow[]): string {
 			date: (value) => value.toISOString().slice(0, 10),
 		},
 	});
-	return ensureTrailingNewline(out);
+	return ensureTrailingNewline(out, '\n');
 }
