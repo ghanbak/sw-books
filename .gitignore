@@ -31,7 +31,6 @@ supabase/.temp/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-/docs
 /.claude
 
 # scripts — transient outputs (regenerable; cached API responses or audit reports)
