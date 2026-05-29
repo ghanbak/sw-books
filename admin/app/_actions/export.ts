@@ -2,12 +2,12 @@
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { safeWrite } from '@/lib/safe-fs';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { type BookFields, type CatalogOverrides, buildBookFields } from '@app/catalog';
 import { type CsvRecord, parseCsv } from '@app/csv/read';
 import { CSV_COLUMNS, stringifyCsv } from '@app/csv/write';
 import { revalidateTag } from 'next/cache';
-import { safeWrite } from '@/lib/safe-fs';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 
 type ActionError = { code: string; message: string };
 type Result<T> = { ok: true; data: T } | { ok: false; error: ActionError };
@@ -84,12 +84,18 @@ function loadOverrides(): LoadedOverrides {
 			rejectedSlugs,
 			manualFormats: {},
 		},
-		manual: { isbn: isbnManual, primaryIsbn: primaryManual, covers: manualCovers, formats: manualFormats },
+		manual: {
+			isbn: isbnManual,
+			primaryIsbn: primaryManual,
+			covers: manualCovers,
+			formats: manualFormats,
+		},
 	};
 }
 
 function eq(a: unknown, b: unknown): boolean {
-	if (Array.isArray(a) || Array.isArray(b)) return JSON.stringify(a ?? []) === JSON.stringify(b ?? []);
+	if (Array.isArray(a) || Array.isArray(b))
+		return JSON.stringify(a ?? []) === JSON.stringify(b ?? []);
 	return (a ?? null) === (b ?? null);
 }
 
@@ -126,7 +132,11 @@ export async function getDriftReport(): Promise<Result<DriftReport>> {
 	for (const db of rows ?? []) {
 		const rec = recBySlug.get(db.slug);
 		if (!rec) {
-			changedRows.push({ slug: db.slug, title: db.title, fields: [{ field: '(row)', from: 'not in books.csv', to: 'in DB' }] });
+			changedRows.push({
+				slug: db.slug,
+				title: db.title,
+				fields: [{ field: '(row)', from: 'not in books.csv', to: 'in DB' }],
+			});
 			continue;
 		}
 		const expected = buildBookFields(rec, current) as unknown as Record<string, unknown>;
@@ -144,18 +154,25 @@ export async function getDriftReport(): Promise<Result<DriftReport>> {
 		ok: true,
 		data: {
 			changedRows,
-			summary: { rows: changedRows.length, fields: changedRows.reduce((n, r) => n + r.fields.length, 0) },
+			summary: {
+				rows: changedRows.length,
+				fields: changedRows.reduce((n, r) => n + r.fields.length, 0),
+			},
 		},
 	};
 }
 
-export async function exportToCsv(): Promise<Result<{ csvRowsChanged: number; overrideEntriesChanged: number }>> {
+export async function exportToCsv(): Promise<
+	Result<{ csvRowsChanged: number; overrideEntriesChanged: number }>
+> {
 	const { data: rows, error } = await supabaseAdmin.from('books').select('*');
 	if (error) return { ok: false, error: { code: 'DB', message: error.message } };
 
 	const { current, baseline, manual } = loadOverrides();
 	const records = readCsvRecords();
-	const dbBySlug = new Map((rows ?? []).map((r) => [r.slug, r as unknown as Record<string, unknown>]));
+	const dbBySlug = new Map(
+		(rows ?? []).map((r) => [r.slug, r as unknown as Record<string, unknown>]),
+	);
 
 	// 1. Scalar columns → books.csv (only changed cells; preserves CSV-only columns).
 	let csvRowsChanged = 0;
@@ -173,7 +190,10 @@ export async function exportToCsv(): Promise<Result<{ csvRowsChanged: number; ov
 		}
 		if (touched) csvRowsChanged++;
 	}
-	await safeWrite('books.csv', stringifyCsv(records, CSV_COLUMNS, { bom: true, recordDelimiter: '\r\n' }));
+	await safeWrite(
+		'books.csv',
+		stringifyCsv(records, CSV_COLUMNS, { bom: true, recordDelimiter: '\r\n' }),
+	);
 
 	// 2. Override-backed fields → manual JSONs (entry exists iff DB differs from the
 	// pipeline baseline; revert-to-baseline removes the entry).
@@ -189,7 +209,12 @@ export async function exportToCsv(): Promise<Result<{ csvRowsChanged: number; ov
 		if (!rec) continue;
 		const base = buildBookFields(rec, baseline);
 
-		const reconcile = <T>(map: Record<string, T>, dbVal: T, baseVal: T, isEmpty: (v: T) => boolean) => {
+		const reconcile = <T>(
+			map: Record<string, T>,
+			dbVal: T,
+			baseVal: T,
+			isEmpty: (v: T) => boolean,
+		) => {
 			if (!eq(dbVal, baseVal) && !isEmpty(dbVal)) {
 				if (!eq(map[db.slug], dbVal)) {
 					map[db.slug] = dbVal;

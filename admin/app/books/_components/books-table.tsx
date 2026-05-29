@@ -1,25 +1,5 @@
 'use client';
 
-import { isValidIsbn } from '@app/isbn';
-import type { Database } from '@app/types';
-import {
-	type CellContext,
-	type Column,
-	type RowData,
-	type RowSelectionState,
-	type SortingState,
-	createColumnHelper,
-	flexRender,
-	getCoreRowModel,
-	getFilteredRowModel,
-	getSortedRowModel,
-	useReactTable,
-} from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ChevronsUpDown, ExternalLink, ImageDown, ListChecks, Wand2 } from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { startTransition, useMemo, useOptimistic, useState } from 'react';
-import { toast } from 'sonner';
 import { patchBook } from '@/app/_actions/books';
 import { fillEmpty, refetchCover } from '@/app/_actions/bulk';
 import { Badge } from '@/components/ui/badge';
@@ -35,8 +15,36 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
-import { type IssueKey, ISSUE_DEFS } from '@/lib/issues';
+import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
 import { cn } from '@/lib/utils';
+import { isValidIsbn } from '@app/isbn';
+import type { Database } from '@app/types';
+import {
+	type CellContext,
+	type Column,
+	type RowData,
+	type RowSelectionState,
+	type SortingState,
+	createColumnHelper,
+	flexRender,
+	getCoreRowModel,
+	getFilteredRowModel,
+	getSortedRowModel,
+	useReactTable,
+} from '@tanstack/react-table';
+import {
+	ArrowDown,
+	ArrowUp,
+	ChevronsUpDown,
+	ExternalLink,
+	ImageDown,
+	ListChecks,
+	Wand2,
+} from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { startTransition, useMemo, useOptimistic, useState } from 'react';
+import { toast } from 'sonner';
 
 type BookRow = Database['public']['Tables']['books']['Row'];
 
@@ -64,7 +72,6 @@ type RowWithIssues = BookListRow & { issues: IssueKey[] };
 type EditableField = 'title' | 'publisher' | 'era' | 'date_published';
 
 declare module '@tanstack/react-table' {
-	// biome-ignore lint/correctness/noUnusedVariables: TData required to match TanStack's interface signature
 	interface TableMeta<TData extends RowData> {
 		updateField: (id: string, field: EditableField, value: string | null) => void;
 	}
@@ -112,7 +119,6 @@ function EditableText({
 
 	return (
 		<Input
-			// biome-ignore lint/a11y/noAutofocus: focus the field the user clicked to edit
 			autoFocus
 			value={draft}
 			className={cn('h-7 px-1 py-0.5', mono && 'font-mono text-xs')}
@@ -129,7 +135,12 @@ function EditableText({
 function SortHeader({ column, label }: { column: Column<RowWithIssues, unknown>; label: string }) {
 	const sorted = column.getIsSorted();
 	return (
-		<Button variant="ghost" size="sm" className="-ml-2 h-8" onClick={() => column.toggleSorting(sorted === 'asc')}>
+		<Button
+			variant="ghost"
+			size="sm"
+			className="-ml-2 h-8"
+			onClick={() => column.toggleSorting(sorted === 'asc')}
+		>
 			{label}
 			{sorted === 'asc' ? (
 				<ArrowUp className="ml-1 size-3.5" />
@@ -162,7 +173,11 @@ const columns = [
 			<Checkbox
 				aria-label="Select all"
 				checked={
-					table.getIsAllRowsSelected() ? true : table.getIsSomeRowsSelected() ? 'indeterminate' : false
+					table.getIsAllRowsSelected()
+						? true
+						: table.getIsSomeRowsSelected()
+							? 'indeterminate'
+							: false
 				}
 				onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
 			/>
@@ -182,8 +197,12 @@ const columns = [
 		cell: ({ getValue, row }) => {
 			const url = getValue();
 			return url ? (
-				// biome-ignore lint/performance/noImgElement: admin-only tool, remote covers, no next/image config
-				<img src={url} alt="" className="h-12 w-8 rounded-sm border border-border object-cover" loading="lazy" />
+				<img
+					src={url}
+					alt=""
+					className="h-12 w-8 rounded-sm border border-border object-cover"
+					loading="lazy"
+				/>
 			) : (
 				<div className="flex h-12 w-8 items-center justify-center rounded-sm border border-border bg-muted text-[10px] text-muted-foreground">
 					{row.original.title.slice(0, 1)}
@@ -216,7 +235,10 @@ const columns = [
 			return (
 				<Badge
 					variant="outline"
-					className={cn('border-transparent', isCanon ? 'bg-canon text-canon-foreground' : 'bg-legends text-legends-foreground')}
+					className={cn(
+						'border-transparent',
+						isCanon ? 'bg-canon text-canon-foreground' : 'bg-legends text-legends-foreground',
+					)}
 				>
 					{getValue()}
 				</Badge>
@@ -228,7 +250,8 @@ const columns = [
 		cell: ({ getValue }) => <span className="text-sm">{getValue()}</span>,
 	}),
 	columnHelper.accessor(
-		(r) => (r.series_name ? `${r.series_name}${r.series_order != null ? ` #${r.series_order}` : ''}` : ''),
+		(r) =>
+			r.series_name ? `${r.series_name}${r.series_order != null ? ` #${r.series_order}` : ''}` : '',
 		{
 			id: 'series',
 			header: 'Series',
@@ -238,7 +261,9 @@ const columns = [
 	columnHelper.accessor('primary_isbn', {
 		header: 'Primary ISBN',
 		cell: ({ getValue }) => (
-			<span className="font-mono text-xs">{getValue() ?? <span className="text-muted-foreground">—</span>}</span>
+			<span className="font-mono text-xs">
+				{getValue() ?? <span className="text-muted-foreground">—</span>}
+			</span>
 		),
 	}),
 	columnHelper.accessor('isbn', {
@@ -290,7 +315,10 @@ const columns = [
 	}),
 ];
 
-export function BooksTable({ rows, counts }: { rows: RowWithIssues[]; counts: Record<IssueKey, number> }) {
+export function BooksTable({
+	rows,
+	counts,
+}: { rows: RowWithIssues[]; counts: Record<IssueKey, number> }) {
 	const router = useRouter();
 	const [data, setData] = useState<RowWithIssues[]>(rows);
 	const [optimisticData, applyOptimistic] = useOptimistic(
@@ -305,7 +333,8 @@ export function BooksTable({ rows, counts }: { rows: RowWithIssues[]; counts: Re
 	const [bulk, setBulk] = useState<{ label: string; done: number; total: number } | null>(null);
 
 	const visibleData = useMemo(
-		() => (activeIssue ? optimisticData.filter((r) => r.issues.includes(activeIssue)) : optimisticData),
+		() =>
+			activeIssue ? optimisticData.filter((r) => r.issues.includes(activeIssue)) : optimisticData,
 		[optimisticData, activeIssue],
 	);
 
@@ -358,7 +387,8 @@ export function BooksTable({ rows, counts }: { rows: RowWithIssues[]; counts: Re
 			setBulk({ label, done: i + 1, total: items.length });
 		}
 		setBulk(null);
-		if (failures.length) toast.error(`${label}: ${failures.length} failed (${failures.slice(0, 3).join(', ')}…)`);
+		if (failures.length)
+			toast.error(`${label}: ${failures.length} failed (${failures.slice(0, 3).join(', ')}…)`);
 		toast.success(`${label}: ${updated} updated / ${items.length}`);
 		startTransition(() => router.refresh());
 	}
@@ -368,7 +398,12 @@ export function BooksTable({ rows, counts }: { rows: RowWithIssues[]; counts: Re
 		if (bad.length === 0) {
 			toast.success(`All ISBNs valid across ${selectedCount} selected`);
 		} else {
-			toast.error(`${bad.length} row(s) with invalid ISBN check digits: ${bad.map((r) => r.slug).slice(0, 5).join(', ')}`);
+			toast.error(
+				`${bad.length} row(s) with invalid ISBN check digits: ${bad
+					.map((r) => r.slug)
+					.slice(0, 5)
+					.join(', ')}`,
+			);
 		}
 	}
 
@@ -386,7 +421,9 @@ export function BooksTable({ rows, counts }: { rows: RowWithIssues[]; counts: Re
 					All books
 					<span className="text-muted-foreground tabular-nums">{data.length}</span>
 				</button>
-				<div className="px-3 pt-3 pb-1 font-medium text-muted-foreground text-xs uppercase tracking-wide">Issues</div>
+				<div className="px-3 pt-3 pb-1 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+					Issues
+				</div>
 				{ISSUE_DEFS.map((def) => (
 					<button
 						key={def.key}
@@ -415,18 +452,24 @@ export function BooksTable({ rows, counts }: { rows: RowWithIssues[]; counts: Re
 					/>
 					<span className="text-muted-foreground text-sm tabular-nums">
 						{table.getFilteredRowModel().rows.length}
-						{activeIssue ? ` · ${ISSUE_DEFS.find((d) => d.key === activeIssue)?.label}` : ` of ${data.length}`}
+						{activeIssue
+							? ` · ${ISSUE_DEFS.find((d) => d.key === activeIssue)?.label}`
+							: ` of ${data.length}`}
 					</span>
 				</div>
 
 				{selectedCount > 0 && (
 					<div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2">
-						<span className="px-1 text-saber-blue text-sm tabular-nums">{selectedCount} selected</span>
+						<span className="px-1 text-saber-blue text-sm tabular-nums">
+							{selectedCount} selected
+						</span>
 						<Button
 							variant="secondary"
 							size="sm"
 							disabled={running}
-							onClick={() => runSequential('Re-fetch covers', selectedRows, (r) => refetchCover(r.slug))}
+							onClick={() =>
+								runSequential('Re-fetch covers', selectedRows, (r) => refetchCover(r.slug))
+							}
 						>
 							<ImageDown className="size-4" /> Re-fetch covers
 						</Button>
@@ -441,7 +484,12 @@ export function BooksTable({ rows, counts }: { rows: RowWithIssues[]; counts: Re
 						>
 							<Wand2 className="size-4" /> Fill empty
 						</Button>
-						<Button variant="ghost" size="sm" disabled={running} onClick={() => setRowSelection({})}>
+						<Button
+							variant="ghost"
+							size="sm"
+							disabled={running}
+							onClick={() => setRowSelection({})}
+						>
 							Clear
 						</Button>
 						{bulk && (
@@ -462,7 +510,9 @@ export function BooksTable({ rows, counts }: { rows: RowWithIssues[]; counts: Re
 								<TableRow key={headerGroup.id} className="hover:bg-transparent">
 									{headerGroup.headers.map((header) => (
 										<TableHead key={header.id} className="whitespace-nowrap">
-											{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+											{header.isPlaceholder
+												? null
+												: flexRender(header.column.columnDef.header, header.getContext())}
 										</TableHead>
 									))}
 								</TableRow>
@@ -471,8 +521,11 @@ export function BooksTable({ rows, counts }: { rows: RowWithIssues[]; counts: Re
 						<TableBody>
 							{table.getRowModel().rows.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-										No books match.
+									<TableCell
+										colSpan={columns.length}
+										className="h-24 text-center text-muted-foreground"
+									>
+										No transmissions received — adjust the filter or search.
 									</TableCell>
 								</TableRow>
 							) : (

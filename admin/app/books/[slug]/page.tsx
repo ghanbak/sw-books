@@ -1,7 +1,7 @@
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 import { DiffView } from './_components/diff-view';
 
 export const dynamic = 'force-dynamic';

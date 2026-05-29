@@ -1,9 +1,9 @@
 'use server';
 
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { Database } from '@app/types';
 import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 
 type BookRow = Database['public']['Tables']['books']['Row'];
 type ActionError = { code: string; message: string };
@@ -42,7 +42,10 @@ export type BookPatchInput = z.input<typeof patchSchema>;
 export async function patchBook(id: string, raw: unknown): Promise<Result<BookRow>> {
 	const parsed = patchSchema.safeParse(raw);
 	if (!parsed.success) {
-		return { ok: false, error: { code: 'INVALID', message: parsed.error.issues[0]?.message ?? 'invalid patch' } };
+		return {
+			ok: false,
+			error: { code: 'INVALID', message: parsed.error.issues[0]?.message ?? 'invalid patch' },
+		};
 	}
 	if (Object.keys(parsed.data).length === 0) {
 		return { ok: false, error: { code: 'EMPTY', message: 'no fields to update' } };

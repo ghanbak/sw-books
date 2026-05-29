@@ -1,10 +1,15 @@
 'use server';
 
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { toIsbn13 } from '@app/isbn';
 import { fetchVolumes } from '@app/sources/google-books';
-import { coverByIdUrl, coverByIsbnUrl, fetchByIsbn, searchByTitleAuthor } from '@app/sources/open-library';
+import {
+	coverByIdUrl,
+	coverByIsbnUrl,
+	fetchByIsbn,
+	searchByTitleAuthor,
+} from '@app/sources/open-library';
 import type { BookCandidate, LookupResult } from '@app/sources/types';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 
 type ActionError = { code: string; message: string };
 type Result<T> = { ok: true; data: T } | { ok: false; error: ActionError };
@@ -107,7 +112,10 @@ export async function lookupCandidates(slug: string): Promise<Result<LookupResul
 		.eq('slug', slug)
 		.single();
 	if (error || !book) {
-		return { ok: false, error: { code: 'NOT_FOUND', message: error?.message ?? `no book for slug "${slug}"` } };
+		return {
+			ok: false,
+			error: { code: 'NOT_FOUND', message: error?.message ?? `no book for slug "${slug}"` },
+		};
 	}
 
 	const probeIsbn = book.primary_isbn ?? book.isbn?.[0] ?? null;
@@ -116,7 +124,10 @@ export async function lookupCandidates(slug: string): Promise<Result<LookupResul
 		const search = await searchByTitleAuthor<OlSearch>(book.title, book.author?.[0] ?? '');
 		const found = search?.docs?.[0]?.isbn?.find((i) => toIsbn13(i));
 		if (!found) {
-			return { ok: false, error: { code: 'NO_ISBN', message: 'book has no ISBN and OL search found none' } };
+			return {
+				ok: false,
+				error: { code: 'NO_ISBN', message: 'book has no ISBN and OL search found none' },
+			};
 		}
 		return runLookups(found);
 	}

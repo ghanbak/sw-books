@@ -9,10 +9,14 @@ import { env } from './env';
  * component. Do not use @supabase/ssr here (cookie collisions with the
  * service-role key).
  */
-export const supabaseAdmin = createClient<Database>(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-	auth: {
-		persistSession: false,
-		autoRefreshToken: false,
-		detectSessionInUrl: false,
+export const supabaseAdmin = createClient<Database>(
+	env.SUPABASE_URL,
+	env.SUPABASE_SERVICE_ROLE_KEY,
+	{
+		auth: {
+			persistSession: false,
+			autoRefreshToken: false,
+			detectSessionInUrl: false,
+		},
 	},
-});
+);

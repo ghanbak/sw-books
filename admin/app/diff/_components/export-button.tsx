@@ -1,9 +1,5 @@
 'use client';
 
-import { Loader2, Upload } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useTransition } from 'react';
-import { toast } from 'sonner';
 import { exportToCsv } from '@/app/_actions/export';
 import {
 	AlertDialog,
@@ -17,6 +13,10 @@ import {
 	AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { Loader2, Upload } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useTransition } from 'react';
+import { toast } from 'sonner';
 
 export function ExportButton({ disabled, rows }: { disabled: boolean; rows: number }) {
 	const router = useRouter();
@@ -26,7 +26,9 @@ export function ExportButton({ disabled, rows }: { disabled: boolean; rows: numb
 		startExport(async () => {
 			const res = await exportToCsv();
 			if (res.ok) {
-				toast.success(`Exported · ${res.data.csvRowsChanged} CSV rows, ${res.data.overrideEntriesChanged} overrides`);
+				toast.success(
+					`Exported · ${res.data.csvRowsChanged} CSV rows, ${res.data.overrideEntriesChanged} overrides`,
+				);
 				router.refresh();
 			} else {
 				toast.error(`Export failed: ${res.error.message}`);
@@ -46,8 +48,8 @@ export function ExportButton({ disabled, rows }: { disabled: boolean; rows: numb
 				<AlertDialogHeader>
 					<AlertDialogTitle>Export {rows} changed row(s) to data/?</AlertDialogTitle>
 					<AlertDialogDescription>
-						Writes scalar fields to <code>data/books.csv</code> and the four manual-override JSONs. Recovery
-						if anything looks wrong: <code>git checkout data/</code>. Then verify with{' '}
+						Writes scalar fields to <code>data/books.csv</code> and the four manual-override JSONs.
+						Recovery if anything looks wrong: <code>git checkout data/</code>. Then verify with{' '}
 						<code>npm run db:reset && npm run db:seed</code> — drift should return to 0.
 					</AlertDialogDescription>
 				</AlertDialogHeader>

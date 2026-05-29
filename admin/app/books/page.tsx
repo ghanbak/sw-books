@@ -1,10 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import Link from 'next/link';
 import { getDriftReport } from '@/app/_actions/export';
 import { Badge } from '@/components/ui/badge';
-import { type IssueKey, ISSUE_DEFS, issuesFor } from '@/lib/issues';
+import { ISSUE_DEFS, type IssueKey, issuesFor } from '@/lib/issues';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import Link from 'next/link';
 import { type BookListRow, BooksTable } from './_components/books-table';
 
 // Always read live from the local DB; never cache/pre-render the catalog.
@@ -68,7 +68,8 @@ export default async function BooksPage() {
 				<div>
 					<h1 className="font-semibold text-2xl tracking-tight">Catalog</h1>
 					<p className="text-muted-foreground text-sm">
-						{rows.length} books · sourced from <code className="text-saber-blue">data/books.csv</code>
+						{rows.length} books · sourced from{' '}
+						<code className="text-saber-blue">data/books.csv</code>
 					</p>
 				</div>
 				<Link href="/diff">

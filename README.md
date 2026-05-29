@@ -53,6 +53,7 @@ The Apple Sign-In Supabase client secret JWT expires every 6 months — a schedu
 | `npm run db:reset`            | Reset local Supabase, apply migrations, run seed    |
 | `npm run db:types`            | Regenerate `lib/types.ts` from local Supabase       |
 | `npm run db:seed`             | Re-import the CSV seed                              |
+| `npm run admin` / `admin:install` | Local catalog admin tool (Next.js, `127.0.0.1:3100`) |
 | `npx expo prebuild --clean`   | Regenerate `ios/` and `android/` from `app.json`    |
 | `npx expo run:ios`            | Build the native iOS app, launch on simulator       |
 
@@ -79,10 +80,25 @@ data/                   Source CSV for the catalog
 
 Two tables:
 
-- `books` — public catalog. All authenticated users can read. Edited via Supabase Studio, not from the app.
+- `books` — public catalog. All authenticated users can read. Edited with the local admin tool (see below), not from the app.
 - `user_books` — per-user shelves (owned / read / want-to-read). CRUD restricted to the owner via Postgres Row-Level Security.
 
-The CSV in `data/` is the source of truth for the initial catalog; subsequent edits happen in Supabase Studio.
+The CSV in `data/` is the source of truth for the catalog.
+
+## Catalog management
+
+Edit the catalog with the local admin tool — a Next.js app at `admin/`:
+
+```bash
+npm run admin:install
+cp admin/.env.local.example admin/.env.local   # paste the Supabase secret key
+npm run admin                                   # → http://127.0.0.1:3100/books
+```
+
+Inline-edit fields, run Open Library + Google Books lookups per book, fix issues
+in bulk, then review `/diff` and **Export to CSV**. After export, re-run
+`npm run db:reset && npm run db:seed` to confirm the drift returns to 0. Full
+workflow + troubleshooting: [admin/README.md](admin/README.md).
 
 ## Identifiers
 

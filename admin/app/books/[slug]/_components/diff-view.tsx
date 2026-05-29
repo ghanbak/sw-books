@@ -1,11 +1,5 @@
 'use client';
 
-import type { Database } from '@app/types';
-import type { BookCandidate, LookupResult } from '@app/sources/types';
-import { Loader2, Sparkles } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { type ReactNode, startTransition, useState, useTransition } from 'react';
-import { toast } from 'sonner';
 import { patchBook } from '@/app/_actions/books';
 import { lookupCandidates } from '@/app/_actions/lookup';
 import {
@@ -28,11 +22,23 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import type { BookCandidate, LookupResult } from '@app/sources/types';
+import type { Database } from '@app/types';
+import { Loader2, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { type ReactNode, startTransition, useState, useTransition } from 'react';
+import { toast } from 'sonner';
 
 type BookRow = Database['public']['Tables']['books']['Row'];
 type Source = 'current' | 'ol' | 'gb';
 
-const SCALAR_FIELDS = ['cover_image', 'publisher', 'date_published', 'language', 'synopsis'] as const;
+const SCALAR_FIELDS = [
+	'cover_image',
+	'publisher',
+	'date_published',
+	'language',
+	'synopsis',
+] as const;
 type ScalarField = (typeof SCALAR_FIELDS)[number];
 const ARRAY_FIELDS = ['format', 'isbn'] as const;
 type ArrayField = (typeof ARRAY_FIELDS)[number];
@@ -48,13 +54,23 @@ const LABELS: Record<DiffField, string> = {
 	isbn: 'ISBN',
 };
 
-function scalar(book: BookRow, cand: LookupResult | null, field: ScalarField, source: Source): string | null {
+function scalar(
+	book: BookRow,
+	cand: LookupResult | null,
+	field: ScalarField,
+	source: Source,
+): string | null {
 	if (source === 'current') return book[field] ?? null;
 	const c: BookCandidate = source === 'ol' ? (cand?.ol ?? {}) : (cand?.gb ?? {});
 	return c[field] ?? null;
 }
 
-function arr(book: BookRow, cand: LookupResult | null, field: ArrayField, source: Source): string[] {
+function arr(
+	book: BookRow,
+	cand: LookupResult | null,
+	field: ArrayField,
+	source: Source,
+): string[] {
 	if (source === 'current') return book[field] ?? [];
 	const c: BookCandidate = source === 'ol' ? (cand?.ol ?? {}) : (cand?.gb ?? {});
 	return c[field] ?? [];
@@ -168,7 +184,11 @@ export function DiffView({ book }: { book: BookRow }) {
 				</div>
 				<div className="ml-auto flex items-center gap-2">
 					<Button onClick={runLookup} disabled={lookupPending} variant="secondary">
-						{lookupPending ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+						{lookupPending ? (
+							<Loader2 className="size-4 animate-spin" />
+						) : (
+							<Sparkles className="size-4" />
+						)}
 						{hasCandidates ? 'Re-run lookup' : 'Run lookup'}
 					</Button>
 				</div>
@@ -201,7 +221,6 @@ export function DiffView({ book }: { book: BookRow }) {
 						const v = scalar(book, candidates, field, source);
 						if (field === 'cover_image') {
 							return v ? (
-								// biome-ignore lint/performance/noImgElement: remote covers, admin-only
 								<img
 									src={v}
 									alt=""
@@ -285,7 +304,8 @@ export function DiffView({ book }: { book: BookRow }) {
 						Resulting ISBNs ({resultingIsbns.length}):{' '}
 						<span className="font-mono">{resultingIsbns.join(', ') || '—'}</span>
 						<br />
-						primary_isbn → <span className="font-mono text-saber-blue">{primaryPreview ?? '—'}</span>
+						primary_isbn →{' '}
+						<span className="font-mono text-saber-blue">{primaryPreview ?? '—'}</span>
 					</p>
 				</div>
 			)}
@@ -302,9 +322,12 @@ export function DiffView({ book }: { book: BookRow }) {
 					</AlertDialogTrigger>
 					<AlertDialogContent>
 						<AlertDialogHeader>
-							<AlertDialogTitle>Apply {changeCount} change(s) to “{book.title}”?</AlertDialogTitle>
+							<AlertDialogTitle>
+								Apply {changeCount} change(s) to “{book.title}”?
+							</AlertDialogTitle>
 							<AlertDialogDescription>
-								Writes directly to the local database. Review <code>/diff</code> before exporting to CSV.
+								Writes directly to the local database. Review <code>/diff</code> before exporting to
+								CSV.
 								{replaceIsbn && ' ISBNs will be REPLACED, not merged.'}
 							</AlertDialogDescription>
 						</AlertDialogHeader>
@@ -315,20 +338,17 @@ export function DiffView({ book }: { book: BookRow }) {
 					</AlertDialogContent>
 				</AlertDialog>
 				{changeCount > 0 && (
-					<span className="text-muted-foreground text-sm">
-						{Object.keys(patch).join(', ')}
-					</span>
+					<span className="text-muted-foreground text-sm">{Object.keys(patch).join(', ')}</span>
 				)}
-				{replaceBlocked && <span className="text-destructive text-sm">type the slug to confirm replace</span>}
+				{replaceBlocked && (
+					<span className="text-destructive text-sm">type the slug to confirm replace</span>
+				)}
 			</div>
 
 			<Dialog open={enlarged !== null} onOpenChange={(o) => !o && setEnlarged(null)}>
 				<DialogContent className="max-w-md">
 					<DialogTitle className="sr-only">Cover preview</DialogTitle>
-					{enlarged && (
-						// biome-ignore lint/performance/noImgElement: remote cover preview, admin-only
-						<img src={enlarged} alt="" className="mx-auto max-h-[70vh] rounded" />
-					)}
+					{enlarged && <img src={enlarged} alt="" className="mx-auto max-h-[70vh] rounded" />}
 				</DialogContent>
 			</Dialog>
 		</div>
@@ -359,7 +379,8 @@ function FieldRow({
 				onValueChange={(v) => onSelect(v as Source)}
 			>
 				{(['current', 'ol', 'gb'] as const).map((source) => {
-					const disabled = disabledSources.includes(source) || (source !== 'current' && !hasValue(source));
+					const disabled =
+						disabledSources.includes(source) || (source !== 'current' && !hasValue(source));
 					return (
 						<label
 							key={source}

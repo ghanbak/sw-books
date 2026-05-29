@@ -1,7 +1,7 @@
-import { ArrowLeft, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
 import { getDriftReport } from '@/app/_actions/export';
 import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import { ExportButton } from './_components/export-button';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +11,10 @@ export default async function DiffPage() {
 
 	return (
 		<main className="mx-auto max-w-5xl p-6">
-			<Link href="/books" className="mb-4 inline-flex items-center gap-1 text-muted-foreground text-sm hover:text-foreground">
+			<Link
+				href="/books"
+				className="mb-4 inline-flex items-center gap-1 text-muted-foreground text-sm hover:text-foreground"
+			>
 				<ArrowLeft className="size-4" /> Catalog
 			</Link>
 
@@ -32,7 +35,8 @@ export default async function DiffPage() {
 
 					{res.data.changedRows.length === 0 ? (
 						<p className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
-							All systems nominal — the database matches <code className="text-saber-blue">data/books.csv</code>.
+							All systems nominal — the database matches{' '}
+							<code className="text-saber-blue">data/books.csv</code>.
 						</p>
 					) : (
 						<div className="space-y-4">
@@ -49,7 +53,10 @@ export default async function DiffPage() {
 									</div>
 									<div className="space-y-1">
 										{row.fields.map((f) => (
-											<div key={f.field} className="grid grid-cols-[120px_1fr_auto_1fr] items-start gap-2 text-sm">
+											<div
+												key={f.field}
+												className="grid grid-cols-[120px_1fr_auto_1fr] items-start gap-2 text-sm"
+											>
 												<span className="font-medium text-muted-foreground">{f.field}</span>
 												<span className="text-muted-foreground line-through">{f.from}</span>
 												<ArrowRight className="size-3.5 self-center text-muted-foreground" />

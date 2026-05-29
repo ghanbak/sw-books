@@ -1,9 +1,9 @@
 'use server';
 
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import { headCheckCover } from '@app/sources/covers';
 import { fetchVolumes } from '@app/sources/google-books';
 import { coverByIsbnUrl } from '@app/sources/open-library';
-import { headCheckCover } from '@app/sources/covers';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 import { patchBook } from './books';
 import { lookupCandidates } from './lookup';
 
@@ -22,7 +22,9 @@ export type FillResult = {
 };
 
 type GbCover = {
-	items?: Array<{ volumeInfo?: { imageLinks?: { thumbnail?: string; large?: string; extraLarge?: string } } }>;
+	items?: Array<{
+		volumeInfo?: { imageLinks?: { thumbnail?: string; large?: string; extraLarge?: string } };
+	}>;
 };
 
 /** Re-source a cover for one book (OL by ISBN, then Google Books) and persist
@@ -52,7 +54,10 @@ export async function refetchCover(slug: string): Promise<CoverResult> {
 	if (!url) return { slug, status: 'not-found' };
 	if (url === book.cover_image) return { slug, status: 'unchanged', url };
 
-	const { error } = await supabaseAdmin.from('books').update({ cover_image: url }).eq('id', book.id);
+	const { error } = await supabaseAdmin
+		.from('books')
+		.update({ cover_image: url })
+		.eq('id', book.id);
 	if (error) return { slug, status: 'error', message: error.message };
 	return { slug, status: 'updated', url };
 }
@@ -64,7 +69,9 @@ export async function fillEmpty(slug: string): Promise<FillResult> {
 
 	const { data: book } = await supabaseAdmin
 		.from('books')
-		.select('id, cover_image, publisher, date_published, language, synopsis, format, isbn, primary_isbn')
+		.select(
+			'id, cover_image, publisher, date_published, language, synopsis, format, isbn, primary_isbn',
+		)
 		.eq('slug', slug)
 		.single();
 	if (!book) return { slug, status: 'error', message: 'not found' };
@@ -86,7 +93,8 @@ export async function fillEmpty(slug: string): Promise<FillResult> {
 		const v = ol.isbn ?? gb.isbn;
 		if (v?.length) {
 			patch.isbn = v;
-			patch.primary_isbn = book.primary_isbn && v.includes(book.primary_isbn) ? book.primary_isbn : v[0];
+			patch.primary_isbn =
+				book.primary_isbn && v.includes(book.primary_isbn) ? book.primary_isbn : v[0];
 		}
 	}
 
@@ -104,7 +112,9 @@ export async function batchPatch(
 	const results: Array<{ id: string; ok: boolean; message?: string }> = [];
 	for (const u of updates) {
 		const res = await patchBook(u.id, u.patch);
-		results.push(res.ok ? { id: u.id, ok: true } : { id: u.id, ok: false, message: res.error.message });
+		results.push(
+			res.ok ? { id: u.id, ok: true } : { id: u.id, ok: false, message: res.error.message },
+		);
 	}
 	return results;
 }

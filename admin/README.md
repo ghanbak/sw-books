@@ -68,3 +68,17 @@ edits from disk. If an export looks wrong, recover with `git checkout data/`.
 
 > Don't hand-edit `data/books.csv` except for slug renames (slugs are read-only
 > in the tool). Everything else flows through the admin → export loop.
+
+## Troubleshooting
+
+- **`ZodError … SUPABASE_SERVICE_ROLE_KEY` on load** — the key in
+  `admin/.env.local` is missing/blank. Paste the **secret** key from
+  `supabase status`, then restart `npm run admin` (env isn't hot-reloaded).
+- **`npm error Missing script: "dev"`** — run `npm run admin` from the repo
+  root, not `npm run dev` (the root has no `dev` script).
+- **Catalog is empty / fetch fails** — the local Supabase stack isn't running or
+  isn't seeded. `supabase start`, then `npm run db:reset && npm run db:seed`.
+- **Port 3100 in use** — stop the other listener, or change the port in
+  `admin/package.json` (`dev`/`start` scripts) and the root `admin` note.
+- **Edited the schema** — regenerate types with `npm run db:types` so the admin
+  picks up new columns.
