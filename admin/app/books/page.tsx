@@ -4,10 +4,11 @@ import { getDriftReport } from '@/app/_actions/export';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ISSUE_DEFS, type IssueKey, issuesFor } from '@/lib/issues';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getDbTarget, getSupabaseAdmin } from '@/lib/supabase-admin';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { type BookListRow, BooksTable } from './_components/books-table';
+import { DbTargetSwitch } from './_components/db-target-switch';
 
 // Always read live from the local DB; never cache/pre-render the catalog.
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,7 @@ async function loadPlaceholderSlugs(): Promise<Set<string>> {
 }
 
 export default async function BooksPage() {
+	const [supabaseAdmin, target] = await Promise.all([getSupabaseAdmin(), getDbTarget()]);
 	const [{ data, error }, placeholderSlugs] = await Promise.all([
 		supabaseAdmin
 			.from('books')
@@ -69,10 +71,10 @@ export default async function BooksPage() {
 			<header className="mb-6 flex items-start justify-between gap-4">
 				<div>
 					<h1 className="font-semibold text-2xl tracking-tight">Catalog</h1>
-					<p className="text-muted-foreground text-sm">
-						{rows.length} books · sourced from{' '}
-						<code className="text-saber-blue">data/books.csv</code>
-					</p>
+					<div className="mt-1 flex items-center gap-2 text-muted-foreground text-sm">
+						<span className="tabular-nums">{rows.length} books ·</span>
+						<DbTargetSwitch current={target} />
+					</div>
 				</div>
 				<div className="flex items-center gap-3">
 					<Link href="/diff">

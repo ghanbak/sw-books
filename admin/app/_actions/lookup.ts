@@ -1,6 +1,6 @@
 'use server';
 
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { isEnglishIsbn, toIsbn13 } from '@app/isbn';
 import { fetchVolumes } from '@app/sources/google-books';
 import {
@@ -190,6 +190,7 @@ function settled(
  * whichever succeeded.
  */
 export async function lookupCandidates(slug: string): Promise<Result<LookupResult>> {
+	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: book, error } = await supabaseAdmin
 		.from('books')
 		.select('isbn, primary_isbn, title, author')

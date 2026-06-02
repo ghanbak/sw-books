@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function BookDiffPage({ params }: { params: Promise<{ slug: string }> }) {
 	const { slug } = await params;
+	const supabaseAdmin = await getSupabaseAdmin();
 	const { data, error } = await supabaseAdmin.from('books').select('*').eq('slug', slug).single();
 	if (error || !data) notFound();
 

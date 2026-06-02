@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { safeWrite } from '@/lib/safe-fs';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { type BookFields, type CatalogOverrides, buildBookFields } from '@app/catalog';
 import { type CsvRecord, parseCsv } from '@app/csv/read';
 import { CSV_COLUMNS, stringifyCsv } from '@app/csv/write';
@@ -122,6 +122,7 @@ function stableJson(obj: Record<string, unknown>): string {
 }
 
 export async function getDriftReport(): Promise<Result<DriftReport>> {
+	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: rows, error } = await supabaseAdmin.from('books').select('*');
 	if (error) return { ok: false, error: { code: 'DB', message: error.message } };
 
@@ -165,6 +166,7 @@ export async function getDriftReport(): Promise<Result<DriftReport>> {
 export async function exportToCsv(): Promise<
 	Result<{ csvRowsChanged: number; overrideEntriesChanged: number }>
 > {
+	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: rows, error } = await supabaseAdmin.from('books').select('*');
 	if (error) return { ok: false, error: { code: 'DB', message: error.message } };
 

@@ -1,6 +1,6 @@
 'use server';
 
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { ensureUniqueSlug } from '@app/slug';
 import type { Database, Json } from '@app/types';
 import { revalidateTag } from 'next/cache';
@@ -58,6 +58,7 @@ export async function patchBook(id: string, raw: unknown): Promise<Result<BookRo
 		return { ok: false, error: { code: 'EMPTY', message: 'no fields to update' } };
 	}
 
+	const supabaseAdmin = await getSupabaseAdmin();
 	const { data, error } = await supabaseAdmin
 		.from('books')
 		.update(parsed.data)
@@ -117,6 +118,7 @@ export async function createBook(raw: unknown): Promise<Result<BookRow>> {
 	}
 	const input = parsed.data;
 
+	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: clash } = await supabaseAdmin
 		.from('books')
 		.select('slug')
@@ -153,6 +155,7 @@ export async function createBook(raw: unknown): Promise<Result<BookRow>> {
  * is the CSV backup / Supabase PITR.
  */
 export async function deleteBook(id: string, typedSlug: string): Promise<Result<{ slug: string }>> {
+	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: book, error: fetchErr } = await supabaseAdmin
 		.from('books')
 		.select('slug')
@@ -191,6 +194,7 @@ export async function mergeBooks(
 		return { ok: false, error: { code: 'INVALID', message: 'survivor cannot also be a loser' } };
 	}
 
+	const supabaseAdmin = await getSupabaseAdmin();
 	const { data, error } = await supabaseAdmin.rpc('merge_books', {
 		survivor: survivorId,
 		losers: loserIds,
