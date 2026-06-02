@@ -2,8 +2,10 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getDriftReport } from '@/app/_actions/export';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ISSUE_DEFS, type IssueKey, issuesFor } from '@/lib/issues';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { type BookListRow, BooksTable } from './_components/books-table';
 
@@ -72,18 +74,26 @@ export default async function BooksPage() {
 						<code className="text-saber-blue">data/books.csv</code>
 					</p>
 				</div>
-				<Link href="/diff">
-					<Badge
-						variant="outline"
-						className={
-							driftRows > 0
-								? 'border-saber-yellow/40 bg-saber-yellow/10 text-saber-yellow tabular-nums'
-								: 'text-muted-foreground tabular-nums'
-						}
-					>
-						{driftRows > 0 ? `${driftRows} unsaved` : 'Synced to books.csv'}
-					</Badge>
-				</Link>
+				<div className="flex items-center gap-3">
+					<Link href="/diff">
+						<Badge
+							variant="outline"
+							className={
+								driftRows > 0
+									? 'border-saber-yellow/40 bg-saber-yellow/10 text-saber-yellow tabular-nums'
+									: 'text-muted-foreground tabular-nums'
+							}
+						>
+							{driftRows > 0 ? `${driftRows} unsaved` : 'Synced to books.csv'}
+						</Badge>
+					</Link>
+					<Link href="/books/new">
+						<Button size="sm">
+							<Plus className="size-4" />
+							New book
+						</Button>
+					</Link>
+				</div>
 			</header>
 			<BooksTable rows={rows} counts={counts} />
 		</main>
