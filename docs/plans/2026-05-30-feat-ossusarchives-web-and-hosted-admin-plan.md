@@ -141,9 +141,15 @@ Sources: [App Review 5.1.1](https://developer.apple.com/app-store/review/guideli
 - Move existing admin routes under `/admin/*`.
 - **Acceptance:** `/` and `/privacy` public + crawlable; `/admin/*` redirects to `/login` (gate lands in C).
 
-### Phase C — Auth-gated admin (login + **env allowlist**), writing live to prod
+### Phase C — Auth-gated admin (login + **env allowlist**), writing live to prod  ✅ built
 
 Two clients, `requireAdmin()` in every privileged surface, env-var allowlist (no table in V1).
+
+> **✅ Built.** `@supabase/ssr` session client (`admin/lib/supabase-auth.ts`) separate from the service-role data client; `getAdmin()`/`requireAdmin()` (`admin/lib/auth.ts`) verify via `getClaims()` + `ADMIN_USER_IDS` allowlist (by auth user id). Middleware (`admin/middleware.ts` + `supabase-middleware.ts`) refreshes the session + redirects unauthed → `/login`; every **mutating** server action re-checks `getAdmin()` (CVE defense). Google OAuth: `/login` (prints your user id when signed-in-but-not-allowlisted, for bootstrap) + `/auth/callback` (PKCE, same-origin `next`, `x-forwarded-host`). `serverActions.allowedOrigins` via `ADMIN_ALLOWED_ORIGIN`.
+>
+> **Deviation (deliberate):** the gate **enforces only in production builds** (`NODE_ENV==='production'`). Local `next dev` is loopback-only and stays **ungated**, so local development needs no auth env and no login. This keeps the existing local workflow frictionless while gating any hosted deploy.
+>
+> **(You, to verify — prod/hosted only):** set `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` (prod, publishable) + `ADMIN_USER_IDS`; add `<origin>/auth/callback` to the prod Supabase **Auth → URL Configuration → Redirect URLs** (Google is already configured for the app). First login → `/login` shows your user id → paste into `ADMIN_USER_IDS` → redeploy. OAuth can't be exercised here.
 
 #### Research Insights — two-client SSR auth (current `@supabase/ssr`)
 - **Cookie/session client** `admin/lib/supabase-server.ts` (anon/publishable key) — uses `getAll/setAll` (the `get/set/remove` triplet is deprecated; `setAll` now takes a 2nd `_headers` arg); `cookies()` is async in Next 15.
