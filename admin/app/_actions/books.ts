@@ -172,3 +172,41 @@ export async function deleteBook(id: string, typedSlug: string): Promise<Result<
 	revalidateTag('books');
 	return { ok: true, data: { slug: book.slug } };
 }
+
+/**
+ * Merge duplicate books into a survivor via the `merge_books` Postgres function
+ * (atomic: repoints + OR-merges user shelves, unions isbn[]/format[], applies
+ * scalar overrides, deletes losers). `resolution` carries optional scalar
+ * overrides (e.g. `{ primary_isbn, canon, title, … }`); arrays are auto-unioned.
+ *
+ * NB: `merge_books` is added by migration 20260602000000 and isn't in the
+ * generated types until `npm run db:types` is re-run, hence the typed cast.
+ */
+const mergeBooksRpc = supabaseAdmin.rpc.bind(supabaseAdmin) as unknown as (
+	fn: 'merge_books',
+	args: { survivor: string; losers: string[]; resolution: Record<string, unknown> },
+) => Promise<{ data: BookRow | null; error: { message: string } | null }>;
+
+export async function mergeBooks(
+	survivorId: string,
+	loserIds: string[],
+	resolution: Record<string, unknown> = {},
+): Promise<Result<BookRow>> {
+	if (loserIds.length === 0) {
+		return { ok: false, error: { code: 'EMPTY', message: 'no books to merge' } };
+	}
+	if (loserIds.includes(survivorId)) {
+		return { ok: false, error: { code: 'INVALID', message: 'survivor cannot also be a loser' } };
+	}
+
+	const { data, error } = await mergeBooksRpc('merge_books', {
+		survivor: survivorId,
+		losers: loserIds,
+		resolution,
+	});
+	if (error || !data) {
+		return { ok: false, error: { code: 'DB', message: error?.message ?? 'merge failed' } };
+	}
+	revalidateTag('books');
+	return { ok: true, data };
+}
