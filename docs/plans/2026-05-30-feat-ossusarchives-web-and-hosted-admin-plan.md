@@ -105,9 +105,13 @@ middleware.ts                 → token refresh + redirect (matcher: /admin/:pat
 
 > Ship as **three PRs**: (1) Privacy page, (2) Hosting + marketing stub + auth gate, (3) CSV backup. Phase A has no dependencies and unblocks store review first.
 
-### Phase A — Privacy policy + account-deletion (ship first)
+### Phase A — Privacy policy + account-deletion (ship first)  ✅ page built
 
 The privacy **page** is quick; the **account-deletion** requirement it links to is a separate, hard launch blocker — scope it here so the policy doesn't promise something that doesn't exist.
+
+> **✅ Built:** `admin/app/privacy/page.tsx` — static (`force-static`), crawlable, public, static `metadata`. Covers data collected (Apple/Google sign-in ids incl. private relay, `user_books` shelves), service providers (Supabase/Vercel/Apple/Google), Amazon affiliate disclosure, retention + **in-app account deletion** (Settings → Delete account) **+ Apple token revocation**, children, contact, effective date.
+>
+> **⚠️ Still required before store submission (NOT in this web repo):** the in-app **account-deletion** flow it promises — a Supabase Edge Function (delete `auth.users` + `user_books`, revoke the Apple token) wired to a Settings button in the **Expo app**. Tracked in the TestFlight roadmap. Also: confirm the contact email (`privacy@ossusarchives.com` placeholder) and set the URL in App Store Connect + Play Console.
 
 `admin/app/privacy/page.tsx` — static, crawlable, no auth, static `metadata`.
 
@@ -135,11 +139,12 @@ Sources: [App Review 5.1.1](https://developer.apple.com/app-store/review/guideli
 
 > **Note:** the in-app account-deletion Edge Function + Apple revocation is its own workstream (already flagged in the TestFlight roadmap). It lives in the Expo app, not this web repo. The privacy page may ship first, but **store submission needs both.**
 
-### Phase B — Hosting skeleton + marketing stub
-- Configure Vercel (root directory = `admin/`); `force-static` public pages; sitemap/robots; apex+www domains + canonical redirect.
-- `admin/app/page.tsx` — minimal placeholder ("Ossus Archives — coming soon", link to `/privacy` + App Store when live).
-- Move existing admin routes under `/admin/*`.
-- **Acceptance:** `/` and `/privacy` public + crawlable; `/admin/*` redirects to `/login` (gate lands in C).
+### Phase B — Hosting skeleton + marketing stub  ✅ built (app structure)
+- [x] `admin/app/page.tsx` — `force-static` marketing stub (replaces the old `/`→`/books` redirect); links to `/privacy`.
+- [x] Moved the catalog tool under `/admin/*` (`/admin/books`, `/admin/diff`, `/admin/books/[slug]`, `/admin/books/new`); `/admin` redirects to `/admin/books`. All internal links/redirects/OAuth `next` repointed.
+- [x] Narrowed the auth gate (middleware matcher) to `/admin/*`; `/`, `/privacy`, `/login`, `/auth` stay public + crawlable.
+- [ ] **(Deploy-time, you)** Vercel project (Root Directory `admin`, include-outside-files), apex+www domain + canonical redirect — see `2026-06-02-deploy-admin-to-vercel-checklist.md`. `sitemap.ts`/`robots.ts` deferred.
+- **Acceptance:** route tree is `/` (marketing) · `/privacy` · `/admin/*` (gated) · `/login` `/auth/callback`. tsc + biome clean.
 
 ### Phase C — Auth-gated admin (login + **env allowlist**), writing live to prod  ✅ built
 
