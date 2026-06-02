@@ -92,15 +92,12 @@ flowchart LR
 - [ ] **(You, locally)** Confirm in `npm run admin`: trash → type slug → row vanishes; wrong slug stays disabled. Run `npm run catalog:backup` after deletions to capture the post-delete state.
 - **Note:** backup is the **manual** `npm run catalog:backup` (chosen design), not a per-action commit.
 
-### Phase 3 — Merge function (clear the backlog manually; UI deferred)
-- [ ] **Migration** — `merge_books(survivor uuid, losers uuid[], resolution jsonb)` `plpgsql`, run in one transaction:
-  1. **Delete colliding loser shelves** — `DELETE FROM user_books l WHERE l.book_id = ANY(losers) AND EXISTS (SELECT 1 FROM user_books s WHERE s.user_id = l.user_id AND s.book_id = survivor)` *after* OR-merging their flags into the survivor's row (so a user's `read/owned/want_to_read = true` on a loser is **preserved**, not dropped).
-  2. **Repoint remaining** — `UPDATE user_books SET book_id = survivor WHERE book_id = ANY(losers)`.
-  3. **Apply resolved survivor fields** from `resolution` (union `isbn[]`+`format[]`; survivor-wins scalars; validate `primary_isbn ∈ isbn[]`).
-  4. **Delete losers.**
-- [ ] `mergeBooks()` server action = thin `supabase.rpc('merge_books', …)` wrapper + `revalidateTag('books')` + `commitBackup()`.
-- [ ] **Clear the known backlog** — call `merge_books` manually (SQL/rpc) for the duplicates enumerated in `docs/plans/2026-05-05-feat-catalog-data-quality-pass-plan.md` / `scripts/isbn-collisions.json`. No detector, no UI.
-- [ ] **Fixture test** — seed a fake user shelving both survivor and a loser with differing flags; assert flags OR-merge, the unique constraint is deduped, and no shelf data is lost.
+### Phase 3 — Merge function (clear the backlog manually; UI deferred) ✅ built
+- [x] **Migration** `supabase/migrations/20260602000000_add_merge_books_function.sql` — `ordered_text_union()` + `merge_books(survivor uuid, losers uuid[], resolution jsonb)` `plpgsql`, atomic: (1) OR-merge loser shelf flags into the survivor's row, (2) collide-delete loser shelves that would violate `UNIQUE(user_id, book_id)`, (3) repoint remaining shelves, (4) union `isbn[]`/`format[]` (survivor-first, deduped) + apply optional scalar overrides from `resolution` + validate `primary_isbn ∈ isbn[]`, (5) delete losers.
+- [x] `mergeBooks(survivorId, loserIds, resolution)` server action — thin `rpc('merge_books', …)` wrapper (typed cast until `db:types` re-run) + `revalidateTag('books')`. Guards empty/self-merge.
+- [x] **Self-checking test** `supabase/tests/merge_books_test.sql` — seeds two users (one shelving both books with differing flags), runs the merge, asserts isbn/format union, loser deleted, OR-merge + dedup + repoint with no shelf data lost; `BEGIN/ROLLBACK` (non-destructive).
+- [ ] **(You, locally)** Apply + verify: `npm run db:reset` (applies the migration) → `npm run db:types` (regenerates `lib/types.ts` so `merge_books` is typed) → run `supabase/tests/merge_books_test.sql` (expect `PASS`).
+- [ ] **(You)** Clear the known backlog: call `merge_books` manually for the dups enumerated in `docs/plans/2026-05-05-feat-catalog-data-quality-pass-plan.md` / `scripts/isbn-collisions.json` (against prod), then `npm run catalog:backup`. No detector/UI.
 - **Deferred (only if dups recur):** a manual multi-select "Merge" in the table that calls the same function. The detector / dismissed-pairs / duplicates view stay cut.
 - **Acceptance:** `merge_books` yields one survivor (unioned ISBNs/formats, valid primary_isbn), losers gone, shelves repointed with flags preserved and no constraint failure; backlog cleared.
 
