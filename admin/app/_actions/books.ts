@@ -2,7 +2,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { ensureUniqueSlug } from '@app/slug';
-import type { Database } from '@app/types';
+import type { Database, Json } from '@app/types';
 import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 
@@ -178,19 +178,11 @@ export async function deleteBook(id: string, typedSlug: string): Promise<Result<
  * (atomic: repoints + OR-merges user shelves, unions isbn[]/format[], applies
  * scalar overrides, deletes losers). `resolution` carries optional scalar
  * overrides (e.g. `{ primary_isbn, canon, title, … }`); arrays are auto-unioned.
- *
- * NB: `merge_books` is added by migration 20260602000000 and isn't in the
- * generated types until `npm run db:types` is re-run, hence the typed cast.
  */
-const mergeBooksRpc = supabaseAdmin.rpc.bind(supabaseAdmin) as unknown as (
-	fn: 'merge_books',
-	args: { survivor: string; losers: string[]; resolution: Record<string, unknown> },
-) => Promise<{ data: BookRow | null; error: { message: string } | null }>;
-
 export async function mergeBooks(
 	survivorId: string,
 	loserIds: string[],
-	resolution: Record<string, unknown> = {},
+	resolution: Json = {},
 ): Promise<Result<BookRow>> {
 	if (loserIds.length === 0) {
 		return { ok: false, error: { code: 'EMPTY', message: 'no books to merge' } };
@@ -199,7 +191,7 @@ export async function mergeBooks(
 		return { ok: false, error: { code: 'INVALID', message: 'survivor cannot also be a loser' } };
 	}
 
-	const { data, error } = await mergeBooksRpc('merge_books', {
+	const { data, error } = await supabaseAdmin.rpc('merge_books', {
 		survivor: survivorId,
 		losers: loserIds,
 		resolution,
