@@ -86,10 +86,11 @@ flowchart LR
 - [ ] **(You, locally — needs `npm run admin` against prod/local)** Visual/interaction pass: search by ISBN prefills; manual create with no search works; a colliding slug surfaces the suggestion; created book appears in `/books`. (Can't be exercised here — no running app / DB.)
 - **Note:** backup is the **manual** `npm run catalog:backup` (per the chosen design), not a per-action `commitBackup()`. Run it after an add session.
 
-### Phase 2 — Delete a book (guarded) — ships after Phase 0
-- [ ] `admin/app/_actions/books.ts` — `deleteBook(id, typedSlug)`: fetch the row by `id` (uuid), assert `typedSlug === row.slug` (avoids a TOCTOU where the typed slug matches a different row), `DELETE`. `user_books.book_id ON DELETE CASCADE` removes shelf refs — intended for a genuine deletion. `revalidateTag('books')` + `commitBackup()`.
-- [ ] Typed-confirmation dialog in `books-table.tsx`. No in-app undo — recovery is the auto-committed backup / PITR (state it).
-- **Acceptance:** delete removes the row + from `/books`; the auto-commit captures the post-delete state; restore can recover it.
+### Phase 2 — Delete a book (guarded) ✅ built
+- [x] `admin/app/_actions/books.ts` — `deleteBook(id, typedSlug)`: fetches the row by `id` (uuid), asserts `typedSlug === row.slug` (no TOCTOU deleting a different row), `DELETE` (cascades to `user_books`). `revalidateTag('books')`. Returns `CONFIRM`/`NOT_FOUND`/`DB` errors.
+- [x] Typed-confirmation `AlertDialog` row action (trash icon) in `books-table.tsx`; Delete disabled until the slug is typed exactly; on success the row is removed from the table (`removeRow` table-meta). Copy states "no undo — recovery is the CSV backup / PITR".
+- [ ] **(You, locally)** Confirm in `npm run admin`: trash → type slug → row vanishes; wrong slug stays disabled. Run `npm run catalog:backup` after deletions to capture the post-delete state.
+- **Note:** backup is the **manual** `npm run catalog:backup` (chosen design), not a per-action commit.
 
 ### Phase 3 — Merge function (clear the backlog manually; UI deferred)
 - [ ] **Migration** — `merge_books(survivor uuid, losers uuid[], resolution jsonb)` `plpgsql`, run in one transaction:
