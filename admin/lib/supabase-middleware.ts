@@ -39,13 +39,12 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 		},
 	});
 
+	// Matcher already scopes this to /admin/*, so any non-admin caller is bounced
+	// to /login.
 	const { data } = await supabase.auth.getClaims();
 	const sub = data?.claims?.sub;
 	const isAdmin = !!sub && allowlist().includes(sub);
-
-	const { pathname } = request.nextUrl;
-	const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/auth');
-	if (!isAdmin && !isAuthRoute) {
+	if (!isAdmin) {
 		const redirectUrl = request.nextUrl.clone();
 		redirectUrl.pathname = '/login';
 		return NextResponse.redirect(redirectUrl);

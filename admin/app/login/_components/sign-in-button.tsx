@@ -20,7 +20,7 @@ export function SignInButton() {
 		const supabase = createBrowserClient(url, key);
 		const { error } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
-			options: { redirectTo: `${window.location.origin}/auth/callback?next=/books` },
+			options: { redirectTo: `${window.location.origin}/auth/callback?next=/admin/books` },
 		});
 		if (error) {
 			toast.error(error.message);

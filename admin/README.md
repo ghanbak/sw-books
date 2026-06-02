@@ -37,21 +37,21 @@ npm run admin            # → http://127.0.0.1:3100/books
 
 ## What you can do
 
-- **`/books`** — sort, filter, multi-select. Edit title / publisher / era /
+- **`/admin/books`** — sort, filter, multi-select. Edit title / publisher / era /
   published inline (autosaves). Left rail filters by issue (missing primary
   ISBN, no cover, sparse, manual-review, …).
 - **Bulk ops** (select rows) — re-fetch covers, validate ISBNs, fill empty
   fields from Open Library + Google Books.
-- **`/books/[slug]`** — run an OL + GB lookup and apply fields from a 3-column
+- **`/admin/books/[slug]`** — run an OL + GB lookup and apply fields from a 3-column
   diff. ISBNs merge additively by default; destructive replace needs a typed
   confirmation.
-- **`/diff`** — review every field that differs from `data/`, then **Export to
+- **`/admin/diff`** — review every field that differs from `data/`, then **Export to
   CSV**.
 
 ## Export & verify
 
-Edits live only in the local DB until you export. The drift chip on `/books`
-shows the unsaved count; `/diff` lists the changes.
+Edits live only in the local DB until you export. The drift chip on `/admin/books`
+shows the unsaved count; `/admin/diff` lists the changes.
 
 **Export** writes scalar fields to `data/books.csv` and routes
 `isbn` / `primary_isbn` / `cover_image` / `format` to the four
@@ -63,7 +63,7 @@ Verify a round-trip after exporting:
 npm run db:reset && SUPABASE_SERVICE_ROLE_KEY=<secret> npm run db:seed
 ```
 
-The drift count on `/books` should return to **0** — the seed reproduced your
+The drift count on `/admin/books` should return to **0** — the seed reproduced your
 edits from disk. If an export looks wrong, recover with `git checkout data/`.
 
 > Don't hand-edit `data/books.csv` except for slug renames (slugs are read-only

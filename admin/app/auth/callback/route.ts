@@ -9,8 +9,8 @@ import { NextResponse } from 'next/server';
 export async function GET(request: Request): Promise<NextResponse> {
 	const { searchParams, origin } = new URL(request.url);
 	const code = searchParams.get('code');
-	let next = searchParams.get('next') ?? '/books';
-	if (!next.startsWith('/') || next.startsWith('//')) next = '/books';
+	let next = searchParams.get('next') ?? '/admin/books';
+	if (!next.startsWith('/') || next.startsWith('//')) next = '/admin/books';
 
 	if (code) {
 		const supabase = await createAuthServerClient();

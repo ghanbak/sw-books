@@ -6,9 +6,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-	// Run on everything except Next internals and static assets. /login and /auth
-	// are matched but exempted from the redirect inside updateSession.
-	matcher: [
-		'/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
-	],
+	// Gate only the admin tool. The marketing stub (/), /privacy, /login and
+	// /auth stay public (and crawlable for App Store review).
+	matcher: ['/admin', '/admin/:path*'],
 };

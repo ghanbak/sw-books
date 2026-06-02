@@ -15,7 +15,7 @@ export default async function BookDiffPage({ params }: { params: Promise<{ slug:
 	return (
 		<main className="mx-auto max-w-6xl p-6">
 			<Link
-				href="/books"
+				href="/admin/books"
 				className="mb-4 inline-flex items-center gap-1 text-muted-foreground text-sm hover:text-foreground"
 			>
 				<ArrowLeft className="size-4" /> Catalog

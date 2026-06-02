@@ -13,7 +13,7 @@ function allowlist(): string[] {
 
 export default async function LoginPage() {
 	// Local dev is ungated — go straight to the catalog.
-	if (process.env.NODE_ENV !== 'production') redirect('/books');
+	if (process.env.NODE_ENV !== 'production') redirect('/admin/books');
 
 	// Already signed in + allowlisted → in you go.
 	let signedInId: string | null = null;
@@ -23,7 +23,7 @@ export default async function LoginPage() {
 		const { data } = await supabase.auth.getClaims();
 		const claims = data?.claims;
 		if (claims?.sub) {
-			if (allowlist().includes(claims.sub)) redirect('/books');
+			if (allowlist().includes(claims.sub)) redirect('/admin/books');
 			signedInId = claims.sub;
 			signedInEmail = typeof claims.email === 'string' ? claims.email : null;
 		}

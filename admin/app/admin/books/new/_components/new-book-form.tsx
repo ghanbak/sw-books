@@ -169,7 +169,7 @@ export function NewBookForm() {
 				return;
 			}
 			toast.success(`Created "${res.data.title}"`);
-			router.push(`/books/${res.data.slug}`);
+			router.push(`/admin/books/${res.data.slug}`);
 		});
 	}
 
@@ -302,7 +302,7 @@ export function NewBookForm() {
 					{saving && <Loader2 className="size-4 animate-spin" />}
 					Create book
 				</Button>
-				<Button variant="ghost" onClick={() => router.push('/books')} disabled={saving}>
+				<Button variant="ghost" onClick={() => router.push('/admin/books')} disabled={saving}>
 					Cancel
 				</Button>
 			</div>

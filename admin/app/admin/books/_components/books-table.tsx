@@ -408,7 +408,7 @@ const columns = [
 		cell: ({ row, table }) => (
 			<div className="flex items-center justify-end gap-1">
 				<Button asChild variant="ghost" size="sm" className="h-7 gap-1 text-saber-blue">
-					<Link href={`/books/${row.original.slug}`}>
+					<Link href={`/admin/books/${row.original.slug}`}>
 						Diff <ExternalLink className="size-3.5" />
 					</Link>
 				</Button>

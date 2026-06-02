@@ -77,7 +77,7 @@ export default async function BooksPage() {
 					</div>
 				</div>
 				<div className="flex items-center gap-3">
-					<Link href="/diff">
+					<Link href="/admin/diff">
 						<Badge
 							variant="outline"
 							className={
@@ -89,7 +89,7 @@ export default async function BooksPage() {
 							{driftRows > 0 ? `${driftRows} unsaved` : 'Synced to books.csv'}
 						</Badge>
 					</Link>
-					<Link href="/books/new">
+					<Link href="/admin/books/new">
 						<Button size="sm">
 							<Plus className="size-4" />
 							New book
