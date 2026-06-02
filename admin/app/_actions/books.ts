@@ -144,3 +144,31 @@ export async function createBook(raw: unknown): Promise<Result<BookRow>> {
 	revalidateTag('books');
 	return { ok: true, data };
 }
+
+/**
+ * Delete a book. Guarded: the caller must type the book's slug, and we compare
+ * it against the slug fetched by `id` (so a stale/typo'd slug can't delete a
+ * different row). `user_books.book_id ON DELETE CASCADE` removes shelf refs —
+ * intended for a genuine "this book shouldn't exist" deletion. No undo; recovery
+ * is the CSV backup / Supabase PITR.
+ */
+export async function deleteBook(id: string, typedSlug: string): Promise<Result<{ slug: string }>> {
+	const { data: book, error: fetchErr } = await supabaseAdmin
+		.from('books')
+		.select('slug')
+		.eq('id', id)
+		.maybeSingle();
+	if (fetchErr) return { ok: false, error: { code: 'DB', message: fetchErr.message } };
+	if (!book) return { ok: false, error: { code: 'NOT_FOUND', message: 'book not found' } };
+	if (typedSlug.trim() !== book.slug) {
+		return {
+			ok: false,
+			error: { code: 'CONFIRM', message: `type "${book.slug}" exactly to confirm` },
+		};
+	}
+
+	const { error } = await supabaseAdmin.from('books').delete().eq('id', id);
+	if (error) return { ok: false, error: { code: 'DB', message: error.message } };
+	revalidateTag('books');
+	return { ok: true, data: { slug: book.slug } };
+}

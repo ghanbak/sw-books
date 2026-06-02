@@ -1,7 +1,17 @@
 'use client';
 
-import { patchBook } from '@/app/_actions/books';
+import { deleteBook, patchBook } from '@/app/_actions/books';
 import { fillEmpty, googleBooksStatus, refetchCover } from '@/app/_actions/bulk';
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -39,11 +49,13 @@ import {
 	ExternalLink,
 	ImageDown,
 	ListChecks,
+	Loader2,
+	Trash2,
 	Wand2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { startTransition, useMemo, useOptimistic, useState } from 'react';
+import { startTransition, useMemo, useOptimistic, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
 type BookRow = Database['public']['Tables']['books']['Row'];
@@ -74,7 +86,82 @@ type EditableField = 'title' | 'publisher' | 'era' | 'date_published';
 declare module '@tanstack/react-table' {
 	interface TableMeta<TData extends RowData> {
 		updateField: (id: string, field: EditableField, value: string | null) => void;
+		removeRow: (id: string) => void;
 	}
+}
+
+function DeleteBookCell({
+	id,
+	slug,
+	title,
+	onDeleted,
+}: {
+	id: string;
+	slug: string;
+	title: string;
+	onDeleted: () => void;
+}) {
+	const [open, setOpen] = useState(false);
+	const [typed, setTyped] = useState('');
+	const [pending, startDelete] = useTransition();
+
+	return (
+		<AlertDialog
+			open={open}
+			onOpenChange={(o) => {
+				setOpen(o);
+				if (!o) setTyped('');
+			}}
+		>
+			<AlertDialogTrigger asChild>
+				<Button
+					variant="ghost"
+					size="sm"
+					className="h-7 text-muted-foreground hover:text-destructive"
+					aria-label={`Delete ${title}`}
+				>
+					<Trash2 className="size-3.5" />
+				</Button>
+			</AlertDialogTrigger>
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Delete “{title}”?</AlertDialogTitle>
+					<AlertDialogDescription>
+						This permanently removes the book and any user shelf entries (cascade). There is no undo
+						— recovery is the CSV backup / Supabase PITR. Type{' '}
+						<code className="font-mono text-foreground">{slug}</code> to confirm.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<Input
+					autoFocus
+					value={typed}
+					placeholder={slug}
+					onChange={(e) => setTyped(e.target.value)}
+				/>
+				<AlertDialogFooter>
+					<AlertDialogCancel>Cancel</AlertDialogCancel>
+					<Button
+						variant="destructive"
+						disabled={typed.trim() !== slug || pending}
+						onClick={() =>
+							startDelete(async () => {
+								const res = await deleteBook(id, typed.trim());
+								if (res.ok) {
+									toast.success(`Deleted “${title}”`);
+									setOpen(false);
+									onDeleted();
+								} else {
+									toast.error(res.error.message);
+								}
+							})
+						}
+					>
+						{pending && <Loader2 className="size-4 animate-spin" />} Delete
+					</Button>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	);
 }
 
 function EditableText({
@@ -305,12 +392,20 @@ const columns = [
 	columnHelper.display({
 		id: 'actions',
 		header: '',
-		cell: ({ row }) => (
-			<Button asChild variant="ghost" size="sm" className="h-7 gap-1 text-saber-blue">
-				<Link href={`/books/${row.original.slug}`}>
-					Diff <ExternalLink className="size-3.5" />
-				</Link>
-			</Button>
+		cell: ({ row, table }) => (
+			<div className="flex items-center justify-end gap-1">
+				<Button asChild variant="ghost" size="sm" className="h-7 gap-1 text-saber-blue">
+					<Link href={`/books/${row.original.slug}`}>
+						Diff <ExternalLink className="size-3.5" />
+					</Link>
+				</Button>
+				<DeleteBookCell
+					id={row.original.id}
+					slug={row.original.slug}
+					title={row.original.title}
+					onDeleted={() => table.options.meta?.removeRow(row.original.id)}
+				/>
+			</div>
 		),
 	}),
 ];
@@ -351,12 +446,14 @@ export function BooksTable({
 		});
 	};
 
+	const removeRow = (id: string) => setData((prev) => prev.filter((r) => r.id !== id));
+
 	const table = useReactTable({
 		data: visibleData,
 		columns,
 		state: { sorting, globalFilter, rowSelection },
 		getRowId: (row) => row.id,
-		meta: { updateField },
+		meta: { updateField, removeRow },
 		onSortingChange: setSorting,
 		onGlobalFilterChange: setGlobalFilter,
 		onRowSelectionChange: setRowSelection,
