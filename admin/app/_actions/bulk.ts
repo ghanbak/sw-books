@@ -1,5 +1,6 @@
 'use server';
 
+import { getAdmin } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { headCheckCover } from '@app/sources/covers';
 import { fetchVolumes } from '@app/sources/google-books';
@@ -30,6 +31,7 @@ type GbCover = {
 /** Re-source a cover for one book (OL by ISBN, then Google Books) and persist
  * it if a valid candidate differs from the current cover. */
 export async function refetchCover(slug: string): Promise<CoverResult> {
+	if (!(await getAdmin())) return { slug, status: 'error', message: 'not authorized' };
 	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: book } = await supabaseAdmin
 		.from('books')

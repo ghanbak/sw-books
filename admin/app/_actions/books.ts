@@ -1,5 +1,6 @@
 'use server';
 
+import { getAdmin } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { ensureUniqueSlug } from '@app/slug';
 import type { Database, Json } from '@app/types';
@@ -47,6 +48,7 @@ const patchSchema = z
 export type BookPatchInput = z.input<typeof patchSchema>;
 
 export async function patchBook(id: string, raw: unknown): Promise<Result<BookRow>> {
+	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
 	const parsed = patchSchema.safeParse(raw);
 	if (!parsed.success) {
 		return {
@@ -109,6 +111,7 @@ export type BookCreateInput = z.input<typeof createSchema>;
  * SLUG_TAKEN error with a suggested alternative rather than a raw DB error.
  */
 export async function createBook(raw: unknown): Promise<Result<BookRow>> {
+	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
 	const parsed = createSchema.safeParse(raw);
 	if (!parsed.success) {
 		return {
@@ -155,6 +158,7 @@ export async function createBook(raw: unknown): Promise<Result<BookRow>> {
  * is the CSV backup / Supabase PITR.
  */
 export async function deleteBook(id: string, typedSlug: string): Promise<Result<{ slug: string }>> {
+	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
 	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: book, error: fetchErr } = await supabaseAdmin
 		.from('books')
@@ -187,6 +191,7 @@ export async function mergeBooks(
 	loserIds: string[],
 	resolution: Json = {},
 ): Promise<Result<BookRow>> {
+	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
 	if (loserIds.length === 0) {
 		return { ok: false, error: { code: 'EMPTY', message: 'no books to merge' } };
 	}

@@ -2,6 +2,7 @@
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { getAdmin } from '@/lib/auth';
 import { safeWrite } from '@/lib/safe-fs';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { type BookFields, type CatalogOverrides, buildBookFields } from '@app/catalog';
@@ -166,6 +167,7 @@ export async function getDriftReport(): Promise<Result<DriftReport>> {
 export async function exportToCsv(): Promise<
 	Result<{ csvRowsChanged: number; overrideEntriesChanged: number }>
 > {
+	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
 	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: rows, error } = await supabaseAdmin.from('books').select('*');
 	if (error) return { ok: false, error: { code: 'DB', message: error.message } };

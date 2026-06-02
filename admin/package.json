@@ -9,6 +9,7 @@
 		"lint": "biome check ."
 	},
 	"dependencies": {
+		"@supabase/ssr": "^0.10.3",
 		"@supabase/supabase-js": "^2.103.0",
 		"@tanstack/react-table": "^8.21.3",
 		"class-variance-authority": "^0.7.1",
