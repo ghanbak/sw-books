@@ -35,7 +35,7 @@ export default async function BooksPage() {
 		supabaseAdmin
 			.from('books')
 			.select(
-				'id, slug, title, author, canon, era, type, series_name, series_order, primary_isbn, isbn, format, publisher, date_published, cover_image, synopsis',
+				'id, slug, title, author, canon, era, type, series_name, series_order, timeline_order, primary_isbn, isbn, format, publisher, date_published, cover_image, synopsis',
 			)
 			.order('title', { ascending: true }),
 		loadPlaceholderSlugs(),

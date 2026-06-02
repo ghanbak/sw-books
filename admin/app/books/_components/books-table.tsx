@@ -71,6 +71,7 @@ export type BookListRow = Pick<
 	| 'type'
 	| 'series_name'
 	| 'series_order'
+	| 'timeline_order'
 	| 'primary_isbn'
 	| 'isbn'
 	| 'format'
@@ -345,6 +346,18 @@ const columns = [
 			cell: ({ getValue }) => <span className="text-muted-foreground text-sm">{getValue()}</span>,
 		},
 	),
+	columnHelper.accessor('timeline_order', {
+		header: ({ column }) => <SortHeader column={column} label="Timeline" />,
+		sortUndefined: 'last',
+		cell: ({ getValue }) => {
+			const v = getValue();
+			return (
+				<span className="text-sm tabular-nums">
+					{v ?? <span className="text-muted-foreground">—</span>}
+				</span>
+			);
+		},
+	}),
 	columnHelper.accessor('primary_isbn', {
 		header: 'Primary ISBN',
 		cell: ({ getValue }) => (
