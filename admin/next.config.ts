@@ -15,8 +15,22 @@ const nextConfig: NextConfig = {
 	// via the @app/* path aliases in tsconfig.json.
 	experimental: {
 		externalDir: true,
+		// `serverActions.allowedOrigins` lives under `experimental` in Next 15;
+		// at the top level it's rejected as an unrecognized key.
+		...(allowedOrigin ? { serverActions: { allowedOrigins: [allowedOrigin] } } : {}),
 	},
-	...(allowedOrigin ? { serverActions: { allowedOrigins: [allowedOrigin] } } : {}),
+	// The shared ../lib files import third-party packages (isbn3, csv-parse,
+	// csv-stringify). Webpack resolves those bare imports from the importing
+	// file's location, walking up from ../lib — which never reaches this app's
+	// node_modules. On Vercel only admin/node_modules is installed, so add it to
+	// the module search path explicitly.
+	webpack: (config) => {
+		config.resolve.modules = [
+			path.join(__dirname, 'node_modules'),
+			...(config.resolve.modules ?? ['node_modules']),
+		];
+		return config;
+	},
 };
 
 export default nextConfig;

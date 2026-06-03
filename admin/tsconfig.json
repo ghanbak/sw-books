@@ -17,6 +17,9 @@
 		"plugins": [{ "name": "next" }],
 		"paths": {
 			"@/*": ["./*"],
+			"isbn3": ["./node_modules/isbn3"],
+			"csv-parse/sync": ["./node_modules/csv-parse/lib/sync"],
+			"csv-stringify/sync": ["./node_modules/csv-stringify/lib/sync"],
 			"@app/types": ["../lib/types.ts"],
 			"@app/catalog": ["../lib/catalog.ts"],
 			"@app/sources/*": ["../lib/sources/*"],
