@@ -38,6 +38,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 /.claude
+/.codex
+/.conductor
 
 # scripts — transient outputs (regenerable; cached API responses or audit reports)
 scripts/cover-audit-report.json
