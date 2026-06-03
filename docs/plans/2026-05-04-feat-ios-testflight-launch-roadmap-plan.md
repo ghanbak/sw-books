@@ -406,12 +406,20 @@ Deno.serve(async (req) => {
   const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
   if (deleteError) return new Response('Delete failed', { status: 500 });
 
+  // 3. Sign in with Apple users: revoke their tokens (Apple TN3194 — required).
+  //    POST https://appleid.apple.com/auth/revoke with client_id, client_secret
+  //    (an ES256 JWT signed with the .p8), token=<stored Apple refresh token>,
+  //    token_type_hint=refresh_token. Skipping this = non-compliant deletion.
+
   return new Response(JSON.stringify({ ok: true }));
 });
 ```
 
 - [ ] Service role key only in Edge Function env, set via `supabase secrets set`. Never in `.env*`. Never behind `EXPO_PUBLIC_`.
 - [ ] FK on `user_books.user_id → auth.users(id) ON DELETE CASCADE` — verify with `\d user_books` in psql, not assumed
+- [ ] **Sign in with Apple token revocation (Apple TN3194 — required for Apple-sign-in users):** after `deleteUser`, `POST https://appleid.apple.com/auth/revoke` with `client_id` (Service/Bundle ID), `client_secret` (an ES256 JWT signed with your `.p8`: `iss`=Team ID, `sub`=client_id, `aud`=`https://appleid.apple.com`, `exp` ≤ 180d), `token`=the stored Apple refresh token, `token_type_hint=refresh_token`. Without it Apple treats the deletion as non-compliant.
+- [ ] **Prerequisite — capture the Apple refresh token at sign-in:** persist the refresh token from the initial Apple token exchange (server-side) so it's available to revoke at deletion time. No stored token → nothing to revoke → can't satisfy the requirement.
+- [ ] **Web deletion path (Google Play):** the policy + Play Data safety form require a public HTTPS URL where a user can request account+data deletion without re-downloading the app; can call the same Edge Function logic.
 - [ ] Rate limit: 1 deletion attempt per uid per 60s. Log attempts to a `deletion_attempts` table; reject 2nd attempt with 429
 - [ ] Re-auth requirement: require Apple/Google sign-in completion within last 5 minutes before allowing the call. Enforce client-side AND server-side
 - [ ] CORS: lock to the app's bundle scheme; reject browser origins
