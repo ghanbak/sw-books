@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
+import { ADMIN_ENFORCED, isAllowlisted } from './admin-allowlist';
 
 /**
  * Token refresh + access gate. Enforces only in production (Vercel); local
@@ -7,22 +8,20 @@ import { type NextRequest, NextResponse } from 'next/server';
  * security boundary on its own (CVE-2025-29927) — every privileged server action
  * re-checks via getAdmin(). This is token refresh + a UX redirect.
  */
-const ENFORCE = process.env.NODE_ENV === 'production';
-
-function allowlist(): string[] {
-	return (process.env.ADMIN_USER_IDS ?? '')
-		.split(',')
-		.map((s) => s.trim())
-		.filter(Boolean);
+function toLogin(request: NextRequest): NextResponse {
+	const redirectUrl = request.nextUrl.clone();
+	redirectUrl.pathname = '/login';
+	return NextResponse.redirect(redirectUrl);
 }
 
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
 	let response = NextResponse.next({ request });
-	if (!ENFORCE) return response;
+	if (!ADMIN_ENFORCED) return response;
 
 	const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 	const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-	if (!url || !key) return response; // auth not configured — nothing to refresh
+	// Enforcing but auth isn't configured → fail CLOSED (don't serve /admin).
+	if (!url || !key) return toLogin(request);
 
 	const supabase = createServerClient(url, key, {
 		cookies: {
@@ -42,12 +41,6 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 	// Matcher already scopes this to /admin/*, so any non-admin caller is bounced
 	// to /login.
 	const { data } = await supabase.auth.getClaims();
-	const sub = data?.claims?.sub;
-	const isAdmin = !!sub && allowlist().includes(sub);
-	if (!isAdmin) {
-		const redirectUrl = request.nextUrl.clone();
-		redirectUrl.pathname = '/login';
-		return NextResponse.redirect(redirectUrl);
-	}
+	if (!isAllowlisted(data?.claims?.sub)) return toLogin(request);
 	return response;
 }

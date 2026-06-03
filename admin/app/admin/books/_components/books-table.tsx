@@ -510,7 +510,9 @@ export function BooksTable({
 		setBulk(null);
 		if (failures.length)
 			toast.error(`${label}: ${failures.length} failed (${failures.slice(0, 3).join(', ')}…)`);
-		toast.success(`${label}: ${updated} updated / ${items.length}`);
+		// Only claim success if something didn't fail outright.
+		if (failures.length < items.length)
+			toast.success(`${label}: ${updated} updated / ${items.length}`);
 		startTransition(() => router.refresh());
 	}
 

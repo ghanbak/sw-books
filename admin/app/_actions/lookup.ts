@@ -1,5 +1,6 @@
 'use server';
 
+import { getAdmin } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { isEnglishIsbn, toIsbn13 } from '@app/isbn';
 import { fetchVolumes } from '@app/sources/google-books';
@@ -190,6 +191,7 @@ function settled(
  * whichever succeeded.
  */
 export async function lookupCandidates(slug: string): Promise<Result<LookupResult>> {
+	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
 	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: book, error } = await supabaseAdmin
 		.from('books')
@@ -225,6 +227,7 @@ export type NewBookSearch = { isbn?: string; title?: string; author?: string };
  * failing/empty still returns whichever succeeded.
  */
 export async function searchForNewBook(input: NewBookSearch): Promise<Result<LookupResult>> {
+	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
 	let isbn: string | null = null;
 	if (input.isbn?.trim()) {
 		isbn = toIsbn13(input.isbn.trim());

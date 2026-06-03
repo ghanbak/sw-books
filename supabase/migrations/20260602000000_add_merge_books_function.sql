@@ -83,7 +83,10 @@ begin
 	if not found then
 		raise exception 'survivor % not found', survivor;
 	end if;
-	for rec in select isbn, format from public.books where id = any(losers) loop
+	for rec in
+		select isbn, format from public.books where id = any(losers)
+		order by array_position(losers, id)
+	loop
 		merged_isbn := public.ordered_text_union(merged_isbn, rec.isbn);
 		merged_format := public.ordered_text_union(merged_format, rec.format);
 	end loop;

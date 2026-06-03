@@ -1,4 +1,5 @@
 import 'server-only';
+import { ADMIN_ENFORCED, isAllowlisted } from './admin-allowlist';
 import { createAuthServerClient } from './supabase-auth';
 
 /**
@@ -7,8 +8,6 @@ import { createAuthServerClient } from './supabase-auth';
  * login and no auth env. Any hosted deploy (NODE_ENV=production) requires a
  * Google login whose user id is in ADMIN_USER_IDS.
  */
-const ENFORCE = process.env.NODE_ENV === 'production';
-
 export class NotAdminError extends Error {
 	constructor() {
 		super('Not authorized');
@@ -18,26 +17,18 @@ export class NotAdminError extends Error {
 
 export type AdminIdentity = { sub: string; email?: string };
 
-function allowlist(): string[] {
-	return (process.env.ADMIN_USER_IDS ?? '')
-		.split(',')
-		.map((s) => s.trim())
-		.filter(Boolean);
-}
-
 /**
  * The signed-in, allowlisted admin — or null. Verifies the JWT with
  * `getClaims()` (never `getSession()`) and checks the id against ADMIN_USER_IDS.
  * In development returns a synthetic local identity (gate disabled).
  */
 export async function getAdmin(): Promise<AdminIdentity | null> {
-	if (!ENFORCE) return { sub: 'local-dev', email: 'local@dev' };
+	if (!ADMIN_ENFORCED) return { sub: 'local-dev', email: 'local@dev' };
 
 	const supabase = await createAuthServerClient();
 	const { data, error } = await supabase.auth.getClaims();
 	const claims = data?.claims;
-	if (error || !claims?.sub) return null;
-	if (!allowlist().includes(claims.sub)) return null;
+	if (error || !claims?.sub || !isAllowlisted(claims.sub)) return null;
 	return { sub: claims.sub, email: typeof claims.email === 'string' ? claims.email : undefined };
 }
 

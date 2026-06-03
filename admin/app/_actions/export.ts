@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { getAdmin } from '@/lib/auth';
 import { safeWrite } from '@/lib/safe-fs';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getDbTarget, getSupabaseAdmin } from '@/lib/supabase-admin';
 import { type BookFields, type CatalogOverrides, buildBookFields } from '@app/catalog';
 import { type CsvRecord, parseCsv } from '@app/csv/read';
 import { CSV_COLUMNS, stringifyCsv } from '@app/csv/write';
@@ -123,6 +123,7 @@ function stableJson(obj: Record<string, unknown>): string {
 }
 
 export async function getDriftReport(): Promise<Result<DriftReport>> {
+	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
 	let records: CsvRecord[];
 	try {
 		records = readCsvRecords();
@@ -178,6 +179,14 @@ export async function exportToCsv(): Promise<
 	Result<{ csvRowsChanged: number; overrideEntriesChanged: number }>
 > {
 	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
+	// Export writes the repo's local data/ files; serializing the prod DB over them
+	// would clobber the seed source. Only allow it against the local target.
+	if ((await getDbTarget()) === 'prod') {
+		return {
+			ok: false,
+			error: { code: 'TARGET', message: 'Switch the database to Local before exporting to CSV.' },
+		};
+	}
 	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: rows, error } = await supabaseAdmin.from('books').select('*');
 	if (error) return { ok: false, error: { code: 'DB', message: error.message } };

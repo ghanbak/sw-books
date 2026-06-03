@@ -1,15 +1,9 @@
+import { isAllowlisted } from '@/lib/admin-allowlist';
 import { authConfig, createAuthServerClient } from '@/lib/supabase-auth';
 import { redirect } from 'next/navigation';
 import { SignInButton } from './_components/sign-in-button';
 
 export const dynamic = 'force-dynamic';
-
-function allowlist(): string[] {
-	return (process.env.ADMIN_USER_IDS ?? '')
-		.split(',')
-		.map((s) => s.trim())
-		.filter(Boolean);
-}
 
 export default async function LoginPage() {
 	// Local dev is ungated — go straight to the catalog.
@@ -23,7 +17,7 @@ export default async function LoginPage() {
 		const { data } = await supabase.auth.getClaims();
 		const claims = data?.claims;
 		if (claims?.sub) {
-			if (allowlist().includes(claims.sub)) redirect('/admin/books');
+			if (isAllowlisted(claims.sub)) redirect('/admin/books');
 			signedInId = claims.sub;
 			signedInEmail = typeof claims.email === 'string' ? claims.email : null;
 		}

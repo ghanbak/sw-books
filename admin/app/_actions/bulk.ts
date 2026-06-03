@@ -67,6 +67,7 @@ export async function refetchCover(slug: string): Promise<CoverResult> {
 
 /** Fill only the empty fields of one book from OL/GB candidates. */
 export async function fillEmpty(slug: string): Promise<FillResult> {
+	if (!(await getAdmin())) return { slug, status: 'error', message: 'not authorized' };
 	const look = await lookupCandidates(slug);
 	if (!look.ok) return { slug, status: 'error', message: look.error.message };
 
