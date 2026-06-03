@@ -24,6 +24,13 @@ async function main(): Promise<void> {
 		process.exit(1);
 	}
 	const rows = data ?? [];
+	if (rows.length === 0) {
+		console.error(
+			'Refusing to write an empty backup (0 rows returned) — aborting to protect the existing file. ' +
+				'Check the credentials / RLS read access.',
+		);
+		process.exit(1);
+	}
 	writeFileSync(OUT, serializeBackup(rows), 'utf-8');
 	console.log(`Wrote ${rows.length} rows → data/catalog-backup.csv`);
 }

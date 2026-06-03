@@ -123,12 +123,22 @@ function stableJson(obj: Record<string, unknown>): string {
 }
 
 export async function getDriftReport(): Promise<Result<DriftReport>> {
+	let records: CsvRecord[];
+	try {
+		records = readCsvRecords();
+	} catch {
+		// No data/books.csv available (e.g. hosted on Vercel, where data/ isn't
+		// bundled). Drift vs the frozen CSV is N/A — report no drift instead of
+		// crashing the catalog page.
+		return { ok: true, data: { changedRows: [], summary: { rows: 0, fields: 0 } } };
+	}
+
 	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: rows, error } = await supabaseAdmin.from('books').select('*');
 	if (error) return { ok: false, error: { code: 'DB', message: error.message } };
 
 	const { current } = loadOverrides();
-	const recBySlug = new Map(readCsvRecords().map((r) => [r.slug?.trim() ?? '', r]));
+	const recBySlug = new Map(records.map((r) => [r.slug?.trim() ?? '', r]));
 
 	const changedRows: DriftRow[] = [];
 	for (const db of rows ?? []) {

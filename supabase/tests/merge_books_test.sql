@@ -78,3 +78,63 @@ begin
 end $$;
 
 rollback;
+
+-- ── Regression: one user shelving TWO different losers (and not the survivor)
+--    must collapse to a single survivor row, with no UNIQUE(user_id, book_id)
+--    violation and OR-merged flags. ──
+begin;
+
+insert into auth.users (id, instance_id, aud, role, email) values
+	('cccccccc-cccc-cccc-cccc-cccccccccccc', '00000000-0000-0000-0000-000000000000',
+		'authenticated', 'authenticated', 'merge-test-c@example.com')
+on conflict (id) do nothing;
+
+insert into public.books (id, slug, title, author, canon, type, isbn) values
+	('11111111-1111-1111-1111-111111111111', 'm2-survivor', 'S', array['A'], 'Canon', 'Adult Novel', array['9780000000010']),
+	('22222222-2222-2222-2222-222222222222', 'm2-loser-1', 'L1', array['A'], 'Canon', 'Adult Novel', array['9780000000011']),
+	('33333333-3333-3333-3333-333333333333', 'm2-loser-2', 'L2', array['A'], 'Canon', 'Adult Novel', array['9780000000012']);
+
+-- User C shelves BOTH losers (not the survivor), with differing flags.
+insert into public.user_books (user_id, book_id, owned, read, want_to_read) values
+	('cccccccc-cccc-cccc-cccc-cccccccccccc', '22222222-2222-2222-2222-222222222222', true, false, false),
+	('cccccccc-cccc-cccc-cccc-cccccccccccc', '33333333-3333-3333-3333-333333333333', false, true, false);
+
+select public.merge_books(
+	'11111111-1111-1111-1111-111111111111',
+	array['22222222-2222-2222-2222-222222222222', '33333333-3333-3333-3333-333333333333']::uuid[],
+	'{}'::jsonb
+);
+
+do $$
+declare
+	cnt int;
+	ub public.user_books;
+	s public.books;
+begin
+	if exists (select 1 from public.books
+		where id in ('22222222-2222-2222-2222-222222222222', '33333333-3333-3333-3333-333333333333')) then
+		raise exception 'losers not deleted';
+	end if;
+
+	select count(*) into cnt from public.user_books
+	where user_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+	if cnt <> 1 then
+		raise exception 'user C should collapse to exactly 1 shelf row, has %', cnt;
+	end if;
+
+	select * into ub from public.user_books
+	where user_id = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+	if ub.book_id <> '11111111-1111-1111-1111-111111111111' or not ub.owned or not ub.read then
+		raise exception 'user C row not merged onto survivor with OR-merged flags: book=% owned=% read=%',
+			ub.book_id, ub.owned, ub.read;
+	end if;
+
+	select * into s from public.books where id = '11111111-1111-1111-1111-111111111111';
+	if not (array['9780000000010', '9780000000011', '9780000000012'] <@ s.isbn) then
+		raise exception 'survivor isbn union missing loser isbns: %', s.isbn;
+	end if;
+
+	raise notice 'merge_books multi-loser test: PASS';
+end $$;
+
+rollback;

@@ -59,34 +59,23 @@ begin
 		raise exception 'survivor % cannot also be a loser', survivor;
 	end if;
 
-	-- 1. OR-merge loser shelf flags into the survivor's row (per user who has both).
-	update public.user_books s
-	set owned = s.owned or agg.owned,
-		read = s.read or agg.read,
-		want_to_read = s.want_to_read or agg.want_to_read
-	from (
-		select user_id,
-			bool_or(owned) as owned,
-			bool_or(read) as read,
-			bool_or(want_to_read) as want_to_read
-		from public.user_books
-		where book_id = any(losers)
-		group by user_id
-	) agg
-	where s.book_id = survivor and s.user_id = agg.user_id;
+	-- 1-3. Collapse every affected user's survivor + loser shelf rows into a single
+	-- survivor row (flags OR-merged), then drop all loser rows. Handles any number
+	-- of losers and loser-vs-loser duplicates with no UNIQUE(user_id, book_id)
+	-- violation: the grouped insert yields exactly one row per user, and the
+	-- conflict target (an existing survivor row) is folded in by the same aggregate.
+	insert into public.user_books (user_id, book_id, owned, read, want_to_read)
+	select ub.user_id, survivor,
+		bool_or(ub.owned), bool_or(ub.read), bool_or(ub.want_to_read)
+	from public.user_books ub
+	where ub.book_id = survivor or ub.book_id = any(losers)
+	group by ub.user_id
+	on conflict (user_id, book_id) do update set
+		owned = excluded.owned,
+		read = excluded.read,
+		want_to_read = excluded.want_to_read;
 
-	-- 2. Drop loser shelf rows that would collide with the survivor.
-	delete from public.user_books l
-	where l.book_id = any(losers)
-		and exists (
-			select 1 from public.user_books s
-			where s.user_id = l.user_id and s.book_id = survivor
-		);
-
-	-- 3. Repoint the remaining loser shelf rows to the survivor.
-	update public.user_books
-	set book_id = survivor
-	where book_id = any(losers);
+	delete from public.user_books where book_id = any(losers);
 
 	-- 4. Union arrays across survivor + losers (survivor first), in query order.
 	select isbn, format into merged_isbn, merged_format
