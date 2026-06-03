@@ -15,6 +15,10 @@
     "db:types": "supabase gen types typescript --local > lib/types.ts",
     "db:seed": "npx tsx scripts/seed.ts",
     "db:seed:prod": "npx tsx scripts/seed.ts --production",
+    "catalog:export": "npx tsx scripts/export-db-to-csv.ts",
+    "catalog:export:prod": "npx tsx scripts/export-db-to-csv.ts --production",
+    "catalog:backup": "bash scripts/catalog-backup.sh",
+    "catalog:restore": "npx tsx scripts/restore-from-backup.ts",
     "admin": "npm --prefix admin run dev",
     "admin:install": "npm --prefix admin install",
     "admin:predev": "npm run db:types"

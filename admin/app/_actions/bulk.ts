@@ -1,6 +1,7 @@
 'use server';
 
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getAdmin } from '@/lib/auth';
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { headCheckCover } from '@app/sources/covers';
 import { fetchVolumes } from '@app/sources/google-books';
 import { coverByIsbnUrl } from '@app/sources/open-library';
@@ -30,6 +31,8 @@ type GbCover = {
 /** Re-source a cover for one book (OL by ISBN, then Google Books) and persist
  * it if a valid candidate differs from the current cover. */
 export async function refetchCover(slug: string): Promise<CoverResult> {
+	if (!(await getAdmin())) return { slug, status: 'error', message: 'not authorized' };
+	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: book } = await supabaseAdmin
 		.from('books')
 		.select('id, primary_isbn, isbn, cover_image')
@@ -64,9 +67,11 @@ export async function refetchCover(slug: string): Promise<CoverResult> {
 
 /** Fill only the empty fields of one book from OL/GB candidates. */
 export async function fillEmpty(slug: string): Promise<FillResult> {
+	if (!(await getAdmin())) return { slug, status: 'error', message: 'not authorized' };
 	const look = await lookupCandidates(slug);
 	if (!look.ok) return { slug, status: 'error', message: look.error.message };
 
+	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: book } = await supabaseAdmin
 		.from('books')
 		.select(

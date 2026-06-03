@@ -2,8 +2,9 @@
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { getAdmin } from '@/lib/auth';
 import { safeWrite } from '@/lib/safe-fs';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getDbTarget, getSupabaseAdmin } from '@/lib/supabase-admin';
 import { type BookFields, type CatalogOverrides, buildBookFields } from '@app/catalog';
 import { type CsvRecord, parseCsv } from '@app/csv/read';
 import { CSV_COLUMNS, stringifyCsv } from '@app/csv/write';
@@ -122,11 +123,23 @@ function stableJson(obj: Record<string, unknown>): string {
 }
 
 export async function getDriftReport(): Promise<Result<DriftReport>> {
+	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
+	let records: CsvRecord[];
+	try {
+		records = readCsvRecords();
+	} catch {
+		// No data/books.csv available (e.g. hosted on Vercel, where data/ isn't
+		// bundled). Drift vs the frozen CSV is N/A — report no drift instead of
+		// crashing the catalog page.
+		return { ok: true, data: { changedRows: [], summary: { rows: 0, fields: 0 } } };
+	}
+
+	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: rows, error } = await supabaseAdmin.from('books').select('*');
 	if (error) return { ok: false, error: { code: 'DB', message: error.message } };
 
 	const { current } = loadOverrides();
-	const recBySlug = new Map(readCsvRecords().map((r) => [r.slug?.trim() ?? '', r]));
+	const recBySlug = new Map(records.map((r) => [r.slug?.trim() ?? '', r]));
 
 	const changedRows: DriftRow[] = [];
 	for (const db of rows ?? []) {
@@ -165,6 +178,16 @@ export async function getDriftReport(): Promise<Result<DriftReport>> {
 export async function exportToCsv(): Promise<
 	Result<{ csvRowsChanged: number; overrideEntriesChanged: number }>
 > {
+	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
+	// Export writes the repo's local data/ files; serializing the prod DB over them
+	// would clobber the seed source. Only allow it against the local target.
+	if ((await getDbTarget()) === 'prod') {
+		return {
+			ok: false,
+			error: { code: 'TARGET', message: 'Switch the database to Local before exporting to CSV.' },
+		};
+	}
+	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: rows, error } = await supabaseAdmin.from('books').select('*');
 	if (error) return { ok: false, error: { code: 'DB', message: error.message } };
 

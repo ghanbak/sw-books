@@ -12,7 +12,7 @@ export default async function DiffPage() {
 	return (
 		<main className="mx-auto max-w-5xl p-6">
 			<Link
-				href="/books"
+				href="/admin/books"
 				className="mb-4 inline-flex items-center gap-1 text-muted-foreground text-sm hover:text-foreground"
 			>
 				<ArrowLeft className="size-4" /> Catalog
@@ -43,7 +43,10 @@ export default async function DiffPage() {
 							{res.data.changedRows.map((row) => (
 								<div key={row.slug} className="rounded-lg border border-border bg-card p-4">
 									<div className="mb-2 flex items-baseline gap-2">
-										<Link href={`/books/${row.slug}`} className="font-medium hover:text-saber-blue">
+										<Link
+											href={`/admin/books/${row.slug}`}
+											className="font-medium hover:text-saber-blue"
+										>
 											{row.title}
 										</Link>
 										<span className="font-mono text-muted-foreground text-xs">{row.slug}</span>

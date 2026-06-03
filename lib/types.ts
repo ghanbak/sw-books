@@ -149,7 +149,41 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      merge_books: {
+        Args: { losers: string[]; resolution?: Json; survivor: string }
+        Returns: {
+          author: string[]
+          canon: string
+          cover_image: string | null
+          created_at: string | null
+          date_published: string | null
+          era: string | null
+          format: string[] | null
+          id: string
+          isbn: string[] | null
+          language: string | null
+          primary_isbn: string | null
+          publisher: string | null
+          series_name: string | null
+          series_order: number | null
+          slug: string
+          synopsis: string | null
+          timeline_order: number | null
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "books"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      ordered_text_union: {
+        Args: { a: string[]; b: string[] }
+        Returns: string[]
+      }
     }
     Enums: {
       [_ in never]: never

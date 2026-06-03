@@ -22,7 +22,8 @@
 			"@app/sources/*": ["../lib/sources/*"],
 			"@app/csv/*": ["../lib/csv/*"],
 			"@app/isbn": ["../lib/isbn.ts"],
-			"@app/result": ["../lib/result.ts"]
+			"@app/result": ["../lib/result.ts"],
+			"@app/slug": ["../lib/slug.ts"]
 		}
 	},
 	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
