@@ -1,0 +1,54 @@
+name: Catalog CSV Backup
+
+# Deterministic one-way backup of the production catalog to
+# data/catalog-backup.csv. Read-only against the DB. Commits only on a diff.
+#
+# Secrets (repo Settings → Secrets and variables → Actions):
+#   SUPABASE_URL          prod project URL, e.g. https://<ref>.supabase.co
+#   SUPABASE_READONLY_KEY prod PUBLISHABLE/anon key — read-only via the books RLS
+#                         policy. Do NOT use the service-role key here.
+#
+# Schedules run on the DEFAULT branch only, so this activates once merged to main.
+# workflow_dispatch can be run manually from any branch.
+
+on:
+  schedule:
+    - cron: '17 8 * * *' # daily 08:17 UTC (avoid :00 — schedules lag under load)
+  workflow_dispatch: {}
+
+concurrency:
+  group: catalog-backup
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Export production catalog → CSV
+        run: npx tsx scripts/export-db-to-csv.ts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          # Anon/publishable key — read-only via RLS. NOT the service-role key.
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_READONLY_KEY }}
+
+      - name: Commit if changed
+        run: |
+          if [ -z "$(git status --porcelain data/catalog-backup.csv)" ]; then
+            echo "catalog-backup.csv unchanged — nothing to commit."
+            exit 0
+          fi
+          git config user.name "ossus-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/catalog-backup.csv
+          git commit -m "chore(catalog): scheduled CSV backup [skip ci]"
+          git push

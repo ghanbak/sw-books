@@ -194,9 +194,13 @@ export async function requireAdmin() {
 
 - **Acceptance:** non-allowlisted Google login denied at `/admin`; allowlisted owner gets full access; service-role key absent from client bundle (CI-enforced); spoofed middleware header still cannot mutate (action-level check holds); `next=` cannot redirect off-origin.
 
-### Phase D — CSV backup (GitHub Actions, replaces local-FS export)
+### Phase D — CSV backup (GitHub Actions, replaces local-FS export)  ✅ built
 
 A scheduled + manual workflow runs `scripts/export-prod-to-csv.ts`, writes `data/books.csv` deterministically, commits on diff. **Retire the override-JSON reconcile**; write all fields as columns; **append admin-created rows** (fixes the silent-drop bug).
+
+> **✅ Built:** `.github/workflows/catalog-backup.yml` — daily cron (`17 8 * * *`) + `workflow_dispatch`, `concurrency` guard, `permissions: contents: write`. Runs the existing deterministic `scripts/export-db-to-csv.ts` (built in the catalog plan — already DB-shaped, all fields as columns, no override-JSON reconcile) → `data/catalog-backup.csv`, then a plain-`git` commit-if-changed (no third-party action; default `GITHUB_TOKEN` push doesn't re-trigger). Uses a **read-only anon key** (read via the `books` RLS policy), not service-role.
+>
+> **(You) to activate:** add repo secrets `SUPABASE_URL` (prod) + `SUPABASE_READONLY_KEY` (prod **publishable/anon** key). Schedules run on the **default branch**, so it fires once this is merged to `main`; until then use **Run workflow** (workflow_dispatch) to test.
 
 #### Research Insights — workflow
 ```yaml
