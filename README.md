@@ -34,6 +34,15 @@ npx expo prebuild --clean
 npx expo run:ios
 ```
 
+> **This app requires a development build — it cannot run in Expo Go.** It ships
+> native modules (Google / Apple Sign-In), and Expo Go only bundles Expo's own
+> native code, so launching there fails with `RNGoogleSignin could not be found`.
+> `npx expo run:ios` compiles the dev build and installs it on the simulator once
+> (slow the first time, fast after). For day-to-day work afterward, run
+> `npm start` and open the **dev build** app on the simulator — not Expo Go. Use
+> the simulator, not a physical device (the device can't reach the dev server on
+> this setup).
+
 If `pod install` fails with `Encoding::CompatibilityError`, your shell locale isn't UTF-8. One-shot fix: prepend `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` to the prebuild command. Permanent fix: add those exports to `~/.zshrc`.
 
 ## Auth
@@ -48,14 +57,18 @@ The Apple Sign-In Supabase client secret JWT expires every 6 months — a schedu
 
 | Command                       | What it does                                        |
 | ----------------------------- | --------------------------------------------------- |
-| `npm start`                   | Expo dev server                                     |
+| `npx expo run:ios`            | Build + install the dev build, launch on simulator  |
+| `npm start`                   | Start Metro; serve JS to the installed dev build (not Expo Go) |
+| `npx expo prebuild --clean`   | Regenerate `ios/` and `android/` from `app.json`    |
 | `npm run lint` / `lint:fix`   | Biome check / autofix                               |
 | `npm run db:reset`            | Reset local Supabase, apply migrations, run seed    |
 | `npm run db:types`            | Regenerate `lib/types.ts` from local Supabase       |
 | `npm run db:seed`             | Re-import the CSV seed                              |
-| `npm run admin` / `admin:install` | Local catalog admin tool (Next.js, `127.0.0.1:3100`) |
-| `npx expo prebuild --clean`   | Regenerate `ios/` and `android/` from `app.json`    |
-| `npx expo run:ios`            | Build the native iOS app, launch on simulator       |
+| `npm run admin:install`       | Install the admin tool's dependencies (first run only) |
+| `npm run admin`               | Start the local catalog admin (Next.js, `127.0.0.1:3100`) |
+
+All commands run from the repo root — the admin scripts reach into `admin/` for
+you via `--prefix`, so never `cd admin` to run them.
 
 ## Project layout
 
@@ -85,20 +98,43 @@ Two tables:
 
 The CSV in `data/` is the source of truth for the catalog.
 
-## Catalog management
+## Catalog management — the admin tool
 
-Edit the catalog with the local admin tool — a Next.js app at `admin/`:
+Edit the catalog with the local admin tool: a separate Next.js app under
+`admin/` that talks to your local Supabase `books` table directly with the
+service-role key. It's **loopback-only and ungated** — `http://127.0.0.1:3100`,
+no login — so it's safe to run locally but never exposed.
+
+**First-time setup** (run from the repo root):
 
 ```bash
-npm run admin:install
-cp admin/.env.local.example admin/.env.local   # paste the Supabase secret key
-npm run admin                                   # → http://127.0.0.1:3100/books
+npm run admin:install                          # install admin/ dependencies (once)
+cp admin/.env.local.example admin/.env.local   # then paste the Supabase secret key
+```
+
+Fill `admin/.env.local` with values from `supabase status`:
+
+```
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_…          # the "secret" (RLS-bypassing) key
+```
+
+**Run it** (the local stack must be up and seeded first):
+
+```bash
+supabase start                                 # if not already running
+npm run db:reset && npm run db:seed            # migrations + catalog seed
+npm run admin                                  # → http://127.0.0.1:3100/books
 ```
 
 Inline-edit fields, run Open Library + Google Books lookups per book, fix issues
 in bulk, then review `/diff` and **Export to CSV**. After export, re-run
 `npm run db:reset && npm run db:seed` to confirm the drift returns to 0. Full
 workflow + troubleshooting: [admin/README.md](admin/README.md).
+
+> All admin commands run from the **repo root**, not `admin/` — the root
+> `package.json` owns `admin` / `admin:install` (they `--prefix admin` for you).
+> Running them inside `admin/` fails with `Missing script: "admin"`.
 
 To push the catalog to production, copy `.env.production.example` →
 `.env.production` (prod URL + secret key from the Supabase dashboard) and run
