@@ -24,6 +24,7 @@ supabase/.temp/
 .env
 .env.*
 !.env.example
+!.env.local.example
 !.env.production.example
 !admin/.env.local.example
 
@@ -37,6 +38,8 @@ admin/next-env.d.ts
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# agents
 /.claude
 /.codex
 /.conductor
