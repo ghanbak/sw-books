@@ -128,9 +128,9 @@ Notes:
 
 ## 6. Post-deploy verification
 
-- [ ] `/` (marketing) and `/privacy` load **publicly**, no login.
-- [ ] `/robots.txt` and `/sitemap.xml` resolve and list only the public pages.
-- [ ] `/admin/*` while logged out → redirects to `/login`.
+- [x] `/` (marketing) and `/privacy` load **publicly**, no login.
+- [x] `/robots.txt` and `/sitemap.xml` resolve and list only the public pages.
+- [x] `/admin/*` while logged out → redirects to `/login`.
 - [ ] After Google sign-in with an allowlisted id → `/admin/books` loads.
 - [ ] The Local/Prod switch shows **Production** data; add / edit / delete works against prod.
 - [ ] (Phase D) **Actions → Catalog CSV Backup → Run workflow** succeeds and commits `data/catalog-backup.csv` only when prod changed.
