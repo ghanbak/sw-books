@@ -54,17 +54,20 @@ A capture → recognize → review → add pipeline:
 
 ```
 app/(tabs)/scan.tsx  ── mode switch (shelf | barcode) + first-run dialogue
-  ├─ shelf mode → ShelfScanner (capture loop, state machine)
+  ├─ shelf mode → ShelfScanner (capture loop, useReducer states)
   │     └─ camera (VisionCamera v5)  ──takePhoto()──▶ still uri
   │            └─ lib/ocr.ts        ──PhotoRecognizer(uri)──▶ text fragments
-  │                   └─ lib/spine-match.ts (TF-IDF cosine) ─▶ ranked candidates
+  │                   └─ lib/spine-match.ts (IDF scorer) ─▶ ranked candidates
   │                          └─ aggregate/dedupe ─▶ match session
-  │     └─ app/scan-review.tsx (review queue) ─▶ addOwned(ids[])
+  │     └─ inline review overlay (reuses scan.tsx result-overlay) ─▶ addOwned(ids[])
   └─ barcode mode → useCodeScanner (ean-13/upc-a) ─▶ existing ISBN lookup
 
-lib/hooks.tsx        ── useBooks() (catalog), addOwned() (NEW batch mutation)
+ScanSessionProvider  ── holds the match-session draft ABOVE the tab navigator
+                        (survives tab-switch/background; see Decision 4)
+lib/hooks.tsx        ── useBooks() (catalog), addOwned() (NEW batch upsert, OR-merges flags)
 lib/shelf-queue.ts   ── offline write queue (Phase 2.5 fast-follow; not v1)
-supabase/migrations/ ── NEW unique constraint on user_books(user_id, book_id)
+user_books           ── NO migration: UNIQUE (user_id, book_id) ALREADY EXISTS
+                        (20260410000000_create_books_and_user_books.sql:40)
 ```
 
 **Module boundaries (key principle):** OCR and matching are pure, camera-agnostic
@@ -98,31 +101,48 @@ to the camera screen.
 
 ### Decision 2 — Matching engine (`lib/spine-match.ts`, pure TS)
 
-Hand-rolled **TF-IDF cosine** scorer — zero dependencies, <1ms/fragment over a
+Hand-rolled **IDF-weighted scorer** — zero dependencies, <1ms/fragment over a
 few-hundred-book catalog, and a score we fully control (Fuse.js's Bitap score saturates on
 shared franchise words exactly where disambiguation is needed). Fuse.js can be added later
 as a recall booster; not needed for v1.
 
+> **Build the dumb version first, then earn each refinement with real data.** Per the
+> plan_review (all three reviewers): the IDF weighting + score/margin buckets are
+> load-bearing — they are the technical heart and ship in v1. Everything else below marked
+> *(calibration)* is **deferred to Phase 4** and added back **only if 20–40 labeled real
+> photos show it moves precision.** Tuning seven interacting knobs before seeing one OCR
+> failure is overfitting.
+
 - **Index (built once from `useBooks()`):** tokenize `title + author[] + series_name`;
   `idf(t) = ln(N / (1 + df(t)))` so "Star Wars/Jedi/Darth" auto-deweight and
-  "Thrawn/Zahn/Plagueis" dominate; per-field boosts (title ×1.0, author ×0.9, series
-  ×0.7); store each book's L2-normalized weighted vector.
+  "Thrawn/Zahn/Plagueis" dominate. v1 score = **IDF-weighted token coverage**: sum of IDF
+  of the book's tokens present in the fragment bag, normalized by the book's total IDF
+  mass. *(calibration: per-field boosts, L2 cosine vectors.)*
 - **Normalize (index + query identically):** case-fold; strip diacritics
-  (`normalize('NFKD')`); punctuation→space; canonicalize OCR confusions on a match-only
-  copy (`{l,1,I,|}→l`, `{O,0}→o`, `rn→m`, `cl→d`, `S↔5`, `B↔8`); drop tiny stopword set;
-  generate sliding 1–4-token windows per OCR line and across adjacent lines (spine text
-  wraps unpredictably).
-- **Score:** cosine(query, book) + small author-exact and contiguous-bigram bonuses
-  (restores word-order signal lost by bag-of-words).
-- **Confidence buckets** (calibrate against a labeled sample — see Phase 4):
-  - High (auto-select): `S1 ≥ 0.62` AND `margin ≥ 0.12`
-  - Low ("double-check"): `S1 ≥ 0.42` and not high
-  - Reject (silent): `S1 < 0.42`, or high score with `margin < 0.05` → disambiguation
-- **Aggregate/dedupe:** group fragments by `book_id`; book confidence = **max**
-  fragment score + small boost for count of distinct supporting fragments (don't sum —
-  rewards noise); union across photos keeps best evidence; collapse editions to one
-  catalog row per title (canon/legends/format variants of the same work → single owned
-  entry).
+  (`normalize('NFKD')`); punctuation→space; drop a tiny stopword set. **OCR-confusion
+  canonicalization is a single-direction collapse to one alphabet applied to BOTH sides**
+  (e.g. `{o,0}→0`, `{l,1,i,|}→1`, `{s,5}→5`, `{b,8}→8`) — *(calibration; the brainstorm's
+  `↔`/`rn→m`/`cl→d` rewrites are dropped: `↔` is not a function and `cl→d` corrupts "Clone
+  Wars" → "done wars").* *(calibration: sliding 1–4-token windows across wrapped lines.)*
+- **Score refinements** *(all calibration):* author-exact bonus, contiguous-bigram bonus
+  (word-order signal).
+- **Title-coverage floor (v1, REQUIRED):** a match must cover a minimum share of the
+  candidate's **title** tokens — not just one rare token. Guards the brainstorm's own
+  flagged false-positive (a distinctive token from book A printed on book B's spine/blurb
+  matching A). Without this, IDF rewards a single lucky rare-token hit.
+- **Confidence buckets** — **thresholds are PROVISIONAL placeholders until Phase 4
+  calibration** (do not treat as final):
+  - High (auto-select): `S1 ≥ ~0.6` AND `margin ≥ ~0.12`
+  - Low ("double-check"): `S1 ≥ ~0.4` and not high
+  - Reject (silent): below low, or high score with tiny margin → disambiguation
+- **Aggregate/dedupe:** group fragments by `book_id`; book confidence = **max** fragment
+  score + small boost for count of distinct supporting fragments (don't sum — rewards
+  noise); union across photos keeps best evidence.
+- **Edition collapse (define the key):** the schema has **no `work_id`** (verified
+  `lib/types.ts:38-58`), so collapse on a derived key = **normalized title + first
+  author**; tie-break which row becomes the owned entry by `primary_isbn` present, else
+  format priority, else `timeline_order`. Canon/Legends/format variants of one work → one
+  owned entry. *(Open: whether the user should pick the specific edition — deferred.)*
 - **Output:** ranked top-N `{ book, score, margin }` per recognized book (powers the swap
   UI; cached on the result so swapping is instant and offline).
 
@@ -130,18 +150,30 @@ as a recall booster; not needed for v1.
 
 The current `toggleShelf` (`lib/hooks.tsx:127`) is **toggle-only, single-row, serial, and
 fails silently** — wrong for a batch add (it would turn an already-owned book *off*, and N
-books = N round-trips with silent partial failures). Three changes:
+books = N round-trips with silent partial failures). Two changes (**no migration** —
+plan_review verified `UNIQUE (user_id, book_id)` already exists at
+`20260410000000_create_books_and_user_books.sql:40`):
 
-1. **Migration — idempotency:** add `UNIQUE (user_id, book_id)` to `user_books` (new
-   migration file). Enables safe `upsert(onConflict)` so a replayed queued write is a
-   harmless no-op. *Pre-check for existing duplicate rows before applying* (see Data
-   Integrity in Risks).
-2. **`addOwned(bookIds: string[])`** — new method on `UserBooksProvider` alongside
-   `toggleShelf`: splits selected ids into existing-rows (`update owned:true`) vs new
-   (batch `insert`/`upsert`), one optimistic Map update for all, single round-trip,
-   aggregate success/partial-failure result (`Result<…>`), revert-on-failure. Reused by
-   the offline queue's flush.
-3. **`lib/shelf-queue.ts` (FAST-FOLLOW, not v1)** — tiny AsyncStorage-backed write queue.
+1. **`addOwned(bookIds: string[])`** — new method on `UserBooksProvider` alongside
+   `toggleShelf`. Design (verified against the existing schema + merge precedent):
+   - **One atomic `upsert(rows, { onConflict: 'user_id,book_id' })`** on the existing
+     constraint. Atomic = all-or-nothing, so there is no intra-call "partial failure";
+     revert = restore the prior `userBooks` Map snapshot for the whole batch on error.
+   - **MUST OR-merge existing shelf flags, not clobber.** Supabase upsert replaces the
+     full row — sending `{owned:true}` for a book the user already has as `read:true`
+     would reset `read`/`want_to_read` to `false` (**silent data-loss bug**). Read each id
+     from the current Map and send full rows with `owned: true` OR-ed onto existing flags.
+     This mirrors the merge function's `bool_or(...)` precedent
+     (`20260602000000_add_merge_books_function.sql:67-76`).
+   - **Optimistic reconciliation:** new books have no row `id` yet (`gen_random_uuid()`
+     server-side). Insert optimistic placeholders into the Map, then reconcile with the
+     rows returned by `.upsert(...).select()` (replace placeholders with real rows);
+     revert the whole batch on error. Returns `Result<{ added: string[] }>`.
+   - **Auth sequencing:** `addOwned` no-ops on `!user` (like `toggleShelf:129`). For the
+     signed-out→sign-in-at-Add flow, call it **only after the new session has propagated
+     to the provider** (await the auth-state update, not just the sign-in promise) — else
+     it silently no-ops. Recompute already-owned exclusions after the post-sign-in refetch.
+2. **`lib/shelf-queue.ts` (FAST-FOLLOW, not v1)** — tiny AsyncStorage-backed write queue.
    Op = `{ id (expo-crypto uuid), type: 'add_owned', userId, bookId, attempts, createdAt }`;
    enqueue collapses duplicates; flush is mutex-guarded, oldest-first, exponential backoff
    + jitter; triggered on app start, foreground (`AppState`), and NetInfo
@@ -150,46 +182,53 @@ books = N round-trips with silent partial failures). Three changes:
 
 > **DECIDED (2026-06-08):** v1 ships **"Add requires connection"** — if offline at Add,
 > block with a clear message and **keep the review draft** intact; no writes are lost. The
-> offline queue is a **fast-follow**. The migration + `addOwned` still land in v1, so the
-> queue upgrade is additive (swap the direct `addOwned` call for enqueue+flush).
+> offline queue is a **fast-follow**. `addOwned` lands in v1, so the queue upgrade is
+> additive (swap the direct `addOwned` call for enqueue+flush).
 
-### Decision 4 — Scanner state machine
+### Decision 4 — Scanner flow state (`useReducer`, not a library)
 
-Most SpecFlow gaps map to a missing state. Model the shelf flow explicitly (e.g. a
-`useReducer` or XState-lite in `hooks/useShelfScan.ts`):
+Most SpecFlow gaps map to a missing state, so model the **flow states** with a plain
+`useReducer` — *not* XState, not a dependency. The genuine flow states are the boxes
+below. The prereq conditions (signed-out, camera-denied, catalog-loading/failed) are
+**derived at render** from `useAuth`/`useCameraPermissions`/`useBooks().loading|error` —
+they gate entry into `Capturing` but are not reducer states.
+
+**Where the state lives (plan_review fix):** the match-session draft must survive a
+tab-switch. Expo Router native tabs can unmount a blurred tab's screen, so screen-level
+reducer state would be lost. Hoist the draft into a **`ScanSessionProvider` mounted above
+the tab navigator** (sibling to `UserBooksProvider`); the scan screen reads/writes it.
+This is what makes "survives tab-switch + background" true (per Decisions Locked #2).
 
 ```mermaid
 stateDiagram-v2
-    [*] --> CheckingPrereqs
-    CheckingPrereqs --> NeedsAuth: signed out
-    CheckingPrereqs --> NeedsPermission: camera denied
-    CheckingPrereqs --> CatalogLoading: catalog not ready
-    CheckingPrereqs --> CatalogFailed: catalog error
-    CheckingPrereqs --> Capturing: ready
-    CatalogLoading --> Capturing: loaded
+    [*] --> Capturing
     Capturing --> Capturing: auto-capture (Continue)
     Capturing --> Interrupted: call / background / revoke
     Interrupted --> Capturing: resume (captures preserved)
     Capturing --> Processing: Finish
-    Processing --> ReviewDraft: matches found
-    Processing --> EmptyState: zero matches
-    ReviewDraft --> ReviewDraft: swap / select / deselect
-    ReviewDraft --> Adding: Add selected
-    Adding --> Done: online success
-    Adding --> Queued: offline / partial → queue
-    EmptyState --> Capturing: keep scanning
-    EmptyState --> [*]: switch to barcode
-    NeedsAuth --> CheckingPrereqs: signed in
+    Processing --> Review: matches found
+    Processing --> Empty: zero matches
+    Review --> Review: swap / select / deselect
+    Review --> Adding: Add selected
+    Adding --> Done: online success (addOwned)
+    Adding --> Review: offline → block + keep draft
+    Empty --> Capturing: keep scanning
+    Empty --> [*]: switch to barcode
 ```
+*No `Queued` state in v1 — offline at Add returns to `Review` with a blocking "reconnect
+to save" message; the queue (and its `Queued` state) arrives in Phase 2.5.*
 
 ### Screens & Navigation
 
-- **`app/(tabs)/scan.tsx`** — becomes the mode host (shelf default, barcode secondary) +
+- **`app/(tabs)/scan.tsx`** — the mode host (shelf default, barcode secondary) +
   first-run dialogue. Reuses existing permission UI (`scan.tsx:85-115`).
-- **`app/scan-review.tsx`** — NEW stack screen (register in `app/_layout.tsx:59-65`
-  mirroring `book/[id]`; `typedRoutes` is on). Receives the match session; renders the
-  review queue. List rows reuse the `BookCard` pattern (`app/(tabs)/shelf.tsx`); grid
-  mode reuses `Book3D` (`components/Book3D.tsx`). Already-owned via `userBooks.get(id)`.
+- **Inline review overlay (v1)** — rather than a new route, the review queue renders as a
+  full-screen overlay on the scan screen, reusing the existing result-overlay pattern
+  (`scan.tsx:152-203`). This sidesteps a navigation boundary and the "draft across
+  navigation" problem entirely. List rows reuse the `BookCard` pattern
+  (`app/(tabs)/shelf.tsx`); the grid toggle reuses `Book3D` (`components/Book3D.tsx`);
+  already-owned via `userBooks.get(id)`. **Promote to a dedicated `app/scan-review.tsx`
+  screen later** if the queue UI outgrows an overlay.
 - **First-run flag** — AsyncStorage `@ossus/scan_intro_seen`, following the existing
   ref-guarded hydrate pattern in `components/catalog-sort-control.tsx:41-53`.
 
@@ -208,21 +247,30 @@ stateDiagram-v2
 
 ### Phase 1 — Recognition core (pure logic, no UI) 🧠
 - `lib/ocr.ts` — `recognizeImage(uri): Promise<Result<OcrFragment[]>>` wrapping the
-  chosen OCR engine; `OcrFragment = { text, box?, line }`.
+  chosen OCR engine. v1 `OcrFragment = { text }` only — **`box`/`line` are NOT carried in
+  v1** (the matcher pools all text into one bag; no spatial use). Add geometry later as an
+  explicit forward-hook for spine segmentation if needed. **Phase 0 pins the exact
+  engine→`OcrFragment[]` adapter** so the engine swap (VisionCamera plugin vs ML Kit)
+  doesn't retro-fit Phase 1.
 - `lib/spine-match.ts` — `buildCatalogIndex(books)`, `matchFragments(fragments, index):
-  RankedMatch[]`, normalization, TF-IDF, confidence bucketing, aggregation/dedupe.
+  RankedMatch[]`. v1 = IDF coverage score + title-coverage floor + score/margin buckets +
+  edition-collapse (normalized-title+first-author key) + aggregation/dedupe. Tuning
+  refinements deferred (see Decision 2).
 - `lib/spine-match.test.ts` — vitest table-driven cases (reuse `book(partial)` factory
   from `lib/sort.test.ts:6-8`; `it.each` like `lib/__tests__/slug.test.ts`): shared-word
-  disambiguation, OCR-confusion inputs, partial/wrapped titles, margin/confidence
-  buckets, edition collapse, cross-fragment aggregation.
+  disambiguation, partial/wrapped titles, title-coverage-floor rejects, margin/confidence
+  buckets, edition collapse, cross-fragment aggregation. **Assert behavior with provisional
+  thresholds via named constants** so Phase 4 calibration re-tunes the constant, not every
+  test.
 
-### Phase 2 — Data layer (migration + batch add) 🗄️
-- Migration: `supabase/migrations/<ts>_add_user_books_owner_unique.sql` (`UNIQUE
-  (user_id, book_id)`; pre-check duplicates). Regenerate `lib/types.ts` (`npm run db:types`).
-- `addOwned(bookIds[])` in `UserBooksProvider` with batch upsert + aggregate `Result` +
-  optimistic Map update + revert-on-failure.
+### Phase 2 — Data layer (batch add) 🗄️
+- **No migration** — `UNIQUE (user_id, book_id)` already exists. No `db:types` regen.
+- `addOwned(bookIds[])` in `UserBooksProvider`: single atomic `upsert(onConflict)` that
+  **OR-merges existing flags** (no clobber), optimistic placeholder→server-row
+  reconciliation, whole-batch revert, `Result` return, `!user` auth sequencing (Decision 3).
+- `ScanSessionProvider` (above the tab navigator) holding the match-session draft.
 - v1 add path calls `addOwned` directly; **offline → block with "reconnect to save" and
-  keep the review draft** (no queue yet).
+  keep the draft** (no queue yet).
 
 ### Phase 2.5 — Offline write queue (FAST-FOLLOW, post-v1) 🔌
 - `lib/shelf-queue.ts` + `@react-native-community/netinfo`; wire optimistic state + flush
@@ -237,12 +285,20 @@ stateDiagram-v2
   (OCR-then-delete per still + startup orphan sweep); max-photo cap + memory strategy
   (incremental OCR per capture, discard still after).
 
-### Phase 4 — Review queue + matching calibration 📋
-- `app/scan-review.tsx`: list/grid toggle, high vs "double-check" groups, pre-selection,
-  already-owned badge/exclude, per-row swap (ranked alts + catalog-search fallback),
-  batch Add → `addOwned`/queue.
-- **Calibration:** capture 20–40 real shelf photos, hand-label, sweep thresholds, bias to
-  ≥0.95 precision in the high bucket; hard-code constants with a dated calibration comment.
+### Phase 4 — Review overlay (inline) 📋
+- Inline review overlay on `scan.tsx` (reusing the result-overlay pattern): list default +
+  grid toggle, high vs "double-check" groups, pre-selection, already-owned badge/exclude,
+  per-row swap (ranked alts + catalog-search fallback), batch Add → `addOwned`.
+- Swap to an already-owned book → show the badge + auto-deselect (consistent with the
+  exclude rule).
+
+### Phase 4.5 — Matching calibration (data task, gates the precision criterion) 🎯
+- Split from the UI (plan_review: different skill/timeline; avoids rewriting Phase-1
+  tests). Capture 20–40 real shelf photos, hand-label, sweep the **two real knobs** (score
+  floor, margin); bias to ≥0.95 precision in the high bucket; set the named threshold
+  constants with a dated calibration comment. **Then** add back tuning refinements
+  (field boosts/cosine, OCR-confusion collapse, n-gram windows, bigram bonus) **one at a
+  time, keeping only those that measurably move precision.**
 
 ### Phase 5 — Mode host, first-run, edge states 🧩
 - Shelf/barcode mode switch in `scan.tsx`; migrate barcode path to `useCodeScanner`
@@ -292,10 +348,10 @@ stateDiagram-v2
 - [ ] No OOM on a large scan; per-still memory bounded (incremental OCR + temp cleanup).
 - [ ] Offline at add (v1) → blocked with a clear "reconnect to save" message; **review draft is kept**, nothing lost. (Auto-queue + sync lands in Phase 2.5; replayed writes idempotent via the unique constraint.)
 - [ ] Silent-capture flow is operable with VoiceOver/TalkBack (manual shutter + announcements).
-- [ ] All colors via `constants/tokens.ts`; no hardcoded hex in new screens.
+- [ ] All colors via `constants/tokens.ts`, **except** the documented camera-feed overlay raw-hex exception (`scan.tsx` already uses intentional `#000`/`rgba(...)` over the live feed where tokens read wrong).
 
 ### Quality Gates
-- [ ] `lib/spine-match.test.ts` + `lib/shelf-queue.test.ts` pass; `vitest` green.
+- [ ] `lib/spine-match.test.ts` passes; `vitest` green. (`lib/shelf-queue.test.ts` is a Phase 2.5 gate.)
 - [ ] `npm run lint` (Biome) clean.
 - [ ] Clean iOS **and** Android dev builds with the new native deps.
 - [ ] Manual QA on iOS + a low-RAM Android device.
@@ -317,18 +373,19 @@ stateDiagram-v2
 | Match thresholds are data-specific | Bad auto-adds erode trust | Calibrate on 20–40 labeled real photos; bias to precision |
 | `user_books` has pre-existing `(user_id, book_id)` duplicates | Unique migration fails | Pre-check + de-dupe query before adding the constraint |
 | Large library OOM | Crash on target power-user | Incremental per-capture OCR + temp-file cleanup + photo cap |
-| Draft loss on interruption/navigation | Catastrophic to trust | Keep review draft in-memory across background + tab-switch (v1); app-kill persistence deferred |
-| reactCompiler experiment + worklet/frame code | Subtle bugs | Verify in Phase 0; exclude frame code from compiler if needed |
+| `addOwned` upsert clobbers `read`/`want_to_read` | Silent data loss | OR-merge existing flags (`bool_or` precedent); never send a bare `{owned:true}` row |
+| Draft loss on tab-switch (native tabs unmount blurred screen) | Catastrophic to trust | Hoist draft into `ScanSessionProvider` above the tab navigator; app-kill persistence deferred |
+| reactCompiler experiment + worklets | Overstated for v1 | **v1 app code has no worklets** (OCR on stills) — this is a Phase-0-spike + future-live-pan concern only; if needed, exclude a file via `"use no memo"` |
 
 ## Edge Cases → Resolution (from SpecFlow)
 
 | Case | Resolution |
 |---|---|
-| Signed-out entering scanner | Allow capture+review; prompt sign-in at **Add**; persist the draft across sign-in. |
+| Signed-out entering scanner | Allow capture+review; prompt sign-in at **Add**; keep the draft across sign-in; call `addOwned` only after the session propagates, then recompute already-owned from the refetch. |
 | Catalog still loading / failed at Finish | Distinct "catalog loading / retry" state — **never** routed into the lighting/coverage empty state. |
 | Session expiry / account switch mid-flow | Re-validate `user` + refetch owned-set immediately before Add; recompute exclusions. |
 | Permission revoked / call / background mid-capture | Enter `Interrupted`; preserve captured set; offer resume. |
-| Navigate away from review queue | Keep draft in-memory across tab-switch + background (v1); app-kill clears it (deferred). |
+| Navigate away from review queue | Draft lives in `ScanSessionProvider` above the tab navigator → survives tab-switch + background; app-kill clears it (deferred). |
 | Large library | Photo cap + nudge to Finish (number set in Phase 3); incremental OCR; bounded memory. |
 | Temp captures | Delete each still after its OCR; startup sweep of orphans (storage + privacy). |
 | Swap to already-owned book | Show "already in library" badge + auto-deselect. |
@@ -348,6 +405,7 @@ stateDiagram-v2
 - Current scanner / permission / result UI: `app/(tabs)/scan.tsx:1-206` (barcode flow `:31-71`, permission `:85-115`, camera `:120-129`).
 - Shelf data layer: `lib/hooks.tsx` — `useBooks()` `:35-70` (full in-memory catalog, `loading`/`error`), `toggleShelf` `:127-196` (toggle-only, serial, silent-revert, `!user` no-op `:129`, clears owned-set on account change `:122`).
 - Types: `lib/types.ts` — `books` `:38-58` (title/author[]/series_name/series_order/isbn[]/primary_isbn/canon/format/cover_image), `user_books` `:107-116`.
+- Schema/RLS: `supabase/migrations/20260410000000_create_books_and_user_books.sql:40` (**existing** `UNIQUE (user_id, book_id)`), `:78-92` (`TO authenticated` RLS); `supabase/migrations/20260602000000_add_merge_books_function.sql:67-76` (`ON CONFLICT (user_id, book_id)` + `bool_or` flag-merge — the precedent `addOwned` follows).
 - Routing: `app/_layout.tsx:42-66` (Stack; providers wrap at `:37-41`); `app/book/[id].tsx` (pushed-screen pattern); native tabs `app/(tabs)/_layout.tsx:46-49`.
 - Reuse: `lib/result.ts:5-15` (Result type); `constants/tokens.ts:9-47` (tokens + `badge.canon/legends` for the owned badge); `components/catalog-sort-control.tsx:41-53` (AsyncStorage ref-guard pattern for `@ossus/scan_intro_seen`); `components/Book3D.tsx:31-39` (grid mode); `app/(tabs)/shelf.tsx` (FlashList `BookCard` rows + `userBooks.get(id)` owned-lookup).
 - Tests: `lib/sort.test.ts:6-8` (`book(partial)` factory), `lib/__tests__/slug.test.ts:5-14` (`it.each`); `vitest.config.ts` (node env, `**/*.test.ts`).
@@ -371,5 +429,28 @@ stateDiagram-v2
 4. **Photo cap + auto-capture thresholds:** **deferred to Phase 3** tuning on real devices.
 5. **Two physical copies:** **no affordance in v1** — set semantics, one owned entry.
 
-_No open questions remain; ready for review or implementation._
-```
+## Plan Review Revisions (2026-06-08)
+
+Applied after review by the DHH, Kieran, and code-simplicity reviewers (findings verified
+against the codebase):
+- **Removed the `UNIQUE (user_id, book_id)` migration** — it already exists
+  (`20260410000000_…:40`). Dropped the `db:types` regen and the fake "duplicate rows" risk.
+- **`addOwned` redesigned** to OR-merge existing shelf flags (prevents a silent
+  `read`/`want_to_read` clobber), with atomic upsert + optimistic→server-row
+  reconciliation + auth sequencing. Cites the `bool_or` merge precedent.
+- **Matcher de-tuned for v1:** ship IDF-coverage scoring + title-coverage floor +
+  score/margin buckets; **defer** field boosts/cosine, OCR-confusion table, n-gram
+  windows, bigram bonus to calibration. Fixed the unimplementable `↔` notation and dropped
+  `cl→d`/`rn→m` (they corrupt "Clone Wars"). Defined the edition-collapse key. Thresholds
+  marked provisional-until-calibration.
+- **Review queue is now an inline overlay** (no new route) for v1; promote to a screen later.
+- **State:** plain `useReducer`, dead `Queued` state removed; draft hoisted into a
+  `ScanSessionProvider` above the tab navigator so it survives tab-switch.
+- **Calibration split** into its own phase (4.5) to avoid rewriting Phase-1 tests.
+- **reactCompiler risk re-scoped:** v1 app code has no worklets.
+
+**Kept against reviewer pushback (user decisions):** VisionCamera v5 build-once foundation
+(accepting the Phase 0 spike risk); the full capture experience (auto-capture + ghost
+overlay + flourish + haptics). The offline queue stays deferred to Phase 2.5.
+
+_No open questions remain; ready for implementation._
