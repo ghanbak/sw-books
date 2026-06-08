@@ -16,8 +16,8 @@ presents a review queue to add matches to the owned shelf in one batch. The exis
 barcode reader is retained as a secondary mode introduced by a first-run dialogue.
 
 Everything except the shelf write runs **on-device** (free, offline, private). The only
-network dependency is the final batch add to Supabase, which is queued and synced if
-offline.
+network dependency is the final batch add to Supabase; v1 requires a connection at Add
+(blocks + keeps the draft if offline), with an auto-queue/sync fast-follow.
 
 This plan is the implementation (HOW) of the 2026-06-05 brainstorm (WHAT). Settled
 product decisions are not re-litigated here; see the brainstorm for rationale.
@@ -45,8 +45,8 @@ A capture → recognize → review → add pipeline:
 4. **Review** — list (default) / grid (toggle) queue; high-confidence pre-selected,
    low-confidence in a "double-check these" group; already-owned badged + excluded; swap
    a wrong match among ranked alternatives or via catalog search.
-5. **Add** — one batch upsert to the owned shelf; optimistic UI; queued + synced if
-   offline.
+5. **Add** — one batch upsert to the owned shelf; optimistic UI; v1 requires a connection
+   (blocks + keeps the draft if offline); auto-queue + sync is a fast-follow.
 
 ## Technical Approach
 
@@ -63,7 +63,7 @@ app/(tabs)/scan.tsx  ── mode switch (shelf | barcode) + first-run dialogue
   └─ barcode mode → useCodeScanner (ean-13/upc-a) ─▶ existing ISBN lookup
 
 lib/hooks.tsx        ── useBooks() (catalog), addOwned() (NEW batch mutation)
-lib/shelf-queue.ts   ── NEW offline write queue (AsyncStorage + NetInfo + backoff)
+lib/shelf-queue.ts   ── offline write queue (Phase 2.5 fast-follow; not v1)
 supabase/migrations/ ── NEW unique constraint on user_books(user_id, book_id)
 ```
 
@@ -141,18 +141,17 @@ books = N round-trips with silent partial failures). Three changes:
    (batch `insert`/`upsert`), one optimistic Map update for all, single round-trip,
    aggregate success/partial-failure result (`Result<…>`), revert-on-failure. Reused by
    the offline queue's flush.
-3. **`lib/shelf-queue.ts`** — tiny AsyncStorage-backed write queue (AsyncStorage 2.2.0 is
-   already installed; no new storage dep). Op = `{ id (expo-crypto uuid), type:
-   'add_owned', userId, bookId, attempts, createdAt }`. Enqueue collapses duplicates;
-   flush is mutex-guarded, oldest-first, exponential backoff + jitter; triggered on app
-   start, foreground (`AppState`), and NetInfo `isInternetReachable` rising edge. Adds
-   `@react-native-community/netinfo`. Optimistic local state on enqueue + a subtle "N
-   changes will sync when you're online" indicator.
+3. **`lib/shelf-queue.ts` (FAST-FOLLOW, not v1)** — tiny AsyncStorage-backed write queue.
+   Op = `{ id (expo-crypto uuid), type: 'add_owned', userId, bookId, attempts, createdAt }`;
+   enqueue collapses duplicates; flush is mutex-guarded, oldest-first, exponential backoff
+   + jitter; triggered on app start, foreground (`AppState`), and NetInfo
+   `isInternetReachable` rising edge; adds `@react-native-community/netinfo`. Lands right
+   after v1 — the v1 migration + `addOwned` make it purely additive.
 
-> **Scope lever:** the offline queue is the one piece of *net-new infra*. If schedule
-> pressure appears, v1 can ship with **"Add requires connection"** (block + clear message,
-> keep the review draft) and the queue becomes a fast follow — the migration + `addOwned`
-> still land, so the upgrade is additive. Default plan includes the queue.
+> **DECIDED (2026-06-08):** v1 ships **"Add requires connection"** — if offline at Add,
+> block with a clear message and **keep the review draft** intact; no writes are lost. The
+> offline queue is a **fast-follow**. The migration + `addOwned` still land in v1, so the
+> queue upgrade is additive (swap the direct `addOwned` call for enqueue+flush).
 
 ### Decision 4 — Scanner state machine
 
@@ -217,12 +216,18 @@ stateDiagram-v2
   disambiguation, OCR-confusion inputs, partial/wrapped titles, margin/confidence
   buckets, edition collapse, cross-fragment aggregation.
 
-### Phase 2 — Data layer (migration + batch add + offline queue) 🗄️
+### Phase 2 — Data layer (migration + batch add) 🗄️
 - Migration: `supabase/migrations/<ts>_add_user_books_owner_unique.sql` (`UNIQUE
   (user_id, book_id)`; pre-check duplicates). Regenerate `lib/types.ts` (`npm run db:types`).
-- `addOwned(bookIds[])` in `UserBooksProvider` with batch upsert + aggregate `Result`.
+- `addOwned(bookIds[])` in `UserBooksProvider` with batch upsert + aggregate `Result` +
+  optimistic Map update + revert-on-failure.
+- v1 add path calls `addOwned` directly; **offline → block with "reconnect to save" and
+  keep the review draft** (no queue yet).
+
+### Phase 2.5 — Offline write queue (FAST-FOLLOW, post-v1) 🔌
 - `lib/shelf-queue.ts` + `@react-native-community/netinfo`; wire optimistic state + flush
-  triggers; `lib/shelf-queue.test.ts` (enqueue dedupe, backoff, mutex, idempotent replay).
+  triggers; swap the v1 direct-`addOwned` call for enqueue+flush; `lib/shelf-queue.test.ts`
+  (enqueue dedupe, backoff, mutex, idempotent replay).
 
 ### Phase 3 — Capture experience 📸
 - `hooks/useShelfScan.ts` state machine (states above); capture loop with steady/in-focus
@@ -285,7 +290,7 @@ stateDiagram-v2
 - [ ] Recognition + matching run fully on-device (no network); only the shelf add hits Supabase.
 - [ ] Matching ≥0.95 precision in the high-confidence bucket on the calibration sample.
 - [ ] No OOM on a large scan; per-still memory bounded (incremental OCR + temp cleanup).
-- [ ] Offline at add → queued and synced on reconnect; replayed writes are idempotent (no duplicates).
+- [ ] Offline at add (v1) → blocked with a clear "reconnect to save" message; **review draft is kept**, nothing lost. (Auto-queue + sync lands in Phase 2.5; replayed writes idempotent via the unique constraint.)
 - [ ] Silent-capture flow is operable with VoiceOver/TalkBack (manual shutter + announcements).
 - [ ] All colors via `constants/tokens.ts`; no hardcoded hex in new screens.
 
@@ -312,7 +317,7 @@ stateDiagram-v2
 | Match thresholds are data-specific | Bad auto-adds erode trust | Calibrate on 20–40 labeled real photos; bias to precision |
 | `user_books` has pre-existing `(user_id, book_id)` duplicates | Unique migration fails | Pre-check + de-dupe query before adding the constraint |
 | Large library OOM | Crash on target power-user | Incremental per-capture OCR + temp-file cleanup + photo cap |
-| Draft loss on interruption/navigation | Catastrophic to trust | Persist review draft (≥ tab-switch/background; decide app-kill) |
+| Draft loss on interruption/navigation | Catastrophic to trust | Keep review draft in-memory across background + tab-switch (v1); app-kill persistence deferred |
 | reactCompiler experiment + worklet/frame code | Subtle bugs | Verify in Phase 0; exclude frame code from compiler if needed |
 
 ## Edge Cases → Resolution (from SpecFlow)
@@ -323,12 +328,12 @@ stateDiagram-v2
 | Catalog still loading / failed at Finish | Distinct "catalog loading / retry" state — **never** routed into the lighting/coverage empty state. |
 | Session expiry / account switch mid-flow | Re-validate `user` + refetch owned-set immediately before Add; recompute exclusions. |
 | Permission revoked / call / background mid-capture | Enter `Interrupted`; preserve captured set; offer resume. |
-| Navigate away from review queue | Persist draft (survive tab-switch + background; app-kill persistence = open question). |
-| Large library | Hard photo cap + nudge to Finish; incremental OCR; bounded memory. |
+| Navigate away from review queue | Keep draft in-memory across tab-switch + background (v1); app-kill clears it (deferred). |
+| Large library | Photo cap + nudge to Finish (number set in Phase 3); incremental OCR; bounded memory. |
 | Temp captures | Delete each still after its OCR; startup sweep of orphans (storage + privacy). |
 | Swap to already-owned book | Show "already in library" badge + auto-deselect. |
-| Two physical copies of one title | Accepted v1 limitation (set semantics); no affordance yet. |
-| Partial/flaky offline mid-batch | Per-book status (added / pending sync); idempotent upsert reconciles on flush. |
+| Two physical copies of one title | v1: no affordance — set semantics, one owned entry (decided). |
+| Offline at add (v1) | Block with "reconnect to save"; keep draft. Auto-queue/idempotent replay = Phase 2.5. |
 | OCR huge/empty text | Per-photo token/size cap; empty → silent bad-frame gating. |
 
 ## Documentation Plan
@@ -359,10 +364,12 @@ stateDiagram-v2
 - Brainstorm: `docs/brainstorms/2026-06-05-visual-shelf-scanner-brainstorm.md`
 - Prior plans for house style: `docs/plans/2026-05-30-feat-catalog-add-merge-delete-plan.md`
 
-## Open Questions / Decisions to Confirm
-1. **Offline queue in v1, or fast-follow?** Default = ship it. Confirm vs "Add requires connection" v1.
-2. **Review-draft persistence depth:** survive tab-switch/background (yes) — also survive full app-kill? (adds AsyncStorage/SQLite draft storage).
-3. **Camera path:** proceed assuming VisionCamera (Phase 0 confirms); accept Path A fallback if the spike fails?
-4. **Photo cap number** (e.g. 20) and the steady/in-focus auto-capture thresholds — set during Phase 3 tuning.
-5. **Two-physical-copies:** confirm "no affordance in v1" is acceptable.
+## Decisions Locked (2026-06-08)
+1. **Offline:** v1 = **"Add requires connection"** (block + keep draft). Auto-queue + sync = **Phase 2.5 fast-follow**. Migration + `addOwned` still in v1 (additive upgrade).
+2. **Draft persistence:** in-memory, survives **background + tab-switch only**; app-kill clears it (persistence deferred).
+3. **Camera:** **VisionCamera v5** default; **Phase 0 spike** gates the worklets/Reanimated bump; **expo-camera + ML Kit** is the documented fallback if the spike fails.
+4. **Photo cap + auto-capture thresholds:** **deferred to Phase 3** tuning on real devices.
+5. **Two physical copies:** **no affordance in v1** — set semantics, one owned entry.
+
+_No open questions remain; ready for review or implementation._
 ```
