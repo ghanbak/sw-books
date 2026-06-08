@@ -64,9 +64,10 @@ app/(tabs)/scan.tsx  ── mode switch (shelf | barcode) + first-run dialogue
 
 ScanSessionProvider  ── holds the match-session draft ABOVE the tab navigator
                         (survives tab-switch/background; see Decision 4)
-lib/hooks.tsx        ── useBooks() (catalog), addOwned() (NEW batch upsert, OR-merges flags)
+lib/hooks.tsx        ── useBooks() (catalog), addOwned() → add_owned_books RPC
+add_owned_books RPC  ── server-side flag-merge (sets owned=true, never touches read/want)
 lib/shelf-queue.ts   ── offline write queue (Phase 2.5 fast-follow; not v1)
-user_books           ── NO migration: UNIQUE (user_id, book_id) ALREADY EXISTS
+user_books           ── UNIQUE (user_id, book_id) ALREADY EXISTS — no schema migration
                         (20260410000000_create_books_and_user_books.sql:40)
 ```
 
@@ -126,10 +127,13 @@ as a recall booster; not needed for v1.
   Wars" → "done wars").* *(calibration: sliding 1–4-token windows across wrapped lines.)*
 - **Score refinements** *(all calibration):* author-exact bonus, contiguous-bigram bonus
   (word-order signal).
-- **Title-coverage floor (v1, REQUIRED):** a match must cover a minimum share of the
-  candidate's **title** tokens — not just one rare token. Guards the brainstorm's own
+- **Title-coverage floor (v1, REQUIRED):** a match must cover a minimum number of the
+  candidate's **title** tokens — **count-based, not IDF-mass** (IDF-mass would let a single
+  rare title token clear the floor, which is exactly the hole this guards). Use a named
+  provisional constant `MIN_TITLE_TOKEN_COVERAGE` (start ≈ "≥2 distinct title tokens, or
+  all of them for 1-token titles"; calibrated in Phase 4.5). Guards the brainstorm's
   flagged false-positive (a distinctive token from book A printed on book B's spine/blurb
-  matching A). Without this, IDF rewards a single lucky rare-token hit.
+  matching A).
 - **Confidence buckets** — **thresholds are PROVISIONAL placeholders until Phase 4
   calibration** (do not treat as final):
   - High (auto-select): `S1 ≥ ~0.6` AND `margin ≥ ~0.12`
@@ -139,10 +143,14 @@ as a recall booster; not needed for v1.
   score + small boost for count of distinct supporting fragments (don't sum — rewards
   noise); union across photos keeps best evidence.
 - **Edition collapse (define the key):** the schema has **no `work_id`** (verified
-  `lib/types.ts:38-58`), so collapse on a derived key = **normalized title + first
-  author**; tie-break which row becomes the owned entry by `primary_isbn` present, else
-  format priority, else `timeline_order`. Canon/Legends/format variants of one work → one
-  owned entry. *(Open: whether the user should pick the specific edition — deferred.)*
+  `lib/types.ts:38-58`), so collapse on a derived key = **normalized title + normalized
+  first author** (`author[0]`; books with no author key on title + `''`, with a unit test
+  asserting two distinct authorless same-title works are *not* wrongly merged). Tie-break
+  for which row becomes the owned entry, in order: (1) `primary_isbn` present; (2) explicit
+  **format priority `hardcover > paperback > ebook > audiobook`** (first match in that
+  list; unknown formats rank last); (3) lowest `timeline_order` (column verified at
+  `lib/types.ts:55`). Canon/Legends/format variants of one work → one owned entry. *(Open:
+  letting the user pick the specific edition — deferred.)*
 - **Output:** ranked top-N `{ book, score, margin }` per recognized book (powers the swap
   UI; cached on the result so swapping is instant and offline).
 
@@ -150,39 +158,59 @@ as a recall booster; not needed for v1.
 
 The current `toggleShelf` (`lib/hooks.tsx:127`) is **toggle-only, single-row, serial, and
 fails silently** — wrong for a batch add (it would turn an already-owned book *off*, and N
-books = N round-trips with silent partial failures). Two changes (**no migration** —
-plan_review verified `UNIQUE (user_id, book_id)` already exists at
-`20260410000000_create_books_and_user_books.sql:40`):
+books = N round-trips with silent partial failures). The `UNIQUE (user_id, book_id)`
+constraint already exists (`20260410000000_create_books_and_user_books.sql:40`), so no
+schema migration is needed. Two changes:
 
-1. **`addOwned(bookIds: string[])`** — new method on `UserBooksProvider` alongside
-   `toggleShelf`. Design (verified against the existing schema + merge precedent):
-   - **One atomic `upsert(rows, { onConflict: 'user_id,book_id' })`** on the existing
-     constraint. Atomic = all-or-nothing, so there is no intra-call "partial failure";
-     revert = restore the prior `userBooks` Map snapshot for the whole batch on error.
-   - **Adding to owned MUST NOT change `read` or `want_to_read`.** It only sets
-     `owned = true`; the other two shelf flags are preserved exactly as they were. Because
-     Supabase upsert replaces the **full row**, sending a bare `{owned:true}` for a book
-     the user already has as `read:true` would reset `read`/`want_to_read` to `false`
-     (**silent data-loss bug**). So read each id from the current `userBooks` Map and send
-     full rows = existing flags with `owned` forced to `true` (i.e. `owned: existing.owned
-     || true`, `read: existing.read`, `want_to_read: existing.want_to_read`). For a book
-     not yet on any shelf, insert `{owned:true, read:false, want_to_read:false}`. This
-     mirrors the merge function's `bool_or(...)` precedent
-     (`20260602000000_add_merge_books_function.sql:67-76`).
-   - **Optimistic reconciliation:** new books have no row `id` yet (`gen_random_uuid()`
-     server-side). Insert optimistic placeholders into the Map, then reconcile with the
-     rows returned by `.upsert(...).select()` (replace placeholders with real rows);
-     revert the whole batch on error. Returns `Result<{ added: string[] }>`.
-   - **Auth sequencing:** `addOwned` no-ops on `!user` (like `toggleShelf:129`). For the
-     signed-out→sign-in-at-Add flow, call it **only after the new session has propagated
-     to the provider** (await the auth-state update, not just the sign-in promise) — else
-     it silently no-ops. Recompute already-owned exclusions after the post-sign-in refetch.
-2. **`lib/shelf-queue.ts` (FAST-FOLLOW, not v1)** — tiny AsyncStorage-backed write queue.
+1. **Server-side RPC `add_owned_books(book_ids uuid[])`** (one small function migration —
+   mirrors the existing `merge_books` precedent). Round-2 plan_review converged here:
+   doing the flag-merge **in the database** is both simpler and strictly more correct than
+   a client-side merge, which would re-introduce the clobber whenever the in-memory Map is
+   stale (e.g. a `read` toggled on another device). The function:
+
+   ```sql
+   -- supabase/migrations/<ts>_add_owned_books_rpc.sql   (SECURITY INVOKER → RLS applies)
+   create function public.add_owned_books(book_ids uuid[])
+   returns setof public.user_books
+   language sql
+   as $$
+     insert into public.user_books (user_id, book_id, owned)
+     select auth.uid(), unnest(book_ids), true
+     on conflict (user_id, book_id) do update set owned = true
+     returning *;
+   $$;
+   ```
+   - **`read`/`want_to_read` are preserved by construction** — `DO UPDATE SET owned = true`
+     lists *only* `owned`, so the other flags are never touched (no clobber, no stale-Map
+     race). New rows insert `owned=true` with the table defaults (`read=false`,
+     `want_to_read=false`).
+   - **`user_id` + RLS handled server-side** via `auth.uid()` — the client can't omit it
+     or forge another user's id; `SECURITY INVOKER` keeps the `TO authenticated` RLS
+     policies (`20260410000000:78-92`) in force.
+   - **Idempotent** — re-running for an already-owned book is a harmless no-op (the
+     Phase 2.5 queue replay relies on this).
+
+2. **`addOwned(bookIds: string[]): Promise<Result<{ rows: UserBook[] }>>`** on
+   `UserBooksProvider`, thin wrapper over the RPC:
+   - **Optimistic:** snapshot `userBooksRef.current` *before* mutating; for each id, set
+     `owned: true` on the existing Map entry (preserving its other flags) or add a
+     temporary entry for not-yet-on-shelf books (keyed by `book_id`; any placeholder `id`
+     is display-only and is **replaced wholesale** by the returned rows — nothing writes it
+     back).
+   - **Authoritative reconcile:** `supabase.rpc('add_owned_books', { book_ids })` returns
+     the real `user_books` rows; merge them into the Map by `book_id` (gives new books
+     their real `id`/`created_at`). On error, restore the snapshot. Atomic — all-or-nothing.
+   - **Auth sequencing:** no-ops on `!user` (like `toggleShelf:129`). For the
+     signed-out→sign-in-at-Add flow, call it **only after the post-sign-in owned-set
+     refetch has completed** (`UserBooksProvider.fetchUserBooks`, `hooks.tsx:118-125`) — not
+     merely after the sign-in promise resolves — then recompute already-owned exclusions.
+3. **`lib/shelf-queue.ts` (FAST-FOLLOW, not v1)** — tiny AsyncStorage-backed write queue.
    Op = `{ id (expo-crypto uuid), type: 'add_owned', userId, bookId, attempts, createdAt }`;
    enqueue collapses duplicates; flush is mutex-guarded, oldest-first, exponential backoff
    + jitter; triggered on app start, foreground (`AppState`), and NetInfo
    `isInternetReachable` rising edge; adds `@react-native-community/netinfo`. Lands right
-   after v1 — the v1 migration + `addOwned` make it purely additive.
+   after v1 — the `add_owned_books` RPC + `addOwned` make it purely additive (swap the
+   direct call for enqueue+flush; the RPC's idempotency makes replay safe).
 
 > **DECIDED (2026-06-08):** v1 ships **"Add requires connection"** — if offline at Add,
 > block with a clear message and **keep the review draft** intact; no writes are lost. The
@@ -202,6 +230,15 @@ tab-switch. Expo Router native tabs can unmount a blurred tab's screen, so scree
 reducer state would be lost. Hoist the draft into a **`ScanSessionProvider` mounted above
 the tab navigator** (sibling to `UserBooksProvider`); the scan screen reads/writes it.
 This is what makes "survives tab-switch + background" true (per Decisions Locked #2).
+Keep it thin — a `useReducer` + context holding only the draft; no selectors, no
+persistence (app-kill clearing is deliberately deferred).
+
+**Account-switch safety (plan_review fix):** the draft's recognized books + pre-selection
+were computed against *one* user's shelf. `ScanSessionProvider` must **clear the draft when
+`user.id` changes to a different non-null id** (account switch / a different sign-in),
+mirroring `UserBooksProvider`'s clear-on-user-change (`hooks.tsx:122`). It must **preserve
+the draft across `null → first sign-in`** (the intended signed-out→sign-in-at-Add flow).
+Without this, User B could add books User A scanned.
 
 ```mermaid
 stateDiagram-v2
@@ -268,11 +305,14 @@ to save" message; the queue (and its `Queued` state) arrives in Phase 2.5.*
   test.
 
 ### Phase 2 — Data layer (batch add) 🗄️
-- **No migration** — `UNIQUE (user_id, book_id)` already exists. No `db:types` regen.
-- `addOwned(bookIds[])` in `UserBooksProvider`: single atomic `upsert(onConflict)` that
-  **OR-merges existing flags** (no clobber), optimistic placeholder→server-row
-  reconciliation, whole-batch revert, `Result` return, `!user` auth sequencing (Decision 3).
-- `ScanSessionProvider` (above the tab navigator) holding the match-session draft.
+- **No schema migration** — `UNIQUE (user_id, book_id)` already exists. One small
+  **function migration**: the `add_owned_books(book_ids uuid[])` RPC (Decision 3); regen
+  `lib/types.ts` (`npm run db:types`) so the RPC is typed.
+- `addOwned(bookIds[])` in `UserBooksProvider`: thin wrapper over the RPC — optimistic Map
+  flip (preserving other flags), authoritative reconcile from returned rows, whole-batch
+  snapshot revert, `Result` return, post-refetch `!user` auth sequencing (Decision 3).
+- `ScanSessionProvider` (above the tab navigator) holding the draft + clearing on
+  account switch (Decision 4).
 - v1 add path calls `addOwned` directly; **offline → block with "reconnect to save" and
   keep the draft** (no queue yet).
 
@@ -298,11 +338,14 @@ to save" message; the queue (and its `Queued` state) arrives in Phase 2.5.*
 
 ### Phase 4.5 — Matching calibration (data task, gates the precision criterion) 🎯
 - Split from the UI (plan_review: different skill/timeline; avoids rewriting Phase-1
-  tests). Capture 20–40 real shelf photos, hand-label, sweep the **two real knobs** (score
-  floor, margin); bias to ≥0.95 precision in the high bucket; set the named threshold
-  constants with a dated calibration comment. **Then** add back tuning refinements
-  (field boosts/cosine, OCR-confusion collapse, n-gram windows, bigram bonus) **one at a
-  time, keeping only those that measurably move precision.**
+  tests). **Runs as a parallel track — data collection can begin as soon as Phase 0's OCR
+  adapter + Phase 1's matcher exist** (it needs neither the capture UI nor the overlay), so
+  the one measurable criterion (≥0.95 precision) is de-risked early, not discovered late.
+- Capture 20–40 real shelf photos, hand-label, sweep the **knobs that exist** (score floor,
+  margin, `MIN_TITLE_TOKEN_COVERAGE`); bias to ≥0.95 precision in the high bucket; set the
+  named threshold constants with a dated calibration comment. **Then** add back tuning
+  refinements (field boosts/cosine, OCR-confusion collapse, n-gram windows, bigram bonus)
+  **one at a time, keeping only those that measurably move precision.**
 
 ### Phase 5 — Mode host, first-run, edge states 🧩
 - Shelf/barcode mode switch in `scan.tsx`; migrate barcode path to `useCodeScanner`
@@ -343,7 +386,7 @@ to save" message; the queue (and its `Queued` state) arrives in Phase 2.5.*
 - [ ] Review queue: list default + grid toggle; high-confidence pre-selected; low-confidence in a "double-check" group; already-owned badged + excluded.
 - [ ] A wrong match can be swapped among ranked alternatives or via catalog search; swap to an already-owned book auto-deselects with the badge.
 - [ ] Selected books add to the owned shelf in one batch; UI reflects them immediately.
-- [ ] Adding to owned sets only `owned=true` and **leaves `read`/`want_to_read` unchanged** for books already on a shelf (verified by a unit test on `addOwned`).
+- [ ] Adding to owned sets only `owned=true` and **leaves `read`/`want_to_read` unchanged** for books already on a shelf (the `add_owned_books` RPC `DO UPDATE SET owned = true`; verified by an integration test, incl. a stale-client case).
 - [ ] Barcode mode still reads ISBNs (existing behavior preserved); first-run dialogue introduces both modes once.
 - [ ] Non-catalog books are silently ignored; zero-match shows the helpful empty state + barcode fallback.
 
@@ -362,10 +405,11 @@ to save" message; the queue (and its `Queued` state) arrives in Phase 2.5.*
 - [ ] Manual QA on iOS + a low-RAM Android device.
 
 ## Success Metrics
+_Instrumentation is **out of v1 scope** (no analytics wiring is planned in any phase) —
+listed as the signals to wire post-v1 if/when analytics land._
 - **Adoption:** % of new shelves populated via shelf-scan vs barcode vs manual.
 - **Throughput:** median books added per shelf-scan session; time-to-populate vs barcode.
-- **Trust:** swap/deselect rate in the review queue (proxy for match precision); ratio of
-  high-confidence auto-selected that survive to Add.
+- **Trust:** swap/deselect rate in the review queue (proxy for match precision).
 - **Reliability:** scan-session crash rate; offline-queue sync success rate.
 
 ## Dependencies & Risks
@@ -376,9 +420,9 @@ to save" message; the queue (and its `Queued` state) arrives in Phase 2.5.*
 | VisionCamera v5 on SDK 54 build issues (early reports) | iOS build fails | Validate EAS/local iOS build in Phase 0 before feature work |
 | Native deps need a fresh dev build (no `ios/`/`android/` dirs; managed prebuild) | Can't OTA; rebuild required | Plan a `npx expo prebuild` + dev-build step; communicate no-Expo-Go |
 | Match thresholds are data-specific | Bad auto-adds erode trust | Calibrate on 20–40 labeled real photos; bias to precision |
-| `user_books` has pre-existing `(user_id, book_id)` duplicates | Unique migration fails | Pre-check + de-dupe query before adding the constraint |
 | Large library OOM | Crash on target power-user | Incremental per-capture OCR + temp-file cleanup + photo cap |
-| `addOwned` upsert overrides `read`/`want_to_read` | Silent data loss | Adding owned only sets `owned=true`; preserve the other flags exactly (read current Map, send full rows); never send a bare `{owned:true}` row. Covered by a unit test. |
+| Adding owned overrides `read`/`want_to_read` | Silent data loss | `add_owned_books` RPC `DO UPDATE SET owned = true` touches only `owned` — other flags preserved server-side, immune to stale-client races. Covered by an integration test. |
+| Draft persists across an account switch | User B adds User A's books | `ScanSessionProvider` clears the draft on a change to a different non-null `user.id`; preserves it across `null → first sign-in` |
 | Draft loss on tab-switch (native tabs unmount blurred screen) | Catastrophic to trust | Hoist draft into `ScanSessionProvider` above the tab navigator; app-kill persistence deferred |
 | reactCompiler experiment + worklets | Overstated for v1 | **v1 app code has no worklets** (OCR on stills) — this is a Phase-0-spike + future-live-pan concern only; if needed, exclude a file via `"use no memo"` |
 
@@ -388,8 +432,9 @@ to save" message; the queue (and its `Queued` state) arrives in Phase 2.5.*
 |---|---|
 | Signed-out entering scanner | Allow capture+review; prompt sign-in at **Add**; keep the draft across sign-in; call `addOwned` only after the session propagates, then recompute already-owned from the refetch. |
 | Catalog still loading / failed at Finish | Distinct "catalog loading / retry" state — **never** routed into the lighting/coverage empty state. |
-| Session expiry / account switch mid-flow | Re-validate `user` + refetch owned-set immediately before Add; recompute exclusions. |
+| Session expiry / account switch mid-flow | `ScanSessionProvider` clears the draft on a different non-null `user.id`; re-validate `user` + refetch owned-set before Add; recompute exclusions. |
 | Permission revoked / call / background mid-capture | Enter `Interrupted`; preserve captured set; offer resume. |
+| Interruption mid-**Processing** (OCR) | Fail-safe: stills are preserved, so re-run OCR from them on resume (Processing is fast + re-runnable); no partial-result persistence needed. |
 | Navigate away from review queue | Draft lives in `ScanSessionProvider` above the tab navigator → survives tab-switch + background; app-kill clears it (deferred). |
 | Large library | Photo cap + nudge to Finish (number set in Phase 3); incremental OCR; bounded memory. |
 | Temp captures | Delete each still after its OCR; startup sweep of orphans (storage + privacy). |
@@ -421,14 +466,14 @@ to save" message; the queue (and its `Queued` state) arrives in Phase 2.5.*
 - OCR: `react-native-vision-camera-ocr-plus` v2 (still `PhotoRecognizer` + live `useTextRecognition`) https://github.com/jamenamcinteer/react-native-vision-camera-ocr-plus · standalone `@react-native-ml-kit/text-recognition` https://www.npmjs.com/package/@react-native-ml-kit/text-recognition · Infinite Red ML Kit (Expo-first) https://docs.infinite.red/react-native-mlkit/
 - expo-camera SDK 54: https://docs.expo.dev/versions/latest/sdk/camera/ · New Architecture: https://docs.expo.dev/guides/new-architecture/
 - Offline: NetInfo https://github.com/react-native-netinfo/react-native-netinfo · idempotent upsert pattern (Supabase `onConflict`).
-- Matching: Fuse.js https://www.fusejs.io/ (considered, not adopted v1); TF-IDF cosine (hand-rolled).
+- Matching: Fuse.js https://www.fusejs.io/ (considered, not adopted v1); hand-rolled IDF-weighted coverage scorer (cosine/TF-IDF refinements deferred to Phase 4.5).
 
 ### Related Work
 - Brainstorm: `docs/brainstorms/2026-06-05-visual-shelf-scanner-brainstorm.md`
 - Prior plans for house style: `docs/plans/2026-05-30-feat-catalog-add-merge-delete-plan.md`
 
 ## Decisions Locked (2026-06-08)
-1. **Offline:** v1 = **"Add requires connection"** (block + keep draft). Auto-queue + sync = **Phase 2.5 fast-follow**. Migration + `addOwned` still in v1 (additive upgrade).
+1. **Offline:** v1 = **"Add requires connection"** (block + keep draft). Auto-queue + sync = **Phase 2.5 fast-follow**. The `add_owned_books` RPC + `addOwned` ship in v1 (queue is an additive upgrade).
 2. **Draft persistence:** in-memory, survives **background + tab-switch only**; app-kill clears it (persistence deferred).
 3. **Camera:** **VisionCamera v5** default; **Phase 0 spike** gates the worklets/Reanimated bump; **expo-camera + ML Kit** is the documented fallback if the spike fails.
 4. **Photo cap + auto-capture thresholds:** **deferred to Phase 3** tuning on real devices.
@@ -440,9 +485,9 @@ Applied after review by the DHH, Kieran, and code-simplicity reviewers (findings
 against the codebase):
 - **Removed the `UNIQUE (user_id, book_id)` migration** — it already exists
   (`20260410000000_…:40`). Dropped the `db:types` regen and the fake "duplicate rows" risk.
-- **`addOwned` redesigned** to OR-merge existing shelf flags (prevents a silent
-  `read`/`want_to_read` clobber), with atomic upsert + optimistic→server-row
-  reconciliation + auth sequencing. Cites the `bool_or` merge precedent.
+- **`addOwned` redesigned** to prevent a silent `read`/`want_to_read` clobber + auth
+  sequencing. *(The client-side merge described here was **superseded in Round 2** by the
+  server-side `add_owned_books` RPC — see below. Implement the RPC version.)*
 - **Matcher de-tuned for v1:** ship IDF-coverage scoring + title-coverage floor +
   score/margin buckets; **defer** field boosts/cosine, OCR-confusion table, n-gram
   windows, bigram bonus to calibration. Fixed the unimplementable `↔` notation and dropped
@@ -457,5 +502,24 @@ against the codebase):
 **Kept against reviewer pushback (user decisions):** VisionCamera v5 build-once foundation
 (accepting the Phase 0 spike risk); the full capture experience (auto-capture + ghost
 overlay + flourish + haptics). The offline queue stays deferred to Phase 2.5.
+
+### Round 2 (2026-06-08)
+
+Second review pass; the round-1 blockers were confirmed resolved. Applied:
+- **`addOwned` moved server-side to an `add_owned_books(book_ids uuid[])` RPC** (the one
+  fix all three reviewers converged on). `DO UPDATE SET owned = true` preserves
+  `read`/`want_to_read` by construction — closes the **stale-Map clobber** Kieran flagged
+  (a client-side merge overwrites flags toggled on another device) *and* removes the
+  optimistic placeholder→row reconciliation ceremony DHH/Simplicity flagged *and* handles
+  `user_id`/RLS server-side via `auth.uid()`. One small function migration; mirrors the
+  existing `merge_books` precedent.
+- **`ScanSessionProvider` clears the draft on account switch** (different non-null
+  `user.id`), preserves across `null → first sign-in` — fixes a cross-account
+  add-User-A's-books bug.
+- **Title-coverage floor pinned as count-based** (`MIN_TITLE_TOKEN_COVERAGE`), not IDF-mass.
+- **Edition-collapse tie-break enumerated** (primary_isbn → hardcover>paperback>ebook>audiobook → lowest `timeline_order`); authorless-collapse guarded by a test.
+- **Auth sequencing tightened:** call `addOwned` after the post-sign-in owned-set *refetch*, not just after the sign-in promise.
+- **Calibration (4.5) made a parallel track** — can start once Phase 0 OCR + Phase 1 matcher exist (de-risks the precision criterion early).
+- Deleted the lingering dead "duplicate rows / migration fails" risk row; trimmed Success Metrics to mark instrumentation out of v1 scope; noted interruption-during-Processing.
 
 _No open questions remain; ready for implementation._
