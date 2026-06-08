@@ -159,11 +159,15 @@ plan_review verified `UNIQUE (user_id, book_id)` already exists at
    - **One atomic `upsert(rows, { onConflict: 'user_id,book_id' })`** on the existing
      constraint. Atomic = all-or-nothing, so there is no intra-call "partial failure";
      revert = restore the prior `userBooks` Map snapshot for the whole batch on error.
-   - **MUST OR-merge existing shelf flags, not clobber.** Supabase upsert replaces the
-     full row — sending `{owned:true}` for a book the user already has as `read:true`
-     would reset `read`/`want_to_read` to `false` (**silent data-loss bug**). Read each id
-     from the current Map and send full rows with `owned: true` OR-ed onto existing flags.
-     This mirrors the merge function's `bool_or(...)` precedent
+   - **Adding to owned MUST NOT change `read` or `want_to_read`.** It only sets
+     `owned = true`; the other two shelf flags are preserved exactly as they were. Because
+     Supabase upsert replaces the **full row**, sending a bare `{owned:true}` for a book
+     the user already has as `read:true` would reset `read`/`want_to_read` to `false`
+     (**silent data-loss bug**). So read each id from the current `userBooks` Map and send
+     full rows = existing flags with `owned` forced to `true` (i.e. `owned: existing.owned
+     || true`, `read: existing.read`, `want_to_read: existing.want_to_read`). For a book
+     not yet on any shelf, insert `{owned:true, read:false, want_to_read:false}`. This
+     mirrors the merge function's `bool_or(...)` precedent
      (`20260602000000_add_merge_books_function.sql:67-76`).
    - **Optimistic reconciliation:** new books have no row `id` yet (`gen_random_uuid()`
      server-side). Insert optimistic placeholders into the Map, then reconcile with the
@@ -339,6 +343,7 @@ to save" message; the queue (and its `Queued` state) arrives in Phase 2.5.*
 - [ ] Review queue: list default + grid toggle; high-confidence pre-selected; low-confidence in a "double-check" group; already-owned badged + excluded.
 - [ ] A wrong match can be swapped among ranked alternatives or via catalog search; swap to an already-owned book auto-deselects with the badge.
 - [ ] Selected books add to the owned shelf in one batch; UI reflects them immediately.
+- [ ] Adding to owned sets only `owned=true` and **leaves `read`/`want_to_read` unchanged** for books already on a shelf (verified by a unit test on `addOwned`).
 - [ ] Barcode mode still reads ISBNs (existing behavior preserved); first-run dialogue introduces both modes once.
 - [ ] Non-catalog books are silently ignored; zero-match shows the helpful empty state + barcode fallback.
 
@@ -373,7 +378,7 @@ to save" message; the queue (and its `Queued` state) arrives in Phase 2.5.*
 | Match thresholds are data-specific | Bad auto-adds erode trust | Calibrate on 20–40 labeled real photos; bias to precision |
 | `user_books` has pre-existing `(user_id, book_id)` duplicates | Unique migration fails | Pre-check + de-dupe query before adding the constraint |
 | Large library OOM | Crash on target power-user | Incremental per-capture OCR + temp-file cleanup + photo cap |
-| `addOwned` upsert clobbers `read`/`want_to_read` | Silent data loss | OR-merge existing flags (`bool_or` precedent); never send a bare `{owned:true}` row |
+| `addOwned` upsert overrides `read`/`want_to_read` | Silent data loss | Adding owned only sets `owned=true`; preserve the other flags exactly (read current Map, send full rows); never send a bare `{owned:true}` row. Covered by a unit test. |
 | Draft loss on tab-switch (native tabs unmount blurred screen) | Catastrophic to trust | Hoist draft into `ScanSessionProvider` above the tab navigator; app-kill persistence deferred |
 | reactCompiler experiment + worklets | Overstated for v1 | **v1 app code has no worklets** (OCR on stills) — this is a Phase-0-spike + future-live-pan concern only; if needed, exclude a file via `"use no memo"` |
 
