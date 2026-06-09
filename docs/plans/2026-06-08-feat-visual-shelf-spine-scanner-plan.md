@@ -286,7 +286,14 @@ to save" message; the queue (and its `Queued` state) arrives in Phase 2.5.*
   and note the deferred live-pan migration. Either way, lock the camera/OCR module API
   (`lib/ocr.ts`) so later phases are camera-agnostic.
 
-### Phase 1 — Recognition core (pure logic, no UI) 🧠
+### Phase 1 — Recognition core (pure logic, no UI) 🧠 ✅ DONE (2026-06-08)
+> Shipped `lib/spine-match.ts` (IDF-coverage scorer, title-coverage floor, score/margin
+> buckets, edition collapse, cross-fragment/photo aggregation) + `lib/ocr.ts` (the
+> camera-agnostic OCR→matcher contract) + `lib/spine-match.test.ts` (25 vitest cases).
+> Full suite green (81 tests), Biome + `tsc` strict clean. Used smoothed idf
+> (`ln((1+N)/(1+df))+1`) so scoring is well-behaved on any catalog size. Thresholds are
+> provisional pending Phase 4.5 calibration.
+
 - `lib/ocr.ts` — `recognizeImage(uri): Promise<Result<OcrFragment[]>>` wrapping the
   chosen OCR engine. v1 `OcrFragment = { text }` only — **`box`/`line` are NOT carried in
   v1** (the matcher pools all text into one bag; no spatial use). Add geometry later as an
