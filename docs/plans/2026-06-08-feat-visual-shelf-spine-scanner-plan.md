@@ -338,7 +338,21 @@ Original spike spec (for reference):
   thresholds via named constants** so Phase 4 calibration re-tunes the constant, not every
   test.
 
-### Phase 2 — Data layer (batch add) 🗄️
+### Phase 2 — Data layer (batch add) 🗄️ ✅ DONE (2026-06-09; one local step remains)
+> Shipped: `supabase/migrations/20260609000000_add_owned_books_function.sql` (the RPC,
+> `DO UPDATE SET owned = true` — flags preserved server-side), `addOwned` on
+> `UserBooksProvider` (optimistic flip → RPC → merge returned rows by `book_id` →
+> snapshot revert on error, `Result` return, `not_signed_in` no-op), pure helpers in
+> `lib/shelf.ts` (`applyOwnedOptimistic`, `mergeServerRows`, `shouldClearScanDraft`) with
+> 12 vitest cases incl. the flag-preservation and account-switch tables, and
+> `ScanSessionProvider` (`lib/scan-session.tsx`) mounted above the tab navigator in
+> `app/_layout.tsx` with the account-switch draft clear. 93/93 tests, tsc clean.
+> **Remaining local step (Docker was down):** `npm run db:reset && npm run db:types`,
+> then remove the `@ts-expect-error` + `as unknown` cast at the `addOwned` RPC call in
+> `lib/hooks.tsx` (the directive will self-flag once types regenerate), and run the
+> RPC integration test (add owned for a `read:true` book on a second device/stale
+> client → `read` unchanged). Note: repo-wide `npm run lint` currently fails on
+> pre-existing format drift unrelated to this work (fails identically on HEAD).
 - **No schema migration** — `UNIQUE (user_id, book_id)` already exists. One small
   **function migration**: the `add_owned_books(book_ids uuid[])` RPC (Decision 3); regen
   `lib/types.ts` (`npm run db:types`) so the RPC is typed.
