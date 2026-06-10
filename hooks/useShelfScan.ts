@@ -59,8 +59,17 @@ function scanDirectory(): Directory {
  * survives tab switches — this hook's state does not need to).
  *
  * @param enabled gates the camera + sensors — pass `isFocused && permissionGranted`.
+ * @param manualOnly disables the hands-free gyro auto-capture loop (the manual shutter
+ *   still works). Used for the VoiceOver/TalkBack path: steadiness gating is meaningless
+ *   when the user can't see the framing, and a surprise auto-fire is worse than none.
  */
-export function useShelfScan({ enabled }: { enabled: boolean }) {
+export function useShelfScan({
+	enabled,
+	manualOnly = false,
+}: {
+	enabled: boolean;
+	manualOnly?: boolean;
+}) {
 	const { user } = useAuth();
 	const { books } = useBooks();
 	const { userBooks, addOwned } = useUserBooks();
@@ -242,7 +251,8 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 
 	// Hands-free auto-capture: steady-hold fires the gate; movement between captures
 	// is required, so resting on a framing never duplicates stills.
-	const autoCaptureActive = enabled && state.phase === 'capturing' && !atCaptureCap(state);
+	const autoCaptureActive =
+		enabled && !manualOnly && state.phase === 'capturing' && !atCaptureCap(state);
 	useEffect(() => {
 		if (!autoCaptureActive) return;
 		// Cold start of the loop (first entry, intro dismiss, "keep scanning", resume):
@@ -332,6 +342,7 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 						? result.error.message
 						: "Couldn't save — check your connection and try again. Your scan is safe.",
 				);
+				Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
 				dispatch({ type: 'add_blocked' });
 			}
 		} catch (cause) {
@@ -339,13 +350,19 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 			// otherwise strand the user in `adding` behind a disabled UI forever.
 			if (__DEV__) console.warn('[shelf-scan] add threw:', cause);
 			setAddError("Couldn't save — check your connection and try again. Your scan is safe.");
+			Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
 			dispatch({ type: 'add_blocked' });
 		} finally {
 			addInFlightRef.current = false;
 		}
 	}, [addOwned, getDraft, setDraft, userBooks]);
 
-	const finish = useCallback(() => dispatch({ type: 'finished' }), []);
+	const finish = useCallback(() => {
+		// Haptics map: capture = Light impact, finish = Medium, add-success = Success,
+		// add-blocked = Error (below). Best-effort — never block the flow on haptics.
+		Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+		dispatch({ type: 'finished' });
+	}, []);
 	const keepScanning = useCallback(() => {
 		// Fresh attempt — don't carry a stale failure banner into the resumed loop.
 		captureFailureStreakRef.current = 0;

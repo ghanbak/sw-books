@@ -554,12 +554,44 @@ Original spike spec (for reference):
 - **Deferred to Phase 6 polish:** ghost-overlay pre-decode (keep the prior ghost until the
   new one's `onLoad` so the overlap guide doesn't flicker in late on slow devices).
 
-### Phase 6 — Accessibility, polish, QA ♿
+### Phase 6 — Accessibility, polish, QA ♿ ✅ CODE DONE (2026-06-10; device QA + dev build pending)
 - Accessibility for the silent-capture model (the largest usability gap): VoiceOver/
   TalkBack manual-shutter fallback, per-capture + total announcements, review-queue focus
   order, accessible list/grid toggle. Run the `accessibility-compliance` skill.
 - Haptics map (capture / finish / add-success); thermal/battery sanity on a large scan;
   Biome lint (`npm run lint`); full `vitest`; manual device QA on iOS + a low-RAM Android.
+- **Shipped (2026-06-10):**
+  - `hooks/useAccessibility.ts` (new): `useReduceMotion()`, `useScreenReaderEnabled()`
+    (live `AccessibilityInfo` listeners, alive-guarded), and `announce()`. RN-dependent →
+    `hooks/`, not `lib/`.
+  - **Screen-reader narration** of the silent flow (`shelf-scan-capture.tsx`): per-capture
+    count (increase-guarded, same rationale as the flash), processing, empty, and the
+    capture-failure banner are announced; the review overlay announces its recognized count
+    on entry and any add error (`shelf-scan-review.tsx`). `done` relies on its `header`-role
+    title (no double-speak).
+  - **Manual-shutter path for screen readers:** with VoiceOver/TalkBack on, `useShelfScan`
+    runs `manualOnly` — the gyro auto-capture loop is disabled (steadiness gating is
+    meaningless without seeing the framing, and a surprise auto-fire is worse than none);
+    the HUD hint switches to "double-tap Take Photo for each one." The manual shutter
+    already existed; this makes it the whole interaction for that path.
+  - **Reduce-motion:** the full-screen capture flash is skipped entirely (gated at the call
+    site); the counter pop and the ghost crossfade are suppressed. Reanimated `FadeIn/Out`
+    already respect the OS setting by default.
+  - **Header semantics + focus:** `accessibilityRole="header"` on the review title, the
+    inline "On your shelf"/"Double-check these" section labels, the swap-sheet title, and
+    the processing/empty/intro/done titles — so rotor/heading navigation works and grouping
+    is conveyed. (Rows/tiles/toggle already had checkbox/button roles + state from Phase 4.)
+  - **Haptics map completed** (`useShelfScan`): capture = Light, **finish = Medium**,
+    add-success = Success, **add-blocked = Error** — all best-effort.
+  - Gate: 158/158 vitest, `tsc` + Biome clean. Pre-commit kieran review applied (flash
+    reduce-motion guard lifted to the call site; redundant `done` announce dropped).
+- **Deferred / device-bound (handed to user QA):** ghost-overlay full pre-decode is **not
+  doable** as Phase 5 imagined — the previous still is deleted the instant it stops being
+  the ghost (bounded-memory lifecycle), so there's nothing to hold through the new frame's
+  decode; softened with a short crossfade instead. Thermal/battery sanity on a large scan,
+  on-device VoiceOver/TalkBack pass, `SHELF_SCAN_CONSTANTS` tuning, the Apple-Vision→ML-Kit
+  calibration re-check (Phase 4.5), and the Android dev build all require the physical
+  devices and are part of the user's QA round on the dev build.
 
 ## Alternative Approaches Considered
 

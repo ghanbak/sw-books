@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { ArrowLeftRight, Check, LayoutGrid, List, Search } from 'lucide-react-native';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
 	ActivityIndicator,
 	FlatList,
@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Book3D } from '@/components/Book3D';
 import { tokens } from '@/constants/tokens';
+import { announce } from '@/hooks/useAccessibility';
 import { type Book, useBooks, useUserBooks } from '@/lib/hooks';
 import { useScanSession } from '@/lib/scan-session';
 import { swapMatch, toggleSelection } from '@/lib/shelf';
@@ -102,6 +103,25 @@ export function ShelfScanReview({
 		router.push('/(tabs)/shelf');
 	}, [onReset, router]);
 
+	// Screen-reader narration. The review arrives via a silent overlay swap (no nav),
+	// so a VoiceOver user gets no transition cue — announce the recognized count once,
+	// the add outcome, and any error. (Sighted users read these off the UI.)
+	const reviewAnnouncedRef = useRef(false);
+	useEffect(() => {
+		if (phase === 'review' && draft && !reviewAnnouncedRef.current) {
+			reviewAnnouncedRef.current = true;
+			const n = draft.matches.length;
+			announce(
+				`${n} ${n === 1 ? 'book' : 'books'} recognized, ${effectiveSelected.length} pre-selected. Review and add to your shelf.`,
+			);
+		}
+	}, [phase, draft, effectiveSelected.length]);
+	// `done` isn't announced here — its summary count is the screen's `header`-role
+	// title, so a manual announce would just double-speak it.
+	useEffect(() => {
+		if (addError) announce(addError);
+	}, [addError]);
+
 	if (phase === 'done') {
 		return (
 			<Animated.View style={styles.overlay} entering={FadeIn.duration(200)}>
@@ -109,7 +129,7 @@ export function ShelfScanReview({
 					<View style={styles.doneCheck}>
 						<Check size={36} color={tokens.text.primary} strokeWidth={3} />
 					</View>
-					<Text style={styles.doneTitle}>
+					<Text style={styles.doneTitle} accessibilityRole="header">
 						{addedCount === 1 ? '1 book added to Owned' : `${addedCount} books added to Owned`}
 					</Text>
 					<Text style={styles.doneText}>Your archive grows.</Text>
@@ -140,7 +160,9 @@ export function ShelfScanReview({
 		>
 			<View style={[styles.header, { paddingTop: insets.top + 16 }]}>
 				<View style={styles.headerText}>
-					<Text style={styles.title}>Your shelf, recognized</Text>
+					<Text style={styles.title} accessibilityRole="header">
+						Your shelf, recognized
+					</Text>
 					<Text style={styles.subtitle}>
 						{effectiveSelected.length} of {selectableCount} selected — uncheck anything that's wrong
 					</Text>
@@ -178,10 +200,14 @@ export function ShelfScanReview({
 						renderItem={({ item, index }) => (
 							<>
 								{index === 0 && high.length > 0 && (
-									<Text style={styles.sectionLabel}>On your shelf</Text>
+									<Text style={styles.sectionLabel} accessibilityRole="header">
+										On your shelf
+									</Text>
 								)}
 								{index === high.length && low.length > 0 && (
-									<Text style={styles.sectionLabel}>Double-check these</Text>
+									<Text style={styles.sectionLabel} accessibilityRole="header">
+										Double-check these
+									</Text>
 								)}
 								<ReviewRow
 									match={item}
@@ -435,7 +461,7 @@ function SwapSheet({
 				style={styles.sheetAvoider}
 			>
 				<View style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
-					<Text style={styles.sheetTitle} numberOfLines={1}>
+					<Text style={styles.sheetTitle} numberOfLines={1} accessibilityRole="header">
 						Not “{match.book.title}”?
 					</Text>
 					<View style={styles.searchBox}>

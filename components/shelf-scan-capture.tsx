@@ -16,6 +16,7 @@ import { Camera } from 'react-native-vision-camera';
 
 import { ShelfScanReview } from '@/components/shelf-scan-review';
 import { tokens } from '@/constants/tokens';
+import { announce, useReduceMotion, useScreenReaderEnabled } from '@/hooks/useAccessibility';
 import { useShelfScan } from '@/hooks/useShelfScan';
 import { deriveShelfChrome } from '@/lib/shelf-scan';
 
@@ -47,6 +48,8 @@ export function ShelfScanCapture({
 	dirtyRef?: MutableRefObject<boolean>;
 }) {
 	const insets = useSafeAreaInsets();
+	const reduceMotion = useReduceMotion();
+	const screenReaderEnabled = useScreenReaderEnabled();
 	// null = still reading the flag; false = show intro; true = seen.
 	const [introSeen, setIntroSeen] = useState<boolean | null>(null);
 	useEffect(() => {
@@ -66,7 +69,9 @@ export function ShelfScanCapture({
 	// Camera + sensors run only once the intro is dismissed, so auto-capture can't
 	// fire behind the modal.
 	const active = enabled && introSeen === true;
-	const scan = useShelfScan({ enabled: active });
+	// Screen-reader users get a pure manual-shutter flow — auto-capture's steadiness gate
+	// is unusable without seeing the framing, and a surprise fire is worse than none.
+	const scan = useShelfScan({ enabled: active, manualOnly: screenReaderEnabled });
 	const { phase } = scan.state;
 	const showCamera = active && (phase === 'capturing' || phase === 'interrupted');
 
@@ -78,6 +83,25 @@ export function ShelfScanCapture({
 		if (dirtyRef) dirtyRef.current = dirty;
 		onImmersiveChange?.(immersive);
 	}, [dirtyRef, dirty, onImmersiveChange, immersive]);
+
+	// Screen-reader narration of the otherwise-silent flow (a sighted user reads this
+	// off the flash + counter + state overlays; a VoiceOver user can't).
+	const announcedCountRef = useRef(0);
+	useEffect(() => {
+		if (scan.captureCount > announcedCountRef.current) {
+			announce(
+				scan.captureCount === 1 ? '1 photo captured' : `${scan.captureCount} photos captured`,
+			);
+		}
+		announcedCountRef.current = scan.captureCount;
+	}, [scan.captureCount]);
+	useEffect(() => {
+		if (phase === 'processing') announce('Reading spines. Matching against the Archive.');
+		else if (phase === 'empty') announce('No books recognized. Keep scanning or start over.');
+	}, [phase]);
+	useEffect(() => {
+		if (scan.captureError) announce(scan.captureError);
+	}, [scan.captureError]);
 
 	const dismissIntro = useCallback(() => {
 		setIntroSeen(true);
@@ -108,17 +132,23 @@ export function ShelfScanCapture({
 				/>
 			)}
 
-			{/* Ghost of the previous still — a low-opacity overlap guide while panning. */}
+			{/* Ghost of the previous still — a low-opacity overlap guide while panning. A
+			    short crossfade softens the swap to a freshly captured frame (the previous
+			    still is deleted the moment it stops being the ghost, so we can't hold it
+			    through a full pre-decode). Disabled under reduce-motion. */}
 			{showCamera && scan.ghostUri && (
 				<Image
 					source={{ uri: scan.ghostUri }}
 					style={styles.ghost}
 					contentFit="cover"
+					transition={reduceMotion ? 0 : 120}
 					accessible={false}
 				/>
 			)}
 
-			{showCamera && <CaptureFlash captureCount={scan.captureCount} />}
+			{/* Reduce-motion: no flash at all — gated here so the component has no early
+			    return after its hooks (and the difference from the counter is explicit). */}
+			{showCamera && !reduceMotion && <CaptureFlash captureCount={scan.captureCount} />}
 
 			{/* HUD only while actually capturing — during Interrupted the shutter and
 			    Finish would render alive but dead (the reducer ignores them). */}
@@ -128,9 +158,15 @@ export function ShelfScanCapture({
 						<Text style={styles.hint}>
 							{scan.atCap
 								? 'Photo limit reached — tap Finish to see your books'
-								: 'Pan slowly across your shelf — photos snap when you hold steady'}
+								: screenReaderEnabled
+									? // Auto-capture relies on the visual ghost + steadiness; point the
+										// screen-reader path at the reliable manual shutter instead.
+										'Point at a shelf section, then double-tap Take Photo for each one. Tap Finish when done.'
+									: 'Pan slowly across your shelf — photos snap when you hold steady'}
 						</Text>
-						{scan.captureCount > 0 && <CaptureCounter count={scan.captureCount} />}
+						{scan.captureCount > 0 && (
+							<CaptureCounter count={scan.captureCount} reduceMotion={reduceMotion} />
+						)}
 					</View>
 
 					{scan.captureError && (
@@ -177,7 +213,9 @@ export function ShelfScanCapture({
 					exiting={FadeOut.duration(200)}
 				>
 					<ActivityIndicator size="large" color={tokens.accent.secondary} />
-					<Text style={styles.stateTitle}>Reading spines…</Text>
+					<Text style={styles.stateTitle} accessibilityRole="header">
+						Reading spines…
+					</Text>
 					<Text style={styles.stateText}>Matching against the Archive</Text>
 				</Animated.View>
 			)}
@@ -188,7 +226,9 @@ export function ShelfScanCapture({
 					entering={FadeIn.duration(200)}
 					exiting={FadeOut.duration(200)}
 				>
-					<Text style={styles.stateTitle}>No books recognized</Text>
+					<Text style={styles.stateTitle} accessibilityRole="header">
+						No books recognized
+					</Text>
 					<Text style={styles.stateText}>
 						Get closer so spine text fills more of the frame, check the lighting, and hold steady on
 						each section.
@@ -231,7 +271,9 @@ function ShelfIntro({ onDismiss, topInset }: { onDismiss: () => void; topInset: 
 			entering={FadeIn.duration(200)}
 		>
 			<View style={styles.introBody}>
-				<Text style={styles.introTitle}>Scan your shelf</Text>
+				<Text style={styles.introTitle} accessibilityRole="header">
+					Scan your shelf
+				</Text>
 				<Text style={styles.introText}>
 					Pan the camera slowly across a row of spines. Photos snap on their own each time you hold
 					steady — no tapping.
@@ -256,7 +298,9 @@ function ShelfIntro({ onDismiss, topInset }: { onDismiss: () => void; topInset: 
  * Brief white flash per capture — the silent-shutter acknowledgment. Animates only
  * on an INCREASE: these components remount (e.g. Empty → "Keep Scanning") with a
  * non-zero count, and replaying the flourish for a photo that wasn't taken reads
- * as a phantom capture.
+ * as a phantom capture. The caller skips this component entirely under reduce-motion
+ * — a full-screen white flash is exactly what that setting (and photosensitivity
+ * safety) wants gone.
  */
 function CaptureFlash({ captureCount }: { captureCount: number }) {
 	const opacity = useSharedValue(0);
@@ -275,15 +319,15 @@ function CaptureFlash({ captureCount }: { captureCount: number }) {
 }
 
 /** Capture tally that pops on each new still (increase-only, like the flash). */
-function CaptureCounter({ count }: { count: number }) {
+function CaptureCounter({ count, reduceMotion }: { count: number; reduceMotion: boolean }) {
 	const scale = useSharedValue(1);
 	const previousCount = useRef(count);
 	useEffect(() => {
 		const increased = count > previousCount.current;
 		previousCount.current = count;
-		if (!increased) return;
+		if (!increased || reduceMotion) return;
 		scale.value = withSequence(withTiming(1.25, { duration: 90 }), withSpring(1, { damping: 12 }));
-	}, [count, scale]);
+	}, [count, scale, reduceMotion]);
 	const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 	return (
 		<Animated.View style={[styles.counter, style]}>
