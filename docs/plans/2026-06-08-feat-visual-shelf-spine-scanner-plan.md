@@ -275,10 +275,37 @@ to save" message; the queue (and its `Queued` state) arrives in Phase 2.5.*
 
 ## Implementation Phases
 
-### Phase 0 — Camera foundation spike (de-risk before building) 🔬
+### Phase 0 — Camera foundation spike (de-risk before building) 🔬 ✅ GO (2026-06-09, iOS)
+> Spike branch `spike/visioncamera-v5` (commit `31642e3`, throwaway — never merge).
+> **Verdict: the VisionCamera v5 path is GO on iOS.** Validated on the iPhone 16 Pro sim:
+> - **BUILD SUCCEEDED** — `react-native-vision-camera@5.0.11` + `…-worklets@5.0.11` +
+>   `…-ocr-plus@2.0.0` + `react-native-worklets` **0.5.1→0.8.3** (0.9.x needs RN 0.83+) +
+>   `react-native-nitro-modules@0.35.9`/`nitro-image@0.15.1` on RN 0.81.5 / New Arch.
+> - **Reanimated 4.1.1 intact** after the worklets bump (its peer range is `>=0.5.0`;
+>   runtime spring verified, no crash). The plan's top risk did not materialize.
+> - **`PhotoRecognizer(uri)` on a bundled still: perfect OCR** (all 5 test lines exact);
+>   the **Phase 1 matcher on real ML Kit output** returned 2× `[high] 1.00` with zero
+>   distractor false positives.
+> - **Calibration note (Phase 4.5):** a title-only spine ("A New Dawn", author not
+>   printed) scored exactly 0.40 — at the reject boundary — because coverage normalizes
+>   by the book's *total* token mass (title+author). Title-only spines are common on
+>   real shelves; revisit normalization (e.g. title-coverage-weighted score) or floor.
+> - **Required config:** `expo-build-properties` with `ios.deploymentTarget: "16.4"` —
+>   ocr-plus's podspec needs ≥16.0 to select modern GoogleMLKit (`>=8.0`); below that it
+>   falls into an unversioned branch that conflicts with Google Sign-In's
+>   GoogleUtilities 8. (16.4 is the plugin's own minimum.)
+> - **v5 ships no Expo config plugin** (v4-era docs are wrong) — camera permissions stay
+>   on the existing expo-camera plugin / `infoPlist` until expo-camera is dropped.
+> - **App-size note:** ocr-plus unconditionally links all 5 ML Kit scripts + Translate;
+>   Latin-only would need a podspec patch (possible fast-follow).
+> - **Deferred to device/local:** `takePhoto()` + `useCodeScanner` EAN-13 (no camera on
+>   sim; physical iPhone has the known dev-server issue), and the **Android build** (no
+>   Android SDK on this machine) — run both before Phase 3 completes.
+
+Original spike spec (for reference):
 - Throwaway branch: add `react-native-vision-camera@^5` +
   `react-native-vision-camera-worklets` + `react-native-vision-camera-ocr-plus`, bump
-  `react-native-worklets` to required version, add the config plugin, `npx expo prebuild`.
+  `react-native-worklets` to required version, `npx expo prebuild`.
 - **Success criteria:** clean iOS *and* Android dev build; Reanimated 4 animations
   (existing `Book3D` spring, scan FadeIn/Out) still work; a `takePhoto()` →
   `PhotoRecognizer(uri)` round-trip returns text; `useCodeScanner` reads an EAN-13.
