@@ -148,6 +148,28 @@ export function atCaptureCap(state: ShelfScanState): boolean {
 	return state.captures.length >= SHELF_SCAN_CONSTANTS.MAX_CAPTURES;
 }
 
+/** What the mode host needs to place + guard the floating switcher (plan Phase 5). */
+export type ShelfChrome = {
+	/** The review overlay owns the screen — the host hides the floating switcher. */
+	immersive: boolean;
+	/** Un-Finished work a mode switch would discard — the host confirms first. */
+	dirty: boolean;
+};
+
+/**
+ * Derive the host chrome from the capture phase. Pure so the immersive/dirty table is
+ * unit-tested rather than reasoned about by hand. `dirty` is true whenever a switch
+ * would lose work: any phase that isn't pristine capture (0 photos) and isn't `done`
+ * (already saved). Note a published draft only exists in the immersive phases
+ * (review/adding/done), where the switcher is hidden — so the host never needs to
+ * clear a draft on a switch it actually allows.
+ */
+export function deriveShelfChrome(phase: ShelfScanPhase, captureCount: number): ShelfChrome {
+	const immersive = phase === 'review' || phase === 'adding' || phase === 'done';
+	const dirty = phase !== 'done' && !(phase === 'capturing' && captureCount === 0);
+	return { immersive, dirty };
+}
+
 export type CaptureGateConfig = {
 	steadyMaxMagnitude: number;
 	steadyHoldMs: number;
@@ -160,8 +182,13 @@ export type CaptureGate = {
 	 * exactly when an auto-capture should fire.
 	 */
 	sample(magnitude: number, nowMs: number): boolean;
-	/** Forget steadiness/movement history (e.g. on resume from interruption). */
-	reset(): void;
+	/**
+	 * Forget steadiness/movement history. Pass `requireInitialMovement` (cold start of
+	 * the capture loop — entering capture, dismissing the intro, "keep scanning") so the
+	 * first auto-fire only happens AFTER the user has moved the phone into framing; a
+	 * still phone pointed at a lap/floor then won't snap a phantom first photo.
+	 */
+	reset(requireInitialMovement?: boolean): void;
 };
 
 /**
@@ -197,9 +224,9 @@ export function createCaptureGate(
 			movedSinceFire = false;
 			return true;
 		},
-		reset() {
+		reset(requireInitialMovement = false) {
 			steadySince = null;
-			movedSinceFire = true;
+			movedSinceFire = !requireInitialMovement;
 		},
 	};
 }

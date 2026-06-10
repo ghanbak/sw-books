@@ -1,5 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
-import { useEffect, useRef } from 'react';
+import { type MutableRefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
 	FadeIn,
@@ -10,24 +11,91 @@ import Animated, {
 	withSpring,
 	withTiming,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera } from 'react-native-vision-camera';
 
 import { ShelfScanReview } from '@/components/shelf-scan-review';
 import { tokens } from '@/constants/tokens';
 import { useShelfScan } from '@/hooks/useShelfScan';
+import { deriveShelfChrome } from '@/lib/shelf-scan';
+
+const INTRO_SEEN_KEY = '@ossus/scan_intro_seen';
 
 /**
  * The shelf-scanner capture experience (plan Phase 3): silent hands-free
  * auto-capture with a ghost of the previous still as the overlap guide, a
  * per-capture flash + counter-pulse flourish, and the Finish → Processing →
- * Review/Empty hand-off. The review overlay itself lands in Phase 4 — until
- * then `review` renders a minimal recognized-count card so the capture loop is
- * QA-able on device end-to-end.
+ * Review/Empty hand-off, then the Phase 4 review overlay.
+ *
+ * Phase 5: shows a one-time intro before the first capture, reports its chrome
+ * state up so the host can place + guard the mode switcher, and surfaces a
+ * capture-failure banner.
+ *
+ * @param enabled tab focus (+ permission, gated by the host).
+ * @param onImmersiveChange notifies the host when the review overlay takes/leaves the
+ *   screen (drives switcher visibility — lag-tolerant, so a state callback is fine).
+ * @param dirtyRef set each commit to whether a switch would discard work; the host's
+ *   discard-confirm reads it at tap time, so it must NOT lag a frame behind a capture.
  */
-export function ShelfScanCapture({ enabled }: { enabled: boolean }) {
-	const scan = useShelfScan({ enabled });
+export function ShelfScanCapture({
+	enabled,
+	onImmersiveChange,
+	dirtyRef,
+}: {
+	enabled: boolean;
+	onImmersiveChange?: (immersive: boolean) => void;
+	dirtyRef?: MutableRefObject<boolean>;
+}) {
+	const insets = useSafeAreaInsets();
+	// null = still reading the flag; false = show intro; true = seen.
+	const [introSeen, setIntroSeen] = useState<boolean | null>(null);
+	useEffect(() => {
+		let alive = true;
+		AsyncStorage.getItem(INTRO_SEEN_KEY)
+			.then((raw) => {
+				if (alive) setIntroSeen(raw === '1');
+			})
+			.catch(() => {
+				if (alive) setIntroSeen(false);
+			});
+		return () => {
+			alive = false;
+		};
+	}, []);
+
+	// Camera + sensors run only once the intro is dismissed, so auto-capture can't
+	// fire behind the modal.
+	const active = enabled && introSeen === true;
+	const scan = useShelfScan({ enabled: active });
 	const { phase } = scan.state;
-	const showCamera = enabled && (phase === 'capturing' || phase === 'interrupted');
+	const showCamera = active && (phase === 'capturing' || phase === 'interrupted');
+
+	// `immersive` drives switcher visibility (host state, a one-frame lag is invisible);
+	// `dirty` gates a destructive confirm, so it goes to a ref the host reads at tap time
+	// — the effect flushes before the next touch event, so the ref is never stale.
+	const { immersive, dirty } = deriveShelfChrome(phase, scan.captureCount);
+	useEffect(() => {
+		if (dirtyRef) dirtyRef.current = dirty;
+		onImmersiveChange?.(immersive);
+	}, [dirtyRef, dirty, onImmersiveChange, immersive]);
+
+	const dismissIntro = useCallback(() => {
+		setIntroSeen(true);
+		AsyncStorage.setItem(INTRO_SEEN_KEY, '1').catch((cause) => {
+			if (__DEV__) console.warn('[shelf-scan] intro flag write failed:', cause);
+		});
+	}, []);
+
+	// First run: explain the silent auto-capture model before the camera starts. Gated on
+	// `phase === 'capturing'` so a session resumed straight into Review (a draft survived a
+	// tab switch) skips the intro — that user has already scanned.
+	if (enabled && introSeen === false && phase === 'capturing') {
+		return (
+			<View style={styles.container}>
+				<ShelfIntro onDismiss={dismissIntro} topInset={insets.top} />
+			</View>
+		);
+	}
 
 	return (
 		<View style={styles.container}>
@@ -35,7 +103,7 @@ export function ShelfScanCapture({ enabled }: { enabled: boolean }) {
 				<Camera
 					style={StyleSheet.absoluteFill}
 					device="back"
-					isActive={enabled && phase === 'capturing'}
+					isActive={active && phase === 'capturing'}
 					outputs={[scan.previewOutput, scan.photoOutput]}
 				/>
 			)}
@@ -56,7 +124,7 @@ export function ShelfScanCapture({ enabled }: { enabled: boolean }) {
 			    Finish would render alive but dead (the reducer ignores them). */}
 			{showCamera && phase === 'capturing' && (
 				<View style={styles.hud} pointerEvents="box-none">
-					<View style={styles.hudTop}>
+					<View style={[styles.hudTop, { paddingTop: insets.top + 60 }]}>
 						<Text style={styles.hint}>
 							{scan.atCap
 								? 'Photo limit reached — tap Finish to see your books'
@@ -64,6 +132,12 @@ export function ShelfScanCapture({ enabled }: { enabled: boolean }) {
 						</Text>
 						{scan.captureCount > 0 && <CaptureCounter count={scan.captureCount} />}
 					</View>
+
+					{scan.captureError && (
+						<Animated.View style={styles.errorBanner} entering={FadeIn.duration(200)}>
+							<Text style={styles.errorBannerText}>{scan.captureError}</Text>
+						</Animated.View>
+					)}
 
 					<View style={styles.hudBottom}>
 						<Pressable
@@ -146,6 +220,39 @@ export function ShelfScanCapture({ enabled }: { enabled: boolean }) {
 }
 
 /**
+ * One-time explainer for the silent auto-capture model (plan Phase 5 first-run).
+ * Renders before the camera starts so panning instructions land before the first
+ * photo, not after.
+ */
+function ShelfIntro({ onDismiss, topInset }: { onDismiss: () => void; topInset: number }) {
+	return (
+		<Animated.View
+			style={[styles.introOverlay, { paddingTop: topInset + 24 }]}
+			entering={FadeIn.duration(200)}
+		>
+			<View style={styles.introBody}>
+				<Text style={styles.introTitle}>Scan your shelf</Text>
+				<Text style={styles.introText}>
+					Pan the camera slowly across a row of spines. Photos snap on their own each time you hold
+					steady — no tapping.
+				</Text>
+				<Text style={styles.introText}>
+					Tap Finish when you're done and we'll match what we found against the Archive.
+				</Text>
+			</View>
+			<Pressable
+				style={styles.introButton}
+				onPress={onDismiss}
+				accessibilityRole="button"
+				accessibilityLabel="Got it, start scanning"
+			>
+				<Text style={styles.introButtonText}>Got it</Text>
+			</Pressable>
+		</Animated.View>
+	);
+}
+
+/**
  * Brief white flash per capture — the silent-shutter acknowledgment. Animates only
  * on an INCREASE: these components remount (e.g. Empty → "Keep Scanning") with a
  * non-zero count, and replaying the flourish for a photo that wasn't taken reads
@@ -212,7 +319,7 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		gap: 12,
-		paddingTop: 72,
+		// paddingTop is applied inline from the safe-area inset (clears the switcher).
 		paddingHorizontal: 20,
 	},
 	hint: {
@@ -268,6 +375,52 @@ const styles = StyleSheet.create({
 	finishText: {
 		color: tokens.text.primary,
 		fontSize: 15,
+		fontWeight: '600',
+	},
+	errorBanner: {
+		marginTop: 16,
+		marginHorizontal: 20,
+		paddingHorizontal: 16,
+		paddingVertical: 10,
+		borderRadius: 8,
+		backgroundColor: tokens.status.error,
+	},
+	errorBannerText: {
+		color: tokens.text.primary,
+		fontSize: 13,
+		fontWeight: '500',
+		textAlign: 'center',
+	},
+	introOverlay: {
+		...StyleSheet.absoluteFillObject,
+		backgroundColor: tokens.surface.overlay,
+		justifyContent: 'space-between',
+		padding: 32,
+	},
+	introBody: {
+		flex: 1,
+		justifyContent: 'center',
+		gap: 16,
+	},
+	introTitle: {
+		color: tokens.text.primary,
+		fontSize: 26,
+		fontWeight: '700',
+	},
+	introText: {
+		color: tokens.text.secondary,
+		fontSize: 16,
+		lineHeight: 23,
+	},
+	introButton: {
+		paddingVertical: 16,
+		borderRadius: 12,
+		backgroundColor: tokens.accent.primary,
+		alignItems: 'center',
+	},
+	introButtonText: {
+		color: tokens.text.primary,
+		fontSize: 16,
 		fontWeight: '600',
 	},
 	banner: {

@@ -4,6 +4,7 @@ import {
 	type ShelfScanState,
 	atCaptureCap,
 	createCaptureGate,
+	deriveShelfChrome,
 	ghostUri,
 	initialShelfScanState,
 	pendingOcrCount,
@@ -226,5 +227,33 @@ describe('createCaptureGate', () => {
 		// become a way to fire twice in quick succession).
 		expect(gate.sample(0.05, 1300)).toBe(false); // held 600ms, but only 700ms since fire
 		expect(gate.sample(0.05, 1800)).toBe(true); // interval elapsed → fire
+	});
+
+	it('reset(true) requires movement before the first fire (cold start of the loop)', () => {
+		const gate = createCaptureGate(cfg);
+		gate.reset(true); // intro dismissed / "keep scanning" — phone may face a lap
+		// Holding dead still must NOT fire: a phantom photo of whatever it faces.
+		expect(gate.sample(0.05, 0)).toBe(false);
+		expect(gate.sample(0.05, 600)).toBe(false);
+		expect(gate.sample(0.05, 5000)).toBe(false);
+		// Raise the phone into framing (movement), then settle → now it fires.
+		expect(gate.sample(0.6, 5100)).toBe(false);
+		expect(gate.sample(0.05, 5200)).toBe(false);
+		expect(gate.sample(0.05, 5800)).toBe(true);
+	});
+});
+
+describe('deriveShelfChrome', () => {
+	it.each([
+		['capturing', 0, { immersive: false, dirty: false }], // pristine — nothing to lose
+		['capturing', 3, { immersive: false, dirty: true }], // captures pending
+		['interrupted', 2, { immersive: false, dirty: true }],
+		['processing', 4, { immersive: false, dirty: true }],
+		['empty', 2, { immersive: false, dirty: true }],
+		['review', 0, { immersive: true, dirty: true }], // resumed draft, no captures
+		['adding', 5, { immersive: true, dirty: true }],
+		['done', 5, { immersive: true, dirty: false }], // already saved
+	] as const)('phase=%s captures=%d → %o', (phase, count, expected) => {
+		expect(deriveShelfChrome(phase, count)).toEqual(expected);
 	});
 });

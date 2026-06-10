@@ -31,6 +31,13 @@ const GYRO_INTERVAL_MS = 100;
  */
 const CAPTURE_TIMEOUT_MS = 8000;
 
+/**
+ * After this many consecutive capture failures (shutter throw / timeout / file move),
+ * surface a banner — otherwise a user whose every capture silently fails just sees the
+ * "hold steady" hint forever (Phase 3 review finding).
+ */
+const CAPTURE_FAILURE_LIMIT = 3;
+
 /** All session stills live here — a fixed dir makes the startup orphan sweep trivial. */
 function scanDirectory(): Directory {
 	return new Directory(Paths.cache, 'shelf-scan');
@@ -71,6 +78,9 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 
 	const [addError, setAddError] = useState<string | null>(null);
 	const [addedCount, setAddedCount] = useState(0);
+	// Consecutive capture failures → a user-visible banner (see CAPTURE_FAILURE_LIMIT).
+	const captureFailureStreakRef = useRef(0);
+	const [captureError, setCaptureError] = useState<string | null>(null);
 
 	const previewOutput = usePreviewOutput();
 	// Defaults only — 'speed' qualityPrioritization throws on devices without
@@ -113,6 +123,18 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 			if (__DEV__) console.warn('[shelf-scan] still delete failed:', cause);
 		}
 	}, []);
+
+	// Unmount sweep (tab blur, or a discard-via-mode-switch): delete the settled stills
+	// now rather than leaving them for the next session's orphan sweep. Pending-OCR
+	// stills are left for their continuation, which sees aliveRef false and self-cleans —
+	// never delete a file under a live ML Kit read.
+	useEffect(() => {
+		return () => {
+			for (const capture of stateRef.current.captures) {
+				if (capture.ocr !== 'pending') deleteStill(capture.uri);
+			}
+		};
+	}, [deleteStill]);
 
 	// Temp-file lifecycle, derived from reducer state: every settled still except the
 	// current ghost is deleted; once the session leaves capture (review/done/adding),
@@ -193,12 +215,26 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 			const uri = destination.uri;
 
 			dispatch({ type: 'capture_taken', uri });
+			// A real still landed — clear any failure streak/banner.
+			captureFailureStreakRef.current = 0;
+			setCaptureError(null);
 			Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); // best-effort
 			// Fire-and-forget: OCR must not hold the in-flight guard, or captures
 			// serialize behind ML Kit and steady-holds get eaten without firing.
 			void recognizeStill(uri);
 		} catch (cause) {
 			if (__DEV__) console.warn('[shelf-scan] capture failed:', cause);
+			// Only count failures from a live capturing session. A rejection that lands
+			// after Finish/interrupt/reset (incl. the timeout when the session deactivated
+			// mid-shutter) is not a camera fault and must not resurrect the banner.
+			if (aliveRef.current && stateRef.current.phase === 'capturing') {
+				captureFailureStreakRef.current += 1;
+				if (captureFailureStreakRef.current >= CAPTURE_FAILURE_LIMIT) {
+					setCaptureError(
+						"Photos aren't saving. Check lighting and that nothing covers the camera.",
+					);
+				}
+			}
 		} finally {
 			captureInFlightRef.current = false;
 		}
@@ -209,6 +245,10 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 	const autoCaptureActive = enabled && state.phase === 'capturing' && !atCaptureCap(state);
 	useEffect(() => {
 		if (!autoCaptureActive) return;
+		// Cold start of the loop (first entry, intro dismiss, "keep scanning", resume):
+		// require movement before the first auto-fire so a still phone pointed away from
+		// the shelf doesn't snap a phantom photo the instant capturing turns on.
+		gateRef.current.reset(true);
 		Gyroscope.setUpdateInterval(GYRO_INTERVAL_MS);
 		const subscription = Gyroscope.addListener(({ x, y, z }) => {
 			// Don't sample while the shutter is open — the gate commits its fired state
@@ -227,7 +267,10 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 			if (status === 'background') {
 				dispatch({ type: 'interrupted' });
 			} else if (status === 'active') {
-				gateRef.current.reset();
+				// A capture that failed *because* of the backgrounding shouldn't count
+				// toward the "camera is broken" streak — a return is a fresh start.
+				captureFailureStreakRef.current = 0;
+				setCaptureError(null);
 				dispatch({ type: 'resumed' });
 			}
 		});
@@ -303,7 +346,12 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 	}, [addOwned, getDraft, setDraft, userBooks]);
 
 	const finish = useCallback(() => dispatch({ type: 'finished' }), []);
-	const keepScanning = useCallback(() => dispatch({ type: 'continued' }), []);
+	const keepScanning = useCallback(() => {
+		// Fresh attempt — don't carry a stale failure banner into the resumed loop.
+		captureFailureStreakRef.current = 0;
+		setCaptureError(null);
+		dispatch({ type: 'continued' });
+	}, []);
 	const reset = useCallback(() => {
 		// Captures leave state on reset, taking their files out of the lifecycle
 		// effect's sight — delete the settled ones now. Pending-OCR stills are left
@@ -313,6 +361,8 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 		}
 		setAddError(null);
 		setAddedCount(0);
+		captureFailureStreakRef.current = 0;
+		setCaptureError(null);
 		setDraft(null);
 		dispatch({ type: 'reset' });
 	}, [setDraft, deleteStill]);
@@ -343,5 +393,7 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 		addSelected,
 		addError,
 		addedCount,
+		/** Set after repeated capture failures so the HUD can warn the user (Phase 5). */
+		captureError,
 	};
 }

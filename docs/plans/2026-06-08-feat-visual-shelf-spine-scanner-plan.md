@@ -499,7 +499,7 @@ Original spike spec (for reference):
   class: movie/TV media physically labeled with a catalog title. (3) `matchFragments` /
   `classifyConfidence` take an optional `constants` override (harness-only by convention).
 
-### Phase 5 — Mode host, first-run, edge states 🧩
+### Phase 5 — Mode host, first-run, edge states 🧩 ✅ DONE (2026-06-10; device QA outstanding)
 - Shelf/barcode mode switch in `scan.tsx`; migrate barcode path to `useCodeScanner`
   (strip leading-zero EAN-13→UPC-A) *if* Phase 0 chose VisionCamera; first-run dialogue +
   `@ossus/scan_intro_seen`; wire all edge states (auth gate, catalog-loading vs
@@ -511,6 +511,48 @@ Original spike spec (for reference):
     dev-log-only; a user whose every capture fails sees an eternal "hold steady" hint.
   - Replace the Phase 3 interim gates: "Shelf (beta)" hidden until `books.length > 0`
     → real catalog-loading vs catalog-failed states.
+- **Shipped (2026-06-10):**
+  - `app/(tabs)/scan.tsx` rebuilt as a thin **mode host**: camera-permission gate, a
+    persisted Barcode/Shelf mode (`@ossus/scan_mode`, **shelf default**, hydrated to `null`
+    first so the wrong panel never flashes), a floating `ScanModeSwitcher` (segmented,
+    `components/scan-mode-switcher.tsx`), and a `ShelfModePanel` that gates capture on
+    catalog readiness — explicit **loading / load-failed (+Retry via `refetch`) / ready**
+    states replace the interim `books.length > 0` toggle.
+  - Barcode experience extracted to `components/barcode-scan-panel.tsx` (unchanged logic).
+  - **First-run intro** (`components/shelf-scan-capture.tsx`) gated on
+    `@ossus/scan_intro_seen`; the camera + gyro stay off (`active = enabled && introSeen`)
+    until "Got it", so auto-capture can't fire behind the modal. A resumed draft (phase
+    `review`) skips it.
+  - **Destructive-switch confirm**: leaving shelf for barcode with un-Finished captures
+    prompts. The child reports `immersive` (hide switcher) as state and writes `dirty` to a
+    host **ref** so the confirm reads a value that can't lag the just-landed capture; a
+    re-entrancy guard prevents double-tap stacking two dialogs. Switcher is hidden in the
+    immersive review/adding/done phases (where a draft exists), so an allowed switch never
+    strands a draft. Pure `deriveShelfChrome(phase, captureCount)` (in `lib/shelf-scan.ts`,
+    tested) is the single source of the immersive/dirty table.
+  - **Capture-failure feedback**: `useShelfScan` tracks a consecutive-failure streak
+    (`CAPTURE_FAILURE_LIMIT = 3`) → a HUD banner; cleared on success/keepScanning/reset,
+    and **only counted while still a live capturing session** so a backgrounding-induced
+    timeout isn't misdiagnosed as a broken camera.
+- **Deviation — barcode stays on expo-camera (NOT migrated to VisionCamera).** VisionCamera
+  v5 has no `useCodeScanner`; its code output is `useObjectOutput`, which is `@platform iOS`
+  only — migrating would drop **Android barcode scanning**, regressing the Phase 6 Android
+  goal. Keeping expo-camera (cross-platform, proven) for barcode and VisionCamera for shelf
+  is the build-once-on-the-capable-foundation call *per feature*. The two stacks never mount
+  at once (host renders one panel; each also unmounts on tab blur) and share one OS camera
+  permission, so no contention. The leading-zero EAN-13→UPC-A concern is moot on this path:
+  expo-camera already requests `['ean13','upc_a']` and `normalizeIsbn` extracts digits; book
+  barcodes are EAN-13 regardless.
+- **Pre-commit review (kieran-typescript + julik-frontend-races):** both ran; all real
+  findings fixed — the phantom-first-capture race (gate now `reset(true)` requires movement
+  into framing on every cold start of the loop), the stale/double-fired discard confirm
+  (synchronous `dirtyRef` + re-entrancy guard), per-tick host re-render (dirty→ref, immersive
+  →state changes rarely), AsyncStorage/Supabase setState-after-unmount (alive guards),
+  failure-streak banner resurrection (live-session guard + reset on resume), deferred still
+  cleanup on discard (unmount sweep), barcode re-scan deafened for 2s after "Scan Another"
+  (cooldown reset on dismiss), and the intro-flag write swallow (dev-warn).
+- **Deferred to Phase 6 polish:** ghost-overlay pre-decode (keep the prior ghost until the
+  new one's `onLoad` so the overlap guide doesn't flicker in late on slow devices).
 
 ### Phase 6 — Accessibility, polish, QA ♿
 - Accessibility for the silent-capture model (the largest usability gap): VoiceOver/

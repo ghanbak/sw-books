@@ -1,100 +1,102 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useIsFocused } from '@react-navigation/native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useCameraPermissions } from 'expo-camera';
 import { openSettings } from 'expo-linking';
-import { useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { type MutableRefObject, useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Book3D } from '@/components/Book3D';
+import { BarcodeScanPanel } from '@/components/barcode-scan-panel';
+import { ScanModeSwitcher } from '@/components/scan-mode-switcher';
 import { ShelfScanCapture } from '@/components/shelf-scan-capture';
 import { tokens } from '@/constants/tokens';
-import { type Book, useBooks } from '@/lib/hooks';
-import { normalizeIsbn } from '@/lib/isbn';
-import { supabase } from '@/lib/supabase';
+import { useBooks } from '@/lib/hooks';
+import { type ScanMode, parseStoredScanMode } from '@/lib/scan-mode';
 
-type ScanResult =
-	| { type: 'found'; book: Book }
-	| { type: 'not_found'; isbn: string }
-	| { type: 'invalid' }
-	| null;
+const SCAN_MODE_KEY = '@ossus/scan_mode';
 
-const SCAN_COOLDOWN_MS = 2000;
-
+/**
+ * Scan-tab host (plan Phase 5). Owns camera permission, the persisted Barcode/Shelf
+ * mode, the catalog-readiness edge states that gate shelf matching, and the floating
+ * mode switcher (hidden while the shelf review overlay owns the screen). The two
+ * camera experiences live in their own panels — only one mounts at a time.
+ */
 export default function ScanScreen() {
+	const insets = useSafeAreaInsets();
 	const [permission, requestPermission] = useCameraPermissions();
-	const [result, setResult] = useState<ScanResult>(null);
-	const [scanning, setScanning] = useState(false);
-	// Temporary mode switch — Phase 5 replaces this with the real mode host
-	// (shelf default + first-run dialogue + barcode on useCodeScanner).
-	const [mode, setMode] = useState<'barcode' | 'shelf'>('barcode');
-	// Shelf matching needs the catalog in memory — don't offer the mode until it's
-	// loaded (Phase 5 wires the full catalog-loading/failed edge states).
-	const { books } = useBooks();
-	const shelfModeReady = books.length > 0;
-	const lastScanTime = useRef(0);
-	const router = useRouter();
 	const isFocused = useIsFocused();
+	const { books, error: catalogError, refetch } = useBooks();
 
-	const handleBarcodeScanned = useCallback(
-		async ({ data }: { type: string; data: string }) => {
-			// Debounce: ignore scans within cooldown period
-			const now = Date.now();
-			if (now - lastScanTime.current < SCAN_COOLDOWN_MS) return;
-			if (scanning) return;
-
-			lastScanTime.current = now;
-			setScanning(true);
-
-			const isbn = normalizeIsbn(data);
-			if (__DEV__) {
-				console.log(`[Scanner] Raw: "${data}" → Normalized: "${isbn}"`);
-			}
-			if (!isbn) {
-				setResult({ type: 'invalid' });
-				setScanning(false);
-				return;
-			}
-
-			const { data: books, error } = await supabase
-				.from('books')
-				.select('*')
-				.contains('isbn', [isbn])
-				.limit(1);
-
-			if (__DEV__) {
-				console.log(
-					`[Scanner] Query isbn=${isbn}, found=${books?.length ?? 0}, error=${error?.message ?? 'none'}`,
-				);
-			}
-
-			if (books && books.length > 0) {
-				setResult({ type: 'found', book: books[0] });
-			} else {
-				setResult({ type: 'not_found', isbn });
-			}
-			setScanning(false);
-		},
-		[scanning],
-	);
-
-	const dismissResult = useCallback(() => {
-		setResult(null);
+	// null until the persisted mode hydrates — avoids flashing the wrong panel.
+	const [mode, setMode] = useState<ScanMode | null>(null);
+	useEffect(() => {
+		let alive = true;
+		AsyncStorage.getItem(SCAN_MODE_KEY)
+			.then((raw) => {
+				if (alive) setMode(parseStoredScanMode(raw));
+			})
+			.catch(() => {
+				if (alive) setMode(parseStoredScanMode(null));
+			});
+		return () => {
+			alive = false;
+		};
 	}, []);
 
-	const goToBook = useCallback(
-		(bookId: string) => {
-			setResult(null);
-			router.push(`/book/${bookId}`);
+	// Shelf chrome from the capture child: `immersive` (hide the switcher) as state since
+	// a one-frame lag is invisible; `dirty` (a switch would discard captures) as a ref so
+	// the confirm reads a value that can't lag the just-landed capture.
+	const [shelfImmersive, setShelfImmersive] = useState(false);
+	const onShelfImmersive = useCallback((immersive: boolean) => setShelfImmersive(immersive), []);
+	const shelfDirtyRef = useRef(false);
+	// Re-entrancy guard: a double-tap on the switcher must not stack two confirm dialogs.
+	const switchPendingRef = useRef(false);
+
+	const switchMode = useCallback(
+		(next: ScanMode) => {
+			if (next === mode || switchPendingRef.current) return;
+			const commit = () => {
+				setShelfImmersive(false);
+				shelfDirtyRef.current = false;
+				setMode(next);
+				AsyncStorage.setItem(SCAN_MODE_KEY, next).catch(() => {});
+			};
+			// Leaving shelf mid-scan throws away captured photos that were never saved.
+			// (A published review draft only exists in immersive phases, where the
+			// switcher is hidden — so a switch we actually allow never strands a draft.)
+			if (mode === 'shelf' && next === 'barcode' && shelfDirtyRef.current) {
+				switchPendingRef.current = true;
+				const done = () => {
+					switchPendingRef.current = false;
+				};
+				Alert.alert(
+					'Discard this scan?',
+					"Your captured photos haven't been added to your shelf yet.",
+					[
+						{ text: 'Keep scanning', style: 'cancel', onPress: done },
+						{
+							text: 'Discard',
+							style: 'destructive',
+							onPress: () => {
+								commit();
+								done();
+							},
+						},
+					],
+					{ onDismiss: done },
+				);
+				return;
+			}
+			commit();
 		},
-		[router],
+		[mode],
 	);
 
 	// Permission not yet determined
 	if (!permission) {
 		return (
 			<View style={styles.center}>
-				<Text>Loading camera...</Text>
+				<ActivityIndicator color={tokens.accent.primary} />
 			</View>
 		);
 	}
@@ -104,155 +106,123 @@ export default function ScanScreen() {
 		const canAsk = permission.canAskAgain;
 		return (
 			<View style={styles.center}>
-				<Text style={styles.permissionTitle}>Camera Access Needed</Text>
-				<Text style={styles.permissionText}>
+				<Text style={styles.title}>Camera Access Needed</Text>
+				<Text style={styles.bodyText}>
 					{canAsk
-						? 'OssusArchives needs camera access to scan book barcodes.'
-						: 'Camera access was denied. Enable it in Settings to scan barcodes.'}
+						? 'OssusArchives needs camera access to scan books.'
+						: 'Camera access was denied. Enable it in Settings to scan books.'}
 				</Text>
 				<Pressable
-					style={styles.permissionButton}
+					style={styles.primaryButton}
 					onPress={canAsk ? requestPermission : () => openSettings()}
+					accessibilityRole="button"
 				>
-					<Text style={styles.permissionButtonText}>
-						{canAsk ? 'Grant Access' : 'Open Settings'}
-					</Text>
+					<Text style={styles.primaryButtonText}>{canAsk ? 'Grant Access' : 'Open Settings'}</Text>
 				</Pressable>
 			</View>
 		);
 	}
 
-	// Shelf mode: VisionCamera capture experience (one camera stack at a time —
-	// the barcode CameraView below stays unmounted while this renders).
-	if (mode === 'shelf') {
-		return (
-			<View style={styles.container}>
-				<ShelfScanCapture enabled={isFocused} />
-				<Pressable
-					style={styles.modeToggle}
-					onPress={() => setMode('barcode')}
-					accessibilityRole="button"
-					accessibilityLabel="Switch to barcode scanning"
-				>
-					<Text style={styles.modeToggleText}>Barcode</Text>
-				</Pressable>
-			</View>
-		);
+	// Persisted mode still hydrating — brief, on the same black canvas as the camera.
+	if (mode === null) {
+		return <View style={styles.container} />;
 	}
+
+	// Switcher hides only while the shelf review overlay owns the screen (it has its
+	// own navigation; switching there is the destructive case handled via Start Over).
+	const showSwitcher = !(mode === 'shelf' && shelfImmersive);
 
 	return (
 		<View style={styles.container}>
-			{/* Camera — unmount when tab loses focus to release the hardware and battery */}
-			{isFocused && (
-				<CameraView
-					style={StyleSheet.absoluteFill}
-					facing="back"
-					barcodeScannerSettings={{
-						barcodeTypes: ['ean13', 'upc_a'],
-					}}
-					onBarcodeScanned={result ? undefined : handleBarcodeScanned}
+			{mode === 'barcode' ? (
+				<BarcodeScanPanel />
+			) : (
+				<ShelfModePanel
+					focused={isFocused}
+					catalogReady={books.length > 0}
+					catalogError={catalogError}
+					onRetry={refetch}
+					onImmersiveChange={onShelfImmersive}
+					dirtyRef={shelfDirtyRef}
 				/>
 			)}
 
-			{/* Viewfinder overlay */}
-			<View style={styles.viewfinder}>
-				<View style={styles.viewfinderTop} />
-				<View style={styles.viewfinderMiddle}>
-					<View style={styles.viewfinderSide} />
-					<View style={styles.viewfinderTarget}>
-						<View style={[styles.corner, styles.cornerTL]} />
-						<View style={[styles.corner, styles.cornerTR]} />
-						<View style={[styles.corner, styles.cornerBL]} />
-						<View style={[styles.corner, styles.cornerBR]} />
-					</View>
-					<View style={styles.viewfinderSide} />
+			{showSwitcher && (
+				<View style={[styles.switcherSlot, { top: insets.top + 8 }]} pointerEvents="box-none">
+					<ScanModeSwitcher mode={mode} onSwitch={switchMode} />
 				</View>
-				<View style={styles.viewfinderBottom}>
-					<Text style={styles.viewfinderHint}>
-						{scanning ? 'Looking up...' : 'Point at a book barcode'}
-					</Text>
-				</View>
-			</View>
-
-			{shelfModeReady && (
-				<Pressable
-					style={styles.modeToggle}
-					onPress={() => setMode('shelf')}
-					accessibilityRole="button"
-					accessibilityLabel="Switch to shelf scanning"
-				>
-					<Text style={styles.modeToggleText}>Shelf (beta)</Text>
-				</Pressable>
-			)}
-
-			{/* Result overlay */}
-			{result && (
-				<Animated.View
-					style={styles.resultOverlay}
-					entering={FadeIn.duration(200)}
-					exiting={FadeOut.duration(200)}
-				>
-					{result.type === 'found' && (
-						<View style={styles.resultCard}>
-							<Book3D
-								coverUri={result.book.cover_image}
-								title={result.book.title}
-								author={result.book.author}
-								width={100}
-								height={150}
-								accessibilityLabel={`Found: ${result.book.title}`}
-							/>
-							<View style={styles.resultInfo}>
-								<Text style={styles.resultTitle} numberOfLines={2}>
-									{result.book.title}
-								</Text>
-								<Text style={styles.resultAuthor} numberOfLines={1}>
-									{result.book.author.join(', ')}
-								</Text>
-								<Pressable style={styles.resultButton} onPress={() => goToBook(result.book.id)}>
-									<Text style={styles.resultButtonText}>View Book</Text>
-								</Pressable>
-							</View>
-						</View>
-					)}
-
-					{result.type === 'not_found' && (
-						<View style={styles.resultMessage}>
-							<Text style={styles.messageTitle}>Not in the Archive</Text>
-							<Text style={styles.messageText}>
-								If an item does not appear in our records, it does not exist!
-							</Text>
-							<Text style={styles.messageIsbn}>ISBN: {result.isbn}</Text>
-						</View>
-					)}
-
-					{result.type === 'invalid' && (
-						<View style={styles.resultMessage}>
-							<Text style={styles.messageTitle}>Invalid Barcode</Text>
-							<Text style={styles.messageText}>Couldn't read a valid ISBN from that barcode.</Text>
-						</View>
-					)}
-
-					<Pressable style={styles.dismissButton} onPress={dismissResult}>
-						<Text style={styles.dismissText}>Scan Another</Text>
-					</Pressable>
-				</Animated.View>
 			)}
 		</View>
 	);
 }
 
-// Scanner-specialized: lighter than tokens.surface.overlay so the camera feed
-// remains partially visible behind the viewfinder mask.
-const OVERLAY_COLOR = 'rgba(0,0,0,0.55)';
-const CORNER_SIZE = 24;
-const CORNER_WIDTH = 3;
+/**
+ * Shelf mode with its catalog-readiness gate: the matcher needs the full catalog in
+ * memory, so capture only mounts once it has loaded. Loading and load-failure are
+ * explicit states (replacing the Phase 3 `books.length > 0` interim gate) — and both
+ * keep the mode switcher reachable so the user can fall back to barcode.
+ */
+function ShelfModePanel({
+	focused,
+	catalogReady,
+	catalogError,
+	onRetry,
+	onImmersiveChange,
+	dirtyRef,
+}: {
+	focused: boolean;
+	catalogReady: boolean;
+	catalogError: string | null;
+	onRetry: () => void;
+	onImmersiveChange: (immersive: boolean) => void;
+	dirtyRef: MutableRefObject<boolean>;
+}) {
+	// The loading/error states have no captures, so report non-immersive + clean: the
+	// host shows the switcher and never guards a switch that would lose nothing.
+	useEffect(() => {
+		if (!catalogReady) {
+			onImmersiveChange(false);
+			dirtyRef.current = false;
+		}
+	}, [catalogReady, onImmersiveChange, dirtyRef]);
+
+	if (catalogReady) {
+		return (
+			<ShelfScanCapture
+				enabled={focused}
+				onImmersiveChange={onImmersiveChange}
+				dirtyRef={dirtyRef}
+			/>
+		);
+	}
+
+	if (catalogError) {
+		return (
+			<View style={styles.center}>
+				<Text style={styles.title}>Couldn't load the Archive</Text>
+				<Text style={styles.bodyText}>
+					Shelf scanning needs the book catalog. Check your connection and try again.
+				</Text>
+				<Pressable style={styles.primaryButton} onPress={onRetry} accessibilityRole="button">
+					<Text style={styles.primaryButtonText}>Retry</Text>
+				</Pressable>
+			</View>
+		);
+	}
+
+	// Loading (or an empty catalog that's still settling).
+	return (
+		<View style={styles.center}>
+			<ActivityIndicator color={tokens.accent.primary} />
+			<Text style={styles.bodyText}>Loading the Archive…</Text>
+		</View>
+	);
+}
 
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		// True black for the camera frame — tokens.surface.background is near-black
-		// and reads slightly off against the camera feed.
+		// True black for the camera frame (camera-overlay exception; matches the panels).
 		backgroundColor: '#000',
 	},
 	center: {
@@ -260,189 +230,35 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		alignItems: 'center',
 		padding: 32,
+		gap: 16,
 		backgroundColor: '#000',
 	},
-	permissionTitle: {
+	switcherSlot: {
+		position: 'absolute',
+		left: 0,
+		right: 0,
+	},
+	title: {
 		color: tokens.text.primary,
 		fontSize: 20,
 		fontWeight: '600',
-		marginBottom: 8,
+		textAlign: 'center',
 	},
-	permissionText: {
+	bodyText: {
 		color: tokens.text.secondary,
 		fontSize: 14,
 		textAlign: 'center',
-		marginBottom: 24,
 	},
-	permissionButton: {
+	primaryButton: {
+		marginTop: 8,
 		paddingHorizontal: 24,
 		paddingVertical: 12,
 		borderRadius: 8,
-		backgroundColor: tokens.accent.secondary,
+		backgroundColor: tokens.accent.primary,
 	},
-	permissionButtonText: {
-		// True black for max contrast on yellow.
-		color: '#000',
+	primaryButtonText: {
+		color: tokens.text.primary,
 		fontSize: 15,
 		fontWeight: '600',
-	},
-	// Viewfinder overlay
-	viewfinder: {
-		...StyleSheet.absoluteFillObject,
-	},
-	viewfinderTop: {
-		flex: 1,
-		backgroundColor: OVERLAY_COLOR,
-	},
-	viewfinderMiddle: {
-		flexDirection: 'row',
-		height: 200,
-	},
-	viewfinderSide: {
-		flex: 1,
-		backgroundColor: OVERLAY_COLOR,
-	},
-	viewfinderTarget: {
-		width: 260,
-		height: 200,
-	},
-	viewfinderBottom: {
-		flex: 1.5,
-		backgroundColor: OVERLAY_COLOR,
-		alignItems: 'center',
-		paddingTop: 24,
-	},
-	viewfinderHint: {
-		color: tokens.text.primary,
-		fontSize: 14,
-		opacity: 0.8,
-	},
-	// Corner brackets
-	corner: {
-		position: 'absolute',
-		width: CORNER_SIZE,
-		height: CORNER_SIZE,
-	},
-	cornerTL: {
-		top: 0,
-		left: 0,
-		borderTopWidth: CORNER_WIDTH,
-		borderLeftWidth: CORNER_WIDTH,
-		borderColor: tokens.accent.secondary,
-	},
-	cornerTR: {
-		top: 0,
-		right: 0,
-		borderTopWidth: CORNER_WIDTH,
-		borderRightWidth: CORNER_WIDTH,
-		borderColor: tokens.accent.secondary,
-	},
-	cornerBL: {
-		bottom: 0,
-		left: 0,
-		borderBottomWidth: CORNER_WIDTH,
-		borderLeftWidth: CORNER_WIDTH,
-		borderColor: tokens.accent.secondary,
-	},
-	cornerBR: {
-		bottom: 0,
-		right: 0,
-		borderBottomWidth: CORNER_WIDTH,
-		borderRightWidth: CORNER_WIDTH,
-		borderColor: tokens.accent.secondary,
-	},
-	// Temporary mode toggle (replaced by the Phase 5 mode host)
-	modeToggle: {
-		position: 'absolute',
-		top: 64,
-		right: 16,
-		paddingHorizontal: 14,
-		paddingVertical: 8,
-		borderRadius: 16,
-		backgroundColor: 'rgba(0,0,0,0.55)',
-		borderWidth: 1,
-		borderColor: tokens.border.subtle,
-	},
-	modeToggleText: {
-		color: tokens.accent.secondary,
-		fontSize: 13,
-		fontWeight: '600',
-	},
-	// Result overlay
-	resultOverlay: {
-		...StyleSheet.absoluteFillObject,
-		backgroundColor: tokens.surface.overlay,
-		justifyContent: 'center',
-		alignItems: 'center',
-		padding: 24,
-	},
-	resultCard: {
-		flexDirection: 'row',
-		backgroundColor: tokens.surface.card,
-		borderRadius: 12,
-		padding: 16,
-		gap: 16,
-		width: '100%',
-		maxWidth: 360,
-		alignItems: 'center',
-	},
-	resultInfo: {
-		flex: 1,
-		gap: 6,
-	},
-	resultTitle: {
-		color: tokens.text.primary,
-		fontSize: 17,
-		fontWeight: '600',
-	},
-	resultAuthor: {
-		color: tokens.text.secondary,
-		fontSize: 13,
-	},
-	resultButton: {
-		marginTop: 8,
-		paddingVertical: 10,
-		paddingHorizontal: 16,
-		borderRadius: 8,
-		backgroundColor: tokens.accent.secondary,
-		alignSelf: 'flex-start',
-	},
-	resultButtonText: {
-		// True black for max contrast on yellow.
-		color: '#000',
-		fontSize: 14,
-		fontWeight: '600',
-	},
-	resultMessage: {
-		alignItems: 'center',
-		gap: 8,
-	},
-	messageTitle: {
-		color: tokens.text.primary,
-		fontSize: 20,
-		fontWeight: '600',
-	},
-	messageText: {
-		color: tokens.text.secondary,
-		fontSize: 14,
-		textAlign: 'center',
-	},
-	messageIsbn: {
-		color: tokens.text.hint,
-		fontSize: 12,
-		fontFamily: 'monospace',
-		marginTop: 8,
-	},
-	dismissButton: {
-		marginTop: 24,
-		paddingVertical: 12,
-		paddingHorizontal: 24,
-		borderRadius: 8,
-		backgroundColor: 'rgba(255,255,255,0.12)',
-	},
-	dismissText: {
-		color: tokens.text.primary,
-		fontSize: 14,
-		fontWeight: '500',
 	},
 });
