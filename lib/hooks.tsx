@@ -221,8 +221,6 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 			const snapshot = userBooksRef.current;
 			setUserBooks(applyOwnedOptimistic(snapshot, bookIds, user.id));
 
-			// @ts-expect-error -- add_owned_books appears in lib/types.ts after the local
-			// `npm run db:reset && npm run db:types`; this directive then errors and gets removed.
 			const { data, error } = await supabase.rpc('add_owned_books', { book_ids: bookIds });
 
 			if (error) {
@@ -231,8 +229,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 				return err({ code: 'add_failed', message: error.message });
 			}
 
-			// Cast via unknown until db:types regenerates (rpc is untyped pre-regen).
-			const rows = (data ?? []) as unknown as UserBook[];
+			const rows = data ?? [];
 			setUserBooks((prev) => mergeServerRows(prev, rows));
 			return ok({ rows });
 		},

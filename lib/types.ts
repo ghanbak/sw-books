@@ -149,6 +149,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_owned_books: {
+        Args: { book_ids: string[] }
+        Returns: {
+          book_id: string
+          created_at: string | null
+          id: string
+          owned: boolean
+          read: boolean
+          updated_at: string | null
+          user_id: string
+          want_to_read: boolean
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "user_books"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       merge_books: {
         Args: { losers: string[]; resolution?: Json; survivor: string }
         Returns: {
