@@ -347,11 +347,12 @@ Original spike spec (for reference):
 > 12 vitest cases incl. the flag-preservation and account-switch tables, and
 > `ScanSessionProvider` (`lib/scan-session.tsx`) mounted above the tab navigator in
 > `app/_layout.tsx` with the account-switch draft clear. 93/93 tests, tsc clean.
-> **Remaining local step (Docker was down):** `npm run db:reset && npm run db:types`,
-> then remove the `@ts-expect-error` + `as unknown` cast at the `addOwned` RPC call in
-> `lib/hooks.tsx` (the directive will self-flag once types regenerate), and run the
-> RPC integration test (add owned for a `read:true` book on a second device/stale
-> client → `read` unchanged). Note: repo-wide `npm run lint` currently fails on
+> **Local step completed (2026-06-09):** migration applied via `db:reset`, types
+> regenerated, the temporary `@ts-expect-error` + cast removed, and the RPC integration
+> test PASSED (psql, in-transaction + rolled back, as the `authenticated` role with
+> `auth.uid()` set): `read:true, want_to_read:true` book → `add_owned_books` →
+> `owned:t, read:t, want:t` (flags preserved); fresh row inserted clean for the
+> caller's uid; idempotent re-add. Note: repo-wide `npm run lint` currently fails on
 > pre-existing format drift unrelated to this work (fails identically on HEAD).
 - **No schema migration** — `UNIQUE (user_id, book_id)` already exists. One small
   **function migration**: the `add_owned_books(book_ids uuid[])` RPC (Decision 3); regen
@@ -369,7 +370,41 @@ Original spike spec (for reference):
   triggers; swap the v1 direct-`addOwned` call for enqueue+flush; `lib/shelf-queue.test.ts`
   (enqueue dedupe, backoff, mutex, idempotent replay).
 
-### Phase 3 — Capture experience 📸
+### Phase 3 — Capture experience 📸 ✅ DONE (2026-06-09; device QA outstanding)
+> Shipped (code complete; verified by 118/118 vitest + tsc + Biome + a clean iOS
+> simulator build of the full app with the new native deps):
+> - **Native deps on the feature branch** (from the spike): VisionCamera 5.0.11 +
+>   vc-worklets + ocr-plus 2.0.0, worklets 0.8.3, nitro modules,
+>   `expo-build-properties` iOS 16.4 — plus `expo-file-system` (temp-file lifecycle)
+>   and `expo-sensors` (steadiness gating).
+> - **`lib/shelf-scan.ts`** (pure, 19 vitest cases): the Decision-4 reducer with the
+>   full state chart (capturing/interrupted/processing/review/empty/adding/done),
+>   stale-async-safe OCR bookkeeping, MAX_CAPTURES cap; `createCaptureGate` —
+>   steady-hold (gyro magnitude ≤ threshold for `STEADY_HOLD_MS`) + min interval +
+>   **movement required between captures** (holding still never duplicates a framing).
+>   Auto-capture gates on **gyroscope steadiness, not frame processors** — keeps
+>   worklets out of v1 capture; live-frame gating stays the planned future upgrade.
+> - **`lib/ocr.ts`**: `recognizeImage` implementing the Phase-1 contract over
+>   `PhotoRecognizer` (line-level fragments; `no_text` mapped to a benign
+>   zero-fragment capture, engine throw → `engine_error`).
+> - **`hooks/useShelfScan.ts`**: gyro subscription → gate → `capturePhotoToFile`
+>   (silent shutter) → move still into `<cache>/shelf-scan/` → incremental OCR →
+>   reducer; temp-file lifecycle derived from reducer state (only the current ghost
+>   still lives on disk; startup orphan sweep clears crash leftovers); AppState
+>   interrupt/resume; Finish waits for in-flight OCR, runs the matcher, publishes the
+>   draft (+ `defaultSelection` — high bucket minus already-owned) to
+>   `ScanSessionProvider`. `usePhotoOutput()` defaults (no `'speed'`
+>   prioritization — it throws on unsupporting devices).
+> - **`components/shelf-scan-capture.tsx`**: ghost overlay (expo-image, 0.18
+>   opacity), per-capture white-flash + counter-pop flourish (reanimated) +
+>   light-impact haptic, manual shutter (the VoiceOver path, formalized in Phase 6),
+>   Finish/Continue, cap nudge, processing/empty states; `review` renders a
+>   placeholder card until Phase 4's overlay replaces it. Temporary mode toggle in
+>   `scan.tsx` (Phase 5 builds the real mode host).
+> - **Outstanding for this phase (local/device):** physical-device QA — gate
+>   thresholds (`SHELF_SCAN_CONSTANTS`) tuning, `takePhoto` round-trip, plus the
+>   deferred Phase 0 device checks (`useCodeScanner` EAN-13) and the **Android build**
+>   (no Android SDK on this machine).
 - `hooks/useShelfScan.ts` state machine (states above); capture loop with steady/in-focus
   auto-capture gating + min interval; Finish/Continue; ghost-overlay (previous frame, low
   opacity); per-capture flourish (reanimated, following `scan.tsx` FadeIn patterns) +
@@ -400,6 +435,13 @@ Original spike spec (for reference):
   (strip leading-zero EAN-13→UPC-A) *if* Phase 0 chose VisionCamera; first-run dialogue +
   `@ossus/scan_intro_seen`; wire all edge states (auth gate, catalog-loading vs
   catalog-failed vs zero-match, interruption/resume, draft persistence).
+- From the Phase 3 review (carried explicitly so they aren't forgotten):
+  - **Mode switch mid-session is destructive** — leaving shelf mode with un-Finished
+    captures must confirm (the Phase 3 temporary toggle silently discards them).
+  - **Consecutive capture/OCR failures need user feedback** — today failures are
+    dev-log-only; a user whose every capture fails sees an eternal "hold steady" hint.
+  - Replace the Phase 3 interim gates: "Shelf (beta)" hidden until `books.length > 0`
+    → real catalog-loading vs catalog-failed states.
 
 ### Phase 6 — Accessibility, polish, QA ♿
 - Accessibility for the silent-capture model (the largest usability gap): VoiceOver/

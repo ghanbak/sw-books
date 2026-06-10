@@ -7,8 +7,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { Book3D } from '@/components/Book3D';
+import { ShelfScanCapture } from '@/components/shelf-scan-capture';
 import { tokens } from '@/constants/tokens';
-import type { Book } from '@/lib/hooks';
+import { type Book, useBooks } from '@/lib/hooks';
 import { normalizeIsbn } from '@/lib/isbn';
 import { supabase } from '@/lib/supabase';
 
@@ -24,6 +25,13 @@ export default function ScanScreen() {
 	const [permission, requestPermission] = useCameraPermissions();
 	const [result, setResult] = useState<ScanResult>(null);
 	const [scanning, setScanning] = useState(false);
+	// Temporary mode switch — Phase 5 replaces this with the real mode host
+	// (shelf default + first-run dialogue + barcode on useCodeScanner).
+	const [mode, setMode] = useState<'barcode' | 'shelf'>('barcode');
+	// Shelf matching needs the catalog in memory — don't offer the mode until it's
+	// loaded (Phase 5 wires the full catalog-loading/failed edge states).
+	const { books } = useBooks();
+	const shelfModeReady = books.length > 0;
 	const lastScanTime = useRef(0);
 	const router = useRouter();
 	const isFocused = useIsFocused();
@@ -114,6 +122,24 @@ export default function ScanScreen() {
 		);
 	}
 
+	// Shelf mode: VisionCamera capture experience (one camera stack at a time —
+	// the barcode CameraView below stays unmounted while this renders).
+	if (mode === 'shelf') {
+		return (
+			<View style={styles.container}>
+				<ShelfScanCapture enabled={isFocused} />
+				<Pressable
+					style={styles.modeToggle}
+					onPress={() => setMode('barcode')}
+					accessibilityRole="button"
+					accessibilityLabel="Switch to barcode scanning"
+				>
+					<Text style={styles.modeToggleText}>Barcode</Text>
+				</Pressable>
+			</View>
+		);
+	}
+
 	return (
 		<View style={styles.container}>
 			{/* Camera — unmount when tab loses focus to release the hardware and battery */}
@@ -147,6 +173,17 @@ export default function ScanScreen() {
 					</Text>
 				</View>
 			</View>
+
+			{shelfModeReady && (
+				<Pressable
+					style={styles.modeToggle}
+					onPress={() => setMode('shelf')}
+					accessibilityRole="button"
+					accessibilityLabel="Switch to shelf scanning"
+				>
+					<Text style={styles.modeToggleText}>Shelf (beta)</Text>
+				</Pressable>
+			)}
 
 			{/* Result overlay */}
 			{result && (
@@ -313,6 +350,23 @@ const styles = StyleSheet.create({
 		borderBottomWidth: CORNER_WIDTH,
 		borderRightWidth: CORNER_WIDTH,
 		borderColor: tokens.accent.secondary,
+	},
+	// Temporary mode toggle (replaced by the Phase 5 mode host)
+	modeToggle: {
+		position: 'absolute',
+		top: 64,
+		right: 16,
+		paddingHorizontal: 14,
+		paddingVertical: 8,
+		borderRadius: 16,
+		backgroundColor: 'rgba(0,0,0,0.55)',
+		borderWidth: 1,
+		borderColor: tokens.border.subtle,
+	},
+	modeToggleText: {
+		color: tokens.accent.secondary,
+		fontSize: 13,
+		fontWeight: '600',
 	},
 	// Result overlay
 	resultOverlay: {

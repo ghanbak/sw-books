@@ -1,5 +1,11 @@
-import type { UserBook } from '@/lib/hooks';
-import { applyOwnedOptimistic, mergeServerRows, shouldClearScanDraft } from '@/lib/shelf';
+import type { Book, UserBook } from '@/lib/hooks';
+import {
+	applyOwnedOptimistic,
+	defaultSelection,
+	mergeServerRows,
+	shouldClearScanDraft,
+} from '@/lib/shelf';
+import type { SpineMatch } from '@/lib/spine-match';
 import { describe, expect, it } from 'vitest';
 
 // Minimal UserBook factory — only the fields the helpers read matter.
@@ -63,6 +69,33 @@ describe('mergeServerRows', () => {
 		const map = asMap(row({ book_id: 'kept', read: true }));
 		const next = mergeServerRows(map, [row({ book_id: 'b1', owned: true })]);
 		expect(next.get('kept')?.read).toBe(true);
+	});
+});
+
+describe('defaultSelection', () => {
+	const match = (id: string, bucket: SpineMatch['bucket']): SpineMatch => ({
+		book: { id, title: id } as Book,
+		score: 1,
+		margin: 1,
+		bucket,
+		supports: 1,
+		alternates: [],
+	});
+
+	it('pre-selects high-confidence matches only', () => {
+		const selected = defaultSelection([match('h1', 'high'), match('l1', 'low')], new Map());
+		expect(selected).toEqual(['h1']);
+	});
+
+	it('excludes already-owned books from the selection', () => {
+		const owned = asMap(row({ book_id: 'h1', owned: true }));
+		const selected = defaultSelection([match('h1', 'high'), match('h2', 'high')], owned);
+		expect(selected).toEqual(['h2']);
+	});
+
+	it('keeps books that are on a shelf but NOT owned (read/want-to-read only)', () => {
+		const shelf = asMap(row({ book_id: 'h1', owned: false, read: true }));
+		expect(defaultSelection([match('h1', 'high')], shelf)).toEqual(['h1']);
 	});
 });
 

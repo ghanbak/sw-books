@@ -1,4 +1,4 @@
-import { type ReactNode, createContext, useContext, useEffect, useState } from 'react';
+import { type ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './auth';
 import { shouldClearScanDraft } from './shelf';
 import type { SpineMatch } from './spine-match';
@@ -46,11 +46,11 @@ export function ScanSessionProvider({ children }: { children: ReactNode }) {
 		);
 	}, [currentUserId]);
 
-	return (
-		<ScanSessionContext.Provider value={{ draft, setDraft }}>
-			{children}
-		</ScanSessionContext.Provider>
-	);
+	// Memoized so auth re-renders above don't ripple a fresh context value into
+	// every consumer (setDraft from useState is referentially stable).
+	const value = useMemo(() => ({ draft, setDraft }), [draft]);
+
+	return <ScanSessionContext.Provider value={value}>{children}</ScanSessionContext.Provider>;
 }
 
 /** Read/write the scan-session draft. Shared across the scan tab and review overlay. */

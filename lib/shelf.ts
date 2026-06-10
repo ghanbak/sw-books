@@ -1,4 +1,5 @@
 import type { UserBook } from '@/lib/hooks';
+import type { SpineMatch } from '@/lib/spine-match';
 
 /**
  * Pure helpers for the shelf scanner's data layer (batch add + scan-session draft).
@@ -50,6 +51,20 @@ export function mergeServerRows(
 		next.set(row.book_id, row);
 	}
 	return next;
+}
+
+/**
+ * The review queue's initial selection: high-confidence matches are pre-selected;
+ * `low` ("double-check these") start unselected; already-owned books are excluded
+ * (they render with the owned badge and cannot be re-added).
+ */
+export function defaultSelection(
+	matches: SpineMatch[],
+	userBooks: ReadonlyMap<string, UserBook>,
+): string[] {
+	return matches
+		.filter((m) => m.bucket === 'high' && userBooks.get(m.book.id)?.owned !== true)
+		.map((m) => m.book.id);
 }
 
 /**
