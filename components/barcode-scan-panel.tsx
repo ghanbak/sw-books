@@ -26,6 +26,7 @@ type ScanResult =
 	| { type: 'found'; book: Book }
 	| { type: 'not_found'; isbn: string }
 	| { type: 'invalid' }
+	| { type: 'error' }
 	| null;
 
 const SCAN_COOLDOWN_MS = 2000;
@@ -66,25 +67,33 @@ export function BarcodeScanPanel() {
 				return;
 			}
 
-			const { data: books, error } = await supabase
-				.from('books')
-				.select('*')
-				.contains('isbn', [isbn])
-				.limit(1);
+			try {
+				const { data: books, error } = await supabase
+					.from('books')
+					.select('*')
+					.contains('isbn', [isbn])
+					.limit(1);
 
-			if (__DEV__) {
-				console.log(
-					`[Scanner] Query isbn=${isbn}, found=${books?.length ?? 0}, error=${error?.message ?? 'none'}`,
-				);
-			}
+				if (__DEV__) {
+					console.log(
+						`[Scanner] Query isbn=${isbn}, found=${books?.length ?? 0}, error=${error?.message ?? 'none'}`,
+					);
+				}
 
-			if (!aliveRef.current) return;
-			if (books && books.length > 0) {
-				setResult({ type: 'found', book: books[0] });
-			} else {
-				setResult({ type: 'not_found', isbn });
+				if (!aliveRef.current) return;
+				if (books && books.length > 0) {
+					setResult({ type: 'found', book: books[0] });
+				} else {
+					setResult({ type: 'not_found', isbn });
+				}
+			} catch (cause) {
+				// A thrown lookup (network error) must surface a result and release the
+				// scanner — otherwise `scanning` stays true and every later scan is blocked.
+				if (__DEV__) console.warn('[Scanner] lookup threw:', cause);
+				if (aliveRef.current) setResult({ type: 'error' });
+			} finally {
+				if (aliveRef.current) setScanning(false);
 			}
-			setScanning(false);
 		},
 		[scanning],
 	);
@@ -180,6 +189,15 @@ export function BarcodeScanPanel() {
 						<View style={styles.resultMessage}>
 							<Text style={styles.messageTitle}>Invalid Barcode</Text>
 							<Text style={styles.messageText}>Couldn't read a valid ISBN from that barcode.</Text>
+						</View>
+					)}
+
+					{result.type === 'error' && (
+						<View style={styles.resultMessage}>
+							<Text style={styles.messageTitle}>Lookup Failed</Text>
+							<Text style={styles.messageText}>
+								Couldn't reach the Archive. Check your connection and try again.
+							</Text>
 						</View>
 					)}
 

@@ -80,6 +80,24 @@ export function ShelfScanReview({
 		[draft, ownedIds],
 	);
 
+	// Bucket split + the FlatList's ordered data, memoized on `matches` only. A toggle
+	// produces a new draft but keeps the same `matches` array reference, so `ordered`
+	// stays referentially stable and the list doesn't re-virtualize on every checkbox.
+	const { high, low, ordered } = useMemo(() => {
+		const m = draft?.matches ?? [];
+		const high = m.filter((x) => x.bucket === 'high');
+		const low = m.filter((x) => x.bucket === 'low');
+		return { high, low, ordered: [...high, ...low] };
+	}, [draft?.matches]);
+	const selectableCount = useMemo(
+		() => (draft?.matches ?? []).filter((m) => !ownedIds.has(m.book.id)).length,
+		[draft?.matches, ownedIds],
+	);
+	const swapTarget = useMemo(
+		() => (swapTargetId ? draft?.matches.find((m) => m.book.id === swapTargetId) : undefined),
+		[swapTargetId, draft?.matches],
+	);
+
 	const toggle = useCallback(
 		(bookId: string) => {
 			if (!draft || ownedIds.has(bookId)) return;
@@ -146,11 +164,7 @@ export function ShelfScanReview({
 
 	if (!draft) return null;
 	const { matches } = draft;
-	const high = matches.filter((m) => m.bucket === 'high');
-	const low = matches.filter((m) => m.bucket === 'low');
-	const swapTarget = swapTargetId ? matches.find((m) => m.book.id === swapTargetId) : undefined;
 	const adding = phase === 'adding';
-	const selectableCount = matches.filter((m) => !ownedIds.has(m.book.id)).length;
 
 	return (
 		<Animated.View
@@ -195,7 +209,7 @@ export function ShelfScanReview({
 			<View style={[styles.body, adding && styles.bodyDisabled]}>
 				{view === 'list' ? (
 					<FlatList
-						data={[...high, ...low]}
+						data={ordered}
 						keyExtractor={(m) => m.book.id}
 						renderItem={({ item, index }) => (
 							<>
@@ -222,7 +236,7 @@ export function ShelfScanReview({
 					/>
 				) : (
 					<FlatList
-						data={[...high, ...low]}
+						data={ordered}
 						key="grid" // numColumns change requires a remount
 						numColumns={3}
 						keyExtractor={(m) => m.book.id}
