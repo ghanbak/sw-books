@@ -451,7 +451,7 @@ Original spike spec (for reference):
 - Swap to an already-owned book → show the badge + auto-deselect (consistent with the
   exclude rule).
 
-### Phase 4.5 — Matching calibration (data task, gates the precision criterion) 🎯
+### Phase 4.5 — Matching calibration (data task, gates the precision criterion) 🎯 ✅ DONE (2026-06-10; device re-validation outstanding)
 - Split from the UI (plan_review: different skill/timeline; avoids rewriting Phase-1
   tests). **Runs as a parallel track — data collection can begin as soon as Phase 0's OCR
   adapter + Phase 1's matcher exist** (it needs neither the capture UI nor the overlay), so
@@ -461,6 +461,43 @@ Original spike spec (for reference):
   named threshold constants with a dated calibration comment. **Then** add back tuning
   refinements (field boosts/cosine, OCR-confusion collapse, n-gram windows, bigram bonus)
   **one at a time, keeping only those that measurably move precision.**
+- **Completed (2026-06-10).** Dataset: 3 user shelf photos (IMG_7374–76, 48MP), hand-labeled
+  → 28 expected catalog books + heavy noise (12 on-shelf off-catalog SW books, SW DVDs, an
+  RPG/comic cube, two full non-SW shelves). OCR proxy: macOS Vision (`VNRecognizeTextRequest`
+  accurate) over wide frames + 18 per-cube tiles (≈ app captures) at 4 orientations —
+  fragments are realistically noisy ("RETURNINJ EDI", "PATHOLDESTRUCTION KARYSHYN").
+  Harness: `.calibration/` (local-only, **gitignored — contains personal photos**):
+  `ocr.swift` + `calibrate.ts` (real `parseCsv`/`buildBookFields`/`matchFragments` against
+  the real 185-row catalog, precision/recall vs labels, `--detail`, `--sweep`).
+- **Headline result:** threshold sweeps alone could not fix the baseline (high-bucket
+  recall 0.36 at precision 1.0) — the failures were structural, so calibration changed the
+  matcher (the refinements this phase reserved), then re-swept:
+  1. **Margin counts only superset-evidence competitors** (observed-title-token ⊇). The old
+     any-shared-token rule made same-series siblings ("…Revan" / "…Deceived", the Darth Bane
+     trilogy) and 1-token parasites ("I, Jedi") zero each other's margins.
+  2. **Parasite drop:** a candidate beaten by a competitor that explains ⊇ its evidence
+     (strictly more at equal-or-better score, or equal evidence at strictly better score)
+     is dropped, surviving only as the winner's swap alternate. Margins are now ≥ 0.
+  3. **Evidence-quality gate** for multi-token titles: ≥2 title tokens together in ONE
+     fragment, or ≥2 observed *distinctive* tokens (df ≤ `MAX_TITLE_TOKEN_DF`, new constant,
+     **5** — a natural gap in the catalog: 'empire'/'squadron' df 5 in; 'darth' 6, 'wing' 7,
+     'jedi' 44 out). Kills Frankenstein matches assembled across spines ('wing'+'solo'+
+     'command' → "X-Wing: Solo Command") while keeping stacked-spine OCR ("OUTBOUND" /
+     "FLIGHT", both df 1).
+- **Final metrics** (up+right orientation pool, the device-realistic one): high bucket
+  **recall 1.00 (28/28), precision 0.933**; low bucket 2 FPs; zero misses. Both high FPs
+  ("Rogue One" novelization 0.80, "Catalyst" 0.73) trace to a **physical Rogue One DVD**
+  whose spine reads "ROGUE ONE A STAR WARS STORY" — genuine text evidence no text-only
+  matcher can reject; the review queue is the designed escape. Excluding non-book media in
+  frame, high precision is 1.00 → criterion judged met for book shelves. Sweep confirmed
+  thresholds stay at `HIGH_SCORE 0.6 / HIGH_MARGIN 0.12 / LOW_SCORE 0.4 / MIN_TITLE 2`
+  (raising `HIGH_SCORE` to 0.74 would trade the Hand of Thrawn duology, true at 0.73, for
+  one DVD FP — brittle overfit, rejected). The Phase-0 "A New Dawn at 0.40" boundary is why
+  `LOW_SCORE` stays 0.4: weak-but-true title-only spines must still surface for double-check.
+- **Caveats / follow-ups:** (1) Apple Vision ≠ ML Kit — re-validate the headline numbers on
+  device during Phase 6 QA (constants are one file if retuning is needed). (2) Known FP
+  class: movie/TV media physically labeled with a catalog title. (3) `matchFragments` /
+  `classifyConfidence` take an optional `constants` override (harness-only by convention).
 
 ### Phase 5 — Mode host, first-run, edge states 🧩
 - Shelf/barcode mode switch in `scan.tsx`; migrate barcode path to `useCodeScanner`

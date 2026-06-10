@@ -5,11 +5,13 @@ import type { Book } from '@/lib/hooks';
  * catalog. Pure logic, no native deps, Hermes-safe; the camera/OCR layer feeds it
  * `OcrFragment[]` and it returns ranked, confidence-bucketed catalog matches.
  *
- * v1 scoring is deliberately simple (IDF-weighted token coverage + a title-coverage
- * floor + score/margin confidence buckets). Tuning refinements (per-field boosts, L2
- * cosine, OCR-confusion folding, n-gram windows) are intentionally deferred to a
- * calibration pass against real labeled photos — see the plan's Phase 4.5. All tunable
- * values live in `MATCH_CONSTANTS` and are PROVISIONAL until that calibration.
+ * v1 scoring: IDF-weighted token coverage + a title-coverage floor + an
+ * evidence-quality gate + score/margin confidence buckets, where margin counts only
+ * superset-evidence competitors. Calibrated in Phase 4.5 against real labeled shelf
+ * photos (28 catalog books + heavy off-catalog noise); all tunable values live in
+ * `MATCH_CONSTANTS`. Remaining known failure mode: non-book media physically labeled
+ * with a catalog title (e.g. a film's DVD spine) is genuine text evidence and can
+ * surface its novelization — the review queue is the designed escape for that.
  */
 
 /** One unit of recognized text (a line/block from OCR). The matcher only needs `text`. */
@@ -24,7 +26,12 @@ export type SpineMatch = {
 	book: Book;
 	/** Final score, 0..1. */
 	score: number;
-	/** Gap to the best competing interpretation (token-overlapping candidate). */
+	/**
+	 * Gap to the best superset-evidence competitor — a candidate that explains ALL of
+	 * this work's observed title evidence (and possibly more). Equals `score` when no
+	 * such competitor exists; 0 for an exact evidence-and-score tie. Never negative
+	 * (a strictly better competitor drops this match instead).
+	 */
 	margin: number;
 	/** `high` → pre-selected; `low` → "double-check these". Rejects are not returned. */
 	bucket: Bucket;
@@ -39,10 +46,35 @@ export type CatalogIndex = {
 	size: number;
 };
 
-/** Provisional, calibrated in Phase 4.5. Do not treat as final. */
+export type MatchConstants = {
+	readonly MIN_TITLE_TOKEN_COVERAGE: number;
+	readonly MAX_TITLE_TOKEN_DF: number;
+	readonly HIGH_SCORE: number;
+	readonly HIGH_MARGIN: number;
+	readonly LOW_SCORE: number;
+	readonly SUPPORT_BOOST: number;
+	readonly SUPPORT_CAP: number;
+	readonly MAX_ALTERNATES: number;
+};
+
+/**
+ * Calibrated 2026-06-10 (Phase 4.5) on 3 labeled shelf photos: 28 expected catalog
+ * books, ~12 on-shelf off-catalog books, DVDs, and two full non–Star Wars shelves as
+ * noise. Result at these values: high-bucket recall 1.00 with the only high FPs
+ * caused by a DVD spine bearing a catalog title verbatim. Desktop OCR (Apple Vision)
+ * proxied ML Kit — revalidate on device (see plan). Sweep harness: `.calibration/`
+ * (local-only, gitignored — contains personal shelf photos).
+ */
 export const MATCH_CONSTANTS = {
 	/** Min distinct title tokens a match must cover (count-based, not IDF-mass). */
 	MIN_TITLE_TOKEN_COVERAGE: 2,
+	/**
+	 * A title token is "distinctive" when it appears in at most this many works.
+	 * Multi-token titles whose evidence is never paired in one fragment must rest on
+	 * ≥2 distinctive tokens — blocks matches assembled from common tokens ('wing',
+	 * 'jedi', 'solo') scattered across different spines.
+	 */
+	MAX_TITLE_TOKEN_DF: 5,
 	/** A match is auto-selected only at/above this score AND margin. */
 	HIGH_SCORE: 0.6,
 	HIGH_MARGIN: 0.12,
@@ -53,7 +85,7 @@ export const MATCH_CONSTANTS = {
 	SUPPORT_CAP: 2,
 	/** Cap on ranked alternates returned for the swap UI. */
 	MAX_ALTERNATES: 5,
-} as const;
+} as const satisfies MatchConstants;
 
 const STOPWORDS = new Set(['the', 'of', 'a', 'an', 'and', 'to', 'in', 'on', 'for', 'by']);
 
@@ -66,6 +98,8 @@ type WorkEntry = {
 	tokens: Map<string, number>;
 	/** Title tokens only — used for the coverage floor and competitor detection. */
 	titleTokens: Set<string>;
+	/** Document frequency per title token — powers the distinctive-evidence gate. */
+	titleDf: Map<string, number>;
 	/** Sum of idf over `tokens` (the coverage denominator). */
 	totalIdf: number;
 };
@@ -128,8 +162,12 @@ function preferredEdition(a: Book, b: Book): Book {
  * Buckets a candidate by its score and margin to the best competing interpretation.
  * Returns `null` for a reject (not surfaced). Exported for direct boundary testing.
  */
-export function classifyConfidence(score: number, margin: number): Bucket | null {
-	const { HIGH_SCORE, HIGH_MARGIN, LOW_SCORE } = MATCH_CONSTANTS;
+export function classifyConfidence(
+	score: number,
+	margin: number,
+	constants: MatchConstants = MATCH_CONSTANTS,
+): Bucket | null {
+	const { HIGH_SCORE, HIGH_MARGIN, LOW_SCORE } = constants;
 	if (score >= HIGH_SCORE && margin >= HIGH_MARGIN) return 'high';
 	// A strong score with a thin margin (an ambiguous near-tie) drops to double-check
 	// rather than auto-adding.
@@ -180,19 +218,33 @@ export function buildCatalogIndex(books: Book[]): CatalogIndex {
 			tokens.set(t, w);
 			totalIdf += w;
 		}
-		return { book, tokens, titleTokens, totalIdf };
+		const titleDf = new Map<string, number>();
+		for (const t of titleTokens) titleDf.set(t, df.get(t) ?? 0);
+		return { book, tokens, titleTokens, titleDf, totalIdf };
 	});
 
 	return { works, size: n };
 }
 
-type Scored = { entry: WorkEntry; score: number; supports: number };
+type Scored = {
+	entry: WorkEntry;
+	score: number;
+	supports: number;
+	/** Title tokens of this work actually present in the bag (its observed evidence). */
+	observed: Set<string>;
+};
 
 /**
  * Matches a session's OCR fragments (all photos pooled) against the catalog index.
  * Returns ranked, confidence-bucketed matches, deduped by work, with swap alternates.
+ * `constants` is overridable for the Phase 4.5 calibration harness; app code always
+ * uses the default.
  */
-export function matchFragments(fragments: OcrFragment[], index: CatalogIndex): SpineMatch[] {
+export function matchFragments(
+	fragments: OcrFragment[],
+	index: CatalogIndex,
+	constants: MatchConstants = MATCH_CONSTANTS,
+): SpineMatch[] {
 	// Pool all fragment tokens into one bag (union across lines and photos). Keep the
 	// per-fragment sets for corroboration counting.
 	const fragmentSets = fragments.map((f) => new Set(normalizeTokens(f.text)));
@@ -205,12 +257,38 @@ export function matchFragments(fragments: OcrFragment[], index: CatalogIndex): S
 	for (const entry of index.works) {
 		// Title-coverage floor — a distinctive token alone is not enough; the title must
 		// be substantially present.
-		const required = Math.min(entry.titleTokens.size, MATCH_CONSTANTS.MIN_TITLE_TOKEN_COVERAGE);
-		let titleHits = 0;
+		const required = Math.min(entry.titleTokens.size, constants.MIN_TITLE_TOKEN_COVERAGE);
+		const observed = new Set<string>();
 		for (const t of entry.titleTokens) {
-			if (bag.has(t)) titleHits++;
+			if (bag.has(t)) observed.add(t);
 		}
-		if (titleHits < required) continue;
+		if (observed.size < required) continue;
+
+		// Evidence-quality gate (multi-token titles): the title evidence must be locally
+		// coherent — ≥2 title tokens together in ONE fragment (one spine line) — or rest
+		// on ≥2 distinctive tokens. Otherwise the "match" is assembled from common tokens
+		// scattered across unrelated spines ('wing' + 'solo' + 'command').
+		if (entry.titleTokens.size >= 2) {
+			let paired = false;
+			for (const set of fragmentSets) {
+				let hits = 0;
+				for (const t of observed) {
+					if (set.has(t)) hits++;
+				}
+				if (hits >= 2) {
+					paired = true;
+					break;
+				}
+			}
+			if (!paired) {
+				let distinctive = 0;
+				for (const t of observed) {
+					const df = entry.titleDf.get(t) ?? Number.POSITIVE_INFINITY;
+					if (df <= constants.MAX_TITLE_TOKEN_DF) distinctive++;
+				}
+				if (distinctive < 2) continue;
+			}
+		}
 
 		// IDF-weighted coverage of the work's tokens by the bag.
 		let matched = 0;
@@ -231,10 +309,9 @@ export function matchFragments(fragments: OcrFragment[], index: CatalogIndex): S
 			}
 		}
 		const boost =
-			MATCH_CONSTANTS.SUPPORT_BOOST *
-			Math.min(Math.max(supports - 1, 0), MATCH_CONSTANTS.SUPPORT_CAP);
+			constants.SUPPORT_BOOST * Math.min(Math.max(supports - 1, 0), constants.SUPPORT_CAP);
 		const score = Math.min(1, base + boost);
-		scored.push({ entry, score, supports });
+		scored.push({ entry, score, supports, observed });
 	}
 
 	scored.sort((a, b) => b.score - a.score);
@@ -242,20 +319,38 @@ export function matchFragments(fragments: OcrFragment[], index: CatalogIndex): S
 	const matches: SpineMatch[] = [];
 	for (let i = 0; i < scored.length; i++) {
 		const current = scored[i];
-		// Margin is measured only against competing interpretations — candidates whose
-		// title tokens overlap (plausibly the same spine). Unrelated books that are also
-		// on the shelf don't suppress each other's confidence.
-		const competitors = scored.filter(
+		// Related candidates (any shared title token) are plausible swap alternates.
+		const related = scored.filter(
 			(other, j) => j !== i && shareTitleToken(current.entry, other.entry),
 		);
-		const bestCompetitor = competitors.reduce((max, c) => Math.max(max, c.score), 0);
+		// But only SUPERSET-EVIDENCE candidates compete for confidence: a competitor must
+		// explain everything this work's observed title evidence explains (it could be
+		// the same spine misread). Series siblings with their own distinct evidence
+		// ("…Revan" vs "…Deceived") no longer suppress each other.
+		const supersets = related.filter((other) => isSubset(current.observed, other.observed));
+
+		// Parasite drop: a candidate adds nothing when a competitor explains at least its
+		// whole evidence AND beats it — strictly fuller evidence at an equal-or-better
+		// score ("I, Jedi" riding the 'jedi' of "Return of the Jedi"), or the same
+		// evidence at a strictly better score (the spine is ambiguous but corroboration
+		// broke the tie). Dropped candidates still appear among the winner's alternates;
+		// exact ties on equal evidence survive as a genuine near-tie (both demoted by
+		// margin below).
+		const dominated = supersets.some(
+			(other) =>
+				other.score > current.score ||
+				(other.score === current.score && other.observed.size > current.observed.size),
+		);
+		if (dominated) continue;
+
+		const bestCompetitor = supersets.reduce((max, c) => Math.max(max, c.score), 0);
 		const margin = current.score - bestCompetitor;
 
-		const bucket = classifyConfidence(current.score, margin);
+		const bucket = classifyConfidence(current.score, margin, constants);
 		if (!bucket) continue;
 
-		const alternates = competitors
-			.slice(0, MATCH_CONSTANTS.MAX_ALTERNATES)
+		const alternates = related
+			.slice(0, constants.MAX_ALTERNATES)
 			.map((c) => ({ book: c.entry.book, score: c.score }));
 
 		matches.push({
@@ -269,6 +364,14 @@ export function matchFragments(fragments: OcrFragment[], index: CatalogIndex): S
 	}
 
 	return matches;
+}
+
+function isSubset(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+	if (a.size > b.size) return false;
+	for (const t of a) {
+		if (!b.has(t)) return false;
+	}
+	return true;
 }
 
 function shareTitleToken(a: WorkEntry, b: WorkEntry): boolean {

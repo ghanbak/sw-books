@@ -124,29 +124,126 @@ describe('matchFragments — aggregation & dedupe', () => {
 });
 
 describe('matchFragments — confidence & alternates', () => {
-	it('keeps the fuller match high and rejects a partial-overlap competitor', () => {
-		// "Chaos Rising" is clearly present; the "Greater Good" sibling shares only the
-		// "Thrawn Ascendancy" prefix and is correctly dropped (precision over recall).
+	it('keeps the fuller match high and drops a partial-overlap sibling', () => {
+		// "Chaos Rising" is clearly present; the "Greater Good" sibling's evidence is a
+		// strict subset of it and scores lower → dropped (precision over recall).
 		const matches = matchFragments(frags('Thrawn Ascendancy Chaos Rising'), index);
 		const chaos = matches.find((m) => m.book.id === 'asc-chaos');
 		expect(chaos?.bucket).toBe('high');
 		expect(ids(matches)).not.toContain('asc-greater');
 	});
 
-	it('demotes a genuine near-tie to "double-check" and cross-lists alternates', () => {
-		// Two works that share a title token and both score fully → ambiguous → both `low`,
-		// each offered as the other's swap alternative.
+	it('lets series siblings with their own distinct evidence both go high', () => {
+		// Both Old Republic books are physically present; sharing the series prefix must
+		// not make them suppress each other's margin.
+		const siblings = [
+			book({ id: 'revan', title: 'The Old Republic: Revan', author: ['Drew Karpyshyn'] }),
+			book({ id: 'deceived', title: 'The Old Republic: Deceived', author: ['Paul S. Kemp'] }),
+		];
+		const idx = buildCatalogIndex(siblings);
+		const matches = matchFragments(
+			frags('OLD REPUBLIC REVAN Drew Karpyshyn', 'OLD REPUBLIC DECEIVED Paul S. Kemp'),
+			idx,
+		);
+		expect(matches).toHaveLength(2);
+		expect(matches.every((m) => m.bucket === 'high')).toBe(true);
+	});
+
+	it('demotes a genuine equal-evidence tie to "double-check" and cross-lists alternates', () => {
+		// Two works whose observed title evidence is the SAME set → either could be the
+		// spine → both `low`, each offered as the other's swap alternative.
 		const ambiguous = [
-			book({ id: 'd-empire', title: 'Dark Empire', author: [] }),
-			book({ id: 'd-times', title: 'Dark Times', author: [] }),
+			book({ id: 'last-jedi', title: 'The Last Jedi', author: [] }),
+			book({ id: 'last-of-jedi', title: 'Last of the Jedi', author: [] }),
 		];
 		const idx = buildCatalogIndex(ambiguous);
-		const matches = matchFragments(frags('Dark Empire Dark Times'), idx);
+		const matches = matchFragments(frags('THE LAST JEDI'), idx);
 
 		expect(matches).toHaveLength(2);
 		expect(matches.every((m) => m.bucket === 'low')).toBe(true);
-		const empire = matches.find((m) => m.book.id === 'd-empire');
-		expect(empire?.alternates.map((a) => a.book.id)).toContain('d-times');
+		const lastJedi = matches.find((m) => m.book.id === 'last-jedi');
+		expect(lastJedi?.alternates.map((a) => a.book.id)).toContain('last-of-jedi');
+	});
+
+	it('drops the loser of an equal-evidence tie broken by corroboration', () => {
+		// Both works' observed title evidence is the SAME set, but the author fragment
+		// corroborates one — the loser must not surface as a phantom second match for
+		// the same spine (it stays available as a swap alternate).
+		const ambiguous = [
+			book({ id: 'last-jedi', title: 'The Last Jedi', author: ['Jason Fry'] }),
+			book({ id: 'last-of-jedi', title: 'Last of the Jedi', author: ['Jude Watson'] }),
+		];
+		const idx = buildCatalogIndex(ambiguous);
+		const matches = matchFragments(frags('THE LAST JEDI', 'Jason Fry'), idx);
+
+		expect(ids(matches)).toEqual(['last-jedi']);
+		expect(matches[0].bucket).toBe('high');
+		expect(matches[0].alternates.map((a) => a.book.id)).toContain('last-of-jedi');
+	});
+
+	it('drops a strict-subset parasite even on an exact score tie', () => {
+		// Both authorless works score identically, but one explains strictly more
+		// evidence — the subset candidate is dominated, the fuller one is unrivaled.
+		const cat = [
+			book({ id: 'i-jedi', title: 'I, Jedi', author: [] }),
+			book({ id: 'rotj', title: 'Return of the Jedi', author: [] }),
+		];
+		const idx = buildCatalogIndex(cat);
+		const matches = matchFragments(frags('RETURN OF THE JEDI'), idx);
+
+		expect(ids(matches)).toEqual(['rotj']);
+		expect(matches[0].bucket).toBe('high');
+	});
+
+	it('drops a parasite riding another spine and keeps it as an alternate', () => {
+		// "I, Jedi" reduces to the single token 'jedi' — fully explained by the stronger
+		// "Return of the Jedi" spine. It must not surface as a match (it used to suppress
+		// the real book's margin instead), but it stays available for the swap sheet.
+		const cat = [
+			book({ id: 'i-jedi', title: 'I, Jedi', author: ['Michael A. Stackpole'] }),
+			book({ id: 'rotj', title: 'Return of the Jedi', author: ['James Kahn'] }),
+		];
+		const idx = buildCatalogIndex(cat);
+		const matches = matchFragments(frags('RETURN OF THE JEDI', 'James Kahn'), idx);
+
+		expect(ids(matches)).toEqual(['rotj']);
+		expect(matches[0].bucket).toBe('high');
+		expect(matches[0].alternates.map((a) => a.book.id)).toContain('i-jedi');
+	});
+});
+
+describe('matchFragments — evidence-quality gate', () => {
+	// MAX_TITLE_TOKEN_DF: 0 makes no token "distinctive", isolating the pair-locality path.
+	const strict = { ...MATCH_CONSTANTS, MAX_TITLE_TOKEN_DF: 0 };
+
+	it('rejects a title assembled from tokens scattered across different spines', () => {
+		// 'wing', 'solo', and 'command' each appear somewhere, but never together —
+		// "X-Wing: Solo Command" must not be assembled out of three unrelated spines.
+		const cat = [book({ id: 'solo-command', title: 'X-Wing: Solo Command', author: [] })];
+		const idx = buildCatalogIndex(cat);
+		expect(matchFragments(frags('X-WING', 'HAN SOLO', 'THE LAST COMMAND'), idx, strict)).toEqual(
+			[],
+		);
+	});
+
+	it('accepts the same title when its tokens appear together in one fragment', () => {
+		const cat = [book({ id: 'solo-command', title: 'X-Wing: Solo Command', author: [] })];
+		const idx = buildCatalogIndex(cat);
+		expect(ids(matchFragments(frags('X-WING SOLO COMMAND'), idx, strict))).toEqual([
+			'solo-command',
+		]);
+	});
+
+	it('accepts split spine lines when the tokens are distinctive', () => {
+		// Stacked spine text OCRs as separate lines ("OUTBOUND" / "FLIGHT"); two
+		// distinctive tokens are strong enough evidence without same-fragment pairing.
+		const cat = [
+			book({ id: 'outbound', title: 'Outbound Flight', author: ['Timothy Zahn'] }),
+			book({ id: 'heir', title: 'Heir to the Empire', author: ['Timothy Zahn'] }),
+		];
+		const idx = buildCatalogIndex(cat);
+		const matches = matchFragments(frags('OUTBOUND', 'FLIGHT'), idx);
+		expect(ids(matches)).toEqual(['outbound']);
 	});
 });
 
