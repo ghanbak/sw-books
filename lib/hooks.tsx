@@ -8,6 +8,8 @@ import {
 	useState,
 } from 'react';
 import { useAuth } from './auth';
+import { type Result, err, ok } from './result';
+import { applyOwnedOptimistic, mergeServerRows } from './shelf';
 import { supabase } from './supabase';
 import type { Database } from './types';
 
@@ -74,6 +76,7 @@ type UserBooksContextValue = {
 	loading: boolean;
 	refetch: () => Promise<void>;
 	toggleShelf: (bookId: string, field: 'owned' | 'read' | 'want_to_read') => Promise<void>;
+	addOwned: (bookIds: string[]) => Promise<Result<{ rows: UserBook[] }>>;
 };
 
 const UserBooksContext = createContext<UserBooksContextValue>({
@@ -81,6 +84,7 @@ const UserBooksContext = createContext<UserBooksContextValue>({
 	loading: true,
 	refetch: async () => {},
 	toggleShelf: async () => {},
+	addOwned: async () => err({ code: 'no_provider', message: 'UserBooksProvider missing' }),
 });
 
 /**
@@ -195,8 +199,51 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 		[user],
 	);
 
+	/**
+	 * Batch-adds books to the owned shelf via the `add_owned_books` RPC (one round-trip,
+	 * atomic). The flag-merge is server-side — the RPC sets only `owned`, so a stale
+	 * local Map can never clobber `read`/`want_to_read` toggled elsewhere. Optimistic:
+	 * flips the Map immediately, replaces affected entries with the returned rows, and
+	 * restores the pre-call snapshot if the RPC fails.
+	 *
+	 * Callers in the signed-out→sign-in-at-Add flow must wait until the post-sign-in
+	 * `fetchUserBooks` has completed (not just the sign-in promise) — `addOwned` no-ops
+	 * with an error before `user` propagates.
+	 */
+	const addOwned = useCallback(
+		async (bookIds: string[]): Promise<Result<{ rows: UserBook[] }>> => {
+			if (!user) {
+				return err({ code: 'not_signed_in', message: 'Sign in to add books to your shelf.' });
+			}
+			// Dedupe defensively: duplicate ids inside ONE statement make Postgres reject
+			// the whole insert ("ON CONFLICT DO UPDATE command cannot affect row a second
+			// time") — idempotency only protects across calls, not within one.
+			const ids = [...new Set(bookIds)];
+			if (ids.length === 0) return ok({ rows: [] });
+
+			// Snapshot BEFORE the optimistic flip — the whole-batch revert target.
+			const snapshot = userBooksRef.current;
+			setUserBooks(applyOwnedOptimistic(snapshot, ids, user.id));
+
+			const { data, error } = await supabase.rpc('add_owned_books', { book_ids: ids });
+
+			if (error) {
+				console.warn('[user_books] addOwned failed, reverting:', error.message);
+				setUserBooks(snapshot);
+				return err({ code: 'add_failed', message: error.message });
+			}
+
+			const rows = data ?? [];
+			setUserBooks((prev) => mergeServerRows(prev, rows));
+			return ok({ rows });
+		},
+		[user],
+	);
+
 	return (
-		<UserBooksContext.Provider value={{ userBooks, loading, refetch: fetchUserBooks, toggleShelf }}>
+		<UserBooksContext.Provider
+			value={{ userBooks, loading, refetch: fetchUserBooks, toggleShelf, addOwned }}
+		>
 			{children}
 		</UserBooksContext.Provider>
 	);

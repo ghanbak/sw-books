@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 import { tokens } from '@/constants/tokens';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { BooksProvider, UserBooksProvider } from '@/lib/hooks';
+import { ScanSessionProvider } from '@/lib/scan-session';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,36 +38,38 @@ export default function RootLayout() {
 		<AuthProvider>
 			<BooksProvider>
 				<UserBooksProvider>
-					<ThemeProvider value={appDarkTheme}>
-						<AuthGate>
-							<Stack
-								screenOptions={{
-									headerShadowVisible: false,
-									...(Platform.OS === 'ios'
-										? {
-												headerTransparent: true,
-												headerBlurEffect: 'systemMaterial',
-												headerLargeStyle: { backgroundColor: tokens.surface.background },
-											}
-										: {
-												headerStyle: { backgroundColor: tokens.surface.background },
-											}),
-									headerTintColor: tokens.text.primary,
-								}}
-							>
-								<Stack.Screen name="(auth)" options={{ headerShown: false }} />
-								<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-								<Stack.Screen
-									name="book/[id]"
-									options={{
-										title: 'Book Details',
-										headerBackTitle: 'Back',
+					<ScanSessionProvider>
+						<ThemeProvider value={appDarkTheme}>
+							<AuthGate>
+								<Stack
+									screenOptions={{
+										headerShadowVisible: false,
+										...(Platform.OS === 'ios'
+											? {
+													headerTransparent: true,
+													headerBlurEffect: 'systemMaterial',
+													headerLargeStyle: { backgroundColor: tokens.surface.background },
+												}
+											: {
+													headerStyle: { backgroundColor: tokens.surface.background },
+												}),
+										headerTintColor: tokens.text.primary,
 									}}
-								/>
-							</Stack>
-						</AuthGate>
-						<StatusBar style="light" />
-					</ThemeProvider>
+								>
+									<Stack.Screen name="(auth)" options={{ headerShown: false }} />
+									<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+									<Stack.Screen
+										name="book/[id]"
+										options={{
+											title: 'Book Details',
+											headerBackTitle: 'Back',
+										}}
+									/>
+								</Stack>
+							</AuthGate>
+							<StatusBar style="light" />
+						</ThemeProvider>
+					</ScanSessionProvider>
 				</UserBooksProvider>
 			</BooksProvider>
 		</AuthProvider>
