@@ -215,13 +215,17 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 			if (!user) {
 				return err({ code: 'not_signed_in', message: 'Sign in to add books to your shelf.' });
 			}
-			if (bookIds.length === 0) return ok({ rows: [] });
+			// Dedupe defensively: duplicate ids inside ONE statement make Postgres reject
+			// the whole insert ("ON CONFLICT DO UPDATE command cannot affect row a second
+			// time") — idempotency only protects across calls, not within one.
+			const ids = [...new Set(bookIds)];
+			if (ids.length === 0) return ok({ rows: [] });
 
 			// Snapshot BEFORE the optimistic flip — the whole-batch revert target.
 			const snapshot = userBooksRef.current;
-			setUserBooks(applyOwnedOptimistic(snapshot, bookIds, user.id));
+			setUserBooks(applyOwnedOptimistic(snapshot, ids, user.id));
 
-			const { data, error } = await supabase.rpc('add_owned_books', { book_ids: bookIds });
+			const { data, error } = await supabase.rpc('add_owned_books', { book_ids: ids });
 
 			if (error) {
 				console.warn('[user_books] addOwned failed, reverting:', error.message);

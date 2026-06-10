@@ -1,4 +1,13 @@
-import { type ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
+import {
+	type ReactNode,
+	createContext,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react';
 import { useAuth } from './auth';
 import { shouldClearScanDraft } from './shelf';
 import type { SpineMatch } from './spine-match';
@@ -25,30 +34,47 @@ export type ScanDraft = {
 type ScanSessionValue = {
 	draft: ScanDraft | null;
 	setDraft: (draft: ScanDraft | null) => void;
+	/**
+	 * Truth at CALL time, not at last render. `setDraft` writes a ref synchronously,
+	 * so a handler that runs in the same batch as a draft mutation (e.g. a toggle and
+	 * an Add landing together) reads the post-mutation draft — a render-synced
+	 * closure would resurrect the pre-toggle selection.
+	 */
+	getDraft: () => ScanDraft | null;
 };
 
 const ScanSessionContext = createContext<ScanSessionValue>({
 	draft: null,
 	setDraft: () => {},
+	getDraft: () => null,
 });
 
 export function ScanSessionProvider({ children }: { children: ReactNode }) {
 	const { user } = useAuth();
-	const [draft, setDraft] = useState<ScanDraft | null>(null);
+	const [draft, setDraftState] = useState<ScanDraft | null>(null);
+	const draftRef = useRef<ScanDraft | null>(null);
+
+	const setDraft = useCallback((next: ScanDraft | null) => {
+		draftRef.current = next;
+		setDraftState(next);
+	}, []);
+	const getDraft = useCallback(() => draftRef.current, []);
 
 	// Account-switch safety: a draft computed against user A's shelf must not survive
 	// into user B's session (B would add A's books). Preserved across signed-out →
 	// first sign-in (the deliberate scan-now-sign-in-at-Add flow).
 	const currentUserId = user?.id ?? null;
 	useEffect(() => {
-		setDraft((prev) =>
-			prev && shouldClearScanDraft(prev.ownerUserId, currentUserId) ? null : prev,
-		);
+		const current = draftRef.current;
+		if (current && shouldClearScanDraft(current.ownerUserId, currentUserId)) {
+			draftRef.current = null;
+			setDraftState(null);
+		}
 	}, [currentUserId]);
 
 	// Memoized so auth re-renders above don't ripple a fresh context value into
-	// every consumer (setDraft from useState is referentially stable).
-	const value = useMemo(() => ({ draft, setDraft }), [draft]);
+	// every consumer (setDraft/getDraft are referentially stable).
+	const value = useMemo(() => ({ draft, setDraft, getDraft }), [draft, setDraft, getDraft]);
 
 	return <ScanSessionContext.Provider value={value}>{children}</ScanSessionContext.Provider>;
 }

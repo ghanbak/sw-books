@@ -412,7 +412,39 @@ Original spike spec (for reference):
   (OCR-then-delete per still + startup orphan sweep); max-photo cap + memory strategy
   (incremental OCR per capture, discard still after).
 
-### Phase 4 — Review overlay (inline) 📋
+### Phase 4 — Review overlay (inline) 📋 ✅ DONE (2026-06-10; device QA outstanding)
+> Shipped (133/133 vitest + tsc + Biome clean; native deps unchanged from the
+> Phase 3 verified build):
+> - **`components/shelf-scan-review.tsx`**: full-screen overlay — list default +
+>   grid toggle, "On your shelf" (high, pre-selected) vs "Double-check these" (low)
+>   groups, already-owned badge + exclusion, swap sheet (ranked alternates +
+>   catalog search, keyboard-avoiding), batch Add with adding spinner,
+>   offline-blocked banner (draft kept), Done state with View Shelf / Scan More.
+>   Swap is list-view only by design (grid = visual confirmation).
+> - **Pure helpers** (`lib/shelf.ts`, tested): `toggleSelection`; `swapMatch`
+>   (old book ⇄ replacement trade places so swaps are reversible; selection
+>   follows; **owned replacement auto-deselects**; refuses a replacement already
+>   held by another match — no duplicate rows/keys); `pruneOwned` (live-ownership
+>   prune of the frozen selection — count, button, and RPC payload all honest when
+>   a book became owned after the scan).
+> - **`hooks/useShelfScan.ts`**: resume-to-review reducer init when a draft
+>   survived a tab switch; `addSelected` with synchronous in-flight guard
+>   (double-tap can't fire two RPCs whose snapshot reverts collide), try/finally
+>   (a throw can't strand the user in `adding`), live-prune of the payload,
+>   success haptic, draft consumed on success; account-switch safety net does a
+>   FULL `reset()` (no ghost addError).
+> - **`lib/scan-session.tsx`**: `getDraft()` — setDraft writes a ref
+>   synchronously so same-batch toggle+Add reads truth at call time.
+> - **`lib/hooks.tsx`**: `addOwned` dedupes ids (duplicate ids in one
+>   `ON CONFLICT DO UPDATE` statement is a Postgres error).
+> - Review-applied fixes: Book3D's internal Pressable neutralized at all three
+>   embed sites (taps reach rows; VoiceOver loses the nameless button), ownership
+>   FROZEN during `adding` (no "Already owned" flash under the spinner),
+>   safe-area insets, keyboard avoidance for the swap search, tokens instead of
+>   raw colors on the content surface.
+> - **Deferred** (noted, not blocking): per-match stable `rowId` (only matters if
+>   rows grow local state/animations), SectionList refactor, row memoization
+>   (lists are ≤ photo-cap sized), grid-view swap affordance.
 - Inline review overlay on `scan.tsx` (reusing the result-overlay pattern): list default +
   grid toggle, high vs "double-check" groups, pre-selection, already-owned badge/exclude,
   per-row swap (ranked alts + catalog-search fallback), batch Add → `addOwned`.

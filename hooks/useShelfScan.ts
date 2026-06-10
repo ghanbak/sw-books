@@ -1,7 +1,7 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
 import { Gyroscope } from 'expo-sensors';
-import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { usePhotoOutput, usePreviewOutput } from 'react-native-vision-camera';
 
@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/auth';
 import { useBooks, useUserBooks } from '@/lib/hooks';
 import { recognizeImage } from '@/lib/ocr';
 import { useScanSession } from '@/lib/scan-session';
-import { defaultSelection } from '@/lib/shelf';
+import { defaultSelection, pruneOwned } from '@/lib/shelf';
 import {
 	SHELF_SCAN_CONSTANTS,
 	atCaptureCap,
@@ -56,14 +56,21 @@ function scanDirectory(): Directory {
 export function useShelfScan({ enabled }: { enabled: boolean }) {
 	const { user } = useAuth();
 	const { books } = useBooks();
-	const { userBooks } = useUserBooks();
-	const { setDraft } = useScanSession();
+	const { userBooks, addOwned } = useUserBooks();
+	const { draft, setDraft, getDraft } = useScanSession();
 
 	const index = useMemo(() => buildCatalogIndex(books), [books]);
 
-	const [state, dispatch] = useReducer(shelfScanReducer, initialShelfScanState);
+	// Resume straight into Review when a draft survived a tab switch (the draft lives
+	// in ScanSessionProvider precisely because native tabs unmount this screen).
+	const [state, dispatch] = useReducer(shelfScanReducer, draft, (initialDraft) =>
+		initialDraft ? { ...initialShelfScanState, phase: 'review' as const } : initialShelfScanState,
+	);
 	const stateRef = useRef(state);
 	stateRef.current = state;
+
+	const [addError, setAddError] = useState<string | null>(null);
+	const [addedCount, setAddedCount] = useState(0);
 
 	const previewOutput = usePreviewOutput();
 	// Defaults only — 'speed' qualityPrioritization throws on devices without
@@ -252,6 +259,49 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 		dispatch({ type: 'matched', matchCount: matches.length });
 	}, [processingSettled, index, setDraft, user?.id, userBooks]);
 
+	/** Batch-add the draft's selection to the owned shelf (Review → Adding → Done). */
+	const addInFlightRef = useRef(false);
+	const addSelected = useCallback(async () => {
+		// Synchronous re-entrancy guard: `disabled={adding}` and the phase check are
+		// both render-synced — a rapid double-tap passes both and would fire two
+		// concurrent RPCs whose optimistic snapshots can revert each other's merge.
+		if (addInFlightRef.current) return;
+		if (stateRef.current.phase !== 'review') return;
+		// Truth at call time (getDraft) + live-ownership prune: a book marked owned
+		// after the scan must not be re-sent (and must not inflate addedCount).
+		const currentDraft = getDraft();
+		const ids = currentDraft ? pruneOwned(currentDraft.selected, userBooks) : [];
+		if (ids.length === 0) return;
+		addInFlightRef.current = true;
+		setAddError(null);
+		dispatch({ type: 'add_started' });
+		try {
+			const result = await addOwned(ids);
+			if (result.ok) {
+				setAddedCount(result.data.rows.length);
+				setDraft(null); // draft consumed — a later tab-return starts a fresh session
+				Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+				dispatch({ type: 'add_succeeded' });
+			} else {
+				// v1 offline policy: block, keep the draft, let the user retry (plan §Decision 3).
+				setAddError(
+					result.error.code === 'not_signed_in'
+						? result.error.message
+						: "Couldn't save — check your connection and try again. Your scan is safe.",
+				);
+				dispatch({ type: 'add_blocked' });
+			}
+		} catch (cause) {
+			// addOwned returns Result and shouldn't throw — but a throw here would
+			// otherwise strand the user in `adding` behind a disabled UI forever.
+			if (__DEV__) console.warn('[shelf-scan] add threw:', cause);
+			setAddError("Couldn't save — check your connection and try again. Your scan is safe.");
+			dispatch({ type: 'add_blocked' });
+		} finally {
+			addInFlightRef.current = false;
+		}
+	}, [addOwned, getDraft, setDraft, userBooks]);
+
 	const finish = useCallback(() => dispatch({ type: 'finished' }), []);
 	const keepScanning = useCallback(() => dispatch({ type: 'continued' }), []);
 	const reset = useCallback(() => {
@@ -261,9 +311,19 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 		for (const capture of stateRef.current.captures) {
 			if (capture.ocr !== 'pending') deleteStill(capture.uri);
 		}
+		setAddError(null);
+		setAddedCount(0);
 		setDraft(null);
 		dispatch({ type: 'reset' });
 	}, [setDraft, deleteStill]);
+
+	// Account-switch safety net: ScanSessionProvider clears the draft when a different
+	// user signs in — a Review with nothing to review must fall back to capturing.
+	// Full reset() (not a bare dispatch): a stale addError from the previous session
+	// must not greet the next one.
+	useEffect(() => {
+		if (state.phase === 'review' && !draft) reset();
+	}, [state.phase, draft, reset]);
 
 	return {
 		state,
@@ -279,5 +339,9 @@ export function useShelfScan({ enabled }: { enabled: boolean }) {
 		finish,
 		keepScanning,
 		reset,
+		/** Review-overlay add flow (Phase 4). */
+		addSelected,
+		addError,
+		addedCount,
 	};
 }

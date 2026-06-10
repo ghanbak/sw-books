@@ -3,7 +3,10 @@ import {
 	applyOwnedOptimistic,
 	defaultSelection,
 	mergeServerRows,
+	pruneOwned,
 	shouldClearScanDraft,
+	swapMatch,
+	toggleSelection,
 } from '@/lib/shelf';
 import type { SpineMatch } from '@/lib/spine-match';
 import { describe, expect, it } from 'vitest';
@@ -96,6 +99,97 @@ describe('defaultSelection', () => {
 	it('keeps books that are on a shelf but NOT owned (read/want-to-read only)', () => {
 		const shelf = asMap(row({ book_id: 'h1', owned: false, read: true }));
 		expect(defaultSelection([match('h1', 'high')], shelf)).toEqual(['h1']);
+	});
+});
+
+describe('toggleSelection', () => {
+	it('adds an unselected id and removes a selected one', () => {
+		expect(toggleSelection(['a'], 'b')).toEqual(['a', 'b']);
+		expect(toggleSelection(['a', 'b'], 'a')).toEqual(['b']);
+	});
+});
+
+describe('pruneOwned', () => {
+	it('drops books that became owned after the draft was created', () => {
+		const map = asMap(row({ book_id: 'a', owned: true }), row({ book_id: 'b', read: true }));
+		expect(pruneOwned(['a', 'b', 'c'], map)).toEqual(['b', 'c']);
+	});
+
+	it('keeps everything when nothing is owned', () => {
+		expect(pruneOwned(['a', 'b'], new Map())).toEqual(['a', 'b']);
+	});
+});
+
+describe('swapMatch', () => {
+	const bookOf = (id: string): Book => ({ id, title: `Title ${id}` }) as Book;
+	const matchWith = (id: string, alternateIds: string[] = []): SpineMatch => ({
+		book: bookOf(id),
+		score: 0.8,
+		margin: 0.3,
+		bucket: 'high',
+		supports: 1,
+		alternates: alternateIds.map((altId) => ({ book: bookOf(altId), score: 0.5 })),
+	});
+	const noneOwned: ReadonlySet<string> = new Set();
+
+	it('swaps to a ranked alternate — old book and replacement trade places', () => {
+		const { matches } = swapMatch([matchWith('a', ['b', 'c'])], [], 'a', bookOf('b'), noneOwned);
+		expect(matches[0].book.id).toBe('b');
+		expect(matches[0].alternates.map((alt) => alt.book.id)).toEqual(['a', 'c']);
+	});
+
+	it('swaps to a catalog-search pick not among the alternates', () => {
+		const { matches } = swapMatch([matchWith('a', ['b'])], [], 'a', bookOf('z'), noneOwned);
+		expect(matches[0].book.id).toBe('z');
+		expect(matches[0].alternates.map((alt) => alt.book.id)).toEqual(['a', 'b']);
+	});
+
+	it('selection follows the swap when the old book was selected', () => {
+		const { selected } = swapMatch([matchWith('a', ['b'])], ['a'], 'a', bookOf('b'), noneOwned);
+		expect(selected).toEqual(['b']);
+	});
+
+	it('stays unselected when the old book was unselected', () => {
+		const { selected } = swapMatch([matchWith('a', ['b'])], [], 'a', bookOf('b'), noneOwned);
+		expect(selected).toEqual([]);
+	});
+
+	it('auto-deselects when swapping to an already-owned book', () => {
+		const owned: ReadonlySet<string> = new Set(['b']);
+		const { selected } = swapMatch([matchWith('a', ['b'])], ['a'], 'a', bookOf('b'), owned);
+		expect(selected).toEqual([]);
+	});
+
+	it('never duplicates a selection already held by another match', () => {
+		const matches = [matchWith('a', ['b']), matchWith('x')];
+		const { selected } = swapMatch(matches, ['a', 'b'], 'a', bookOf('b'), noneOwned);
+		expect(selected).toEqual(['b']);
+	});
+
+	it('refuses a replacement already held by another match (no duplicate rows)', () => {
+		const matches = [matchWith('a', ['x']), matchWith('x')];
+		expect(swapMatch(matches, ['a'], 'a', bookOf('x'), noneOwned)).toEqual({
+			matches,
+			selected: ['a'],
+		});
+	});
+
+	it('is a no-op for an unknown match or a self-swap', () => {
+		const matches = [matchWith('a', ['b'])];
+		expect(swapMatch(matches, ['a'], 'ghost', bookOf('b'), noneOwned)).toEqual({
+			matches,
+			selected: ['a'],
+		});
+		expect(swapMatch(matches, ['a'], 'a', bookOf('a'), noneOwned)).toEqual({
+			matches,
+			selected: ['a'],
+		});
+	});
+
+	it('only touches the targeted match', () => {
+		const other = matchWith('x', ['y']);
+		const { matches } = swapMatch([matchWith('a', ['b']), other], [], 'a', bookOf('b'), noneOwned);
+		expect(matches[1]).toBe(other);
 	});
 });
 

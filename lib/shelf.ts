@@ -1,4 +1,4 @@
-import type { UserBook } from '@/lib/hooks';
+import type { Book, UserBook } from '@/lib/hooks';
 import type { SpineMatch } from '@/lib/spine-match';
 
 /**
@@ -65,6 +65,63 @@ export function defaultSelection(
 	return matches
 		.filter((m) => m.bucket === 'high' && userBooks.get(m.book.id)?.owned !== true)
 		.map((m) => m.book.id);
+}
+
+/** Toggle one book in the review queue's selection (no-op semantics live in the UI). */
+export function toggleSelection(selected: string[], bookId: string): string[] {
+	return selected.includes(bookId) ? selected.filter((id) => id !== bookId) : [...selected, bookId];
+}
+
+/**
+ * Drop owned books from a selection. `defaultSelection` excludes them at
+ * draft-creation time, but ownership is LIVE while the draft is frozen — a book
+ * marked owned after the scan (another screen, sign-in-at-Add) must fall out of
+ * the count, the Add button, and the RPC payload. One derivation, used everywhere.
+ */
+export function pruneOwned(selected: string[], userBooks: ReadonlyMap<string, UserBook>): string[] {
+	return selected.filter((id) => userBooks.get(id)?.owned !== true);
+}
+
+/**
+ * Swap a review-queue match to a different catalog book (a ranked alternate or a
+ * catalog-search pick). Pure draft surgery for the swap sheet:
+ *   * the old book and the replacement trade places (the old book becomes the
+ *     top alternate, so the swap is always reversible);
+ *   * score/margin/bucket/supports are kept — the user overrode the matcher, and
+ *     re-scoring a deliberate choice would be noise;
+ *   * selection follows the swap: the old id is dropped, the new id is selected
+ *     iff the old one was selected AND the replacement isn't already owned
+ *     (already-owned books are badged + excluded, same rule as `defaultSelection`).
+ */
+export function swapMatch(
+	matches: SpineMatch[],
+	selected: string[],
+	fromBookId: string,
+	replacement: Book,
+	ownedIds: ReadonlySet<string>,
+): { matches: SpineMatch[]; selected: string[] } {
+	const match = matches.find((m) => m.book.id === fromBookId);
+	if (!match || replacement.id === fromBookId) return { matches, selected };
+	// Refuse a replacement that's already another match's pick — two rows for the
+	// same work would mean duplicate list keys and checkboxes toggling in lockstep.
+	if (matches.some((m) => m.book.id === replacement.id)) return { matches, selected };
+
+	const nextMatch: SpineMatch = {
+		...match,
+		book: replacement,
+		alternates: [
+			{ book: match.book, score: match.score },
+			...match.alternates.filter((a) => a.book.id !== replacement.id),
+		],
+	};
+	const nextMatches = matches.map((m) => (m === match ? nextMatch : m));
+
+	const wasSelected = selected.includes(fromBookId);
+	let nextSelected = selected.filter((id) => id !== fromBookId);
+	if (wasSelected && !ownedIds.has(replacement.id) && !nextSelected.includes(replacement.id)) {
+		nextSelected = [...nextSelected, replacement.id];
+	}
+	return { matches: nextMatches, selected: nextSelected };
 }
 
 /**

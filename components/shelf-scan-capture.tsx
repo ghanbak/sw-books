@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Camera } from 'react-native-vision-camera';
 
+import { ShelfScanReview } from '@/components/shelf-scan-review';
 import { tokens } from '@/constants/tokens';
 import { useShelfScan } from '@/hooks/useShelfScan';
 
@@ -131,19 +132,14 @@ export function ShelfScanCapture({ enabled }: { enabled: boolean }) {
 				</Animated.View>
 			)}
 
-			{/* Phase 4 replaces this with the full review overlay (list/grid, swap, Add). */}
-			{phase === 'review' && (
-				<Animated.View
-					style={styles.stateOverlay}
-					entering={FadeIn.duration(200)}
-					exiting={FadeOut.duration(200)}
-				>
-					<Text style={styles.stateTitle}>Spines recognized</Text>
-					<Text style={styles.stateText}>The review queue arrives in Phase 4.</Text>
-					<Pressable style={styles.secondaryButton} onPress={scan.reset} accessibilityRole="button">
-						<Text style={styles.secondaryButtonText}>Scan Again</Text>
-					</Pressable>
-				</Animated.View>
+			{(phase === 'review' || phase === 'adding' || phase === 'done') && (
+				<ShelfScanReview
+					phase={phase}
+					addError={scan.addError}
+					addedCount={scan.addedCount}
+					onAdd={scan.addSelected}
+					onReset={scan.reset}
+				/>
 			)}
 		</View>
 	);
