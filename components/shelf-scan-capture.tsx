@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CameraView } from 'expo-camera';
 import { Image } from 'expo-image';
 import { type MutableRefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -12,7 +13,6 @@ import Animated, {
 	withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Camera } from 'react-native-vision-camera';
 
 import { ShelfScanReview } from '@/components/shelf-scan-review';
 import { tokens } from '@/constants/tokens';
@@ -124,11 +124,11 @@ export function ShelfScanCapture({
 	return (
 		<View style={styles.container}>
 			{showCamera && (
-				<Camera
+				<CameraView
+					ref={scan.cameraRef}
 					style={StyleSheet.absoluteFill}
-					device="back"
-					isActive={active && phase === 'capturing'}
-					outputs={[scan.previewOutput, scan.photoOutput]}
+					facing="back"
+					onCameraReady={scan.onCameraReady}
 				/>
 			)}
 

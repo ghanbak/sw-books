@@ -1,90 +1,86 @@
 {
-  "expo": {
-    "name": "OssusArchives",
-    "slug": "ossus-archives",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "ossusarchives",
-    "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.ghanbak.ossusarchives",
-      "icon": "./assets/images/App-Icon.icon",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#0A0A0C",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
-      ],
-      "package": "com.ghanbak.ossusarchives"
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "deploymentTarget": "16.4"
-          }
-        }
-      ],
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow OssusArchives to scan book barcodes",
-          "barcodeScannerEnabled": true
-        }
-      ],
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#0A0A0C",
-          "dark": {
-            "backgroundColor": "#0A0A0C"
-          }
-        }
-      ],
-      "expo-font",
-      "expo-web-browser",
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": "com.googleusercontent.apps.722354394137-5q2b4cg8ber7o0ttcmnte5c8ed187ihs"
-        }
-      ],
-      "expo-apple-authentication",
-      "./plugins/withVisionCameraNoOptimizer.js",
-      "./plugins/withGoogleModularHeaders.js"
-    ],
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "d3eb2684-ad86-490c-8089-a07203ad7027"
-      }
-    },
-    "owner": "ghanbak"
-  }
+	"expo": {
+		"name": "OssusArchives",
+		"slug": "ossus-archives",
+		"version": "1.0.0",
+		"orientation": "portrait",
+		"icon": "./assets/images/icon.png",
+		"scheme": "ossusarchives",
+		"userInterfaceStyle": "dark",
+		"newArchEnabled": true,
+		"ios": {
+			"supportsTablet": true,
+			"bundleIdentifier": "com.ghanbak.ossusarchives",
+			"icon": "./assets/images/App-Icon.icon",
+			"infoPlist": {
+				"ITSAppUsesNonExemptEncryption": false
+			}
+		},
+		"android": {
+			"adaptiveIcon": {
+				"backgroundColor": "#0A0A0C",
+				"foregroundImage": "./assets/images/android-icon-foreground.png",
+				"monochromeImage": "./assets/images/android-icon-monochrome.png"
+			},
+			"edgeToEdgeEnabled": true,
+			"predictiveBackGestureEnabled": false,
+			"permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"],
+			"package": "com.ghanbak.ossusarchives"
+		},
+		"web": {
+			"output": "static",
+			"favicon": "./assets/images/favicon.png"
+		},
+		"plugins": [
+			"expo-router",
+			[
+				"expo-build-properties",
+				{
+					"ios": {
+						"deploymentTarget": "16.4"
+					}
+				}
+			],
+			[
+				"expo-camera",
+				{
+					"cameraPermission": "Allow OssusArchives to scan book barcodes",
+					"barcodeScannerEnabled": true
+				}
+			],
+			[
+				"expo-splash-screen",
+				{
+					"image": "./assets/images/splash-icon.png",
+					"imageWidth": 200,
+					"resizeMode": "contain",
+					"backgroundColor": "#0A0A0C",
+					"dark": {
+						"backgroundColor": "#0A0A0C"
+					}
+				}
+			],
+			"expo-font",
+			"expo-web-browser",
+			[
+				"@react-native-google-signin/google-signin",
+				{
+					"iosUrlScheme": "com.googleusercontent.apps.722354394137-5q2b4cg8ber7o0ttcmnte5c8ed187ihs"
+				}
+			],
+			"expo-apple-authentication",
+			"./plugins/withGoogleModularHeaders.js"
+		],
+		"experiments": {
+			"typedRoutes": true,
+			"reactCompiler": true
+		},
+		"extra": {
+			"router": {},
+			"eas": {
+				"projectId": "d3eb2684-ad86-490c-8089-a07203ad7027"
+			}
+		},
+		"owner": "ghanbak"
+	}
 }

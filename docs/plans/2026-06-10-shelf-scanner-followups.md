@@ -74,7 +74,14 @@ worthwhile (a real perf/robustness win each), #3 and #4 are pure cleanup._
 
 ---
 
-## 5. EAS image pin + optimizer plugin are scaffolding — revisit after first green build
+## 5. ~~EAS image pin + optimizer plugin are scaffolding~~ — ✅ RESOLVED (Path B, 2026-06-11)
+
+Moot: VisionCamera was dropped entirely (swapped to `expo-camera` + `expo-text-extractor`).
+The `withVisionCameraNoOptimizer` plugin and all `ios.image` pins were removed. The
+`withGoogleModularHeaders` plugin stays (it's for Google Sign-In auth, not the scanner).
+Original note retained below for history.
+
+### (historical) EAS image pin + optimizer plugin are scaffolding — revisit after first green build
 
 **Files:** `eas.json` (all three `ios.image`), `plugins/withVisionCameraNoOptimizer.js`
 

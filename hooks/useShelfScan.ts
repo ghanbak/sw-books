@@ -1,9 +1,9 @@
+import type { CameraView } from 'expo-camera';
 import { Directory, File, Paths } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
 import { Gyroscope } from 'expo-sensors';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { AppState } from 'react-native';
-import { usePhotoOutput, usePreviewOutput } from 'react-native-vision-camera';
 
 import { useAuth } from '@/lib/auth';
 import { useBooks, useUserBooks } from '@/lib/hooks';
@@ -91,10 +91,14 @@ export function useShelfScan({
 	const captureFailureStreakRef = useRef(0);
 	const [captureError, setCaptureError] = useState<string | null>(null);
 
-	const previewOutput = usePreviewOutput();
-	// Defaults only — 'speed' qualityPrioritization throws on devices without
-	// supportsSpeedQualityPrioritization, and OCR likes resolution anyway.
-	const photoOutput = usePhotoOutput();
+	// The component attaches this ref + onCameraReady to its <CameraView>; capture()
+	// calls takePictureAsync on it. takePictureAsync throws before onCameraReady fires,
+	// so capture() gates on cameraReadyRef.
+	const cameraRef = useRef<CameraView>(null);
+	const cameraReadyRef = useRef(false);
+	const onCameraReady = useCallback(() => {
+		cameraReadyRef.current = true;
+	}, []);
 
 	const gateRef = useRef(createCaptureGate());
 	const captureInFlightRef = useRef(false);
@@ -193,15 +197,21 @@ export function useShelfScan({
 		if (captureInFlightRef.current) return;
 		const current = stateRef.current;
 		if (current.phase !== 'capturing' || atCaptureCap(current)) return;
+		// Camera must be mounted and ready — takePictureAsync throws before onCameraReady,
+		// and the gyro gate can fire in the brief window before the feed is live.
+		const cam = cameraRef.current;
+		if (!cam || !cameraReadyRef.current) return;
 		captureInFlightRef.current = true;
 		try {
 			const photo = await Promise.race([
-				photoOutput.capturePhotoToFile({ enableShutterSound: false }, {}),
+				// shutterSound:false keeps the capture silent; default processing leaves the
+				// still EXIF-oriented (OCR accuracy depends on upright text, so don't skip it).
+				cam.takePictureAsync({ shutterSound: false }),
 				new Promise<never>((_, reject) =>
 					setTimeout(() => reject(new Error('capture timed out')), CAPTURE_TIMEOUT_MS),
 				),
 			]);
-			const file = new File(`file://${photo.filePath}`);
+			const file = new File(photo.uri);
 
 			// Re-check intent AFTER the shutter: Finish/reset/unmount may have landed
 			// while the photo was being taken. Drop deliberately — delete, don't move,
@@ -247,7 +257,7 @@ export function useShelfScan({
 		} finally {
 			captureInFlightRef.current = false;
 		}
-	}, [photoOutput, recognizeStill]);
+	}, [recognizeStill]);
 
 	// Hands-free auto-capture: steady-hold fires the gate; movement between captures
 	// is required, so resting on a framing never duplicates stills.
@@ -394,9 +404,9 @@ export function useShelfScan({
 
 	return {
 		state,
-		/** Connect both to the `<Camera outputs={…}>`. */
-		previewOutput,
-		photoOutput,
+		/** Attach to `<CameraView ref={…} onCameraReady={…}>`. */
+		cameraRef,
+		onCameraReady,
 		ghostUri: ghostUri(state),
 		captureCount: state.captures.length,
 		atCap: atCaptureCap(state),

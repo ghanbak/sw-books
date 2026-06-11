@@ -6,6 +6,18 @@ date: 2026-06-10
 
 # fix: VisionCamera V5 iOS archive failure on Xcode 26 🐛
 
+> **✅ RESOLVED via Path B (2026-06-11).** After build #9 showed a *second* VisionCamera
+> compiler crash (IRGen, even at `-Onone`) on Swift 6.2.1, we dropped VisionCamera
+> entirely and swapped the OCR engine to **`expo-camera` + `expo-text-extractor`** (Apple
+> Vision on iOS, ML Kit on Android). Kept all of PR #8's engine-agnostic logic
+> (matcher/reducer/review/session + 158 tests) — only the 3 engine files changed
+> (`lib/ocr.ts`, `hooks/useShelfScan.ts`, `components/shelf-scan-capture.tsx`). Removed
+> the `react-native-vision-camera*` / `react-native-nitro-*` deps, the
+> `withVisionCameraNoOptimizer` plugin, and the Xcode-26.1 image pins. Local gates green:
+> tsc · biome · 158/158 vitest · prebuild · `pod install` (114 pods, no VisionCamera/Nitro).
+> Pending: an EAS build to confirm the archive. The rest of the doc is the journey that
+> led here.
+
 ## Overview
 
 The shelf spine scanner (PR #8, `3c687b5`) can't produce an iOS build.
