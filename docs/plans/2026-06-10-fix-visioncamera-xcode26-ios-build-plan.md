@@ -96,6 +96,47 @@ may also dodge the compiler bug with zero code, but that's a gamble; the build-s
 override is deterministic. `5.0.11` is latest; **no version bump fixes this**, and never
 add `useFrameworks: "static"` with Nitro.
 
+## Update — 2026-06-11, build #9 `e78ad801` (preview): `-Onone` partial, deeper IRGen crash
+
+Both new plugins worked. `pod install` completes (modular-headers fix), and VisionCamera +
+all Nitro pods now compile at `-Onone` (confirmed in the log: `swiftc -module-name
+VisionCamera -Onone …`; everything else still `-O`). **The optimizer "verify" crash is
+gone.** But VisionCamera still crashes `swift-frontend` — a **separate crash in IRGen**,
+emitting type metadata, which runs *even at `-Onone`*:
+
+```
+swiftc -module-name VisionCamera -Onone -whole-module-optimization …
+Apple Swift version 6.2.1 … effective version 5.10
+4  swift::irgen::IRGenModule::getAddrOfLLVMVariable(…)
+5  swift::irgen::emitLazyTypeMetadata(swift::NominalTypeDecl*)
+6  swift::irgen::IRGenerator::emitLazyDefinitions()
+7  swift::performIRGeneration(…)
+```
+
+So `-Onone` alone is **insufficient** — VisionCamera V5 + Nitro hits a **Swift 6.2.1
+compiler bug** (Xcode 26.1). Decisive signal: the maintainer archives the same stack
+clean on **Swift 6.3.1 / Xcode 26.4** ([nitro#1301](https://github.com/mrousavy/nitro/issues/1301));
+Xcode 26.4 (Swift 6.3) shipped 2026-03-24. VisionCamera's docs also list
+`SWIFT_COMPILATION_MODE=singlefile` as a compiler-bug workaround.
+
+### Revised recommendation (supersedes "Path A = `-Onone` alone")
+
+1. **Bump the EAS image to Xcode 26.4 / Swift 6.3 — do this next.** One line in `eas.json`:
+   `"image": "macos-tahoe-26.4-xcode-26.4"`. Highest-confidence fix (newer compiler,
+   maintainer-confirmed clean). **Keep both plugins** — `-Onone` is harmless and
+   `withGoogleModularHeaders` is still required for the Google pods regardless of toolchain.
+2. **If 26.4 still crashes VisionCamera:** add `SWIFT_COMPILATION_MODE = singlefile` to the
+   VisionCamera/Nitro pods in `withVisionCameraNoOptimizer.js` (disables whole-module,
+   changing the IRGen metadata-emission path that's crashing — VisionCamera docs sanction
+   this for compiler bugs).
+3. **If both fail:** **Path B** (drop V5 → `expo-camera` + `expo-text-extractor` / Apple
+   Vision). Two distinct VisionCamera compiler crashes on 26.1 means the foundation is
+   fighting harder than it's worth for a still-capture scanner; cut it.
+
+Attribution note: bumping to 26.4 moves the toolchain (the variable we'd held constant).
+That's correct now — the plugin's effect (`-Onone` applied) is already confirmed in the
+log, so the next variable to move is the compiler itself.
+
 ## Key Facts / Constraints
 
 - **CNG/prebuild project** — `ios/` is gitignored; the on-disk `Podfile.lock` is a stale
