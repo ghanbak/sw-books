@@ -53,6 +53,49 @@ In `__DEV__` builds, the **Continue as Dev User** button signs in as `dev@ossusa
 
 The Apple Sign-In Supabase client secret JWT expires every 6 months — a scheduled agent posts a rotation reminder issue ~2 weeks before expiry.
 
+## Builds & distribution (EAS)
+
+Cloud builds run on EAS Build. Three profiles in [eas.json](eas.json):
+
+| Profile       | Distribution                       | Use                                                       |
+| ------------- | ---------------------------------- | --------------------------------------------------------- |
+| `development` | internal · dev client · simulator  | local dev client                                          |
+| `preview`     | internal · ad-hoc device           | test the real (Release) app on registered devices         |
+| `production`  | App Store                          | TestFlight / App Store                                    |
+
+All iOS profiles are pinned to the `macos-sequoia-15.6-xcode-26.1` build image (see the VisionCamera note below). Builds take ~15–20 min.
+
+### Preview — test on your device
+
+A Release-config, ad-hoc-signed build installable on registered iPhones via the link/QR EAS prints when it finishes. This is the build to smoke-test before shipping — it exercises the same Release archive path as production.
+
+```bash
+# First time only: register your iPhone's UDID (opens a link/QR to install a profile)
+eas device:create
+
+# Build — install from the link EAS prints at the end
+eas build --profile preview --platform ios
+```
+
+Only UDIDs registered via `eas device:create` can install an internal build; an unregistered device build succeeds but won't install.
+
+### Production — TestFlight / App Store
+
+```bash
+# Build + submit to App Store Connect → TestFlight in one step
+eas build --profile production --platform ios --auto-submit
+
+# Or build first, then submit separately (e.g. to inspect the build before sending)
+eas build --profile production --platform ios
+eas submit --profile production --platform ios
+```
+
+`production` sets `autoIncrement: true` with `appVersionSource: "remote"`, so EAS owns the build number — don't bump it by hand. Submit credentials (Apple ID, ASC app ID, team ID) live in `eas.json` under `submit.production`. After upload, App Store Connect takes ~10–30 min to process before the build shows in TestFlight.
+
+Fuller setup (credentials, Apple Developer prerequisites, env/secrets via `eas env:create`) is in `docs/guides/setup-guide.md` (local-only).
+
+> **VisionCamera / Xcode 26 note.** [`plugins/withVisionCameraNoOptimizer.js`](plugins/withVisionCameraNoOptimizer.js) forces `SWIFT_OPTIMIZATION_LEVEL=-Onone` on the VisionCamera/Nitro pods: `react-native-vision-camera` v5 crashes the Swift optimizer under Release whole-module optimization on Xcode 26 ([mrousavy/react-native-vision-camera#3743](https://github.com/mrousavy/react-native-vision-camera/issues/3743)). The Xcode 26.1 image pin and this plugin can be revisited/retired once upstream ships a fix.
+
 ## Commands
 
 | Command                       | What it does                                        |
