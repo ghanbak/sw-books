@@ -72,7 +72,8 @@
         }
       ],
       "expo-apple-authentication",
-      "./plugins/withVisionCameraNoOptimizer.js"
+      "./plugins/withVisionCameraNoOptimizer.js",
+      "./plugins/withGoogleModularHeaders.js"
     ],
     "experiments": {
       "typedRoutes": true,
