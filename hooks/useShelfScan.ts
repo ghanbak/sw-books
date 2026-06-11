@@ -46,7 +46,7 @@ function scanDirectory(): Directory {
 /**
  * The shelf-scanner capture engine (plan Phase 3). Owns the flow reducer
  * (`lib/shelf-scan.ts`), hands-free auto-capture (gyro steadiness gate →
- * `capturePhotoToFile`), incremental per-still OCR, and the temp-file lifecycle
+ * `takePictureAsync`), incremental per-still OCR, and the temp-file lifecycle
  * (only the current ghost still is kept on disk; everything else is deleted the
  * moment its OCR settles — bounded memory regardless of session length).
  *
@@ -91,11 +91,19 @@ export function useShelfScan({
 	const captureFailureStreakRef = useRef(0);
 	const [captureError, setCaptureError] = useState<string | null>(null);
 
-	// The component attaches this ref + onCameraReady to its <CameraView>; capture()
-	// calls takePictureAsync on it. takePictureAsync throws before onCameraReady fires,
-	// so capture() gates on cameraReadyRef.
-	const cameraRef = useRef<CameraView>(null);
+	// The component wires setCameraRef + onCameraReady to its <CameraView>; capture()
+	// calls takePictureAsync via cameraRef. takePictureAsync throws before the camera is
+	// ready, so capture() (and the auto-capture gate) hold off until onCameraReady fires.
+	const cameraRef = useRef<CameraView | null>(null);
 	const cameraReadyRef = useRef(false);
+	// Callback ref so readiness resets when the view detaches: a new capturing session
+	// (e.g. Start Over → scan again) remounts the CameraView, and a stale `ready` from the
+	// previous mount would let a capture fire before the fresh feed is live. onCameraReady
+	// flips it back true once the remounted camera is shootable.
+	const setCameraRef = useCallback((instance: CameraView | null) => {
+		cameraRef.current = instance;
+		if (!instance) cameraReadyRef.current = false;
+	}, []);
 	const onCameraReady = useCallback(() => {
 		cameraReadyRef.current = true;
 	}, []);
@@ -271,9 +279,11 @@ export function useShelfScan({
 		gateRef.current.reset(true);
 		Gyroscope.setUpdateInterval(GYRO_INTERVAL_MS);
 		const subscription = Gyroscope.addListener(({ x, y, z }) => {
-			// Don't sample while the shutter is open — the gate commits its fired state
-			// on a true sample, and a fire we can't honor would be silently destroyed.
-			if (captureInFlightRef.current) return;
+			// Don't sample while the shutter is open or before the camera can shoot — the
+			// gate commits its fired state on a true sample, and a fire we can't honor
+			// (capture in flight, or takePictureAsync not yet callable) would be destroyed,
+			// making the user move-and-resteady to retry.
+			if (captureInFlightRef.current || !cameraReadyRef.current) return;
 			const magnitude = Math.sqrt(x * x + y * y + z * z);
 			if (gateRef.current.sample(magnitude, Date.now())) capture();
 		});
@@ -404,8 +414,8 @@ export function useShelfScan({
 
 	return {
 		state,
-		/** Attach to `<CameraView ref={…} onCameraReady={…}>`. */
-		cameraRef,
+		/** Wire to `<CameraView ref={setCameraRef} onCameraReady={onCameraReady}>`. */
+		setCameraRef,
 		onCameraReady,
 		ghostUri: ghostUri(state),
 		captureCount: state.captures.length,

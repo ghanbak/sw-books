@@ -125,7 +125,7 @@ export function ShelfScanCapture({
 		<View style={styles.container}>
 			{showCamera && (
 				<CameraView
-					ref={scan.cameraRef}
+					ref={scan.setCameraRef}
 					style={StyleSheet.absoluteFill}
 					facing="back"
 					onCameraReady={scan.onCameraReady}
