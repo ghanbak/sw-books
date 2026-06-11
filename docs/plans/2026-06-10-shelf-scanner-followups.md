@@ -71,3 +71,23 @@ remember to honor all three.
 
 _Captured 2026-06-10. Pick up opportunistically; #1 and #2 are the most
 worthwhile (a real perf/robustness win each), #3 and #4 are pure cleanup._
+
+---
+
+## 5. EAS image pin + optimizer plugin are scaffolding — revisit after first green build
+
+**Files:** `eas.json` (all three `ios.image`), `plugins/withVisionCameraNoOptimizer.js`
+
+The `macos-sequoia-15.6-xcode-26.1` pin + the `-Onone` config plugin are the fix for
+the VisionCamera Xcode-26 archive crash (see
+`2026-06-10-fix-visioncamera-xcode26-ios-build-plan.md`). The pin is deliberately the
+**same image as the last failing build (#7)** so a green build is provably attributable
+to the plugin, not the toolchain.
+
+Once a build is confirmed green:
+- Decide whether to keep 26.1, move to a newer stable (e.g. `xcode-26.4`), or drop the
+  pin and track the SDK-54 default. The plugin is the real fix; the pin is scaffolding.
+- Retire the plugin entirely once `react-native-vision-camera` ships a fix for the
+  Xcode-26 whole-module-optimization compiler crash (track mrousavy/react-native-vision-camera#3743).
+
+_Added 2026-06-11._

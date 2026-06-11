@@ -71,7 +71,8 @@
           "iosUrlScheme": "com.googleusercontent.apps.722354394137-5q2b4cg8ber7o0ttcmnte5c8ed187ihs"
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      "./plugins/withVisionCameraNoOptimizer.js"
     ],
     "experiments": {
       "typedRoutes": true,

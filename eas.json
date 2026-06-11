@@ -8,12 +8,14 @@
       "developmentClient": true,
       "distribution": "internal",
       "ios": {
+        "image": "macos-sequoia-15.6-xcode-26.1",
         "simulator": true
       }
     },
     "preview": {
       "distribution": "internal",
       "ios": {
+        "image": "macos-sequoia-15.6-xcode-26.1",
         "resourceClass": "m-medium"
       }
     },
@@ -21,6 +23,7 @@
       "distribution": "store",
       "autoIncrement": true,
       "ios": {
+        "image": "macos-sequoia-15.6-xcode-26.1",
         "resourceClass": "m-medium"
       }
     }
