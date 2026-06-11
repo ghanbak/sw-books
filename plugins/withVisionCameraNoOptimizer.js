@@ -5,10 +5,12 @@ const path = require('node:path');
 // swift-frontend SIGSEGVs in the LLVM IR "verify" pass when compiling the VisionCamera
 // pod with -O -whole-module-optimization (Release archive) on Xcode 26.x. Confirmed via
 // EAS build #7 bafddfd5 ("Global is external, but doesn't have external or weak linkage!").
-// Disabling Swift optimization on the VisionCamera/Nitro pods sidesteps the crashing
-// pass. -Onone is the highest-confidence fix (no optimizer => no optimizer crash); these
-// pods are camera/bridge glue, so the runtime cost is negligible (heavy OCR is ML Kit
-// C++, unaffected). Scope note: start_with?('Nitro') also covers react-native-nitro-image
+// Disabling Swift optimization on the VisionCamera/Nitro pods removes that *optimizer*
+// crash — BUT build #9 e78ad801 showed VisionCamera then crashes a second way, in IRGen
+// type-metadata emission (emitLazyTypeMetadata), which runs even at -Onone. So -Onone is
+// necessary-not-sufficient: kept because it's harmless and cheap, but the real fix is a
+// newer toolchain (Xcode 26.4 / Swift 6.3) or dropping VisionCamera. These pods are
+// camera/bridge glue, so the -Onone runtime cost is negligible (heavy OCR is ML Kit C++). Scope note: start_with?('Nitro') also covers react-native-nitro-image
 // (a separate top-level dep) — intentional: identical -O -whole-module compile, pre-empts
 // the same crash there. CNG/prebuild project (ios/ is gitignored), so this must patch the
 // generated Podfile via a dangerous mod rather than a committed Podfile.

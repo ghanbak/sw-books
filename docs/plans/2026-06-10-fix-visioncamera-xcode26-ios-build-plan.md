@@ -137,6 +137,29 @@ Attribution note: bumping to 26.4 moves the toolchain (the variable we'd held co
 That's correct now — the plugin's effect (`-Onone` applied) is already confirmed in the
 log, so the next variable to move is the compiler itself.
 
+### Build #9 — crash attribution resolved + review synthesis (2026-06-11)
+
+The log has **exactly one** `swift-frontend` crash; its frame-0 program args are
+`-module-name VisionCamera … -Onone … -cxx-interoperability-mode=default`. So
+**VisionCamera is the sole crasher** — the `Failed frontend command: ExpoSensors` line is
+a reaped parallel job (no stack, only `WriteAuxiliaryFile` steps), not a second crash.
+The crash is in VisionCamera's **C++-interop type-metadata emission** (Nitro), which stock
+Expo Swift pods don't use — that's why only it crashes. Consequence: **Path B genuinely
+removes the failure class**, and 26.4 is a legitimate keep-V5 attempt.
+
+Plan-review (dhh / kieran / simplicity) consensus, adopted:
+- **Stop calling toolchain moves "highest-confidence."** `-Onone` was predicted highest-
+  confidence and was wrong; 26.4 is a *gamble* (one maintainer data point on different code),
+  not a guarantee. Labelled as such throughout now.
+- **The `singlefile` tier is cut.** Stacking a third speculative compiler workaround behind
+  "if it still fails" is a slot machine. Decision is binary: 26.4 archives, or Path B.
+- **Path B is the reviewer-favored default** — three distinct VisionCamera failures + two
+  carried plugins for a still-capture scanner is the foundation not holding weight.
+- **Recommended next action: hedge.** Fire **one** Xcode-26.4 EAS build (keep V5) *and, in
+  parallel,* start the Path B swap on a branch (it builds in the simulator — seconds, not a
+  20-min loop). Ship whichever lands first; if 26.4 fails, Path B is already underway and
+  there are no further keep-V5 rungs.
+
 ## Key Facts / Constraints
 
 - **CNG/prebuild project** — `ios/` is gitignored; the on-disk `Podfile.lock` is a stale
@@ -288,10 +311,12 @@ you separately decide the V5 foundation isn't worth carrying for a not-yet-built
 ## Verification Plan
 
 1. **Step 0** (above) — gate.
-2. Path A: `npx expo prebuild -p ios --no-install` → confirm the `vision-camera-swift5`
-   block is in the generated `ios/Podfile`; then (local machine, not sandbox) `pod install`
-   + `xcodebuild -showBuildSettings -target NitroImage | grep SWIFT_VERSION` → must be `5.0`.
-3. EAS production build → successful archive → TestFlight processing.
+2. Path A: `npx expo prebuild -p ios --clean` → `pod install` → confirm `-Onone` resolves
+   on VisionCamera (`xcodebuild -showBuildSettings -target VisionCamera | grep
+   SWIFT_OPTIMIZATION_LEVEL` → `-Onone`). For a toolchain bump, a local single-job Release
+   compile (`xcodebuild … -configuration Release -sdk iphoneos -jobs 1`) can reproduce the
+   VisionCamera compiler crash without a 20-min EAS archive — use it to confirm a fix before spending a build.
+3. EAS build → successful archive → TestFlight / device install.
 4. Physical iPhone: real shelf scan round-trip; tune `SHELF_SCAN_CONSTANTS` if needed.
 5. Update this plan + spike plan with the real Release-archive outcome and the captured error.
 
@@ -301,10 +326,15 @@ you separately decide the V5 foundation isn't worth carrying for a not-yet-built
   spikes must run an `eas build` (or device Release archive) before declaring GO.
 - **At 20 min/build, attribution is the game** — change one variable; capture the real
   error before patching.
-- Nitro + Xcode 26: force `SWIFT_VERSION=5.0` on `VisionCamera*`/`Nitro*`; never
-  `useFrameworks: "static"` with Nitro. (Record only if a single-variable build proves it.)
-- The V5 foundation was adopted for a live-pan feature still not in scope; revisit whether
-  carrying it is worth its cost. [[project_visioncamera_xcode26_conflict]], [[feedback_build_once_capable_foundation]].
+- VisionCamera V5 + Nitro on Xcode 26.1 / Swift 6.2.1 crashes `swift-frontend` in
+  multiple passes (optimizer verify, then IRGen type-metadata) because of its C++ interop
+  (`-cxx-interoperability-mode=default`); stock Swift Expo pods don't. `-Onone` clears only
+  the optimizer crash. Never `useFrameworks: "static"` with Nitro.
+- **A foundation that can't compile isn't a foundation.** The V5 stack was adopted for a
+  live-pan feature with no code/timeline, yet has produced three distinct build failures and
+  two carried Podfile plugins for a still-capture scanner that needs none of V5's power. The
+  `lib/ocr.ts` boundary was built to make the engine swappable — if the toolchain bump
+  doesn't land cleanly, use it. [[project_visioncamera_xcode26_conflict]], [[feedback_build_once_capable_foundation]].
 
 ## References
 
