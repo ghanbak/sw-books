@@ -37,12 +37,8 @@ export async function createAuthServerClient() {
 						cookieStore.set(name, value, options);
 					}
 				} catch {
-					// Expected from a Server Component (can't write cookies) — the
-					// middleware refreshes the session, so that case is safe to ignore.
-					// But the OAuth callback is a Route Handler where writes DO work, so
-					// if this fires during /auth/callback the session cookie was silently
-					// dropped (H-D). Temporary diagnostic — see the login-redirect plan.
-					console.warn('[supabase-auth] cookie write skipped (setAll catch)');
+					// Called from a Server Component (can't write cookies) — the
+					// middleware refreshes the session, so this is safe to ignore.
 				}
 			},
 		},

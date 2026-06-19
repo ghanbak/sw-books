@@ -40,16 +40,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
 	// Matcher already scopes this to /admin/*, so any non-admin caller is bounced
 	// to /login.
-	const { data, error } = await supabase.auth.getClaims();
-	const sub = data?.claims?.sub;
-	if (!isAllowlisted(sub)) {
-		// Temporary diagnostic (login-redirect plan): separate "getClaims failed at
-		// the Edge" (H-B) from "authenticated but sub not allowlisted". Booleans /
-		// error message only — never the token.
-		console.warn(
-			`[middleware] gate bounce: getClaims_error=${error ? error.message : 'none'} has_sub=${Boolean(sub)}`,
-		);
-		return toLogin(request);
-	}
+	const { data } = await supabase.auth.getClaims();
+	if (!isAllowlisted(data?.claims?.sub)) return toLogin(request);
 	return response;
 }

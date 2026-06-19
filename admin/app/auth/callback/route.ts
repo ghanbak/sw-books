@@ -30,12 +30,10 @@ export async function GET(request: Request): Promise<NextResponse> {
 	const supabase = await createAuthServerClient();
 	const { error } = await supabase.auth.exchangeCodeForSession(code);
 	if (error) {
-		// Boolean only — never log the verifier value. Tells us whether the PKCE
-		// code-verifier cookie reached the server (H-A) vs the exchange failing for
-		// another reason.
-		const hasVerifier = (request.headers.get('cookie') ?? '').includes('-auth-token-code-verifier');
+		// Surface the failure rather than silently bouncing to /login — the
+		// original bug was an "Invalid API key" hidden by this swallowed error.
 		console.error(
-			`[auth/callback] exchangeCodeForSession failed: ${error.message} (status=${error.status}, code_verifier_cookie=${hasVerifier})`,
+			`[auth/callback] exchangeCodeForSession failed: ${error.message} (status=${error.status})`,
 		);
 		return loginRedirect(origin, 'exchange_failed');
 	}

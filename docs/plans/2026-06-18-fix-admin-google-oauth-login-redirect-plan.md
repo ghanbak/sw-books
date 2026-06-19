@@ -2,11 +2,17 @@
 title: "fix: Admin Google OAuth login bounces back to /login in production"
 type: fix
 date: 2026-06-18
-status: proposed
+status: resolved
 area: admin (Next.js on Vercel) + Supabase Auth
 ---
 
 # 🐛 fix: Admin Google OAuth login bounces back to `/login` in production
+
+> **RESOLVED 2026-06-18.** The diagnostic-first Phase 1 worked: un-swallowing the
+> error revealed `Invalid API key` — a wrong `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+> (none of H-A/H-B/H-D). A second bug (catalog DB target defaulting to `local`)
+> surfaced right after. Full write-up:
+> [docs/solutions/2026-06-18-admin-oauth-invalid-api-key.md](../solutions/2026-06-18-admin-oauth-invalid-api-key.md).
 
 ## Overview
 
