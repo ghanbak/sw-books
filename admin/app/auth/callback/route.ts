@@ -5,24 +5,43 @@ import { NextResponse } from 'next/server';
  * OAuth (PKCE) callback: exchanges the code for a session, then redirects to
  * `next` (validated to a same-origin path to prevent open-redirects). Honors
  * `x-forwarded-host` so Vercel deployments redirect to the right host.
+ *
+ * On failure it logs the exact GoTrue error (codes/booleans only — never cookie
+ * values) and surfaces a short `?error=` code on /login. This path is prod-only
+ * (local dev is ungated), so this is the only window into why a sign-in bounces.
  */
+type CallbackError = 'exchange_failed' | 'missing_code';
+
+function loginRedirect(origin: string, error: CallbackError): NextResponse {
+	return NextResponse.redirect(`${origin}/login?error=${error}`);
+}
+
 export async function GET(request: Request): Promise<NextResponse> {
 	const { searchParams, origin } = new URL(request.url);
 	const code = searchParams.get('code');
 	let next = searchParams.get('next') ?? '/admin/books';
 	if (!next.startsWith('/') || next.startsWith('//')) next = '/admin/books';
 
-	if (code) {
-		const supabase = await createAuthServerClient();
-		const { error } = await supabase.auth.exchangeCodeForSession(code);
-		if (!error) {
-			const forwardedHost = request.headers.get('x-forwarded-host');
-			if (process.env.NODE_ENV === 'development') {
-				return NextResponse.redirect(`${origin}${next}`);
-			}
-			if (forwardedHost) return NextResponse.redirect(`https://${forwardedHost}${next}`);
-			return NextResponse.redirect(`${origin}${next}`);
-		}
+	if (!code) {
+		console.error('[auth/callback] no code in callback url');
+		return loginRedirect(origin, 'missing_code');
 	}
-	return NextResponse.redirect(`${origin}/login`);
+
+	const supabase = await createAuthServerClient();
+	const { error } = await supabase.auth.exchangeCodeForSession(code);
+	if (error) {
+		// Boolean only — never log the verifier value. Tells us whether the PKCE
+		// code-verifier cookie reached the server (H-A) vs the exchange failing for
+		// another reason.
+		const hasVerifier = (request.headers.get('cookie') ?? '').includes('-auth-token-code-verifier');
+		console.error(
+			`[auth/callback] exchangeCodeForSession failed: ${error.message} (status=${error.status}, code_verifier_cookie=${hasVerifier})`,
+		);
+		return loginRedirect(origin, 'exchange_failed');
+	}
+
+	const forwardedHost = request.headers.get('x-forwarded-host');
+	if (process.env.NODE_ENV === 'development') return NextResponse.redirect(`${origin}${next}`);
+	if (forwardedHost) return NextResponse.redirect(`https://${forwardedHost}${next}`);
+	return NextResponse.redirect(`${origin}${next}`);
 }
