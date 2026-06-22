@@ -1,62 +1,51 @@
-import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
-import { Platform } from "react-native";
+import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Platform } from 'react-native';
 
-import { tokens } from "@/constants/tokens";
+import { tokens } from '@/constants/tokens';
 
 // Native tab bar — UIKit on iOS, Material 3 on Android.
 //
-// On iOS 26+ this becomes the floating Liquid Glass capsule automatically.
-// `role="search"` on the scan tab gives it the separated circular affordance
-// (like the magnifying glass in Apple News).
+// Tabs: Archives · Timeline · Library · Search. Search uses `role="search"` for
+// the separated circular affordance (like Apple News). Scan and Profile are no
+// longer tabs — they open as a full-screen modal / bottom sheet from each tab's
+// header action buttons.
 //
-// On iOS <26 there's no Liquid Glass capsule. UITabBarAppearance layers the
-// backgroundEffect (blur) over the backgroundColor, so we disable the blur and
-// use a solid color. Critically, iOS applies scrollEdgeAppearance (transparent
-// by default) when content is at the top — disableTransparentOnScrollEdge=true
-// forces the bar to keep its standard background everywhere.
+// On iOS 26+ this becomes the floating Liquid Glass capsule automatically. On
+// iOS <26 we disable the blur and use a solid color, and force the standard
+// background everywhere via disableTransparentOnScrollEdge.
 //
 // Icons are SF Symbols on iOS only. Android currently shows tab labels without
 // icons — add `androidSrc` PNGs or a VectorIcon family when we ship Android.
-const iosMajor =
-  Platform.OS === "ios" ? Number.parseInt(String(Platform.Version), 10) : 0;
+const iosMajor = Platform.OS === 'ios' ? Number.parseInt(String(Platform.Version), 10) : 0;
 const isIOS26Plus = iosMajor >= 26;
 
 export default function TabLayout() {
-  return (
-    <NativeTabs
-      blurEffect={isIOS26Plus ? "systemChromeMaterialDark" : "none"}
-      backgroundColor={isIOS26Plus ? undefined : tokens.surface.background}
-      disableTransparentOnScrollEdge={!isIOS26Plus}
-    >
-      <NativeTabs.Trigger name="index">
-        <Icon
-          sf={{ default: "externaldrive", selected: "externaldrive.fill" }}
-        />
-        <Label>Archives</Label>
-      </NativeTabs.Trigger>
+	return (
+		<NativeTabs
+			blurEffect={isIOS26Plus ? 'systemChromeMaterialDark' : 'none'}
+			backgroundColor={isIOS26Plus ? undefined : tokens.surface.background}
+			disableTransparentOnScrollEdge={!isIOS26Plus}
+		>
+			<NativeTabs.Trigger name="archives">
+				<Icon sf={{ default: 'archivebox', selected: 'archivebox.fill' }} />
+				<Label>Archives</Label>
+			</NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="shelf">
-        <Icon
-          sf={{ default: "books.vertical", selected: "books.vertical.fill" }}
-        />
-        <Label>Shelves</Label>
-      </NativeTabs.Trigger>
+			<NativeTabs.Trigger name="timeline">
+				<Icon sf={{ default: 'clock', selected: 'clock.fill' }} />
+				<Label>Timeline</Label>
+			</NativeTabs.Trigger>
 
-      {/* biome-ignore lint/a11y/useSemanticElements: NativeTabsTabBarItemRole, not ARIA */}
-      <NativeTabs.Trigger name="scan" role="search">
-        <Icon sf="barcode.viewfinder" />
-        <Label>Scan</Label>
-      </NativeTabs.Trigger>
+			<NativeTabs.Trigger name="library">
+				<Icon sf={{ default: 'books.vertical', selected: 'books.vertical.fill' }} />
+				<Label>Library</Label>
+			</NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="profile">
-        <Icon
-          sf={{
-            default: "person.crop.circle",
-            selected: "person.crop.circle.fill",
-          }}
-        />
-        <Label>Profile</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
+			{/* biome-ignore lint/a11y/useSemanticElements: NativeTabsTabBarItemRole, not ARIA */}
+			<NativeTabs.Trigger name="search" role="search">
+				<Icon sf="magnifyingglass" />
+				<Label>Search</Label>
+			</NativeTabs.Trigger>
+		</NativeTabs>
+	);
 }

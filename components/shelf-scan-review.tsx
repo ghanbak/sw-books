@@ -118,7 +118,7 @@ export function ShelfScanReview({
 
 	const goToShelf = useCallback(() => {
 		onReset();
-		router.push('/(tabs)/shelf');
+		router.push('/library');
 	}, [onReset, router]);
 
 	// Screen-reader narration. The review arrives via a silent overlay swap (no nav),
