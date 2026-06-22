@@ -65,6 +65,25 @@ export default function RootLayout() {
 											headerBackTitle: 'Back',
 										}}
 									/>
+									{/* Scan opens over the active tab. Interim `modal` (swipe-to-dismiss) keeps
+									    it from being a dead-end; the scan redesign step switches this to
+									    `fullScreenModal` + an in-screen close button. */}
+									<Stack.Screen
+										name="scan"
+										options={{ presentation: 'modal', headerShown: false }}
+									/>
+									{/* Account/Profile bottom sheet. */}
+									<Stack.Screen
+										name="profile"
+										options={{
+											presentation: 'formSheet',
+											headerShown: false,
+											sheetAllowedDetents: [0.6, 1.0],
+											sheetGrabberVisible: true,
+											sheetCornerRadius: 24,
+										}}
+									/>
+									<Stack.Screen name="about" options={{ title: 'About' }} />
 								</Stack>
 							</AuthGate>
 							<StatusBar style="light" />
@@ -95,7 +114,7 @@ function AuthGate({ children }: { children: ReactNode }) {
 		if (!session && !inAuthGroup) {
 			router.replace('/(auth)/login');
 		} else if (session && (inAuthGroup || atRoot)) {
-			router.replace('/(tabs)');
+			router.replace('/archives');
 		}
 	}, [session, loading, topSegment, router]);
 
