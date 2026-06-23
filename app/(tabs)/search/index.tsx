@@ -1,5 +1,5 @@
 import { FlashList } from '@shopify/flash-list';
-import { Mic, Search as SearchIcon, X } from 'lucide-react-native';
+import { Search as SearchIcon, X } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import {
 	KeyboardAvoidingView,
@@ -68,7 +68,6 @@ export default function SearchScreen() {
 						autoCorrect={false}
 						returnKeyType="search"
 					/>
-					<Mic size={18} color={tokens.text.hint} strokeWidth={2} />
 				</View>
 				{trimmed.length > 0 && (
 					<Pressable
