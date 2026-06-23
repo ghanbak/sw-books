@@ -1,10 +1,13 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 
+import { Card } from '@/components/ui/card';
 import { tokens } from '@/constants/tokens';
 
+const APP_VERSION = '1.0.0';
+
 /**
- * About screen — stub, pushed from the Profile sheet. The Amazon affiliate
- * disclosure moves here from the book detail screen in a later step.
+ * About screen — pushed from the Profile sheet. Hosts the Amazon affiliate
+ * disclosure (moved here from the book detail screen) and app info.
  */
 export default function AboutScreen() {
 	return (
@@ -13,12 +16,19 @@ export default function AboutScreen() {
 			contentContainerStyle={styles.content}
 			contentInsetAdjustmentBehavior="automatic"
 		>
-			<View style={styles.section}>
-				<Text style={styles.heading}>OssusArchives</Text>
+			<Card>
+				<Text style={styles.cardTitle}>Affiliate disclosure</Text>
 				<Text style={styles.body}>
-					A Star Wars book tracker. The affiliate disclosure and app details will live here.
+					OssusArchives is a participant in the Amazon Services LLC Associates Program. Tapping
+					“Find on Amazon” opens Amazon’s website. As an Associate we earn from qualifying purchases
+					— at no extra cost to you.
 				</Text>
-			</View>
+				<Text style={styles.footnote}>
+					You can read the full Amazon Associates terms at affiliate-program.amazon.com.
+				</Text>
+			</Card>
+
+			<Text style={styles.version}>OssusArchives v{APP_VERSION}</Text>
 		</ScrollView>
 	);
 }
@@ -29,20 +39,31 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.surface.background,
 	},
 	content: {
-		padding: 20,
-		gap: 12,
+		padding: 16,
+		gap: 16,
 	},
-	section: {
-		gap: 8,
-	},
-	heading: {
-		fontSize: 18,
-		fontWeight: '600',
-		color: tokens.text.primary,
+	cardTitle: {
+		fontSize: 11,
+		fontWeight: '700',
+		color: tokens.text.hint,
+		textTransform: 'uppercase',
+		letterSpacing: 1.2,
+		marginBottom: 8,
 	},
 	body: {
-		fontSize: 14,
-		lineHeight: 20,
-		color: tokens.text.secondary,
+		fontSize: 15,
+		lineHeight: 23,
+		color: tokens.text.primary,
+		marginBottom: 12,
+	},
+	footnote: {
+		fontSize: 13,
+		lineHeight: 19,
+		color: tokens.text.hint,
+	},
+	version: {
+		fontSize: 12,
+		color: tokens.text.hint,
+		textAlign: 'center',
 	},
 });
