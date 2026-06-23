@@ -51,19 +51,6 @@ export default function CatalogScreen() {
 
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
-	const separator = useCallback(
-		() => (
-			<View
-				style={{
-					height: StyleSheet.hairlineWidth,
-					backgroundColor: tokens.border.subtle,
-					marginLeft: 108,
-					marginRight: 12,
-				}}
-			/>
-		),
-		[],
-	);
 
 	if (loading) {
 		return (
@@ -118,7 +105,6 @@ export default function CatalogScreen() {
 				data={filteredBooks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
-				ItemSeparatorComponent={separator}
 				contentInsetAdjustmentBehavior="automatic"
 				refreshing={loading}
 				onRefresh={refetch}
