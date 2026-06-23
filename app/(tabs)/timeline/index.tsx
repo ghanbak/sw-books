@@ -55,6 +55,7 @@ export default function TimelineScreen() {
 			<View style={[styles.page, { width, height: listHeight }]}>
 				<HoloCover
 					variant="hero"
+					tilt={false}
 					coverUri={item.cover_image}
 					title={item.title}
 					author={item.author}
