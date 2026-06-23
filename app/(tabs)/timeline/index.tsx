@@ -1,25 +1,109 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
+import { HoloCover } from '@/components/holo-cover';
+import { TimelineRail } from '@/components/timeline-rail';
+import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
 import { tokens } from '@/constants/tokens';
+import type { Book } from '@/lib/hooks';
+import { useBooks } from '@/lib/hooks';
+import { groupBooksByYear } from '@/lib/timeline';
+
+type CanonFilter = 'all' | 'Canon' | 'Legends';
+
+const CANON_OPTIONS: FilterPillOption<CanonFilter>[] = [
+	{ key: 'all', label: 'All' },
+	{ key: 'Canon', label: 'Canon' },
+	{ key: 'Legends', label: 'Legends' },
+];
+
+const VIEW_CONFIG = { itemVisiblePercentThreshold: 60 } as const;
 
 /**
- * Timeline tab — stub. Full build (horizontal chronological scroll of hologram
- * covers with a synced notch rail) lands in a later step.
+ * Timeline tab — a horizontal, snap-paged scroll through the catalog in chronological
+ * order (oldest -> newest), one hologram hero per book, with a notch rail below that
+ * stays anchored on the current date as you page within a year.
  */
 export default function TimelineScreen() {
-	return (
-		<ScrollView
-			style={styles.container}
-			contentContainerStyle={styles.content}
-			contentInsetAdjustmentBehavior="automatic"
-		>
-			<View style={styles.center}>
-				<Text style={styles.title}>Timeline</Text>
-				<Text style={styles.subtitle}>
-					A chronological scroll through the galaxy’s history is coming here.
-				</Text>
+	const { width } = useWindowDimensions();
+	const { books } = useBooks();
+	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
+	const [activePage, setActivePage] = useState(0);
+	const [listHeight, setListHeight] = useState(0);
+
+	const data = useMemo(() => {
+		const filtered = canonFilter === 'all' ? books : books.filter((b) => b.canon === canonFilter);
+		return groupBooksByYear(filtered);
+	}, [books, canonFilter]);
+
+	const activeGroup = data.pageToGroup[activePage] ?? 0;
+
+	// Stable callback — FlashList rejects an onViewableItemsChanged that changes identity.
+	const onViewableItemsChanged = useRef(
+		({ viewableItems }: { viewableItems: { index: number | null }[] }) => {
+			const index = viewableItems[0]?.index;
+			if (index != null) setActivePage(index);
+		},
+	).current;
+
+	const coverW = Math.min(220, Math.round(width * 0.55));
+	const coverH = Math.round(coverW * 1.5);
+
+	const renderItem = useCallback(
+		({ item }: { item: Book }) => (
+			<View style={[styles.page, { width, height: listHeight }]}>
+				<HoloCover
+					variant="hero"
+					coverUri={item.cover_image}
+					title={item.title}
+					author={item.author}
+					width={coverW}
+					height={coverH}
+				/>
 			</View>
-		</ScrollView>
+		),
+		[width, listHeight, coverW, coverH],
+	);
+	const keyExtractor = useCallback((item: Book) => item.id, []);
+
+	return (
+		<View style={styles.container}>
+			<View style={styles.filters}>
+				<FilterPills options={CANON_OPTIONS} value={canonFilter} onChange={setCanonFilter} />
+			</View>
+
+			{data.books.length === 0 ? (
+				<View style={styles.empty}>
+					<Text style={styles.emptyText}>No books with a known place on the timeline yet.</Text>
+				</View>
+			) : (
+				<>
+					<View
+						style={styles.listWrap}
+						onLayout={(e) => setListHeight(e.nativeEvent.layout.height)}
+					>
+						{listHeight > 0 && (
+							<FlashList
+								data={data.books}
+								horizontal
+								showsHorizontalScrollIndicator={false}
+								snapToInterval={width}
+								snapToAlignment="start"
+								decelerationRate="fast"
+								disableIntervalMomentum
+								renderItem={renderItem}
+								keyExtractor={keyExtractor}
+								getItemType={() => 'page'}
+								onViewableItemsChanged={onViewableItemsChanged}
+								viewabilityConfig={VIEW_CONFIG}
+							/>
+						)}
+					</View>
+					<TimelineRail groups={data.groups} activeIndex={activeGroup} width={width} />
+				</>
+			)}
+		</View>
 	);
 }
 
@@ -28,22 +112,24 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: tokens.surface.background,
 	},
-	content: {
-		flexGrow: 1,
+	filters: {
+		paddingHorizontal: 12,
+		paddingVertical: 8,
 	},
-	center: {
+	listWrap: {
+		flex: 1,
+	},
+	page: {
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	empty: {
 		flex: 1,
 		alignItems: 'center',
 		justifyContent: 'center',
 		padding: 32,
-		gap: 8,
 	},
-	title: {
-		fontSize: 18,
-		fontWeight: '600',
-		color: tokens.text.primary,
-	},
-	subtitle: {
+	emptyText: {
 		fontSize: 14,
 		color: tokens.text.secondary,
 		textAlign: 'center',
