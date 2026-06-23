@@ -57,18 +57,6 @@ export default function LibraryScreen() {
 
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
-	const separator = useCallback(
-		() => (
-			<View
-				style={{
-					height: StyleSheet.hairlineWidth,
-					backgroundColor: tokens.border.subtle,
-					marginHorizontal: 12,
-				}}
-			/>
-		),
-		[],
-	);
 
 	if (catalogError) {
 		return (
@@ -123,7 +111,6 @@ export default function LibraryScreen() {
 				data={shelvedBooks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
-				ItemSeparatorComponent={separator}
 				contentInsetAdjustmentBehavior="automatic"
 				refreshing={loading}
 				onRefresh={refetch}
