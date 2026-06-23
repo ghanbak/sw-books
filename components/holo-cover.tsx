@@ -1,10 +1,13 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
 	Easing,
+	Extrapolation,
 	interpolate,
+	SensorType,
+	useAnimatedSensor,
 	useAnimatedStyle,
 	useSharedValue,
 	withRepeat,
@@ -23,6 +26,8 @@ type HoloCoverProps = {
 	height: number;
 	/** `hero` = animated projection (detail/timeline); `thumb` = static (lists/scan). */
 	variant?: 'hero' | 'thumb';
+	/** Gyroscope tilt on the hero (default true). Pass false to skip the sensor. */
+	tilt?: boolean;
 	onPress?: () => void;
 	accessibilityLabel?: string;
 };
@@ -33,6 +38,8 @@ type HoloCoverProps = {
  * cyan projector beam + glowing base emitter with a slow looping pulse, gated on
  * reduce-motion. Gyroscope tilt (±15°) is added in a later step (device-only).
  */
+const MAX_TILT = 15 * (Math.PI / 180);
+
 export function HoloCover({
 	coverUri,
 	title,
@@ -40,6 +47,7 @@ export function HoloCover({
 	width,
 	height,
 	variant = 'thumb',
+	tilt,
 	onPress,
 	accessibilityLabel,
 }: HoloCoverProps) {
@@ -52,12 +60,16 @@ export function HoloCover({
 	let content = face;
 	if (variant === 'hero') {
 		const baseSpace = Math.max(14, Math.round(height * 0.12));
-		content = (
-			<View style={[styles.heroWrap, { width, height: height + baseSpace }]}>
-				<Projector width={width} height={height} baseSpace={baseSpace} animated={!reduceMotion} />
-				{face}
-			</View>
-		);
+		const animated = !reduceMotion;
+		// Mount the sensor-bearing hero only when tilt is on, so thumbs and reduce-motion
+		// heroes never subscribe to the device-motion sensor.
+		const props = { width, height, baseSpace, animated };
+		content =
+			tilt !== false && !reduceMotion ? (
+				<TiltedHero {...props}>{face}</TiltedHero>
+			) : (
+				<StaticHero {...props}>{face}</StaticHero>
+			);
 	}
 
 	if (!onPress) return content;
@@ -65,6 +77,46 @@ export function HoloCover({
 		<Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel}>
 			{content}
 		</Pressable>
+	);
+}
+
+type HeroProps = {
+	width: number;
+	height: number;
+	baseSpace: number;
+	animated: boolean;
+	children: ReactNode;
+};
+
+function StaticHero({ width, height, baseSpace, animated, children }: HeroProps) {
+	return (
+		<View style={[styles.heroWrap, { width, height: height + baseSpace }]}>
+			<Projector width={width} height={height} baseSpace={baseSpace} animated={animated} />
+			{children}
+		</View>
+	);
+}
+
+/** Hero whose cover tilts ±15° with the device gyroscope (no-op in the iOS simulator). */
+function TiltedHero({ width, height, baseSpace, animated, children }: HeroProps) {
+	const sensor = useAnimatedSensor(SensorType.ROTATION, { interval: 'auto' });
+	const tiltStyle = useAnimatedStyle(() => {
+		const { pitch, roll } = sensor.sensor.value;
+		const rx = withTiming(
+			interpolate(pitch, [-MAX_TILT, MAX_TILT], [-MAX_TILT, MAX_TILT], Extrapolation.CLAMP),
+			{ duration: 90 },
+		);
+		const ry = withTiming(
+			interpolate(roll, [-MAX_TILT, MAX_TILT], [-MAX_TILT, MAX_TILT], Extrapolation.CLAMP),
+			{ duration: 90 },
+		);
+		return { transform: [{ perspective: 800 }, { rotateX: `${rx}rad` }, { rotateY: `${ry}rad` }] };
+	});
+	return (
+		<View style={[styles.heroWrap, { width, height: height + baseSpace }]}>
+			<Projector width={width} height={height} baseSpace={baseSpace} animated={animated} />
+			<Animated.View style={tiltStyle}>{children}</Animated.View>
+		</View>
 	);
 }
 
