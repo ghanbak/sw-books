@@ -75,7 +75,10 @@ type UserBooksContextValue = {
 	userBooks: Map<string, UserBook>;
 	loading: boolean;
 	refetch: () => Promise<void>;
-	toggleShelf: (bookId: string, field: 'owned' | 'read' | 'want_to_read') => Promise<void>;
+	toggleShelf: (
+		bookId: string,
+		field: 'owned' | 'read' | 'want_to_read' | 'favorite',
+	) => Promise<void>;
 	addOwned: (bookIds: string[]) => Promise<Result<{ rows: UserBook[] }>>;
 };
 
@@ -129,7 +132,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 	}, [user, fetchUserBooks]);
 
 	const toggleShelf = useCallback(
-		async (bookId: string, field: 'owned' | 'read' | 'want_to_read') => {
+		async (bookId: string, field: 'owned' | 'read' | 'want_to_read' | 'favorite') => {
 			if (!user) return;
 
 			const existing = userBooksRef.current.get(bookId);
@@ -137,7 +140,8 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 			if (existing) {
 				const newValue = !existing[field];
 				const updated = { ...existing, [field]: newValue };
-				const allOff = !updated.owned && !updated.read && !updated.want_to_read;
+				const allOff =
+					!updated.owned && !updated.read && !updated.want_to_read && !updated.favorite;
 
 				setUserBooks((prev) => {
 					const next = new Map(prev);
@@ -149,12 +153,9 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 					return next;
 				});
 
-				const updatePayload =
-					field === 'owned'
-						? { owned: newValue }
-						: field === 'read'
-							? { read: newValue }
-							: { want_to_read: newValue };
+				const updatePayload = {
+					[field]: newValue,
+				} as Database['public']['Tables']['user_books']['Update'];
 
 				const { error } = allOff
 					? await supabase.from('user_books').delete().eq('id', existing.id)
@@ -175,6 +176,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 					owned: field === 'owned',
 					read: field === 'read',
 					want_to_read: field === 'want_to_read',
+					favorite: field === 'favorite',
 				};
 
 				const { data, error } = await supabase

@@ -33,6 +33,7 @@ export function applyOwnedOptimistic(
 				owned: true,
 				read: false,
 				want_to_read: false,
+				favorite: false,
 				created_at: null,
 				updated_at: null,
 			});

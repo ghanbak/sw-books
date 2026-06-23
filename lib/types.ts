@@ -107,6 +107,7 @@ export type Database = {
         Row: {
           book_id: string
           created_at: string | null
+          favorite: boolean
           id: string
           owned: boolean
           read: boolean
@@ -117,6 +118,7 @@ export type Database = {
         Insert: {
           book_id: string
           created_at?: string | null
+          favorite?: boolean
           id?: string
           owned?: boolean
           read?: boolean
@@ -127,6 +129,7 @@ export type Database = {
         Update: {
           book_id?: string
           created_at?: string | null
+          favorite?: boolean
           id?: string
           owned?: boolean
           read?: boolean
@@ -154,6 +157,7 @@ export type Database = {
         Returns: {
           book_id: string
           created_at: string | null
+          favorite: boolean
           id: string
           owned: boolean
           read: boolean
