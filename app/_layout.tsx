@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 
 import { tokens } from '@/constants/tokens';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { applyGlobalFont, loadAurebeshPref } from '@/lib/font-prefs';
 import { BooksProvider, UserBooksProvider } from '@/lib/hooks';
 import { ScanSessionProvider } from '@/lib/scan-session';
 
@@ -31,6 +32,8 @@ export const unstable_settings = {
 
 export default function RootLayout() {
 	useEffect(() => {
+		// Apply the persisted Aurebesh font preference before the first paint.
+		loadAurebeshPref().then(applyGlobalFont);
 		SplashScreen.hideAsync();
 	}, []);
 
