@@ -89,24 +89,6 @@ export default function LibraryScreen() {
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.filterRow}>
-				{FILTERS.map(({ key, label }) => {
-					const active = filter === key;
-					return (
-						<Pressable
-							key={key}
-							style={[styles.filterChip, active && styles.filterChipActive]}
-							onPress={() => setFilter(key)}
-						>
-							{!active && liquidGlassAvailable && <GlassView style={StyleSheet.absoluteFill} />}
-							<Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-								{label} ({counts[key]})
-							</Text>
-						</Pressable>
-					);
-				})}
-			</View>
-
 			<FlashList
 				data={shelvedBooks}
 				renderItem={renderItem}
@@ -114,6 +96,25 @@ export default function LibraryScreen() {
 				contentInsetAdjustmentBehavior="automatic"
 				refreshing={loading}
 				onRefresh={refetch}
+				ListHeaderComponent={
+					<View style={styles.filterRow}>
+						{FILTERS.map(({ key, label }) => {
+							const active = filter === key;
+							return (
+								<Pressable
+									key={key}
+									style={[styles.filterChip, active && styles.filterChipActive]}
+									onPress={() => setFilter(key)}
+								>
+									{!active && liquidGlassAvailable && <GlassView style={StyleSheet.absoluteFill} />}
+									<Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+										{label} ({counts[key]})
+									</Text>
+								</Pressable>
+							);
+						})}
+					</View>
+				}
 				ListEmptyComponent={
 					<View style={styles.emptyList}>
 						<Text style={styles.emptyFilterText}>No books in this category</Text>
