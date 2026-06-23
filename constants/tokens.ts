@@ -34,6 +34,12 @@ export const tokens = {
 		error: '#CC4444',
 		success: '#4A90D9',
 	},
+	// Hologram cover projection (HoloCover): cyan beam + glowing base emitter.
+	holo: {
+		cyan: '#3DE0FF',
+		beam: 'rgba(61,224,255,0.15)',
+		emitter: 'rgba(61,224,255,0.55)',
+	},
 } as const;
 
 export type AppTheme = typeof tokens;
