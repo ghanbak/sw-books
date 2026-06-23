@@ -12,6 +12,8 @@ type Props = {
 	accessibilityLabel: string;
 	/** Tints the icon with the primary accent (e.g. an active favorite). */
 	active?: boolean;
+	/** Fills the icon (e.g. a filled star when favorited). */
+	filled?: boolean;
 };
 
 /**
@@ -19,7 +21,13 @@ type Props = {
  * circle when glass isn't available (iOS < 26, Android, Expo Go). Step 1 baseline;
  * enriched in the design-primitives step (reduce-transparency, container merging).
  */
-export function GlassIconButton({ icon: Icon, onPress, accessibilityLabel, active }: Props) {
+export function GlassIconButton({
+	icon: Icon,
+	onPress,
+	accessibilityLabel,
+	active,
+	filled,
+}: Props) {
 	const iconColor = active ? tokens.accent.primary : tokens.text.primary;
 	return (
 		<Pressable
@@ -35,7 +43,7 @@ export function GlassIconButton({ icon: Icon, onPress, accessibilityLabel, activ
 			) : (
 				<View style={[StyleSheet.absoluteFill, styles.fallback]} />
 			)}
-			<Icon size={18} color={iconColor} strokeWidth={2} />
+			<Icon size={18} color={iconColor} fill={filled ? iconColor : 'transparent'} strokeWidth={2} />
 		</Pressable>
 	);
 }
