@@ -1,6 +1,7 @@
 import { FlashList } from '@shopify/flash-list';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HoloCover } from '@/components/holo-cover';
 import { TimelineRail } from '@/components/timeline-rail';
@@ -27,6 +28,7 @@ const VIEW_CONFIG = { itemVisiblePercentThreshold: 60 } as const;
  */
 export default function TimelineScreen() {
 	const { width } = useWindowDimensions();
+	const insets = useSafeAreaInsets();
 	const { books } = useBooks();
 	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
 	const [activePage, setActivePage] = useState(0);
@@ -69,7 +71,7 @@ export default function TimelineScreen() {
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container, { paddingBottom: insets.bottom }]}>
 			<View style={styles.filters}>
 				<FilterPills options={CANON_OPTIONS} value={canonFilter} onChange={setCanonFilter} />
 			</View>
