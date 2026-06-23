@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
 	bar: {
 		height: 3,
 		borderRadius: 2,
-		backgroundColor: tokens.accent.primary,
+		backgroundColor: tokens.border.subtle,
 	},
 	notchTab: {
 		width: 88,
