@@ -1,4 +1,4 @@
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 
 // Native tab bar — UIKit on iOS, Material 3 on Android. No custom styling: the
 // system renders its default (the floating Liquid Glass capsule on iOS 26+).
@@ -12,28 +12,35 @@ import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 // icons — add `androidSrc` PNGs or a VectorIcon family when we ship Android.
 
 export default function TabLayout() {
-	return (
-		<NativeTabs>
-			<NativeTabs.Trigger name="archives">
-				<Icon sf={{ default: 'archivebox', selected: 'archivebox.fill' }} />
-				<Label>Archives</Label>
-			</NativeTabs.Trigger>
+  return (
+    <NativeTabs>
+      <NativeTabs.Trigger name="archives">
+        <Icon sf={{ default: "pyramid", selected: "pyramid.fill" }} />
+        <Label>Archives</Label>
+      </NativeTabs.Trigger>
 
-			<NativeTabs.Trigger name="timeline">
-				<Icon sf={{ default: 'clock', selected: 'clock.fill' }} />
-				<Label>Timeline</Label>
-			</NativeTabs.Trigger>
+      <NativeTabs.Trigger name="timeline">
+        <Icon
+          sf={{
+            default: "lines.measurement.horizontal",
+            selected: "lines.measurement.horizontal",
+          }}
+        />
+        <Label>Timeline</Label>
+      </NativeTabs.Trigger>
 
-			<NativeTabs.Trigger name="library">
-				<Icon sf={{ default: 'books.vertical', selected: 'books.vertical.fill' }} />
-				<Label>Library</Label>
-			</NativeTabs.Trigger>
+      <NativeTabs.Trigger name="library">
+        <Icon
+          sf={{ default: "rectangle.stack", selected: "rectangle.stack.fill" }}
+        />
+        <Label>Library</Label>
+      </NativeTabs.Trigger>
 
-			{/* biome-ignore lint/a11y/useSemanticElements: NativeTabsTabBarItemRole, not ARIA */}
-			<NativeTabs.Trigger name="search" role="search">
-				<Icon sf="magnifyingglass" />
-				<Label>Search</Label>
-			</NativeTabs.Trigger>
-		</NativeTabs>
-	);
+      {/* biome-ignore lint/a11y/useSemanticElements: NativeTabsTabBarItemRole, not ARIA */}
+      <NativeTabs.Trigger name="search" role="search">
+        <Icon sf="magnifyingglass" />
+        <Label>Search</Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
+  );
 }
