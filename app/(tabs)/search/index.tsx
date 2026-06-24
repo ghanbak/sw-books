@@ -10,6 +10,7 @@ import {
 	TextInput,
 	View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookCard } from '@/components/book-card';
 import { tokens } from '@/constants/tokens';
@@ -23,6 +24,7 @@ import { searchBooks } from '@/lib/search';
  */
 export default function SearchScreen() {
 	const { books } = useBooks();
+	const insets = useSafeAreaInsets();
 	const [query, setQuery] = useState('');
 	const trimmed = query.trim();
 	const results = useMemo(() => searchBooks(books, query), [books, query]);
@@ -32,7 +34,7 @@ export default function SearchScreen() {
 
 	return (
 		<KeyboardAvoidingView
-			style={styles.container}
+			style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
 			behavior={Platform.OS === 'ios' ? 'padding' : undefined}
 		>
 			<View style={styles.results}>
@@ -49,7 +51,6 @@ export default function SearchScreen() {
 						data={results}
 						renderItem={renderItem}
 						keyExtractor={keyExtractor}
-						contentInsetAdjustmentBehavior="automatic"
 						keyboardDismissMode="on-drag"
 					/>
 				)}

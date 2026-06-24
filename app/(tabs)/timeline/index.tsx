@@ -1,4 +1,3 @@
-import { useHeaderHeight } from '@react-navigation/elements';
 import { FlashList } from '@shopify/flash-list';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
@@ -30,7 +29,6 @@ const VIEW_CONFIG = { itemVisiblePercentThreshold: 60 } as const;
 export default function TimelineScreen() {
 	const { width } = useWindowDimensions();
 	const insets = useSafeAreaInsets();
-	const headerHeight = useHeaderHeight();
 	const { books } = useBooks();
 	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
 	const [activePage, setActivePage] = useState(0);
@@ -73,7 +71,7 @@ export default function TimelineScreen() {
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
 	return (
-		<View style={[styles.container, { paddingTop: headerHeight, paddingBottom: insets.bottom }]}>
+		<View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
 			<View style={styles.filters}>
 				<FilterPills options={CANON_OPTIONS} value={canonFilter} onChange={setCanonFilter} />
 			</View>

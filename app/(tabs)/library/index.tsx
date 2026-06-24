@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { BookOpen, ScanBarcode } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
@@ -23,6 +24,7 @@ const FILTERS: { key: ShelfFilter; label: string }[] = [
 export default function LibraryScreen() {
 	const { books, error: catalogError, refetch: refetchCatalog } = useBooks();
 	const { userBooks, loading, refetch } = useUserBooks();
+	const insets = useSafeAreaInsets();
 	const [filter, setFilter] = useState<ShelfFilter>('all');
 	const router = useRouter();
 
@@ -88,12 +90,11 @@ export default function LibraryScreen() {
 	}
 
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
 			<FlashList
 				data={shelvedBooks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
-				contentInsetAdjustmentBehavior="automatic"
 				refreshing={loading}
 				onRefresh={refetch}
 				ListHeaderComponent={

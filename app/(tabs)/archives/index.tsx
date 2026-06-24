@@ -1,6 +1,7 @@
 import { FlashList } from '@shopify/flash-list';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
@@ -20,6 +21,7 @@ const CANON_OPTIONS: FilterPillOption<CanonFilter>[] = [
 
 export default function CatalogScreen() {
 	const { books, loading, error, refetch } = useBooks();
+	const insets = useSafeAreaInsets();
 	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
 
 	const filteredBooks = useMemo(() => {
@@ -43,12 +45,11 @@ export default function CatalogScreen() {
 	}
 
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
 			<FlashList
 				data={filteredBooks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
-				contentInsetAdjustmentBehavior="automatic"
 				refreshing={loading}
 				onRefresh={refetch}
 				ListHeaderComponent={
