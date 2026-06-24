@@ -1,4 +1,5 @@
 import { ScrollView, StyleSheet, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/card';
 import { tokens } from '@/constants/tokens';
@@ -10,11 +11,14 @@ const APP_VERSION = '1.0.0';
  * disclosure (moved here from the book detail screen) and app info.
  */
 export default function AboutScreen() {
+	const insets = useSafeAreaInsets();
 	return (
 		<ScrollView
 			style={styles.container}
-			contentContainerStyle={styles.content}
-			contentInsetAdjustmentBehavior="automatic"
+			contentContainerStyle={[
+				styles.content,
+				{ paddingTop: insets.top, paddingBottom: insets.bottom },
+			]}
 		>
 			<Card>
 				<Text style={styles.cardTitle}>Affiliate disclosure</Text>

@@ -1,12 +1,15 @@
 import { Image } from "expo-image";
 import { Apple } from "lucide-react-native";
 import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { tokens } from "@/constants/tokens";
 import { signInWithApple, signInWithGoogle } from "@/lib/auth";
 import { signInAsDevUser } from "@/lib/supabase";
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
+
   async function handleGoogle() {
     try {
       await signInWithGoogle();
@@ -32,7 +35,12 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top, paddingBottom: insets.bottom },
+      ]}
+    >
       <View style={styles.heroSection}>
         <View style={styles.logoCircle}>
           <Image
@@ -112,8 +120,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: tokens.surface.background,
     paddingHorizontal: 32,
-    paddingTop: 80,
-    paddingBottom: 48,
   },
   heroSection: {
     flex: 1,
