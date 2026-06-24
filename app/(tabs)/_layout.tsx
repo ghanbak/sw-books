@@ -1,4 +1,4 @@
-import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { Platform } from "react-native";
 
 import { tokens } from "@/constants/tokens";
@@ -29,33 +29,33 @@ export default function TabLayout() {
       disableTransparentOnScrollEdge={!isIOS26Plus}
     >
       <NativeTabs.Trigger name="index">
-        <Icon
+        <NativeTabs.Trigger.Icon
           sf={{ default: "externaldrive", selected: "externaldrive.fill" }}
         />
-        <Label>Archives</Label>
+        <NativeTabs.Trigger.Label>Archives</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="shelf">
-        <Icon
+        <NativeTabs.Trigger.Icon
           sf={{ default: "books.vertical", selected: "books.vertical.fill" }}
         />
-        <Label>Shelves</Label>
+        <NativeTabs.Trigger.Label>Shelves</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
       {/* biome-ignore lint/a11y/useSemanticElements: NativeTabsTabBarItemRole, not ARIA */}
       <NativeTabs.Trigger name="scan" role="search">
-        <Icon sf="barcode.viewfinder" />
-        <Label>Scan</Label>
+        <NativeTabs.Trigger.Icon sf="barcode.viewfinder" />
+        <NativeTabs.Trigger.Label>Scan</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="profile">
-        <Icon
+        <NativeTabs.Trigger.Icon
           sf={{
             default: "person.crop.circle",
             selected: "person.crop.circle.fill",
           }}
         />
-        <Label>Profile</Label>
+        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );

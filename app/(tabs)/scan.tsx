@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useIsFocused } from '@react-navigation/native';
 import { useCameraPermissions } from 'expo-camera';
 import { openSettings } from 'expo-linking';
+import { useIsFocused } from 'expo-router/react-navigation';
 import { type MutableRefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

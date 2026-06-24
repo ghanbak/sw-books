@@ -1,6 +1,6 @@
-import { useIsFocused } from '@react-navigation/native';
 import { CameraView } from 'expo-camera';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from 'expo-router/react-navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
 		backgroundColor: '#000',
 	},
 	viewfinder: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 	},
 	viewfinderTop: {
 		flex: 1,
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
 		borderColor: tokens.accent.secondary,
 	},
 	resultOverlay: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: tokens.surface.overlay,
 		justifyContent: 'center',
 		alignItems: 'center',

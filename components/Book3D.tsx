@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
 		overflow: 'hidden',
 	},
 	coverFill: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 	},
 	fallbackContent: {
 		flex: 1,

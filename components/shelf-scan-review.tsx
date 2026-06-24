@@ -550,7 +550,7 @@ function SwapSheet({
 
 const styles = StyleSheet.create({
 	overlay: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: tokens.surface.overlay,
 	},
 	header: {
@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
 	},
 	// Swap sheet
 	sheetBackdrop: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: tokens.surface.overlay,
 		justifyContent: 'flex-end',
 	},

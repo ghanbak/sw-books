@@ -345,18 +345,18 @@ const styles = StyleSheet.create({
 		backgroundColor: '#000',
 	},
 	ghost: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		opacity: 0.18,
 		pointerEvents: 'none',
 	},
 	flash: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		// Raw white flash over the live feed — part of the camera-overlay exception.
 		backgroundColor: '#fff',
 		pointerEvents: 'none',
 	},
 	hud: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		justifyContent: 'space-between',
 	},
 	hudTop: {
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 	},
 	introOverlay: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: tokens.surface.overlay,
 		justifyContent: 'space-between',
 		padding: 32,
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 	},
 	stateOverlay: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: tokens.surface.overlay,
 		justifyContent: 'center',
 		alignItems: 'center',

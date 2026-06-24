@@ -236,7 +236,7 @@ export function Book3DViewer({
                 {showFallback ? (
                   <View
                     style={[
-                      StyleSheet.absoluteFillObject,
+                      StyleSheet.absoluteFill,
                       { backgroundColor: fallbackColor },
                     ]}
                   >
@@ -252,7 +252,7 @@ export function Book3DViewer({
                 ) : (
                   <Image
                     source={{ uri: coverUri }}
-                    style={StyleSheet.absoluteFillObject}
+                    style={StyleSheet.absoluteFill}
                     contentFit="cover"
                     onError={() => setImageError(true)}
                   />
