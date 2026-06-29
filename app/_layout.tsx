@@ -79,12 +79,16 @@ export default function RootLayout() {
                       headerBackTitle: "Back",
                     }}
                   />
-                  {/* Scan opens over the active tab. Interim `modal` (swipe-to-dismiss) keeps
-									    it from being a dead-end; the scan redesign step switches this to
-									    `fullScreenModal` + an in-screen close button. */}
+                  {/* Scan is a full-screen modal (camera fills the screen, slides up from the
+                      bottom). No swipe-to-dismiss — the in-screen close button in app/scan.tsx
+                      is the way out. */}
                   <Stack.Screen
                     name="scan"
-                    options={{ presentation: "modal", headerShown: false }}
+                    options={{
+                      presentation: "fullScreenModal",
+                      headerShown: false,
+                      animation: "slide_from_bottom",
+                    }}
                   />
                   {/* Account/Profile bottom sheet. */}
                   <Stack.Screen
