@@ -1,28 +1,20 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type ReactNode, createContext, useCallback, useContext, useState } from 'react';
-import { Text } from 'react-native';
 
 /**
  * App font preference. The default app font is the readable "High Galactic" alphabet
  * (`sacul-high-alphabet`); flipping the Aurebesh toggle swaps every surface to the Aurebesh
  * glyphs (`sacul-basic`). Both .otf files are registered via `useFonts` in app/_layout.
  *
- * JS `<Text>` picks up the font through a global `Text.defaultProps` style; native chrome
- * (header titles, tab labels, the search field) reads `fontFamily` from this context. The
- * nav stack is re-keyed on the font so already-mounted text reflows to the new font.
+ * Everything reads `fontFamily` from this context: JS text via the shared `<Text>` wrapper
+ * (components/ui/text), and native chrome (header titles, tab labels, the search field)
+ * directly. Context-driven, so toggling swaps every surface live with no remount.
  */
 const KEY = '@ossus/aurebesh';
 export const DEFAULT_FONT = 'sacul-high-alphabet';
 export const AUREBESH_FONT = 'sacul-basic';
 
 export const fontFor = (aurebesh: boolean): string => (aurebesh ? AUREBESH_FONT : DEFAULT_FONT);
-
-/** Set the global default font for every JS `<Text>`. */
-export function applyGlobalTextFont(aurebesh: boolean): void {
-	const T = Text as unknown as { defaultProps?: { style?: unknown } };
-	T.defaultProps = T.defaultProps ?? {};
-	T.defaultProps.style = { fontFamily: fontFor(aurebesh) };
-}
 
 /** Read the persisted Aurebesh flag (used to gate the splash before the first paint). */
 export async function loadAurebeshPref(): Promise<boolean> {
@@ -53,7 +45,6 @@ export function FontProvider({
 
 	const setAurebesh = useCallback((on: boolean) => {
 		setAurebeshState(on);
-		applyGlobalTextFont(on);
 		AsyncStorage.setItem(KEY, on ? '1' : '0').catch(() => {});
 	}, []);
 

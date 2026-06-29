@@ -5,13 +5,14 @@ import { useRouter } from 'expo-router';
 import { useIsFocused } from 'expo-router/react-navigation';
 import { X } from 'lucide-react-native';
 import { type MutableRefObject, useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BarcodeScanPanel } from '@/components/barcode-scan-panel';
 import { ScanModeSwitcher } from '@/components/scan-mode-switcher';
 import { ShelfScanCapture } from '@/components/shelf-scan-capture';
 import { GlassIconButton } from '@/components/ui/glass-icon-button';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { useBooks } from '@/lib/hooks';
 import { type ScanMode, parseStoredScanMode } from '@/lib/scan-mode';

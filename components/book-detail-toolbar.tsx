@@ -1,7 +1,8 @@
 import { BookOpen, Bookmark, Check, Library, type LucideIcon } from 'lucide-react-native';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { useUserBooks } from '@/lib/hooks';
 

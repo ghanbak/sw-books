@@ -1,7 +1,8 @@
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 
 const APP_VERSION = '1.0.0';

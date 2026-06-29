@@ -2,10 +2,11 @@ import { CameraView } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from 'expo-router/react-navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { AddedBooksSheet } from '@/components/added-books-sheet';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { type Book, useUserBooks } from '@/lib/hooks';
 import { normalizeIsbn } from '@/lib/isbn';

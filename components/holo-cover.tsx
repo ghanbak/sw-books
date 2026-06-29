@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { type ReactNode, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
 	Easing,
 	Extrapolation,
@@ -14,6 +14,7 @@ import Animated, {
 	withTiming,
 } from 'react-native-reanimated';
 
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { useReduceMotion } from '@/hooks/useAccessibility';
 import { getCoverColor } from '@/lib/cover';

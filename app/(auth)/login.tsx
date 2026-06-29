@@ -1,8 +1,9 @@
 import { Image } from "expo-image";
 import { Apple } from "lucide-react-native";
-import { Alert, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Text } from "@/components/ui/text";
 import { tokens } from "@/constants/tokens";
 import { signInWithApple, signInWithGoogle } from "@/lib/auth";
 import { signInAsDevUser } from "@/lib/supabase";

@@ -1,21 +1,12 @@
 import { useRouter } from 'expo-router';
 import { ArrowLeftRight, Check, LayoutGrid, List, Search } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-	ActivityIndicator,
-	FlatList,
-	KeyboardAvoidingView,
-	Platform,
-	Pressable,
-	StyleSheet,
-	Text,
-	TextInput,
-	View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HoloCover } from '@/components/holo-cover';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
 import { type Book, useBooks, useUserBooks } from '@/lib/hooks';

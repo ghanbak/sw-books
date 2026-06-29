@@ -9,12 +9,7 @@ import "react-native-reanimated";
 
 import { tokens } from "@/constants/tokens";
 import { AuthProvider, useAuth } from "@/lib/auth";
-import {
-  FontProvider,
-  applyGlobalTextFont,
-  loadAurebeshPref,
-  useFontPref,
-} from "@/lib/font-prefs";
+import { FontProvider, loadAurebeshPref, useFontPref } from "@/lib/font-prefs";
 import { BooksProvider, UserBooksProvider } from "@/lib/hooks";
 import { ScanSessionProvider } from "@/lib/scan-session";
 
@@ -51,10 +46,8 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (!ready) return;
-    // Set the default-text font before revealing the UI so the first paint is correct.
-    applyGlobalTextFont(initialAurebesh ?? false);
     SplashScreen.hideAsync();
-  }, [ready, initialAurebesh]);
+  }, [ready]);
 
   if (!ready || initialAurebesh === null) return null;
 
@@ -82,8 +75,6 @@ function NavigationStack() {
   const { fontFamily } = useFontPref();
   return (
     <Stack
-      // Re-key on the font so already-mounted screens reflow when Aurebesh is toggled.
-      key={fontFamily}
       screenOptions={{
         headerShadowVisible: true,
         headerTitleStyle: { fontFamily },

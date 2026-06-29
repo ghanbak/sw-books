@@ -2,6 +2,7 @@ import { Stack } from "expo-router";
 
 import { TabHeaderActions } from "@/components/tab-header-actions";
 import { useFontPref } from "@/lib/font-prefs";
+import { ScrollView, Text, View } from "react-native";
 
 export default function LibraryLayout() {
   const { fontFamily } = useFontPref();

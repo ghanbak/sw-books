@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { ChevronRight, LogOut } from 'lucide-react-native';
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { useAuth } from '@/lib/auth';
 import { useFontPref } from '@/lib/font-prefs';
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
 		gap: 16,
 	},
 	heading: {
-		fontSize: 22,
+		fontSize: ,
 		fontWeight: '700',
 		color: tokens.text.primary,
 		textAlign: 'center',

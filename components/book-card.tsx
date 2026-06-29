@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { HoloCover } from '@/components/holo-cover';
 import { Card } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 import { eraLabel } from '@/lib/timeline';

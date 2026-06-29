@@ -1,18 +1,11 @@
 import { FlashList } from "@shopify/flash-list";
 import { Search as SearchIcon, X } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BookCard } from "@/components/book-card";
+import { Text } from "@/components/ui/text";
 import { tokens } from "@/constants/tokens";
 import { useFontPref } from "@/lib/font-prefs";
 import type { Book } from "@/lib/hooks";

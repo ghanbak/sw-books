@@ -1,11 +1,12 @@
 import { FlashList } from '@shopify/flash-list';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HoloCover } from '@/components/holo-cover';
 import { TimelineRail } from '@/components/timeline-rail';
 import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';

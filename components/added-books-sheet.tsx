@@ -1,8 +1,9 @@
 import { Check, X } from 'lucide-react-native';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HoloCover } from '@/components/holo-cover';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { CircleUser, type LucideIcon, ListFilter, ScanBarcode } from 'lucide-react-native';
+import { CircleUser, ListFilter, type LucideIcon, ScanBarcode } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { tokens } from '@/constants/tokens';

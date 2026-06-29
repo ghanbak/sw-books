@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import type { ScanMode } from '@/lib/scan-mode';
 

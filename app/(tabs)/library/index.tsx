@@ -1,13 +1,14 @@
 import { FlashList } from '@shopify/flash-list';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
 import { TabHeaderActions } from '@/components/tab-header-actions';
 import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { useCatalogSort } from '@/hooks/useCatalogSort';
 import type { Book } from '@/lib/hooks';

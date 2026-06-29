@@ -1,8 +1,9 @@
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { ExternalLink, Info } from 'lucide-react-native';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 
 type Props = {

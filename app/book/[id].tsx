@@ -1,7 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { BookOpen, Calendar, Hash, Layers, Package, Star } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookDetailSkeleton } from '@/components/book-detail-skeleton';
@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/error-state';
 import { HoloCover } from '@/components/holo-cover';
 import { Card } from '@/components/ui/card';
 import { GlassIconButton } from '@/components/ui/glass-icon-button';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { buildAmazonSearchUrl } from '@/lib/amazon';
 import type { Book } from '@/lib/hooks';

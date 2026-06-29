@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { GlassView, liquidGlassAvailable } from '@/lib/glass';
 

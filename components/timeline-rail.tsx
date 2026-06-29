@@ -1,5 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import type { TimelineGroup } from '@/lib/timeline';
 
