@@ -1,158 +1,48 @@
-import { useRouter } from "expo-router";
-import { ChevronRight, LogOut } from "lucide-react-native";
-import { Alert, Pressable, StyleSheet, Switch, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Host, List, ListItem, Switch } from '@expo/ui';
+import { useRouter } from 'expo-router';
+import { Alert } from 'react-native';
 
-import { Card } from "@/components/ui/card";
-import { Text } from "@/components/ui/text";
-import { tokens } from "@/constants/tokens";
-import { useAuth } from "@/lib/auth";
-import { useFontPref } from "@/lib/font-prefs";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from '@/lib/auth';
+import { useFontPref } from '@/lib/font-prefs';
+import { supabase } from '@/lib/supabase';
 
 /**
- * Account bottom sheet (Figma 142:1220, presented as a form sheet): the signed-in
- * account, an Aurebesh font toggle, an About disclosure, and Logout.
+ * Account bottom sheet (form sheet) rendered as a native @expo/ui List: the signed-in
+ * account, the Aurebesh font toggle (native Switch), an About row, and Logout.
+ *
+ * v1 native pass — renders as a system settings list (not the dark Card design). Theming to
+ * the app's look (dark surfaces, red destructive Logout, the heading) needs on-device work.
  */
 export default function ProfileScreen() {
-  const { user } = useAuth();
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { aurebesh, setAurebesh } = useFontPref();
+	const { user } = useAuth();
+	const router = useRouter();
+	const { aurebesh, setAurebesh } = useFontPref();
 
-  const email = user?.email ?? "Signed in";
-  const provider =
-    (user?.app_metadata?.provider as string | undefined) ?? "email";
+	const email = user?.email ?? 'Signed in';
+	const provider = (user?.app_metadata?.provider as string | undefined) ?? 'email';
 
-  async function handleSignOut() {
-    const { error } = await supabase.auth.signOut();
-    if (error) Alert.alert("Sign-out failed", error.message);
-  }
+	async function handleSignOut() {
+		const { error } = await supabase.auth.signOut();
+		if (error) Alert.alert('Sign-out failed', error.message);
+	}
 
-  return (
-    <View style={[styles.container, { paddingBottom: 20 + insets.bottom }]}>
-      <Text style={styles.heading}>Account Settings</Text>
-
-      <Card>
-        <View style={styles.accountRow}>
-          <Text style={styles.email}>{email}</Text>
-          <Text style={styles.provider}>
-            Signed in with {capitalize(provider)}
-          </Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.row}>
-          <View style={styles.rowText}>
-            <Text style={styles.rowLabel}>Aurebesh</Text>
-            <Text style={styles.rowHint}>
-              Render the app in the Aurebesh alphabet.
-            </Text>
-          </View>
-          <Switch
-            value={aurebesh}
-            onValueChange={setAurebesh}
-            trackColor={{
-              true: tokens.accent.primary,
-              false: tokens.surface.background,
-            }}
-          />
-        </View>
-
-        <View style={styles.divider} />
-
-        <Pressable
-          style={styles.row}
-          onPress={() => router.push("/about")}
-          accessibilityRole="button"
-          accessibilityLabel="About app"
-        >
-          <Text style={styles.rowLabel}>About app</Text>
-          <ChevronRight
-            size={18}
-            color={tokens.accent.primary}
-            strokeWidth={2}
-          />
-        </Pressable>
-      </Card>
-
-      <Pressable
-        style={styles.logout}
-        onPress={handleSignOut}
-        accessibilityRole="button"
-      >
-        <LogOut size={16} color={tokens.status.error} strokeWidth={2} />
-        <Text style={styles.logoutText}>Logout</Text>
-      </Pressable>
-    </View>
-  );
+	return (
+		<Host style={{ flex: 1 }}>
+			<List>
+				<ListItem supportingText={`Signed in with ${capitalize(provider)}`}>{email}</ListItem>
+				<ListItem
+					supportingText="Render the app in the Aurebesh alphabet."
+					trailing={<Switch value={aurebesh} onValueChange={setAurebesh} />}
+				>
+					Aurebesh
+				</ListItem>
+				<ListItem onPress={() => router.push('/about')}>About app</ListItem>
+				<ListItem onPress={handleSignOut}>Logout</ListItem>
+			</List>
+		</Host>
+	);
 }
 
 function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+	return s.charAt(0).toUpperCase() + s.slice(1);
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: tokens.surface.background,
-    padding: 16,
-    gap: 16,
-  },
-  heading: {
-    fontSize: 18,
-    color: tokens.text.primary,
-    textAlign: "center",
-    marginTop: 8,
-  },
-  accountRow: {
-    gap: 2,
-    paddingVertical: 4,
-  },
-  email: {
-    fontSize: 12,
-    color: tokens.text.primary,
-  },
-  provider: {
-    fontSize: 10,
-    color: tokens.text.secondary,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: tokens.border.subtle,
-    marginVertical: 10,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    minHeight: 32,
-  },
-  rowText: {
-    flex: 1,
-    gap: 2,
-  },
-  rowLabel: {
-    fontSize: 12,
-    color: tokens.text.primary,
-  },
-  rowHint: {
-    fontSize: 10,
-    color: tokens.text.hint,
-  },
-  logout: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    height: 50,
-    borderRadius: 12,
-    backgroundColor: tokens.status.error,
-  },
-  logoutText: {
-    fontSize: 12,
-    color: tokens.text.primary,
-  },
-});
