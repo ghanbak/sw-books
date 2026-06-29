@@ -1,8 +1,6 @@
-import { FlashList } from '@shopify/flash-list';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
@@ -27,7 +25,6 @@ const LIBRARY_FILTERS: FilterPillOption<LibraryFilter>[] = [
 export default function LibraryScreen() {
 	const { books, error: catalogError, refetch: refetchCatalog } = useBooks();
 	const { userBooks, loading, refetch } = useUserBooks();
-	const insets = useSafeAreaInsets();
 	const [filter, setFilter] = useState<LibraryFilter>('all');
 	const { sort, openSortMenu } = useCatalogSort('@ossus/library_sort');
 	const router = useRouter();
@@ -84,15 +81,18 @@ export default function LibraryScreen() {
 	}
 
 	return (
-		<View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+		<>
 			<Stack.Screen
 				options={{ headerRight: () => <TabHeaderActions showFilter onFilter={openSortMenu} /> }}
 			/>
-			<FlashList
+			<FlatList
+				style={styles.list}
+				contentContainerStyle={shelvedBooks.length === 0 ? styles.emptyContent : undefined}
 				data={shelvedBooks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
 				extraData={filter}
+				contentInsetAdjustmentBehavior="automatic"
 				refreshing={loading}
 				onRefresh={refetch}
 				ListHeaderComponent={
@@ -106,14 +106,17 @@ export default function LibraryScreen() {
 					</View>
 				}
 			/>
-		</View>
+		</>
 	);
 }
 
 const styles = StyleSheet.create({
-	container: {
+	list: {
 		flex: 1,
 		backgroundColor: tokens.surface.background,
+	},
+	emptyContent: {
+		flexGrow: 1,
 	},
 	filterRow: {
 		paddingHorizontal: 12,
