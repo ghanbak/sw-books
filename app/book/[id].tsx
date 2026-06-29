@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 	},
 	title: {
-		fontSize: 28,
+		fontSize: 20,
 		fontWeight: '700',
 		color: tokens.text.primary,
 	},
@@ -283,8 +283,8 @@ const styles = StyleSheet.create({
 		marginBottom: 28,
 	},
 	synopsis: {
-		fontSize: 15,
-		lineHeight: 23,
+		fontSize: 14,
+		lineHeight: 20,
 		color: tokens.text.primary,
 		marginBottom: 20,
 	},
