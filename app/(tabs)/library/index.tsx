@@ -1,16 +1,19 @@
 import { FlashList } from '@shopify/flash-list';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
+import { TabHeaderActions } from '@/components/tab-header-actions';
 import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
 import { tokens } from '@/constants/tokens';
+import { useCatalogSort } from '@/hooks/useCatalogSort';
 import type { Book } from '@/lib/hooks';
 import { useBooks, useUserBooks } from '@/lib/hooks';
 import { type LibraryFilter, deriveLibraryFilter } from '@/lib/library-filter';
+import { sortBooks } from '@/lib/sort';
 
 const LIBRARY_FILTERS: FilterPillOption<LibraryFilter>[] = [
 	{ key: 'all', label: 'All' },
@@ -25,15 +28,19 @@ export default function LibraryScreen() {
 	const { userBooks, loading, refetch } = useUserBooks();
 	const insets = useSafeAreaInsets();
 	const [filter, setFilter] = useState<LibraryFilter>('all');
+	const { sort, openSortMenu } = useCatalogSort('@ossus/library_sort');
 	const router = useRouter();
 
 	const shelvedBooks = useMemo(
 		() =>
-			books.filter((book) => {
-				const ub = userBooks.get(book.id);
-				return ub ? deriveLibraryFilter(ub, filter) : false;
-			}),
-		[books, userBooks, filter],
+			sortBooks(
+				books.filter((book) => {
+					const ub = userBooks.get(book.id);
+					return ub ? deriveLibraryFilter(ub, filter) : false;
+				}),
+				sort,
+			),
+		[books, userBooks, filter, sort],
 	);
 
 	// "Collection awaits" shows only when nothing is on a library shelf at all. A
@@ -77,6 +84,9 @@ export default function LibraryScreen() {
 
 	return (
 		<View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+			<Stack.Screen
+				options={{ headerRight: () => <TabHeaderActions showFilter onFilter={openSortMenu} /> }}
+			/>
 			<FlashList
 				data={shelvedBooks}
 				renderItem={renderItem}

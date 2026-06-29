@@ -1,15 +1,18 @@
 import { FlashList } from '@shopify/flash-list';
+import { Stack } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
+import { TabHeaderActions } from '@/components/tab-header-actions';
 import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
 import { tokens } from '@/constants/tokens';
+import { useCatalogSort } from '@/hooks/useCatalogSort';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
-import { DEFAULT_SORT, sortBooks } from '@/lib/sort';
+import { sortBooks } from '@/lib/sort';
 
 type CanonFilter = 'all' | 'Canon' | 'Legends';
 
@@ -23,11 +26,12 @@ export default function CatalogScreen() {
 	const { books, loading, error, refetch } = useBooks();
 	const insets = useSafeAreaInsets();
 	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
+	const { sort, openSortMenu } = useCatalogSort('@ossus/catalog_sort');
 
 	const filteredBooks = useMemo(() => {
 		const result = canonFilter === 'all' ? books : books.filter((b) => b.canon === canonFilter);
-		return sortBooks(result, DEFAULT_SORT);
-	}, [books, canonFilter]);
+		return sortBooks(result, sort);
+	}, [books, canonFilter, sort]);
 
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
@@ -46,6 +50,9 @@ export default function CatalogScreen() {
 
 	return (
 		<View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+			<Stack.Screen
+				options={{ headerRight: () => <TabHeaderActions showFilter onFilter={openSortMenu} /> }}
+			/>
 			<FlashList
 				data={filteredBooks}
 				renderItem={renderItem}
