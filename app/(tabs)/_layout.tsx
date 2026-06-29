@@ -1,5 +1,7 @@
 import { NativeTabs } from "expo-router/unstable-native-tabs";
 
+import { useFontPref } from "@/lib/font-prefs";
+
 // Native tab bar — UIKit on iOS, Material 3 on Android. No custom styling: the
 // system renders its default (the floating Liquid Glass capsule on iOS 26+).
 //
@@ -12,8 +14,9 @@ import { NativeTabs } from "expo-router/unstable-native-tabs";
 // icons — add `drawable`/`md` icons or a VectorIcon family when we ship Android.
 
 export default function TabLayout() {
+  const { fontFamily } = useFontPref();
   return (
-    <NativeTabs>
+    <NativeTabs labelStyle={{ fontFamily }}>
       <NativeTabs.Trigger name="archives">
         <NativeTabs.Trigger.Icon sf={{ default: "pyramid", selected: "pyramid.fill" }} />
         <NativeTabs.Trigger.Label>Archives</NativeTabs.Trigger.Label>

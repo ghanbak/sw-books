@@ -1,13 +1,12 @@
 import { useRouter } from 'expo-router';
 import { ChevronRight, LogOut } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Card } from '@/components/ui/card';
 import { tokens } from '@/constants/tokens';
 import { useAuth } from '@/lib/auth';
-import { loadAurebeshPref, setAurebeshPref } from '@/lib/font-prefs';
+import { useFontPref } from '@/lib/font-prefs';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -18,19 +17,10 @@ export default function ProfileScreen() {
 	const { user } = useAuth();
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
-	const [aurebesh, setAurebesh] = useState(false);
-
-	useEffect(() => {
-		loadAurebeshPref().then(setAurebesh);
-	}, []);
+	const { aurebesh, setAurebesh } = useFontPref();
 
 	const email = user?.email ?? 'Signed in';
 	const provider = (user?.app_metadata?.provider as string | undefined) ?? 'email';
-
-	const toggleAurebesh = (on: boolean) => {
-		setAurebesh(on);
-		setAurebeshPref(on);
-	};
 
 	async function handleSignOut() {
 		const { error } = await supabase.auth.signOut();
@@ -56,7 +46,7 @@ export default function ProfileScreen() {
 					</View>
 					<Switch
 						value={aurebesh}
-						onValueChange={toggleAurebesh}
+						onValueChange={setAurebesh}
 						trackColor={{ true: tokens.accent.primary, false: tokens.surface.background }}
 					/>
 				</View>
