@@ -1,61 +1,47 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { BookOpen, ScanBarcode } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
+import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
 import { tokens } from '@/constants/tokens';
-import { GlassView, liquidGlassAvailable } from '@/lib/glass';
 import type { Book } from '@/lib/hooks';
 import { useBooks, useUserBooks } from '@/lib/hooks';
+import { type LibraryFilter, deriveLibraryFilter } from '@/lib/library-filter';
 
-type ShelfFilter = 'all' | 'owned' | 'read' | 'want_to_read';
-
-const FILTERS: { key: ShelfFilter; label: string }[] = [
+const LIBRARY_FILTERS: FilterPillOption<LibraryFilter>[] = [
 	{ key: 'all', label: 'All' },
-	{ key: 'owned', label: 'Owned' },
+	{ key: 'favorites', label: 'Favorites' },
+	{ key: 'want_to_read', label: 'Wishlist' },
 	{ key: 'read', label: 'Read' },
-	{ key: 'want_to_read', label: 'Want to Read' },
+	{ key: 'not_read', label: 'Not read' },
 ];
 
 export default function LibraryScreen() {
 	const { books, error: catalogError, refetch: refetchCatalog } = useBooks();
 	const { userBooks, loading, refetch } = useUserBooks();
 	const insets = useSafeAreaInsets();
-	const [filter, setFilter] = useState<ShelfFilter>('all');
+	const [filter, setFilter] = useState<LibraryFilter>('all');
 	const router = useRouter();
 
-	const shelvedBooks = useMemo(() => {
-		const result: Book[] = [];
-		for (const book of books) {
-			const ub = userBooks.get(book.id);
-			if (!ub) continue;
+	const shelvedBooks = useMemo(
+		() =>
+			books.filter((book) => {
+				const ub = userBooks.get(book.id);
+				return ub ? deriveLibraryFilter(ub, filter) : false;
+			}),
+		[books, userBooks, filter],
+	);
 
-			if (filter === 'all') {
-				if (ub.owned || ub.read || ub.want_to_read) result.push(book);
-			} else if (ub[filter]) {
-				result.push(book);
-			}
-		}
-		return result;
-	}, [books, userBooks, filter]);
-
-	const counts = useMemo(() => {
-		let owned = 0;
-		let read = 0;
-		let wantToRead = 0;
-		let all = 0;
-		for (const ub of userBooks.values()) {
-			if (ub.owned || ub.read || ub.want_to_read) all++;
-			if (ub.owned) owned++;
-			if (ub.read) read++;
-			if (ub.want_to_read) wantToRead++;
-		}
-		return { all, owned, read, want_to_read: wantToRead };
-	}, [userBooks]);
+	// "Collection awaits" shows only when nothing is on a library shelf at all. A
+	// favorite-only row doesn't count as a library book (same rule as the "All" pill).
+	const hasLibraryBooks = useMemo(
+		() => Array.from(userBooks.values()).some((ub) => ub.owned || ub.read || ub.want_to_read),
+		[userBooks],
+	);
 
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
@@ -70,7 +56,7 @@ export default function LibraryScreen() {
 		);
 	}
 
-	if (counts.all === 0 && !loading) {
+	if (!hasLibraryBooks && !loading) {
 		return (
 			<View style={styles.emptyContainer}>
 				<Text style={styles.emptyTitle}>Your collection awaits</Text>
@@ -95,25 +81,12 @@ export default function LibraryScreen() {
 				data={shelvedBooks}
 				renderItem={renderItem}
 				keyExtractor={keyExtractor}
+				extraData={filter}
 				refreshing={loading}
 				onRefresh={refetch}
 				ListHeaderComponent={
 					<View style={styles.filterRow}>
-						{FILTERS.map(({ key, label }) => {
-							const active = filter === key;
-							return (
-								<Pressable
-									key={key}
-									style={[styles.filterChip, active && styles.filterChipActive]}
-									onPress={() => setFilter(key)}
-								>
-									{!active && liquidGlassAvailable && <GlassView style={StyleSheet.absoluteFill} />}
-									<Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-										{label} ({counts[key]})
-									</Text>
-								</Pressable>
-							);
-						})}
+						<FilterPills options={LIBRARY_FILTERS} value={filter} onChange={setFilter} />
 					</View>
 				}
 				ListEmptyComponent={
@@ -132,31 +105,8 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.surface.background,
 	},
 	filterRow: {
-		flexDirection: 'row',
 		paddingHorizontal: 12,
 		paddingVertical: 10,
-		gap: 8,
-		flexWrap: 'wrap',
-	},
-	filterChip: {
-		paddingHorizontal: 12,
-		paddingVertical: 6,
-		borderRadius: 16,
-		borderWidth: 1,
-		borderColor: tokens.border.subtle,
-		overflow: 'hidden',
-	},
-	filterChipActive: {
-		backgroundColor: tokens.accent.primary,
-		borderColor: tokens.accent.primary,
-	},
-	filterChipText: {
-		fontSize: 13,
-		fontWeight: '500',
-		color: tokens.text.secondary,
-	},
-	filterChipTextActive: {
-		color: tokens.text.inverse,
 	},
 	emptyContainer: {
 		flex: 1,
