@@ -37,7 +37,8 @@ type HoloCoverProps = {
  * The hologram book cover that replaces the old 3D cover. `thumb` is a plain static
  * cover (no animation/sensors — safe to render per-row in FlashList). `hero` adds a
  * cyan projector beam + glowing base emitter with a slow looping pulse, gated on
- * reduce-motion. Gyroscope tilt (±15°) is added in a later step (device-only).
+ * reduce-motion. The hero also tilts ±15° with the gyroscope, relative to how the
+ * device is held (gated on reduce-motion; the sensor is a no-op in the simulator).
  */
 const MAX_TILT = 15 * (Math.PI / 180);
 
@@ -101,16 +102,23 @@ function StaticHero({ width, height, baseSpace, animated, children }: HeroProps)
 /** Hero whose cover tilts ±15° with the device gyroscope (no-op in the iOS simulator). */
 function TiltedHero({ width, height, baseSpace, animated, children }: HeroProps) {
 	const sensor = useAnimatedSensor(SensorType.ROTATION, { interval: 'auto' });
+	// Baseline = device orientation captured from the first real reading. Tilt tracks
+	// movement RELATIVE to it, so the cover sits neutral at whatever angle the device is
+	// held — absolute pitch/roll would pin it at the ±15° clamp at any reading angle.
+	const baseline = useSharedValue<{ pitch: number; roll: number } | null>(null);
 	const tiltStyle = useAnimatedStyle(() => {
 		const { pitch, roll } = sensor.sensor.value;
-		const rx = withTiming(
-			interpolate(pitch, [-MAX_TILT, MAX_TILT], [-MAX_TILT, MAX_TILT], Extrapolation.CLAMP),
-			{ duration: 90 },
-		);
-		const ry = withTiming(
-			interpolate(roll, [-MAX_TILT, MAX_TILT], [-MAX_TILT, MAX_TILT], Extrapolation.CLAMP),
-			{ duration: 90 },
-		);
+		const base = baseline.value;
+		if (base === null) {
+			// Skip the initial (0,0) pre-warmup frame; latch the first real reading.
+			if (pitch !== 0 || roll !== 0) baseline.value = { pitch, roll };
+			return { transform: [{ perspective: 800 }] };
+		}
+		const clampTilt = (v: number) =>
+			interpolate(v, [-MAX_TILT, MAX_TILT], [-MAX_TILT, MAX_TILT], Extrapolation.CLAMP);
+		// withTiming chases the moving sensor target → ~90ms damped follow (smooths jitter).
+		const rx = withTiming(clampTilt(pitch - base.pitch), { duration: 90 });
+		const ry = withTiming(clampTilt(roll - base.roll), { duration: 90 });
 		return { transform: [{ perspective: 800 }, { rotateX: `${rx}rad` }, { rotateY: `${ry}rad` }] };
 	});
 	return (
