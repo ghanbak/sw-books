@@ -1,7 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { BookOpen, Calendar, Hash, Layers, Package, Star } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookDetailSkeleton } from '@/components/book-detail-skeleton';
@@ -324,7 +324,6 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	mono: {
-		fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
 		fontSize: 13,
 	},
 	formatRow: {
