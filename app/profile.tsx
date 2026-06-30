@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { Alert } from 'react-native';
 
 import { useAuth } from '@/lib/auth';
-import { useFontPref } from '@/lib/font-prefs';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -16,7 +15,6 @@ import { supabase } from '@/lib/supabase';
 export default function ProfileScreen() {
 	const { user } = useAuth();
 	const router = useRouter();
-	const { aurebesh, setAurebesh } = useFontPref();
 
 	const email = user?.email ?? 'Signed in';
 	const provider = (user?.app_metadata?.provider as string | undefined) ?? 'email';
@@ -31,8 +29,8 @@ export default function ProfileScreen() {
 			<List>
 				<ListItem supportingText={`Signed in with ${capitalize(provider)}`}>{email}</ListItem>
 				<ListItem
-					supportingText="Render the app in the Aurebesh alphabet."
-					trailing={<Switch value={aurebesh} onValueChange={setAurebesh} />}
+					supportingText="Aurebesh alphabet — coming soon."
+					trailing={<Switch value={false} onValueChange={() => {}} disabled />}
 				>
 					Aurebesh
 				</ListItem>

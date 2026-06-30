@@ -2,19 +2,22 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type ReactNode, createContext, useCallback, useContext, useState } from 'react';
 
 /**
- * App font preference. The default app font is the readable "High Galactic" alphabet
- * (`sacul-high-alphabet`); flipping the Aurebesh toggle swaps every surface to the Aurebesh
- * glyphs (`sacul-basic`). Both .otf files are registered via `useFonts` in app/_layout.
+ * App font preference. The Sacul typeface has been reverted — the app renders in the system
+ * default font. The .otf files (sacul-high-alphabet / sacul-basic) stay bundled and the
+ * Aurebesh plumbing remains in place, but `AUREBESH_ENABLED` is false so no custom family is
+ * ever applied (even if the flag was previously persisted on) and the Profile toggle is
+ * disabled. To bring it back: set AUREBESH_ENABLED true and point DEFAULT_FONT at the family.
  *
- * Everything reads `fontFamily` from this context: JS text via the shared `<Text>` wrapper
- * (components/ui/text), and native chrome (header titles, tab labels, the search field)
- * directly. Context-driven, so toggling swaps every surface live with no remount.
+ * Text reads `fontFamily` from this context (shared <Text> wrapper + native chrome). With the
+ * default `undefined`, every surface falls back to the system font.
  */
 const KEY = '@ossus/aurebesh';
-export const DEFAULT_FONT = 'sacul-high-alphabet';
+export const AUREBESH_ENABLED = false;
+export const DEFAULT_FONT: string | undefined = undefined;
 export const AUREBESH_FONT = 'sacul-basic';
 
-export const fontFor = (aurebesh: boolean): string => (aurebesh ? AUREBESH_FONT : DEFAULT_FONT);
+export const fontFor = (aurebesh: boolean): string | undefined =>
+	AUREBESH_ENABLED && aurebesh ? AUREBESH_FONT : DEFAULT_FONT;
 
 /** Read the persisted Aurebesh flag (used to gate the splash before the first paint). */
 export async function loadAurebeshPref(): Promise<boolean> {
@@ -25,7 +28,11 @@ export async function loadAurebeshPref(): Promise<boolean> {
 	}
 }
 
-type FontPref = { aurebesh: boolean; fontFamily: string; setAurebesh: (on: boolean) => void };
+type FontPref = {
+	aurebesh: boolean;
+	fontFamily: string | undefined;
+	setAurebesh: (on: boolean) => void;
+};
 
 const FontContext = createContext<FontPref>({
 	aurebesh: false,
