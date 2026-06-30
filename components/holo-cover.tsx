@@ -55,22 +55,24 @@ export function HoloCover({
 }: HoloCoverProps) {
 	const reduceMotion = useReduceMotion();
 
-	const face = (
+	let content = (
 		<CoverFace coverUri={coverUri} title={title} author={author} width={width} height={height} />
 	);
-
-	let content = face;
 	if (variant === 'hero') {
 		const baseSpace = Math.max(14, Math.round(height * 0.12));
 		const animated = !reduceMotion;
+		// Hero gets the holographic face (blue tint + scanlines + glow); thumbs stay plain covers.
+		const holoFace = (
+			<HoloFace coverUri={coverUri} title={title} author={author} width={width} height={height} />
+		);
 		// Mount the sensor-bearing hero only when tilt is on, so thumbs and reduce-motion
 		// heroes never subscribe to the device-motion sensor.
 		const props = { width, height, baseSpace, animated };
 		content =
 			tilt !== false && !reduceMotion ? (
-				<TiltedHero {...props}>{face}</TiltedHero>
+				<TiltedHero {...props}>{holoFace}</TiltedHero>
 			) : (
-				<StaticHero {...props}>{face}</StaticHero>
+				<StaticHero {...props}>{holoFace}</StaticHero>
 			);
 	}
 
@@ -174,6 +176,61 @@ function CoverFace({
 	);
 }
 
+/**
+ * The holographic projection of a cover (Figma "projected-cover"): the real cover under a
+ * blue tint gradient, horizontal scanlines, an inner edge glow, and an outer cyan bloom.
+ * The bloom lives on an unclipped outer wrap; the tint/scanlines/edge are clipped to the
+ * rounded cover so they don't bleed past it.
+ */
+function HoloFace({
+	coverUri,
+	title,
+	author,
+	width,
+	height,
+}: {
+	coverUri: string | null;
+	title: string;
+	author: string[];
+	width: number;
+	height: number;
+}) {
+	return (
+		<View style={[styles.holoGlow, { width, height }]}>
+			<View style={[styles.holoClip, { width, height }]}>
+				<CoverFace
+					coverUri={coverUri}
+					title={title}
+					author={author}
+					width={width}
+					height={height}
+				/>
+				<LinearGradient
+					pointerEvents="none"
+					colors={[tokens.holo.tintTop, tokens.holo.tintMid, tokens.holo.tintBottom]}
+					locations={[0, 0.4, 1]}
+					style={StyleSheet.absoluteFill}
+				/>
+				<Scanlines height={height} />
+				<View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.innerGlow]} />
+			</View>
+		</View>
+	);
+}
+
+/** Evenly spaced horizontal hologram scanlines (12px pitch) clipped to the cover. */
+function Scanlines({ height }: { height: number }) {
+	const tops: number[] = [];
+	for (let y = 6; y < height; y += 12) tops.push(y);
+	return (
+		<View pointerEvents="none" style={StyleSheet.absoluteFill}>
+			{tops.map((top) => (
+				<View key={top} style={[styles.scanline, { top }]} />
+			))}
+		</View>
+	);
+}
+
 /** Cyan beam cone behind the cover + a glowing base emitter, slow looping pulse. */
 function Projector({
 	width,
@@ -243,8 +300,35 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 	},
 	face: {
-		borderRadius: 4,
+		borderRadius: 8,
 		overflow: 'hidden',
+	},
+	// Outer cyan bloom — must NOT clip (iOS shadows don't render under overflow:hidden).
+	holoGlow: {
+		borderRadius: 8,
+		shadowColor: tokens.holo.glow,
+		shadowOffset: { width: 0, height: 0 },
+		shadowOpacity: 0.6,
+		shadowRadius: 24,
+		elevation: 12,
+	},
+	// Clips the tint, scanlines, and edge glow to the rounded cover.
+	holoClip: {
+		borderRadius: 8,
+		overflow: 'hidden',
+		opacity: 0.95,
+	},
+	innerGlow: {
+		borderRadius: 8,
+		borderWidth: 1.5,
+		borderColor: tokens.holo.innerGlow,
+	},
+	scanline: {
+		position: 'absolute',
+		left: 0,
+		right: 0,
+		height: 2,
+		backgroundColor: tokens.holo.scanline,
 	},
 	fallback: {
 		justifyContent: 'center',

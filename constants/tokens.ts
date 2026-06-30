@@ -39,6 +39,13 @@ export const tokens = {
 		cyan: '#3DE0FF',
 		beam: 'rgba(61,224,255,0.15)',
 		emitter: 'rgba(61,224,255,0.55)',
+		// projected-cover face treatment (Figma node 134:2077): blue tint, scanlines, glow.
+		tintTop: 'rgba(111,195,255,0.5)',
+		tintMid: 'rgba(46,140,255,0.42)',
+		tintBottom: 'rgba(31,89,178,0.52)',
+		scanline: 'rgba(158,224,255,0.12)',
+		glow: '#6FC3FF',
+		innerGlow: 'rgba(158,224,255,0.56)',
 	},
 } as const;
 
