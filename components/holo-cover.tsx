@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { type ReactNode, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, Image as RNImage, StyleSheet, View } from 'react-native';
 import Animated, {
 	Easing,
 	Extrapolation,
@@ -121,7 +121,9 @@ function TiltedHero({ width, height, baseSpace, animated, children }: HeroProps)
 		// withTiming chases the moving sensor target → ~90ms damped follow (smooths jitter).
 		const rx = withTiming(clampTilt(pitch - base.pitch), { duration: 90 });
 		const ry = withTiming(clampTilt(roll - base.roll), { duration: 90 });
-		return { transform: [{ perspective: 800 }, { rotateX: `${rx}rad` }, { rotateY: `${ry}rad` }] };
+		return {
+			transform: [{ perspective: 800 }, { rotateX: `${rx}rad` }, { rotateY: `${ry}rad` }],
+		};
 	});
 	return (
 		<View style={[styles.heroWrap, { width, height: height + baseSpace }]}>
@@ -131,19 +133,26 @@ function TiltedHero({ width, height, baseSpace, animated, children }: HeroProps)
 	);
 }
 
-/** The cover image, or a deterministic colored fallback with the title/author. */
+/**
+ * The cover image, or a deterministic colored fallback with the title/author. When
+ * `desaturate` is set (the holo hero), the image is rendered with RN's core `Image` and the
+ * grayscale + hard-light blend style — expo-image's native view ignores the `filter` prop,
+ * so it can't desaturate. Thumbs keep expo-image for its caching/recycling.
+ */
 function CoverFace({
 	coverUri,
 	title,
 	author,
 	width,
 	height,
+	desaturate = false,
 }: {
 	coverUri: string | null;
 	title: string;
 	author: string[];
 	width: number;
 	height: number;
+	desaturate?: boolean;
 }) {
 	const [errored, setErrored] = useState(false);
 	if (!coverUri || errored) {
@@ -153,6 +162,7 @@ function CoverFace({
 					styles.face,
 					styles.fallback,
 					{ width, height, backgroundColor: getCoverColor(title) },
+					desaturate && styles.blendLayer,
 				]}
 			>
 				<Text numberOfLines={3} style={styles.fallbackTitle}>
@@ -162,6 +172,16 @@ function CoverFace({
 					{author.join(', ')}
 				</Text>
 			</View>
+		);
+	}
+	if (desaturate) {
+		return (
+			<RNImage
+				source={{ uri: coverUri }}
+				style={[styles.face, { width, height }, styles.blendLayer]}
+				resizeMode="cover"
+				onError={() => setErrored(true)}
+			/>
 		);
 	}
 	return (
@@ -206,15 +226,14 @@ function HoloFace({
 					locations={[0, 0.4, 1]}
 					style={StyleSheet.absoluteFill}
 				/>
-				<View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.blendLayer]}>
-					<CoverFace
-						coverUri={coverUri}
-						title={title}
-						author={author}
-						width={width}
-						height={height}
-					/>
-				</View>
+				<CoverFace
+					coverUri={coverUri}
+					title={title}
+					author={author}
+					width={width}
+					height={height}
+					desaturate
+				/>
 				<Scanlines height={height} />
 				<View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.innerGlow]} />
 			</View>
@@ -284,7 +303,11 @@ function Projector({
 			<Animated.View
 				style={[
 					styles.emitter,
-					{ width: emitterW, marginLeft: -emitterW / 2, height: Math.max(10, baseSpace) },
+					{
+						width: emitterW,
+						marginLeft: -emitterW / 2,
+						height: Math.max(10, baseSpace),
+					},
 					emitterStyle,
 				]}
 			>
@@ -312,8 +335,20 @@ const styles = StyleSheet.create({
 	holoGlow: {
 		borderRadius: 8,
 		boxShadow: [
-			{ offsetX: 0, offsetY: 0, blurRadius: 32, spreadDistance: 4, color: tokens.holo.bloom },
-			{ offsetX: 0, offsetY: 0, blurRadius: 216, spreadDistance: 16, color: tokens.holo.bloom },
+			{
+				offsetX: 0,
+				offsetY: 0,
+				blurRadius: 32,
+				spreadDistance: 4,
+				color: tokens.holo.bloom,
+			},
+			{
+				offsetX: 0,
+				offsetY: 0,
+				blurRadius: 216,
+				spreadDistance: 16,
+				color: tokens.holo.bloom,
+			},
 		],
 	},
 	// Clips the tint, blended cover, scanlines, and edge glow to the rounded cover.
@@ -334,7 +369,13 @@ const styles = StyleSheet.create({
 	innerGlow: {
 		borderRadius: 8,
 		boxShadow: [
-			{ offsetX: 0, offsetY: 0, blurRadius: 8, color: tokens.holo.innerGlow, inset: true },
+			{
+				offsetX: 0,
+				offsetY: 0,
+				blurRadius: 8,
+				color: tokens.holo.innerGlow,
+				inset: true,
+			},
 		],
 	},
 	scanline: {
