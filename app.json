@@ -12,7 +12,8 @@
 			"bundleIdentifier": "com.ghanbak.ossusarchives",
 			"icon": "./assets/images/App-Icon.icon",
 			"infoPlist": {
-				"ITSAppUsesNonExemptEncryption": false
+				"ITSAppUsesNonExemptEncryption": false,
+				"NSMotionUsageDescription": "OssusArchives uses device motion to tilt the holographic book cover."
 			}
 		},
 		"android": {
