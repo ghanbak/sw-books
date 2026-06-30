@@ -177,10 +177,12 @@ function CoverFace({
 }
 
 /**
- * The holographic projection of a cover (Figma "projected-cover"): the real cover under a
- * blue tint gradient, horizontal scanlines, an inner edge glow, and an outer cyan bloom.
- * The bloom lives on an unclipped outer wrap; the tint/scanlines/edge are clipped to the
- * rounded cover so they don't bleed past it.
+ * The holographic projection of a cover (Figma "projected-cover"). Mirrors the design's
+ * layering: a blue tint gradient underneath, then the cover desaturated to grayscale and
+ * `hard-light` blended on top so it reads as a blue hologram, then scanlines and an inner
+ * edge glow. `isolation: 'isolate'` scopes the blend to the card (not the dark screen
+ * behind it); the outer cyan bloom lives on an unclipped wrapper since the clip would hide
+ * an outset shadow.
  */
 function HoloFace({
 	coverUri,
@@ -198,19 +200,21 @@ function HoloFace({
 	return (
 		<View style={[styles.holoGlow, { width, height }]}>
 			<View style={[styles.holoClip, { width, height }]}>
-				<CoverFace
-					coverUri={coverUri}
-					title={title}
-					author={author}
-					width={width}
-					height={height}
-				/>
 				<LinearGradient
 					pointerEvents="none"
 					colors={[tokens.holo.tintTop, tokens.holo.tintMid, tokens.holo.tintBottom]}
 					locations={[0, 0.4, 1]}
 					style={StyleSheet.absoluteFill}
 				/>
+				<View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.blendLayer]}>
+					<CoverFace
+						coverUri={coverUri}
+						title={title}
+						author={author}
+						width={width}
+						height={height}
+					/>
+				</View>
 				<Scanlines height={height} />
 				<View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.innerGlow]} />
 			</View>
@@ -303,25 +307,35 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		overflow: 'hidden',
 	},
-	// Outer cyan bloom — must NOT clip (iOS shadows don't render under overflow:hidden).
+	// Outer cyan bloom (dual-radius, per the design) — must NOT clip, an outset shadow
+	// doesn't render under overflow:hidden.
 	holoGlow: {
 		borderRadius: 8,
-		shadowColor: tokens.holo.glow,
-		shadowOffset: { width: 0, height: 0 },
-		shadowOpacity: 0.6,
-		shadowRadius: 24,
-		elevation: 12,
+		boxShadow: [
+			{ offsetX: 0, offsetY: 0, blurRadius: 32, spreadDistance: 4, color: tokens.holo.bloom },
+			{ offsetX: 0, offsetY: 0, blurRadius: 216, spreadDistance: 16, color: tokens.holo.bloom },
+		],
 	},
-	// Clips the tint, scanlines, and edge glow to the rounded cover.
+	// Clips the tint, blended cover, scanlines, and edge glow to the rounded cover.
+	// `isolation` scopes the hard-light blend to this group, not the screen behind.
 	holoClip: {
 		borderRadius: 8,
 		overflow: 'hidden',
-		opacity: 0.95,
+		isolation: 'isolate',
+		opacity: 0.92,
 	},
+	// Desaturate the cover and hard-light blend it over the blue tint beneath.
+	blendLayer: {
+		mixBlendMode: 'hard-light',
+		filter: [{ grayscale: 1 }],
+		opacity: 0.8,
+	},
+	// Inner edge glow, painted on top — matches the design's inset box-shadow.
 	innerGlow: {
 		borderRadius: 8,
-		borderWidth: 1.5,
-		borderColor: tokens.holo.innerGlow,
+		boxShadow: [
+			{ offsetX: 0, offsetY: 0, blurRadius: 8, color: tokens.holo.innerGlow, inset: true },
+		],
 	},
 	scanline: {
 		position: 'absolute',
