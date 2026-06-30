@@ -1,4 +1,5 @@
 import { FlashList } from '@shopify/flash-list';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +31,10 @@ const VIEW_CONFIG = { itemVisiblePercentThreshold: 60 } as const;
 export default function TimelineScreen() {
 	const { width } = useWindowDimensions();
 	const insets = useSafeAreaInsets();
+	// Pager can't use a list header + contentInsetAdjustmentBehavior, so offset the body by the
+	// full header height (not just insets.top) — that puts the filter pills below the large title,
+	// matching Archives/Library. insets.top alone leaves them up in the nav-bar row.
+	const headerHeight = useHeaderHeight();
 	const { books } = useBooks();
 	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
 	const [activePage, setActivePage] = useState(0);
@@ -72,7 +77,7 @@ export default function TimelineScreen() {
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
 	return (
-		<View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+		<View style={[styles.container, { paddingTop: headerHeight, paddingBottom: insets.bottom }]}>
 			<View style={styles.filters}>
 				<FilterPills options={CANON_OPTIONS} value={canonFilter} onChange={setCanonFilter} />
 			</View>
