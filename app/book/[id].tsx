@@ -1,5 +1,5 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { BookOpen, Calendar, Hash, Layers, Package, Star } from 'lucide-react-native';
+import { BookOpen, Calendar, Hash, Layers, Package } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +10,6 @@ import { BuyOnAmazonButton } from '@/components/buy-on-amazon-button';
 import { ErrorState } from '@/components/error-state';
 import { HoloCover } from '@/components/holo-cover';
 import { Card } from '@/components/ui/card';
-import { GlassIconButton } from '@/components/ui/glass-icon-button';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { buildAmazonSearchUrl } from '@/lib/amazon';
@@ -82,11 +81,12 @@ export default function BookDetailScreen() {
 			<Stack.Screen
 				options={{
 					headerLargeTitle: false,
+					headerShadowVisible: false,
 					title: '',
 					headerBackTitle: 'Back',
-					headerRight: () => <FavoriteHeaderButton bookId={book.id} />,
 				}}
 			/>
+			<FavoriteHeaderButton bookId={book.id} />
 
 			<ScrollView
 				style={styles.container}
@@ -205,18 +205,23 @@ export default function BookDetailScreen() {
 	);
 }
 
-/** Header star that toggles the favorite flag, filled blue when active. */
+/**
+ * Header favorite toggle as a native right-placement `Stack.Toolbar` button — the system
+ * renders it as a real bar-button item (with its own glass), so we don't nest a custom glass
+ * button inside the header's glass. Filled blue star when active.
+ */
 function FavoriteHeaderButton({ bookId }: { bookId: string }) {
 	const { userBooks, toggleShelf } = useUserBooks();
 	const active = userBooks.get(bookId)?.favorite ?? false;
 	return (
-		<GlassIconButton
-			icon={Star}
-			active={active}
-			filled={active}
-			accessibilityLabel={active ? 'Remove from favorites' : 'Add to favorites'}
-			onPress={() => toggleShelf(bookId, 'favorite')}
-		/>
+		<Stack.Toolbar placement="right">
+			<Stack.Toolbar.Button
+				icon={active ? 'star.fill' : 'star'}
+				tintColor={active ? tokens.accent.primary : undefined}
+				accessibilityLabel={active ? 'Remove from favorites' : 'Add to favorites'}
+				onPress={() => toggleShelf(bookId, 'favorite')}
+			/>
+		</Stack.Toolbar>
 	);
 }
 
