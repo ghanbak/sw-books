@@ -13,7 +13,12 @@ export default function TimelineLayout() {
 				headerLargeTitleStyle: { fontFamily },
 			}}
 		>
-			<Stack.Screen name="index" options={{ title: 'Timeline' }} />
+			<Stack.Screen
+				name="index"
+				options={{
+					title: 'Timeline',
+				}}
+			/>
 		</Stack>
 	);
 }

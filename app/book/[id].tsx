@@ -80,7 +80,7 @@ export default function BookDetailScreen() {
 		<View style={styles.container}>
 			<Stack.Screen
 				options={{
-					headerLargeTitle: false,
+					headerLargeTitle: true,
 					headerShadowVisible: false,
 					title: '',
 					headerBackTitle: 'Back',
