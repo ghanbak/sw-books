@@ -5,6 +5,7 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HoloCover } from '@/components/holo-cover';
+import { TabHeaderActions } from '@/components/tab-header-actions';
 import { TimelineRail } from '@/components/timeline-rail';
 import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
 import { Text } from '@/components/ui/text';
@@ -78,6 +79,7 @@ export default function TimelineScreen() {
 
 	return (
 		<View style={[styles.container, { paddingTop: headerHeight, paddingBottom: insets.bottom }]}>
+			<TabHeaderActions />
 			<View style={styles.filters}>
 				<FilterPills options={CANON_OPTIONS} value={canonFilter} onChange={setCanonFilter} />
 			</View>

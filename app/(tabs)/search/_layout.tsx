@@ -1,6 +1,5 @@
 import { Stack } from 'expo-router';
 
-import { TabHeaderActions } from '@/components/tab-header-actions';
 import { useFontPref } from '@/lib/font-prefs';
 
 export default function SearchLayout() {
@@ -14,10 +13,7 @@ export default function SearchLayout() {
 				headerLargeTitleStyle: { fontFamily },
 			}}
 		>
-			<Stack.Screen
-				name="index"
-				options={{ title: 'Search', headerRight: () => <TabHeaderActions /> }}
-			/>
+			<Stack.Screen name="index" options={{ title: 'Search' }} />
 		</Stack>
 	);
 }

@@ -1,6 +1,5 @@
 import { Stack } from 'expo-router';
 
-import { TabHeaderActions } from '@/components/tab-header-actions';
 import { useFontPref } from '@/lib/font-prefs';
 
 export default function TimelineLayout() {
@@ -14,10 +13,7 @@ export default function TimelineLayout() {
 				headerLargeTitleStyle: { fontFamily },
 			}}
 		>
-			<Stack.Screen
-				name="index"
-				options={{ title: 'Timeline', headerRight: () => <TabHeaderActions /> }}
-			/>
+			<Stack.Screen name="index" options={{ title: 'Timeline' }} />
 		</Stack>
 	);
 }

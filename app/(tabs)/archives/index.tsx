@@ -1,4 +1,3 @@
-import { Stack } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 
@@ -52,9 +51,7 @@ export default function CatalogScreen() {
 	// native large title collapses on scroll and the header/tab-bar insets are applied natively.
 	return (
 		<>
-			<Stack.Screen
-				options={{ headerRight: () => <TabHeaderActions showFilter onFilter={openSortMenu} /> }}
-			/>
+			<TabHeaderActions showFilter onFilter={openSortMenu} />
 			<FlatList
 				style={styles.list}
 				contentContainerStyle={filteredBooks.length === 0 ? styles.emptyContent : undefined}

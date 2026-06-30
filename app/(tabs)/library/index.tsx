@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
@@ -82,9 +82,7 @@ export default function LibraryScreen() {
 
 	return (
 		<>
-			<Stack.Screen
-				options={{ headerRight: () => <TabHeaderActions showFilter onFilter={openSortMenu} /> }}
-			/>
+			<TabHeaderActions showFilter onFilter={openSortMenu} />
 			<FlatList
 				style={styles.list}
 				contentContainerStyle={shelvedBooks.length === 0 ? styles.emptyContent : undefined}

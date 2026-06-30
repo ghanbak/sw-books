@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
+import { TabHeaderActions } from '@/components/tab-header-actions';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
@@ -29,6 +30,7 @@ export default function SearchScreen() {
 
 	return (
 		<>
+			<TabHeaderActions />
 			<Stack.Screen
 				options={{
 					headerSearchBarOptions: {

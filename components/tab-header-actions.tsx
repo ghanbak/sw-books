@@ -1,84 +1,39 @@
-import { useRouter } from 'expo-router';
-import { CircleUser, ListFilter, type LucideIcon, ScanBarcode } from 'lucide-react-native';
-import { Pressable, StyleSheet, View } from 'react-native';
-
-import { tokens } from '@/constants/tokens';
+import { Stack, useRouter } from 'expo-router';
 
 type Props = {
 	/** Filter button shows only on Archives & Library. */
 	showFilter?: boolean;
-	/** Filter tap handler — wired to the sort dropdown in a later step. */
+	/** Filter tap handler — opens the sort menu. */
 	onFilter?: () => void;
 };
 
 /**
- * The header-action cluster (filter / scan / profile) that lives in each tab's
- * native large-title header `headerRight`. Plain tinted glyphs — no custom
- * background container, so they read as standard iOS bar-button items. Scan opens
- * the full-screen scan modal; profile opens the account bottom sheet.
+ * The tab header-action cluster (filter / scan / profile) as native right-placement
+ * `Stack.Toolbar` bar buttons — the system renders them as real bar-button items with their
+ * own glass, matching the favorite and Back buttons. Render this inside the screen body (not
+ * via `headerRight`): a `Stack.Toolbar` is screen-scoped config, not a header view.
  */
 export function TabHeaderActions({ showFilter = false, onFilter }: Props) {
 	const router = useRouter();
 	return (
-		<View style={styles.row}>
+		<Stack.Toolbar placement="right">
 			{showFilter && (
-				<HeaderIconButton
-					icon={ListFilter}
+				<Stack.Toolbar.Button
+					icon="line.3.horizontal.decrease"
 					accessibilityLabel="Filter and sort"
-					// TODO(plan step: filter dropdown) — wire the sort dropdown menu.
 					onPress={onFilter ?? (() => {})}
 				/>
 			)}
-			<HeaderIconButton
-				icon={ScanBarcode}
+			<Stack.Toolbar.Button
+				icon="barcode.viewfinder"
 				accessibilityLabel="Scan a book"
 				onPress={() => router.push('/scan')}
 			/>
-			<HeaderIconButton
-				icon={CircleUser}
+			<Stack.Toolbar.Button
+				icon="person.crop.circle"
 				accessibilityLabel="Account and settings"
 				onPress={() => router.push('/profile')}
 			/>
-		</View>
+		</Stack.Toolbar>
 	);
 }
-
-function HeaderIconButton({
-	icon: Icon,
-	accessibilityLabel,
-	onPress,
-}: {
-	icon: LucideIcon;
-	accessibilityLabel: string;
-	onPress: () => void;
-}) {
-	return (
-		<Pressable
-			onPress={onPress}
-			hitSlop={8}
-			accessibilityRole="button"
-			accessibilityLabel={accessibilityLabel}
-			style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-		>
-			<Icon size={22} color={tokens.text.primary} strokeWidth={2} />
-		</Pressable>
-	);
-}
-
-const styles = StyleSheet.create({
-	row: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		gap: 18,
-		// iOS draws its bar-button glass capsule tight to this view's bounds; without end
-		// padding the outer glyphs sit flush against the capsule edges (reads as cramped).
-		paddingHorizontal: 8,
-	},
-	button: {
-		alignItems: 'center',
-		justifyContent: 'center',
-	},
-	pressed: {
-		opacity: 0.4,
-	},
-});
