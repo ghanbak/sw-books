@@ -55,13 +55,22 @@ export function HoloCover({
 }: HoloCoverProps) {
 	const reduceMotion = useReduceMotion();
 
+	// Thumbs in lists get the holo cover styles (tint + scanlines + grayscale + edge glow)
+	// but no projector beam and no outer bloom — those are hero-only.
 	let content = (
-		<CoverFace coverUri={coverUri} title={title} author={author} width={width} height={height} />
+		<HoloFace
+			coverUri={coverUri}
+			title={title}
+			author={author}
+			width={width}
+			height={height}
+			glow={false}
+		/>
 	);
 	if (variant === 'hero') {
 		const baseSpace = Math.max(14, Math.round(height * 0.12));
 		const animated = !reduceMotion;
-		// Hero gets the holographic face (blue tint + scanlines + glow); thumbs stay plain covers.
+		// Hero adds the projector beam + outer bloom around the same holo face.
 		const holoFace = (
 			<HoloFace coverUri={coverUri} title={title} author={author} width={width} height={height} />
 		);
@@ -135,9 +144,10 @@ function TiltedHero({ width, height, baseSpace, animated, children }: HeroProps)
 
 /**
  * The cover image, or a deterministic colored fallback with the title/author. When
- * `desaturate` is set (the holo hero), the image is rendered with RN's core `Image` and the
- * grayscale + hard-light blend style — expo-image's native view ignores the `filter` prop,
- * so it can't desaturate. Thumbs keep expo-image for its caching/recycling.
+ * `desaturate` is set (every holo face — hero and thumb), the image is rendered with RN's
+ * core `Image` plus the grayscale + hard-light blend style, because expo-image's native view
+ * ignores the `filter` prop and so can't desaturate. The plain expo-image path (cached,
+ * recyclable) is the default for any non-holo use.
  */
 function CoverFace({
 	coverUri,
@@ -210,15 +220,18 @@ function HoloFace({
 	author,
 	width,
 	height,
+	glow = true,
 }: {
 	coverUri: string | null;
 	title: string;
 	author: string[];
 	width: number;
 	height: number;
+	/** Outer cyan bloom (hero). Thumbs in lists pass false — tint/scanlines/edge only. */
+	glow?: boolean;
 }) {
 	return (
-		<View style={[styles.holoGlow, { width, height }]}>
+		<View style={[styles.holoGlow, glow && styles.holoBloom, { width, height }]}>
 			<View style={[styles.holoClip, { width, height }]}>
 				<LinearGradient
 					pointerEvents="none"
@@ -330,10 +343,12 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		overflow: 'hidden',
 	},
-	// Outer cyan bloom (dual-radius, per the design) — must NOT clip, an outset shadow
-	// doesn't render under overflow:hidden.
 	holoGlow: {
 		borderRadius: 8,
+	},
+	// Outer cyan bloom (dual-radius, per the design) — hero only. Must NOT clip; an outset
+	// shadow doesn't render under overflow:hidden.
+	holoBloom: {
 		boxShadow: [
 			{
 				offsetX: 0,
