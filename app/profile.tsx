@@ -1,5 +1,6 @@
 import { FieldGroup, Host, Icon, ListItem, Switch, Text } from '@expo/ui';
 import { DisclosureGroup } from '@expo/ui/swift-ui';
+import Constants from 'expo-constants';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 
@@ -8,7 +9,9 @@ import { tokens } from '@/constants/tokens';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
-const APP_VERSION = '1.0.0';
+// Single source of truth: app.json's expo.version (kept in lockstep with package.json by
+// `npm version` → scripts/sync-app-version.mjs).
+const APP_VERSION = Constants.expoConfig?.version ?? '0.0.0';
 
 const AFFILIATE_DISCLOSURE =
 	'OssusArchives is a participant in the Amazon Associates Program. Tapping “Find on Amazon” opens Amazon’s website. As an Amazon Associate we earn from qualifying purchases — at no extra cost to you.';
