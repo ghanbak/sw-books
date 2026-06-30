@@ -70,6 +70,9 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		gap: 18,
+		// iOS draws its bar-button glass capsule tight to this view's bounds; without end
+		// padding the outer glyphs sit flush against the capsule edges (reads as cramped).
+		paddingHorizontal: 8,
 	},
 	button: {
 		alignItems: 'center',
