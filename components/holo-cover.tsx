@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { type ReactNode, useEffect, useState } from 'react';
-import { Pressable, Image as RNImage, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
 	Easing,
 	Extrapolation,
@@ -55,7 +55,7 @@ export function HoloCover({
 }: HoloCoverProps) {
 	const reduceMotion = useReduceMotion();
 
-	// Thumbs in lists get the holo cover styles (tint + scanlines + grayscale + edge glow)
+	// Thumbs in lists get the holo cover styles (tint + scanlines + luminosity + edge glow)
 	// but no projector beam and no outer bloom — those are hero-only.
 	let content = (
 		<HoloFace
@@ -142,27 +142,19 @@ function TiltedHero({ width, height, baseSpace, animated, children }: HeroProps)
 	);
 }
 
-/**
- * The cover image, or a deterministic colored fallback with the title/author. When
- * `desaturate` is set (every holo face — hero and thumb), the image is rendered with RN's
- * core `Image` plus the grayscale + hard-light blend style, because expo-image's native view
- * ignores the `filter` prop and so can't desaturate. The plain expo-image path (cached,
- * recyclable) is the default for any non-holo use.
- */
+/** The cover image, or a deterministic colored fallback with the title/author. */
 function CoverFace({
 	coverUri,
 	title,
 	author,
 	width,
 	height,
-	desaturate = false,
 }: {
 	coverUri: string | null;
 	title: string;
 	author: string[];
 	width: number;
 	height: number;
-	desaturate?: boolean;
 }) {
 	const [errored, setErrored] = useState(false);
 	if (!coverUri || errored) {
@@ -172,7 +164,6 @@ function CoverFace({
 					styles.face,
 					styles.fallback,
 					{ width, height, backgroundColor: getCoverColor(title) },
-					desaturate && styles.blendLayer,
 				]}
 			>
 				<Text numberOfLines={3} style={styles.fallbackTitle}>
@@ -182,16 +173,6 @@ function CoverFace({
 					{author.join(', ')}
 				</Text>
 			</View>
-		);
-	}
-	if (desaturate) {
-		return (
-			<RNImage
-				source={{ uri: coverUri }}
-				style={[styles.face, { width, height }, styles.blendLayer]}
-				resizeMode="cover"
-				onError={() => setErrored(true)}
-			/>
 		);
 	}
 	return (
@@ -207,12 +188,12 @@ function CoverFace({
 }
 
 /**
- * The holographic projection of a cover (Figma "projected-cover"). Mirrors the design's
- * layering: a blue tint gradient underneath, then the cover desaturated to grayscale and
- * `hard-light` blended on top so it reads as a blue hologram, then scanlines and an inner
- * edge glow. `isolation: 'isolate'` scopes the blend to the card (not the dark screen
- * behind it); the outer cyan bloom lives on an unclipped wrapper since the clip would hide
- * an outset shadow.
+ * The holographic projection of a cover (Figma "projected-cover"): a blue tint gradient
+ * underneath, then the cover `luminosity`-blended on top so it keeps its brightness but
+ * takes the gradient's blue hue/saturation (reads as a blue hologram), then scanlines and an
+ * inner edge glow. `isolation: 'isolate'` scopes the blend to the card (not the dark screen
+ * behind it); the outer cyan bloom (hero only) lives on an unclipped wrapper since the clip
+ * would hide an outset shadow.
  */
 function HoloFace({
 	coverUri,
@@ -239,14 +220,17 @@ function HoloFace({
 					locations={[0, 0.4, 1]}
 					style={StyleSheet.absoluteFill}
 				/>
-				<CoverFace
-					coverUri={coverUri}
-					title={title}
-					author={author}
-					width={width}
-					height={height}
-					desaturate
-				/>
+				{/* mixBlendMode is a ViewStyle prop (not on expo-image's ImageStyle), so the
+				    luminosity blend goes on a wrapper that composites the cover subtree. */}
+				<View style={styles.blendLayer}>
+					<CoverFace
+						coverUri={coverUri}
+						title={title}
+						author={author}
+						width={width}
+						height={height}
+					/>
+				</View>
 				<Scanlines height={height} />
 				<View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.innerGlow]} />
 			</View>
@@ -367,18 +351,17 @@ const styles = StyleSheet.create({
 		],
 	},
 	// Clips the tint, blended cover, scanlines, and edge glow to the rounded cover.
-	// `isolation` scopes the hard-light blend to this group, not the screen behind.
+	// `isolation` scopes the luminosity blend to this group, not the screen behind.
 	holoClip: {
 		borderRadius: 8,
 		overflow: 'hidden',
 		isolation: 'isolate',
 		opacity: 0.92,
 	},
-	// Desaturate the cover and hard-light blend it over the blue tint beneath.
+	// Luminosity blend: keep the cover's brightness, take hue/saturation from the blue tint
+	// beneath. Inherently desaturates (no `filter` needed), so expo-image can stay.
 	blendLayer: {
-		mixBlendMode: 'hard-light',
-		filter: [{ grayscale: 1 }],
-		opacity: 0.8,
+		mixBlendMode: 'luminosity',
 	},
 	// Inner edge glow, painted on top — matches the design's inset box-shadow.
 	innerGlow: {
