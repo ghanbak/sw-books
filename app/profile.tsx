@@ -1,15 +1,16 @@
-import { FieldGroup, Host, ListItem, Switch, Text } from '@expo/ui';
+import { FieldGroup, Host, Icon, ListItem, Switch, Text } from '@expo/ui';
+import { DisclosureGroup, Link } from '@expo/ui/swift-ui';
+import { useState } from 'react';
 import { Alert } from 'react-native';
+
+import { tokens } from '@/constants/tokens';
 
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 
 const APP_VERSION = '1.0.0';
 
-const AFFILIATE_DISCLOSURE =
-	'OssusArchives is a participant in the Amazon Services LLC Associates Program. ' +
-	'Tapping “Find on Amazon” opens Amazon’s website. As an Associate we earn from ' +
-	'qualifying purchases — at no extra cost to you. Full terms at affiliate-program.amazon.com.';
+const AFFILIATE_DISCLOSURE = `OssusArchives is a participant in the Amazon Services LLC Associates Program. Tapping “Find on Amazon” opens Amazon’s website. As an Associate we earn from qualifying purchases — at no extra cost to you. Full terms at ${<Link label="affiliate-program.amazon.com" destination="https://affiliate-program.amazon.com/" />}.`;
 
 /**
  * Account sheet (form sheet) as a native @expo/ui grouped settings form:
@@ -24,6 +25,8 @@ export default function ProfileScreen() {
 	const email = user?.email ?? 'Signed in';
 	const provider = (user?.app_metadata?.provider as string | undefined) ?? 'email';
 
+	const [isExpanded, setIsExpanded] = useState(true);
+
 	async function handleSignOut() {
 		const { error } = await supabase.auth.signOut();
 		if (error) Alert.alert('Sign-out failed', error.message);
@@ -32,10 +35,10 @@ export default function ProfileScreen() {
 	return (
 		<Host style={{ flex: 1 }}>
 			<FieldGroup>
-				<FieldGroup.Section>
+				<FieldGroup.Section title="Account">
 					<ListItem supportingText={`Signed in with ${capitalize(provider)}`}>{email}</ListItem>
 					<ListItem
-						supportingText="Aurebesh alphabet — coming soon."
+						supportingText="Aurebesh alphabet coming soon."
 						trailing={<Switch value={false} onValueChange={() => {}} disabled />}
 					>
 						Aurebesh
@@ -44,11 +47,24 @@ export default function ProfileScreen() {
 
 				<FieldGroup.Section title="About">
 					<ListItem trailing={<Text>{`v${APP_VERSION}`}</Text>}>Version</ListItem>
-					<ListItem supportingText={AFFILIATE_DISCLOSURE}>Affiliate disclosure</ListItem>
+					<DisclosureGroup
+						label="Affiliate disclosure"
+						isExpanded={!isExpanded}
+						onIsExpandedChange={setIsExpanded}
+					>
+						<Text>{AFFILIATE_DISCLOSURE}</Text>
+					</DisclosureGroup>
 				</FieldGroup.Section>
 
 				<FieldGroup.Section>
-					<ListItem onPress={handleSignOut}>Logout</ListItem>
+					<ListItem
+						onPress={handleSignOut}
+						trailing={
+							<Icon name="rectangle.portrait.and.arrow.right" color={tokens.status.error} />
+						}
+					>
+						Logout
+					</ListItem>
 				</FieldGroup.Section>
 			</FieldGroup>
 		</Host>
