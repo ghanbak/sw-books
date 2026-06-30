@@ -71,9 +71,10 @@ const styles = StyleSheet.create({
 	},
 	center: {
 		flex: 1,
-		justifyContent: 'center',
+		justifyContent: 'flex-start',
 		alignItems: 'center',
-		padding: 32,
+		paddingHorizontal: 32,
+		paddingTop: 24,
 	},
 	hint: {
 		fontSize: 14,
