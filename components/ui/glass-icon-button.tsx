@@ -39,7 +39,7 @@ export function GlassIconButton({
 			style={({ pressed }) => [styles.circle, pressed && styles.pressed]}
 		>
 			{liquidGlassAvailable ? (
-				<GlassView style={StyleSheet.absoluteFill} />
+				<GlassView style={[StyleSheet.absoluteFill, styles.glass]} />
 			) : (
 				<View style={[StyleSheet.absoluteFill, styles.fallback]} />
 			)}
@@ -59,6 +59,11 @@ const styles = StyleSheet.create({
 	},
 	pressed: {
 		opacity: 0.6,
+	},
+	// iOS Liquid Glass shapes its rim from the view's own corner radius — without this the
+	// glass renders as a square inside the circular clip. Match the circle so it reads round.
+	glass: {
+		borderRadius: SIZE / 2,
 	},
 	fallback: {
 		backgroundColor: tokens.surface.card,
