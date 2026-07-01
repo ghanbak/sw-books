@@ -127,9 +127,13 @@ function TiltedHero({ width, height, baseSpace, animated, children }: HeroProps)
 		}
 		const clampTilt = (v: number) =>
 			interpolate(v, [-MAX_TILT, MAX_TILT], [-MAX_TILT, MAX_TILT], Extrapolation.CLAMP);
-		// withTiming chases the moving sensor target → ~90ms damped follow (smooths jitter).
-		const rx = withTiming(clampTilt(pitch - base.pitch), { duration: 90 });
-		const ry = withTiming(clampTilt(roll - base.roll), { duration: 90 });
+		// Plain radians — the sensor already updates per frame. NOTE: do NOT wrap these in
+		// withTiming here; its return is an animation object, and `${obj}rad` stringifies to
+		// "[object Object]rad", which the transform parser throws on inside the worklet (a UI-
+		// thread throw = SIGABRT). This branch only runs once a real gyroscope latches the
+		// baseline, so the simulator never hit it.
+		const rx = clampTilt(pitch - base.pitch);
+		const ry = clampTilt(roll - base.roll);
 		return {
 			transform: [{ perspective: 800 }, { rotateX: `${rx}rad` }, { rotateY: `${ry}rad` }],
 		};
