@@ -101,6 +101,7 @@ export default function BookDetailScreen() {
 				<View style={styles.coverWrapper}>
 					<HoloCover
 						variant="hero"
+						tilt={false}
 						coverUri={book.cover_image}
 						title={book.title}
 						author={book.author}
