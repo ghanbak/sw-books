@@ -1,21 +1,12 @@
 import { useRouter } from 'expo-router';
 import { ArrowLeftRight, Check, LayoutGrid, List, Search } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-	ActivityIndicator,
-	FlatList,
-	KeyboardAvoidingView,
-	Platform,
-	Pressable,
-	StyleSheet,
-	Text,
-	TextInput,
-	View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Book3D } from '@/components/Book3D';
+import { HoloCover } from '@/components/holo-cover';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
 import { type Book, useBooks, useUserBooks } from '@/lib/hooks';
@@ -118,7 +109,7 @@ export function ShelfScanReview({
 
 	const goToShelf = useCallback(() => {
 		onReset();
-		router.push('/(tabs)/shelf');
+		router.push('/library');
 	}, [onReset, router]);
 
 	// Screen-reader narration. The review arrives via a silent overlay swap (no nav),
@@ -327,14 +318,15 @@ function ReviewRow({
 				<View style={[styles.checkbox, selected && styles.checkboxOn]}>
 					{selected && <Check size={14} color={tokens.text.primary} strokeWidth={3} />}
 				</View>
-				{/* Book3D is itself a Pressable — neutralize it so taps reach the row
+				{/* Cover is decorative here, so taps reach the row
 				    and VoiceOver doesn't announce a nameless extra button. */}
 				<View
 					pointerEvents="none"
 					accessibilityElementsHidden
 					importantForAccessibility="no-hide-descendants"
 				>
-					<Book3D
+					<HoloCover
+						variant="thumb"
 						coverUri={book.cover_image}
 						title={book.title}
 						author={book.author}
@@ -396,7 +388,8 @@ function ReviewTile({
 					accessibilityElementsHidden
 					importantForAccessibility="no-hide-descendants"
 				>
-					<Book3D
+					<HoloCover
+						variant="thumb"
 						coverUri={book.cover_image}
 						title={book.title}
 						author={book.author}
@@ -513,7 +506,8 @@ function SwapSheet({
 									accessibilityElementsHidden
 									importantForAccessibility="no-hide-descendants"
 								>
-									<Book3D
+									<HoloCover
+										variant="thumb"
 										coverUri={item.cover_image}
 										title={item.title}
 										author={item.author}

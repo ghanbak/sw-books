@@ -2,12 +2,13 @@ import { CameraView } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from 'expo-router/react-navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
-import { Book3D } from '@/components/Book3D';
+import { AddedBooksSheet } from '@/components/added-books-sheet';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
-import type { Book } from '@/lib/hooks';
+import { type Book, useUserBooks } from '@/lib/hooks';
 import { normalizeIsbn } from '@/lib/isbn';
 import { supabase } from '@/lib/supabase';
 
@@ -19,7 +20,8 @@ import { supabase } from '@/lib/supabase';
  * renders one panel at a time), so they don't contend for the hardware.
  *
  * Looks up each scanned ISBN against Supabase directly — this path does NOT need the
- * in-memory catalog, so it works even while the catalog is still loading.
+ * in-memory catalog, so it works even while the catalog is still loading. A found book
+ * surfaces the AddedBooksSheet confirmation (add to library / view / scan another).
  */
 
 type ScanResult =
@@ -46,6 +48,7 @@ export function BarcodeScanPanel() {
 	}, []);
 	const router = useRouter();
 	const isFocused = useIsFocused();
+	const { addOwned } = useUserBooks();
 
 	const handleBarcodeScanned = useCallback(
 		async ({ data }: { type: string; data: string }) => {
@@ -111,6 +114,14 @@ export function BarcodeScanPanel() {
 		},
 		[router],
 	);
+	const addToLibrary = useCallback(
+		async (book: Book) => {
+			const res = await addOwned([book.id]);
+			dismissResult();
+			if (!res.ok) Alert.alert('Could not add to library', res.error.message);
+		},
+		[addOwned, dismissResult],
+	);
 
 	return (
 		<View style={styles.container}>
@@ -144,37 +155,24 @@ export function BarcodeScanPanel() {
 				</View>
 			</View>
 
-			{/* Result overlay */}
-			{result && (
+			{/* Found → confirmation sheet over the camera */}
+			{result?.type === 'found' && (
+				<AddedBooksSheet
+					title="1 book found"
+					books={[result.book]}
+					onSelectBook={goToBook}
+					onDismiss={dismissResult}
+					onConfirm={() => addToLibrary(result.book)}
+				/>
+			)}
+
+			{/* Other results → centered message */}
+			{result && result.type !== 'found' && (
 				<Animated.View
 					style={styles.resultOverlay}
 					entering={FadeIn.duration(200)}
 					exiting={FadeOut.duration(200)}
 				>
-					{result.type === 'found' && (
-						<View style={styles.resultCard}>
-							<Book3D
-								coverUri={result.book.cover_image}
-								title={result.book.title}
-								author={result.book.author}
-								width={100}
-								height={150}
-								accessibilityLabel={`Found: ${result.book.title}`}
-							/>
-							<View style={styles.resultInfo}>
-								<Text style={styles.resultTitle} numberOfLines={2}>
-									{result.book.title}
-								</Text>
-								<Text style={styles.resultAuthor} numberOfLines={1}>
-									{result.book.author.join(', ')}
-								</Text>
-								<Pressable style={styles.resultButton} onPress={() => goToBook(result.book.id)}>
-									<Text style={styles.resultButtonText}>View Book</Text>
-								</Pressable>
-							</View>
-						</View>
-					)}
-
 					{result.type === 'not_found' && (
 						<View style={styles.resultMessage}>
 							<Text style={styles.messageTitle}>Not in the Archive</Text>
@@ -292,43 +290,6 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		alignItems: 'center',
 		padding: 24,
-	},
-	resultCard: {
-		flexDirection: 'row',
-		backgroundColor: tokens.surface.card,
-		borderRadius: 12,
-		padding: 16,
-		gap: 16,
-		width: '100%',
-		maxWidth: 360,
-		alignItems: 'center',
-	},
-	resultInfo: {
-		flex: 1,
-		gap: 6,
-	},
-	resultTitle: {
-		color: tokens.text.primary,
-		fontSize: 17,
-		fontWeight: '600',
-	},
-	resultAuthor: {
-		color: tokens.text.secondary,
-		fontSize: 13,
-	},
-	resultButton: {
-		marginTop: 8,
-		paddingVertical: 10,
-		paddingHorizontal: 16,
-		borderRadius: 8,
-		backgroundColor: tokens.accent.secondary,
-		alignSelf: 'flex-start',
-	},
-	resultButtonText: {
-		// True black for max contrast on yellow.
-		color: '#000',
-		fontSize: 14,
-		fontWeight: '600',
 	},
 	resultMessage: {
 		alignItems: 'center',

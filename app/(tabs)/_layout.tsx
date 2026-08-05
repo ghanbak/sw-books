@@ -1,61 +1,48 @@
 import { NativeTabs } from "expo-router/unstable-native-tabs";
-import { Platform } from "react-native";
 
-import { tokens } from "@/constants/tokens";
+import { useFontPref } from "@/lib/font-prefs";
 
-// Native tab bar — UIKit on iOS, Material 3 on Android.
+// Native tab bar — UIKit on iOS, Material 3 on Android. No custom styling: the
+// system renders its default (the floating Liquid Glass capsule on iOS 26+).
 //
-// On iOS 26+ this becomes the floating Liquid Glass capsule automatically.
-// `role="search"` on the scan tab gives it the separated circular affordance
-// (like the magnifying glass in Apple News).
-//
-// On iOS <26 there's no Liquid Glass capsule. UITabBarAppearance layers the
-// backgroundEffect (blur) over the backgroundColor, so we disable the blur and
-// use a solid color. Critically, iOS applies scrollEdgeAppearance (transparent
-// by default) when content is at the top — disableTransparentOnScrollEdge=true
-// forces the bar to keep its standard background everywhere.
+// Tabs: Archives · Timeline · Library · Search. Search uses `role="search"` for
+// the separated circular affordance (like Apple News). Scan and Profile are no
+// longer tabs — they open as a full-screen modal / bottom sheet from each tab's
+// header action buttons.
 //
 // Icons are SF Symbols on iOS only. Android currently shows tab labels without
-// icons — add `androidSrc` PNGs or a VectorIcon family when we ship Android.
-const iosMajor =
-  Platform.OS === "ios" ? Number.parseInt(String(Platform.Version), 10) : 0;
-const isIOS26Plus = iosMajor >= 26;
+// icons — add `drawable`/`md` icons or a VectorIcon family when we ship Android.
 
 export default function TabLayout() {
+  const { fontFamily } = useFontPref();
   return (
-    <NativeTabs
-      blurEffect={isIOS26Plus ? "systemChromeMaterialDark" : "none"}
-      backgroundColor={isIOS26Plus ? undefined : tokens.surface.background}
-      disableTransparentOnScrollEdge={!isIOS26Plus}
-    >
-      <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Icon
-          sf={{ default: "externaldrive", selected: "externaldrive.fill" }}
-        />
+    <NativeTabs labelStyle={{ fontFamily }}>
+      <NativeTabs.Trigger name="archives">
+        <NativeTabs.Trigger.Icon sf={{ default: "pyramid", selected: "pyramid.fill" }} />
         <NativeTabs.Trigger.Label>Archives</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="shelf">
+      <NativeTabs.Trigger name="timeline">
         <NativeTabs.Trigger.Icon
-          sf={{ default: "books.vertical", selected: "books.vertical.fill" }}
+          sf={{
+            default: "lines.measurement.horizontal",
+            selected: "lines.measurement.horizontal",
+          }}
         />
-        <NativeTabs.Trigger.Label>Shelves</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Timeline</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="library">
+        <NativeTabs.Trigger.Icon
+          sf={{ default: "rectangle.stack", selected: "rectangle.stack.fill" }}
+        />
+        <NativeTabs.Trigger.Label>Library</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
 
       {/* biome-ignore lint/a11y/useSemanticElements: NativeTabsTabBarItemRole, not ARIA */}
-      <NativeTabs.Trigger name="scan" role="search">
-        <NativeTabs.Trigger.Icon sf="barcode.viewfinder" />
-        <NativeTabs.Trigger.Label>Scan</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="profile">
-        <NativeTabs.Trigger.Icon
-          sf={{
-            default: "person.crop.circle",
-            selected: "person.crop.circle.fill",
-          }}
-        />
-        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="search" role="search">
+        <NativeTabs.Trigger.Icon sf="magnifyingglass" />
+        <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );

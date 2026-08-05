@@ -1,5 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { SegmentedControl } from '@expo/ui/community/segmented-control';
+import { StyleSheet, View } from 'react-native';
 
 import { tokens } from '@/constants/tokens';
 import type { ScanMode } from '@/lib/scan-mode';
@@ -8,12 +8,13 @@ const SEGMENTS: { mode: ScanMode; label: string }[] = [
 	{ mode: 'barcode', label: 'Barcode' },
 	{ mode: 'shelf', label: 'Shelf' },
 ];
+const LABELS = SEGMENTS.map((s) => s.label);
 
 /**
- * Segmented Barcode | Shelf control, floated over the camera feed (plan Phase 5
- * mode host). Shared chrome: each panel decides WHEN to show it and whether a
- * switch needs confirmation — this component only renders the choice. `onSwitch`
- * receives the target mode and is a no-op when it equals the current one.
+ * Barcode | Shelf control floated over the camera, as a native @expo/ui SegmentedControl.
+ * `onSwitch` receives the target mode; the parent decides when to show it and whether a
+ * switch needs confirmation. v1 native pass — the native control replaces the custom glassy
+ * switcher; verify the dark look reads over the live camera on a device.
  */
 export function ScanModeSwitcher({
 	mode,
@@ -23,29 +24,19 @@ export function ScanModeSwitcher({
 	onSwitch: (next: ScanMode) => void;
 }) {
 	return (
-		<Animated.View
-			style={styles.container}
-			entering={FadeIn.duration(150)}
-			pointerEvents="box-none"
-		>
-			<View style={styles.track} accessibilityRole="tablist">
-				{SEGMENTS.map(({ mode: segment, label }) => {
-					const active = segment === mode;
-					return (
-						<Pressable
-							key={segment}
-							style={[styles.segment, active && styles.segmentActive]}
-							onPress={() => onSwitch(segment)}
-							accessibilityRole="tab"
-							accessibilityState={{ selected: active }}
-							accessibilityLabel={`${label} scanning`}
-						>
-							<Text style={[styles.label, active && styles.labelActive]}>{label}</Text>
-						</Pressable>
-					);
-				})}
-			</View>
-		</Animated.View>
+		<View style={styles.container} pointerEvents="box-none">
+			<SegmentedControl
+				style={styles.control}
+				values={LABELS}
+				selectedIndex={SEGMENTS.findIndex((s) => s.mode === mode)}
+				appearance="dark"
+				tintColor={tokens.accent.primary}
+				onValueChange={(value) => {
+					const next = SEGMENTS.find((s) => s.label === value)?.mode;
+					if (next && next !== mode) onSwitch(next);
+				}}
+			/>
+		</View>
 	);
 }
 
@@ -53,33 +44,7 @@ const styles = StyleSheet.create({
 	container: {
 		alignItems: 'center',
 	},
-	track: {
-		flexDirection: 'row',
-		padding: 3,
-		borderRadius: 22,
-		gap: 3,
-		// Dark backing so the control stays legible over a bright camera feed
-		// (camera-overlay exception, same as the rest of the scan chrome).
-		backgroundColor: 'rgba(0,0,0,0.55)',
-		borderWidth: 1,
-		borderColor: tokens.border.subtle,
-	},
-	segment: {
-		paddingHorizontal: 22,
-		paddingVertical: 9,
-		borderRadius: 19,
-	},
-	segmentActive: {
-		backgroundColor: tokens.accent.primary,
-	},
-	label: {
-		color: tokens.text.primary,
-		fontSize: 14,
-		fontWeight: '600',
-		opacity: 0.7,
-	},
-	labelActive: {
-		color: tokens.text.primary,
-		opacity: 1,
+	control: {
+		width: 240,
 	},
 });

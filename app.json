@@ -2,7 +2,7 @@
 	"expo": {
 		"name": "OssusArchives",
 		"slug": "ossus-archives",
-		"version": "1.0.0",
+		"version": "1.1.0",
 		"orientation": "portrait",
 		"icon": "./assets/images/icon.png",
 		"scheme": "ossusarchives",
@@ -12,7 +12,8 @@
 			"bundleIdentifier": "com.ghanbak.ossusarchives",
 			"icon": "./assets/images/App-Icon.icon",
 			"infoPlist": {
-				"ITSAppUsesNonExemptEncryption": false
+				"ITSAppUsesNonExemptEncryption": false,
+				"NSMotionUsageDescription": "OssusArchives uses device motion to tilt the holographic book cover."
 			}
 		},
 		"android": {
@@ -22,7 +23,10 @@
 				"monochromeImage": "./assets/images/android-icon-monochrome.png"
 			},
 			"predictiveBackGestureEnabled": false,
-			"permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"],
+			"permissions": [
+				"android.permission.CAMERA",
+				"android.permission.RECORD_AUDIO"
+			],
 			"package": "com.ghanbak.ossusarchives"
 		},
 		"web": {

@@ -1,14 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCameraPermissions } from 'expo-camera';
 import { openSettings } from 'expo-linking';
+import { useRouter } from 'expo-router';
 import { useIsFocused } from 'expo-router/react-navigation';
+import { X } from 'lucide-react-native';
 import { type MutableRefObject, useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BarcodeScanPanel } from '@/components/barcode-scan-panel';
 import { ScanModeSwitcher } from '@/components/scan-mode-switcher';
 import { ShelfScanCapture } from '@/components/shelf-scan-capture';
+import { GlassIconButton } from '@/components/ui/glass-icon-button';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { useBooks } from '@/lib/hooks';
 import { type ScanMode, parseStoredScanMode } from '@/lib/scan-mode';
@@ -23,6 +27,7 @@ const SCAN_MODE_KEY = '@ossus/scan_mode';
  */
 export default function ScanScreen() {
 	const insets = useSafeAreaInsets();
+	const router = useRouter();
 	const [permission, requestPermission] = useCameraPermissions();
 	const isFocused = useIsFocused();
 	const { books, error: catalogError, refetch } = useBooks();
@@ -92,11 +97,20 @@ export default function ScanScreen() {
 		[mode],
 	);
 
+	// A full-screen modal has no swipe-to-dismiss, so this close button is the only way out.
+	// Rendered in every state; top-left so it never overlaps the centered mode switcher.
+	const closeButton = (
+		<View style={[styles.closeSlot, { top: insets.top + 8 }]} pointerEvents="box-none">
+			<GlassIconButton icon={X} accessibilityLabel="Close scanner" onPress={() => router.back()} />
+		</View>
+	);
+
 	// Permission not yet determined
 	if (!permission) {
 		return (
 			<View style={styles.center}>
 				<ActivityIndicator color={tokens.accent.primary} />
+				{closeButton}
 			</View>
 		);
 	}
@@ -119,13 +133,14 @@ export default function ScanScreen() {
 				>
 					<Text style={styles.primaryButtonText}>{canAsk ? 'Grant Access' : 'Open Settings'}</Text>
 				</Pressable>
+				{closeButton}
 			</View>
 		);
 	}
 
 	// Persisted mode still hydrating — brief, on the same black canvas as the camera.
 	if (mode === null) {
-		return <View style={styles.container} />;
+		return <View style={styles.container}>{closeButton}</View>;
 	}
 
 	// Switcher hides only while the shelf review overlay owns the screen (it has its
@@ -152,6 +167,9 @@ export default function ScanScreen() {
 					<ScanModeSwitcher mode={mode} onSwitch={switchMode} />
 				</View>
 			)}
+
+			{/* Close hides during the immersive shelf review (it owns its own navigation). */}
+			{showSwitcher && closeButton}
 		</View>
 	);
 }
@@ -237,6 +255,10 @@ const styles = StyleSheet.create({
 		position: 'absolute',
 		left: 0,
 		right: 0,
+	},
+	closeSlot: {
+		position: 'absolute',
+		left: 16,
 	},
 	title: {
 		color: tokens.text.primary,

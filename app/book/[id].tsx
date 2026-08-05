@@ -1,20 +1,22 @@
-import { useLocalSearchParams } from 'expo-router';
-import { BookOpen, Bookmark, Calendar, Hash, Layers, Library, Package } from 'lucide-react-native';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { BookOpen, Calendar, Hash, Layers, Package } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Book3D } from '@/components/Book3D';
-import { Book3DViewer } from '@/components/Book3DViewer';
-import { AffiliateDisclosureSheet } from '@/components/affiliate-disclosure-sheet';
 import { BookDetailSkeleton } from '@/components/book-detail-skeleton';
+import { BookDetailToolbar } from '@/components/book-detail-toolbar';
 import { BuyOnAmazonButton } from '@/components/buy-on-amazon-button';
 import { ErrorState } from '@/components/error-state';
+import { HoloCover } from '@/components/holo-cover';
+import { Card } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { buildAmazonSearchUrl } from '@/lib/amazon';
 import type { Book } from '@/lib/hooks';
 import { useBooks, useUserBooks } from '@/lib/hooks';
 import { supabase } from '@/lib/supabase';
+import { eraLabel } from '@/lib/timeline';
 
 export default function BookDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
@@ -23,11 +25,7 @@ export default function BookDetailScreen() {
 	const [book, setBook] = useState<Book | null>(cached);
 	const [loading, setLoading] = useState(!cached);
 	const [error, setError] = useState<string | null>(null);
-	const [viewerOpen, setViewerOpen] = useState(false);
-	const [disclosureOpen, setDisclosureOpen] = useState(false);
-	const { userBooks, toggleShelf } = useUserBooks();
 	const insets = useSafeAreaInsets();
-	const shelfEntry = book ? userBooks.get(book.id) : undefined;
 	const amazonUrl = book ? buildAmazonSearchUrl(book.isbn?.[0]) : null;
 
 	const fetchBook = useCallback(async () => {
@@ -76,95 +74,55 @@ export default function BookDetailScreen() {
 	}
 
 	const publishedDate = formatPublishedDate(book.date_published);
-
 	const isbns = book.isbn ?? [];
-	// Reserve space at the bottom of the scroll content so the floating
-	// "Find on Amazon" button doesn't permanently obscure the last cards.
-	const scrollPaddingBottom = amazonUrl ? 96 + insets.bottom : 48;
 
 	return (
 		<View style={styles.container}>
+			<Stack.Screen
+				options={{
+					headerLargeTitle: true,
+					headerShadowVisible: false,
+					title: '',
+					headerBackTitle: 'Back',
+				}}
+			/>
+			<FavoriteHeaderButton bookId={book.id} />
+
 			<ScrollView
 				style={styles.container}
-				contentContainerStyle={[styles.content, { paddingBottom: scrollPaddingBottom }]}
+				contentContainerStyle={[styles.content, { paddingBottom: 96 + insets.bottom }]}
 				contentInsetAdjustmentBehavior="automatic"
 			>
-				{/* Hero cover */}
+				{/* Title + author byline */}
+				<Text style={styles.title}>{book.title}</Text>
+				<Text style={styles.author}>{book.author.join(', ')}</Text>
+
+				{/* Hologram cover */}
 				<View style={styles.coverWrapper}>
-					<Book3D
+					<HoloCover
+						variant="hero"
+						tilt={false}
 						coverUri={book.cover_image}
 						title={book.title}
 						author={book.author}
 						width={200}
 						height={300}
-						onPress={() => setViewerOpen(true)}
-						accessibilityLabel={`Book cover: ${book.title}. Tap to inspect in 3D.`}
-					/>
-				</View>
-
-				<Book3DViewer
-					visible={viewerOpen}
-					onClose={() => setViewerOpen(false)}
-					coverUri={book.cover_image}
-					title={book.title}
-					author={book.author}
-				/>
-
-				{/* Title + Author */}
-				<Text style={styles.title}>{book.title}</Text>
-				<Text style={styles.author}>{book.author.join(', ')}</Text>
-
-				{/* Shelf actions */}
-				<View style={styles.shelfButtons}>
-					<ShelfButton
-						icon={
-							<Library
-								size={16}
-								color={shelfEntry?.owned ? tokens.text.inverse : tokens.text.secondary}
-								strokeWidth={2}
-							/>
-						}
-						label="Owned"
-						active={shelfEntry?.owned ?? false}
-						onPress={() => toggleShelf(book.id, 'owned')}
-					/>
-					<ShelfButton
-						icon={
-							<BookOpen
-								size={16}
-								color={shelfEntry?.read ? tokens.text.inverse : tokens.text.secondary}
-								strokeWidth={2}
-							/>
-						}
-						label="Read"
-						active={shelfEntry?.read ?? false}
-						onPress={() => toggleShelf(book.id, 'read')}
-					/>
-					<ShelfButton
-						icon={
-							<Bookmark
-								size={16}
-								color={shelfEntry?.want_to_read ? tokens.text.inverse : tokens.text.secondary}
-								strokeWidth={2}
-							/>
-						}
-						label="Want to Read"
-						active={shelfEntry?.want_to_read ?? false}
-						onPress={() => toggleShelf(book.id, 'want_to_read')}
 					/>
 				</View>
 
 				{/* Synopsis */}
-				{book.synopsis && (
-					<View style={styles.section}>
-						<Text style={styles.synopsis}>{book.synopsis}</Text>
+				{book.synopsis && <Text style={styles.synopsis}>{book.synopsis}</Text>}
+
+				{/* Find on Amazon — now below the summary */}
+				{amazonUrl && (
+					<View style={styles.amazon}>
+						<BuyOnAmazonButton url={amazonUrl} />
 					</View>
 				)}
 
-				{/* Details card */}
-				<View style={styles.card}>
+				{/* Details */}
+				<Card style={styles.card}>
 					<Text style={styles.cardTitle}>Details</Text>
-
 					<DetailRow
 						icon={<Layers size={14} color={tokens.text.hint} strokeWidth={2} />}
 						label="Continuity"
@@ -191,21 +149,13 @@ export default function BookDetailScreen() {
 					)}
 					{book.language && <DetailRow label="Language" value={book.language} />}
 					{book.timeline_order != null && (
-						<DetailRow
-							label="Timeline"
-							value={
-								book.timeline_order < 0
-									? `${Math.abs(book.timeline_order)} BBY`
-									: `${book.timeline_order} ABY`
-							}
-							mono
-						/>
+						<DetailRow label="Timeline" value={eraLabel(book.timeline_order)} mono />
 					)}
-				</View>
+				</Card>
 
-				{/* Series card */}
+				{/* Series */}
 				{book.series_name && (
-					<View style={styles.card}>
+					<Card style={styles.card}>
 						<Text style={styles.cardTitle}>Series</Text>
 						<DetailRow label="Name" value={book.series_name} />
 						{book.series_order != null && book.series_order > 0 && (
@@ -215,12 +165,12 @@ export default function BookDetailScreen() {
 								value={`#${book.series_order}`}
 							/>
 						)}
-					</View>
+					</Card>
 				)}
 
-				{/* Formats card */}
+				{/* Formats */}
 				{book.format && book.format.length > 0 && (
-					<View style={styles.card}>
+					<Card style={styles.card}>
 						<Text style={styles.cardTitle}>Formats</Text>
 						<View style={styles.formatRow}>
 							{book.format.map((f) => (
@@ -229,36 +179,50 @@ export default function BookDetailScreen() {
 								</View>
 							))}
 						</View>
-					</View>
+					</Card>
 				)}
 
-				{/* Identifiers card */}
+				{/* Identifiers */}
 				{isbns.length > 0 && (
-					<View style={styles.card}>
+					<Card style={styles.card}>
 						<Text style={styles.cardTitle}>Identifiers</Text>
 						{isbns.map((isbn) => (
 							<DetailRow key={isbn} label="ISBN" value={isbn} mono />
 						))}
-					</View>
+					</Card>
 				)}
 
-				{/* Era (if available) */}
+				{/* Era */}
 				{book.era && (
-					<View style={styles.card}>
+					<Card style={styles.card}>
 						<Text style={styles.cardTitle}>Era</Text>
 						<DetailRow label="Timeline Era" value={book.era} />
-					</View>
+					</Card>
 				)}
 			</ScrollView>
 
-			{amazonUrl && (
-				<View style={[styles.floatingContainer, { paddingBottom: 12 + insets.bottom }]}>
-					<BuyOnAmazonButton url={amazonUrl} onInfoPress={() => setDisclosureOpen(true)} />
-				</View>
-			)}
-
-			<AffiliateDisclosureSheet visible={disclosureOpen} onClose={() => setDisclosureOpen(false)} />
+			<BookDetailToolbar bookId={book.id} />
 		</View>
+	);
+}
+
+/**
+ * Header favorite toggle as a native right-placement `Stack.Toolbar` button — the system
+ * renders it as a real bar-button item (with its own glass), so we don't nest a custom glass
+ * button inside the header's glass. Filled blue star when active.
+ */
+function FavoriteHeaderButton({ bookId }: { bookId: string }) {
+	const { userBooks, toggleShelf } = useUserBooks();
+	const active = userBooks.get(bookId)?.favorite ?? false;
+	return (
+		<Stack.Toolbar placement="right">
+			<Stack.Toolbar.Button
+				icon={active ? 'star.fill' : 'star'}
+				tintColor={active ? tokens.accent.primary : undefined}
+				accessibilityLabel={active ? 'Remove from favorites' : 'Add to favorites'}
+				onPress={() => toggleShelf(bookId, 'favorite')}
+			/>
+		</Stack.Toolbar>
 	);
 }
 
@@ -284,29 +248,10 @@ function DetailRow({
 }) {
 	return (
 		<View style={styles.detailRow}>
-			{icon ?? <View style={{ width: 14 }} />}
+			{icon ?? <View style={styles.iconSpacer} />}
 			<Text style={styles.detailLabel}>{label}</Text>
 			<Text style={[styles.detailValue, mono && styles.mono]}>{value}</Text>
 		</View>
-	);
-}
-
-function ShelfButton({
-	icon,
-	label,
-	active,
-	onPress,
-}: {
-	icon: React.ReactNode;
-	label: string;
-	active: boolean;
-	onPress: () => void;
-}) {
-	return (
-		<Pressable style={[styles.shelfButton, active && styles.shelfButtonActive]} onPress={onPress}>
-			{icon}
-			<Text style={[styles.shelfButtonText, active && styles.shelfButtonTextActive]}>{label}</Text>
-		</Pressable>
 	);
 }
 
@@ -317,9 +262,6 @@ const styles = StyleSheet.create({
 	},
 	content: {
 		padding: 20,
-		paddingTop: Platform.OS === 'ios' ? 8 : 20,
-		alignItems: 'center',
-		paddingBottom: 48,
 	},
 	center: {
 		flex: 1,
@@ -331,89 +273,31 @@ const styles = StyleSheet.create({
 		color: tokens.text.hint,
 		fontSize: 16,
 	},
-
-	// Floating Amazon button container — pinned to bottom, safe-area-aware
-	floatingContainer: {
-		position: 'absolute',
-		left: 0,
-		right: 0,
-		bottom: 0,
-		paddingHorizontal: 20,
-		paddingTop: 12,
-		backgroundColor: tokens.surface.background,
-		borderTopWidth: StyleSheet.hairlineWidth,
-		borderTopColor: tokens.border.subtle,
-	},
-
-	// Hero
-	coverWrapper: {
-		marginBottom: 24,
-		marginTop: 8,
-	},
 	title: {
-		fontSize: 24,
+		fontSize: 20,
 		fontWeight: '700',
-		textAlign: 'center',
-		marginBottom: 4,
 		color: tokens.text.primary,
 	},
 	author: {
 		fontSize: 16,
-		textAlign: 'center',
-		marginBottom: 20,
+		marginTop: 2,
 		color: tokens.text.secondary,
 	},
-
-	// Shelf buttons
-	shelfButtons: {
-		flexDirection: 'row',
-		gap: 10,
-		width: '100%',
-		marginBottom: 24,
-	},
-	shelfButton: {
-		flex: 1,
-		paddingVertical: 10,
-		borderRadius: 8,
-		backgroundColor: tokens.surface.card,
-		borderWidth: 1,
-		borderColor: tokens.border.subtle,
+	coverWrapper: {
 		alignItems: 'center',
-		gap: 4,
-	},
-	shelfButtonActive: {
-		backgroundColor: tokens.accent.primary,
-		borderColor: tokens.accent.primary,
-	},
-	shelfButtonText: {
-		fontSize: 11,
-		fontWeight: '600',
-		color: tokens.text.secondary,
-	},
-	shelfButtonTextActive: {
-		color: tokens.text.inverse,
-	},
-
-	// Synopsis
-	section: {
-		width: '100%',
-		marginBottom: 20,
+		marginTop: 20,
+		marginBottom: 28,
 	},
 	synopsis: {
-		fontSize: 15,
-		lineHeight: 23,
+		fontSize: 14,
+		lineHeight: 20,
 		color: tokens.text.primary,
+		marginBottom: 20,
 	},
-
-	// Cards (datapad style)
+	amazon: {
+		marginBottom: 20,
+	},
 	card: {
-		width: '100%',
-		backgroundColor: tokens.surface.card,
-		borderRadius: 12,
-		padding: 16,
-		gap: 0,
-		borderWidth: StyleSheet.hairlineWidth,
-		borderColor: tokens.border.subtle,
 		marginBottom: 12,
 	},
 	cardTitle: {
@@ -422,10 +306,8 @@ const styles = StyleSheet.create({
 		color: tokens.text.hint,
 		textTransform: 'uppercase',
 		letterSpacing: 1.2,
-		marginBottom: 12,
+		marginBottom: 4,
 	},
-
-	// Detail rows
 	detailRow: {
 		flexDirection: 'row',
 		alignItems: 'center',
@@ -434,7 +316,9 @@ const styles = StyleSheet.create({
 		borderTopWidth: StyleSheet.hairlineWidth,
 		borderTopColor: tokens.border.subtle,
 	},
-	detailRowPressable: {},
+	iconSpacer: {
+		width: 14,
+	},
 	detailLabel: {
 		fontSize: 13,
 		color: tokens.text.hint,
@@ -446,18 +330,13 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	mono: {
-		fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
 		fontSize: 13,
 	},
-	link: {
-		color: tokens.accent.primary,
-	},
-
-	// Formats
 	formatRow: {
 		flexDirection: 'row',
 		flexWrap: 'wrap',
 		gap: 6,
+		paddingTop: 8,
 	},
 	formatChip: {
 		paddingHorizontal: 10,

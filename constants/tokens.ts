@@ -34,6 +34,21 @@ export const tokens = {
 		error: '#CC4444',
 		success: '#4A90D9',
 	},
+	// Hologram cover projection (HoloCover): cyan beam + glowing base emitter.
+	holo: {
+		cyan: '#3DE0FF',
+		beam: 'rgba(61,224,255,0.15)',
+		emitter: 'rgba(61,224,255,0.55)',
+		// projected-cover face treatment (Figma node 134:2077): blue tint, scanlines, glow.
+		// The cover is desaturated and hard-light blended over this tint, so the design's
+		// strong alphas read as a vivid blue hologram rather than washing the art out.
+		tintTop: 'rgba(111,195,255,0.9)',
+		tintMid: 'rgba(46,140,255,0.8)',
+		tintBottom: 'rgba(31,89,178,0.75)',
+		scanline: 'rgba(158,224,255,0.12)',
+		bloom: 'rgba(111,195,255,0.3)',
+		innerGlow: 'rgba(158,224,255,0.56)',
+	},
 } as const;
 
 export type AppTheme = typeof tokens;

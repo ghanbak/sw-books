@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView } from 'expo-camera';
 import { Image } from 'expo-image';
 import { type MutableRefObject, useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
 	FadeIn,
 	FadeOut,
@@ -15,6 +15,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ShelfScanReview } from '@/components/shelf-scan-review';
+import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce, useReduceMotion, useScreenReaderEnabled } from '@/hooks/useAccessibility';
 import { useShelfScan } from '@/hooks/useShelfScan';
