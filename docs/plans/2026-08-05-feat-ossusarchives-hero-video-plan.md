@@ -9,19 +9,12 @@ date: 2026-08-05
 ## Overview
 
 Replace the centered text stub at `/` with a fullscreen hyperspace video hero. Move the copy to a
-top-left card styled exactly like the app's datapad card, left-aligned, and swap "Coming soon to iOS."
-for a lightsaber-blue pill button — "Join the TestFlight" → <https://testflight.apple.com/join/pT9n8FCC>.
+top-left card styled like the app's shared datapad card — notch footer included — left-aligned, and swap
+"Coming soon to iOS." for a lightsaber-blue pill button: "Join the TestFlight" →
+<https://testflight.apple.com/join/pT9n8FCC>.
 
 Scope: one page rewrite, one new client component, two static assets, one `next.config.ts` headers rule.
 No DB, no auth, no new routes. The page stays `force-static`.
-
-**Revised 2026-08-05** after simplicity, TypeScript, and performance reviews. See
-[Review revisions](#review-revisions) for what changed and why.
-
-**Rebased onto `911a9e3`** ("Native-first navigation redesign + holographic covers", PR #9), which
-rewrote the app's card and book-row components. The card spec below is re-derived from the new shared
-[components/ui/card.tsx](components/ui/card.tsx) — it now has **no border**, **12px padding**, and a
-**datapad notch footer**. The Amazon button spec was re-checked and is unchanged.
 
 ## Problem Statement / Motivation
 
@@ -47,8 +40,10 @@ rewrote the app's card and book-row components. The card spec below is re-derive
 | `lucide-react` already a dependency | [admin/package.json](admin/package.json) | `ExternalLink` available, no install |
 | Dark-only, `<html className="dark">` | [admin/app/layout.tsx](admin/app/layout.tsx) | No light-mode variants |
 | Biome: tabs, single quotes, semicolons, width 100 | [admin/biome.json](admin/biome.json) | Root `biome.json` **ignores** `admin/` — lint from `admin/` or these files are silently skipped |
+| Biome is a **root** dependency, not `admin/`'s | `admin/package.json` has no biome | `biome check .` resolves via root `node_modules/.bin`. `npm run admin:install` alone leaves it missing |
 | `admin/lib/env.ts` parses env at module load | [admin/lib/env.ts:10](admin/lib/env.ts:10) | ⚠️ `next build` **fails without** the 4 Supabase vars |
 | **This worktree has no `node_modules`** | verified | ⚠️ `npm ci` at root **and** in `admin/` before Phase 3 |
+| Tailwind preflight sets `img,video { height: auto }` | compiled from `admin/app/globals.css` | ⚠️ **`inset-0` alone does not stretch replaced elements** — see the `size-full` note below |
 | No `next/image` lint rule active | script is `biome check .`, not `next lint` | A plain `<img>` is fine (and correct — we need `object-cover` on a raw element) |
 
 ### The source video — inspected
@@ -64,11 +59,8 @@ Content: an iPhone mockup tumbling through a radial hyperspace star-streak tunne
 screens (Archives list → book detail → Timeline with a book cover). Rendered in Rotato — the project file
 `ossusarchives-hyperspace.rotato` sits beside it.
 
-Three findings that shape the implementation:
-
 1. **The phone is dead-center, the corners are dark.** Top-left is the darkest region of frame and
-   contains no subject. The card lands in empty space. This is also why **no scrim is needed** — see
-   [Review revisions](#review-revisions).
+   contains no subject. The card lands in empty space, and no readability scrim is needed.
 2. **The loop seam is nearly clean.** First and last frames have *identical camera geometry and identical
    starfield positions*; only the phone's on-screen content differs (Archives vs. Timeline). A plain
    `loop` will not pop geometrically. If the screen-content change reads badly, crossfade the tail into
@@ -85,23 +77,18 @@ Real encodes of this source, VMAF scored against a CRF-12 30fps reference:
 |---|---|---|
 | x264 crf26 **with** `-g 60 -keyint_min 60 -sc_threshold 0` | 2.83 MB | 95.51 |
 | **x264 crf26, GOP flags removed** | **1.51 MB** | **95.27** |
-| x264 crf28 (with GOP flags) | 2.34 MB | 94.71 |
-| VP9 crf34 | 2.31 MB | 93.68 |
-| SVT-AV1 crf44 preset 6 | 2.03 MB | 96.45 |
 
 **The fixed-GOP flags cost 47% of the file for −0.24 VMAF.** They force a keyframe every 2s — 10 I-frames
 instead of 3 — and I-frames on dense star-noise are enormously expensive. Fixed GOP exists for seeking and
-adaptive streaming; a background loop is never seeked. Removing them makes the ≤3 MB target trivially met
-and the whole quality-escalation ladder unnecessary.
+adaptive streaming; a background loop is never seeked.
 
-**VP9 is strictly dominated** — bigger *and* worse than x264 at every comparable point. It also has **no
-hardware decoder on Apple Silicon**, so every Mac visitor would software-decode a 1080p30 loop forever.
-AV1 wins on quality-per-byte but has the same forever-loop battery problem on pre-M3 Apple Silicon and most
-Intel laptops. **Ship one H.264 file** — hardware-decoded on everything.
+VP9 and AV1 were measured too and both lose. VP9 crf34 is 2.31 MB at VMAF 93.68 — bigger *and* worse than
+x264. AV1 wins on quality-per-byte but, like VP9, has no hardware decoder on Apple Silicon (pre-M3) or most
+Intel laptops, so a forever-looping background video would burn CPU and battery on every visit. **Ship one
+H.264 file** — hardware-decoded on everything.
 
-**Poster:** at `-q:v 4` the JPEG measures **204 KB**, not the ~150 KB originally estimated. The same frame
-as `cwebp -q 68` is **101 KB**. WebP works for both `<img src>` and `<video poster>` (Safari 14+).
-`cwebp` is installed at `/opt/homebrew/bin/cwebp`.
+**Poster:** at `-q:v 4` the JPEG measures 204 KB. The same frame as `cwebp -q 68` is **101 KB**. WebP works
+for both `<img src>` and `<video poster>` (Safari 14+). `cwebp` is installed at `/opt/homebrew/bin/cwebp`.
 
 ### Decisions taken (confirmed with the user)
 
@@ -122,7 +109,7 @@ and carries a skeuomorphic **datapad notch footer**:
 // card
 backgroundColor: tokens.surface.card,   // #1A1A1E → bg-card
 borderRadius: 12,                       //         → rounded-[12px]  (⚠️ Tailwind rounded-xl = 14px here)
-borderWidth: 0,                         //         → NO border utility
+borderWidth: 0,                         //         → no utility; preflight already emits `border: 0 solid`
 overflow: 'hidden',                     //         → overflow-hidden (clips the notch tab)
 // body
 padding: 12,                            //         → p-3
@@ -136,26 +123,33 @@ height: 12, paddingHorizontal: 12, paddingRight: 24,   // → h-3 pl-3 pr-6, fle
   bg: tokens.surface.background }       // #0A0A0C → h-3 w-[88px] rounded-t-[16px] bg-background
 ```
 
-Every measurement lands on Tailwind's standard scale (`h-3`=12, `h-1`=4, `w-8`=32, `w-2`=8, `gap-1`=4,
-`p-3`/`pl-3`=12, `pr-6`=24), so only the radii and the 88px tab need arbitrary values.
+Three things verified against compiled Tailwind output rather than the documented scale:
 
-> The notch tab is filled with the *screen background* color so it reads as a cutout of the card. On the
-> hero it sits over video rather than over `#0A0A0C`, so it renders as a solid near-black tab instead of a
-> true cutout. That's fine — the video's own field is near-black behind the card — and a real cutout would
-> need CSS masking for no visible gain.
+- `items-start` on the strip is **load-bearing**. Without it CSS's default `stretch` makes the lightBars
+  wrapper 12px tall, and its own `items-center` then centers the 4px bars at y=4–8 instead of y=0–4.
+- RN resolves `paddingRight` over `paddingHorizontal`, so the strip is **12L / 24R**, not 24/24.
+- `rounded-t-[16px]` on a 12px-tall box **clamps to 12px** — in RN *and* CSS, by the same rule. The 16 is
+  nominal on both sides. Don't "fix" it.
 
 **Button** — [components/buy-on-amazon-button.tsx:54-71](components/buy-on-amazon-button.tsx:54):
 
 ```ts
-height: 52, borderRadius: 100, gap: 10,      // → h-[52px] rounded-full gap-[10px]
+height: 52, borderRadius: 100, gap: 10,      // → h-13 rounded-full gap-2.5
 backgroundColor: tokens.accent.primary,      // #4A90D9 → bg-primary
 color: tokens.text.inverse,                  // #0A0A0C → text-primary-foreground
-fontSize: 16, fontWeight: '600',             // → text-[16px] font-semibold
-pressed: { opacity: 0.85 },                  // → hover:opacity-85
+fontSize: 16, fontWeight: '600',             // → text-base font-semibold
+pressed: { opacity: 0.85 },                  // → active:opacity-85  (NOT hover-only — see below)
 icon: ExternalLink size={18} strokeWidth={2.5}
 ```
 
-Every value maps to an existing token in [admin/app/globals.css](admin/app/globals.css) — no new CSS vars.
+Colors map exactly to [admin/app/globals.css](admin/app/globals.css) — no new CSS vars. The one
+approximation is body copy: `text-muted-foreground` is `#9d9da1`, whereas `tokens.text.secondary`
+(`rgba(255,255,255,0.6)`) composites over the card to ≈`#a3a3a5`, ~4% lighter. Sub-perceptual, and the
+affected text has no direct RN counterpart, so the admin's own token wins.
+
+`h-13`/`gap-2.5`/`text-base` are used over `h-[52px]`/`gap-[10px]`/`text-[16px]` — identical computed
+values, but rem-derived, so the button honors a user's root font-size setting. Radii and the 88px tab stay
+absolute px, which is the normal web convention.
 
 ## Proposed Solution
 
@@ -175,7 +169,7 @@ admin/
 ```
 ┌─ <main> relative min-h-svh ────────────────────────────┐
 │  <HeroBackdrop/>  poster img + (desktop) video, both   │
-│                   absolute inset-0 object-cover        │
+│                   absolute inset-0 size-full           │
 │  ┌ p-6 sm:p-10 lg:p-16 ─────────────────────────────┐  │
 │  │ ┌ card max-w-md ────────┐                        │  │
 │  │ │ Ossus Archives        │      (phone mockup      │  │
@@ -188,8 +182,22 @@ admin/
 └────────────────────────────────────────────────────────┘
 ```
 
-No scrim. The card is opaque, the top-left is already the darkest region of frame, and nothing else on the
-page sits over the video.
+### ⚠️ `size-full` is mandatory on the media layer
+
+Tailwind v4 preflight emits `img, video { max-width: 100%; height: auto; }`. That author-origin
+`height: auto` **overrides the `width`/`height` attributes**, and for an absolutely-positioned *replaced*
+element the height resolves from the intrinsic ratio rather than stretching between `top:0` and `bottom:0`.
+
+Measured in Chrome without `size-full`:
+
+| viewport | media box | uncovered |
+|---|---|---|
+| 1440×900 | 1440×810 | **90px** black band |
+| 980×2121 | 980×551 | **1569px** |
+
+`object-cover` is a no-op in that state, because the element box already matches the media's 16:9. This
+affects the poster on *every* path, mobile and reduced-motion included. `size-full` compiles to
+`width:100%; height:100%` and fixes it.
 
 ### Why a client component
 
@@ -214,7 +222,7 @@ import { useEffect, useState } from 'react';
 
 const SMALL_SCREEN = '(max-width: 767px)';
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';
-const FILL_LAYER = 'absolute inset-0 object-cover';
+const FILL_LAYER = 'absolute inset-0 size-full object-cover';
 
 export function HeroBackdrop() {
 	const [playVideo, setPlayVideo] = useState(false);
@@ -228,12 +236,14 @@ export function HeroBackdrop() {
 		if (!allowed) return;
 
 		// Wait for `load` so the video fetch never competes with the LCP poster.
+		// The readyState guard matters: async chunk loading can run this after `load`.
 		if (document.readyState === 'complete') {
 			setPlayVideo(true);
 			return;
 		}
 		const onLoad = () => setPlayVideo(true);
 		window.addEventListener('load', onLoad, { once: true });
+		// Covers unmount before `load` fires; `once` covers the normal path.
 		return () => window.removeEventListener('load', onLoad);
 	}, []);
 
@@ -245,6 +255,7 @@ export function HeroBackdrop() {
 				width={1920}
 				height={1080}
 				fetchPriority="high"
+				decoding="async"
 				className={FILL_LAYER}
 			/>
 			{playVideo && (
@@ -266,12 +277,8 @@ export function HeroBackdrop() {
 }
 ```
 
-Notes:
-- No `biome-ignore` — `a11y/useMediaCaption` already exempts `<video muted>`, so the suppression would be
-  reported as unused.
-- No `preload` — `autoPlay` already forces the fetch; the attribute only overrides UA heuristics that would
-  otherwise back off on constrained connections. Control *when the element mounts* instead.
-- `alt=""` alone marks the poster decorative; `aria-hidden` on it would be redundant.
+- No `preload` — `autoPlay` already forces the fetch, and the attribute only overrides UA heuristics that
+  would otherwise back off on constrained connections. Control *when the element mounts* instead.
 - `disableRemotePlayback` stops Safari offering an AirPlay route for a decorative video.
 
 ### `admin/app/page.tsx` (rewrite)
@@ -297,7 +304,7 @@ export default function Home() {
 			<HeroBackdrop />
 			<div className="relative p-6 sm:p-10 lg:p-16">
 				{/* Mirrors components/ui/card.tsx — the shell every book row uses */}
-				<div className="w-full max-w-md overflow-hidden rounded-[12px] bg-card text-left">
+				<div className="w-full max-w-md overflow-hidden rounded-[12px] bg-card text-card-foreground text-left">
 					<div className="space-y-4 p-3">
 						<div className="space-y-2">
 							<h1 className="font-semibold text-2xl tracking-tight sm:text-3xl">Ossus Archives</h1>
@@ -310,7 +317,7 @@ export default function Home() {
 							href={TESTFLIGHT_URL}
 							target="_blank"
 							rel="noopener noreferrer"
-							className="flex h-[52px] w-full items-center justify-center gap-[10px] rounded-full bg-primary font-semibold text-[16px] text-primary-foreground transition-opacity hover:opacity-85 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+							className="flex h-13 w-full items-center justify-center gap-2.5 rounded-full bg-primary font-semibold text-base text-primary-foreground transition-opacity hover:opacity-85 active:opacity-85 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
 						>
 							<ExternalLink size={18} strokeWidth={2.5} aria-hidden="true" />
 							Join the TestFlight
@@ -337,15 +344,18 @@ export default function Home() {
 }
 ```
 
+`active:opacity-85`, not `hover:` alone. Tailwind v4 compiles `hover:` inside `@media (hover: hover)`, so a
+hover-only rule gives **zero press feedback on touch** — and RN's `pressed` is a press state, not a hover
+state. Both are kept: `hover:` for the desktop affordance, `active:` for the actual app-matching behavior.
+
 `focus-visible:outline-hidden`, **not** `outline-none`. In Tailwind v4 `outline-none` emits
 `outline-style: none` with no forced-colors fallback, and the `ring-*` indicator is a `box-shadow` that
 Windows High Contrast Mode discards — the only CTA on the page would have zero focus state there.
-`outline-hidden` keeps the transparent-outline fallback. (`admin/components/ui/button.tsx` has the same
-v3-ism, but it's shadcn-generated and Biome-ignored — don't propagate it.)
+`outline-hidden` adds the `@media (forced-colors: active)` transparent-outline fallback.
 
 No `overflow-hidden` on `<main>`: with an absolutely-positioned media layer it clips the card with no
-scrollbar once the card exceeds viewport height (200% zoom, short landscape phone). `object-cover` already
-clips inside the element box, so it was never doing anything.
+scrollbar once the card exceeds viewport height (200% zoom, short landscape phone). It stays on the *card*,
+where it clips the notch tab's top radii — matching RN's `overflow: 'hidden'`.
 
 `min-h-svh` rather than `dvh` — on iOS Safari `dvh` re-resolves as the URL bar collapses, relayouting the
 hero on every scroll.
@@ -362,8 +372,7 @@ SRC="$HOME/Desktop/_website-2026/_videos/ossusarchives-hyperspace.mp4"
 ```
 
 **H.264, single file.** 60→30 fps, audio stripped (`-an`, also guarantees autoplay), `+faststart` so
-playback begins before the file finishes downloading. **No `-g`/`-keyint_min`/`-sc_threshold`** — see
-measured data above.
+playback begins before the file finishes downloading. **No `-g`/`-keyint_min`/`-sc_threshold`.**
 
 ```bash
 ffmpeg -i "$SRC" -an \
@@ -385,11 +394,7 @@ ffmpeg -ss 18 -i "$SRC" -frames:v 1 -y /tmp/poster.png
 cwebp -q 68 /tmp/poster.png -o admin/public/hero/hyperspace-poster.webp
 ```
 
-**Gate — check sizes before committing:**
-
-```bash
-ls -lh admin/public/hero/
-```
+**Gate — check sizes before committing** (`ls -lh admin/public/hero/`):
 
 | Asset | Ceiling |
 |---|---|
@@ -405,7 +410,8 @@ the clean loop seam. **Total git impact: ~1.6 MB**, permanent. The 30.5 MB maste
 2. Rewrite `admin/app/page.tsx` (code above).
 3. Add cache headers to `admin/next.config.ts` alongside the existing keys. Next serves unhashed `public/`
    assets as `Cache-Control: public, max-age=0`, costing a conditional-GET round-trip per load — including
-   on the poster, which is the LCP resource:
+   on the poster, which is the LCP resource. That's the whole justification; the tradeoff is the rename
+   constraint in the comment:
 
 ```ts
 // /hero/* is immutable — a re-encode MUST ship under a new filename (…-1080.v2.mp4).
@@ -430,6 +436,9 @@ npm ci && cd admin && npm ci
 ```
 
 - Use `npm ci`, not `npm install` — `install` drifts the Expo dependency tree in this repo.
+- The root install is not optional: Biome is a **root** dependency and `admin`'s `biome check .` resolves
+  the binary from root `node_modules/.bin`. Without it you get "command not found", which is easy to
+  misread as a passing lint.
 - `next build` needs `admin/.env.local` with `SUPABASE_LOCAL_URL`, `SUPABASE_LOCAL_SERVICE_ROLE_KEY`,
   `SUPABASE_PROD_URL`, `SUPABASE_PROD_SERVICE_ROLE_KEY` — [admin/lib/env.ts:10](admin/lib/env.ts:10)
   parses at module load and `/admin/*` builds in the same pass. The marketing page needs none of them.
@@ -438,8 +447,8 @@ npm ci && cd admin && npm ci
 cd admin && npm run lint && npm run build
 ```
 
-Confirm `/` is still marked static (`○`) in the build output. If it isn't, the cause is a dynamic API in a
-server component — *not* the client-component import, which cannot flip a route to dynamic.
+Confirm `/` is still marked static (`○`). If it isn't, the cause is a dynamic API in a server component —
+*not* the client-component import, which cannot flip a route to dynamic.
 
 ```bash
 cd admin && npm run dev
@@ -447,100 +456,43 @@ cd admin && npm run dev
 
 Checks at `127.0.0.1:3100`:
 
+- [ ] **Media fills the viewport at 1440×900 and at a tall window** — no black band at the bottom
 - [ ] Desktop ≥1280px — video plays, loops, silent; **no black flash** on hydration
-- [ ] Card is visually identical to the app's book-detail card (side-by-side against the simulator)
-- [ ] Button matches "Find on Amazon": pill, 52px, `#4A90D9`, dark label, external-link icon; opens
-      TestFlight in a new tab
+- [ ] Card matches `components/ui/card.tsx` side-by-side against the simulator
+- [ ] **Notch tab reads as a notch, not a black blob over the starfield.** If it doesn't, drop the tab and
+      keep the light bars
+- [ ] Button matches "Find on Amazon"; **press feedback works on a touch device**, not just hover
+- [ ] Opens TestFlight in a new tab
 - [ ] 390×844 — Network tab shows **zero** video bytes
 - [ ] DevTools → Rendering → `prefers-reduced-motion: reduce` → zero video bytes
-- [ ] 200% browser zoom — card is fully reachable, page scrolls
+- [ ] 200% browser zoom — card fully reachable, page scrolls
 - [ ] Keyboard focus ring visible on the button
 - [ ] Lighthouse **desktop** (1350×940), LCP element is the poster. Mobile emulation is 412px — below the
-      gate — so a green mobile score proves nothing about the desktop path.
-
-After deploying to a preview URL:
-
-```bash
-curl -sI -r 0-1 https://<preview>/hero/hyperspace-1080.mp4 | grep -iE 'HTTP|x-vercel-cache|content-range'
-```
-
-Expect `206` with `x-vercel-cache: HIT` — confirming range requests are served from cache, not an origin
-round-trip per chunk.
-
-## Review revisions
-
-Three reviewers examined the first draft. Changes made:
-
-**Cut (simplicity + performance agreed):**
-- **The WebM/VP9 encode.** Measured strictly worse than H.264 on both size and VMAF, plus no hardware
-  decode on Apple Silicon → continuous CPU/battery cost on every Mac visit.
-- **The radial-gradient scrim.** The plan's own research says the top-left is the darkest region with no
-  subject, and the card is opaque — a contrast fix where there is no contrast problem.
-- **The `saveData` check.** Chromium-only, removed from Chrome desktop, and evaluated only in the
-  desktop-video path where it is ~always false. It was also the sole reason the file needed an `as` cast —
-  and that line was **102 columns against Biome's `lineWidth: 100`, so Phase 3's first gate would have
-  failed on the plan's own snippet.**
-- **The `change` listeners.** One cut, three problems solved: it satisfies the simplicity objection,
-  removes the older-Safari `addEventListener` crash risk (a throwing effect tears down the React 19 root to
-  a blank page), and eliminates a resize-restarts-playback bug.
-- **The `preload` attribute** — redundant alongside `autoPlay`.
-- **The dead `biome-ignore`** — `useMediaCaption` already exempts `<video muted>`.
-- **The `sr-only` hedge, the crossfade recipe, the poster-sharpness mitigation branches, and the Success
-  Metrics section** — hedges against low-probability problems, or unmeasurable without site analytics.
-
-**Fixed (real defects):**
-- **Black flash on desktop.** `if (!playVideo) return <img/>` early-returned a *different element type*, so
-  React unmounted the poster and mounted a fresh video — painting `#0A0A0C` full-screen for a frame or more
-  mid-hydration. The poster now stays mounted and the video layers over it.
-- **`-g 60 -keyint_min 60 -sc_threshold 0` cost 47% of the file** for −0.24 VMAF. Removed.
-- **`focus-visible:outline-none`** removes the focus indicator entirely in Windows High Contrast Mode under
-  Tailwind v4. Now `outline-hidden`.
-- **`overflow-hidden`** clipped the card with no scrollbar at 200% zoom.
-- **Poster was 204 KB as JPEG**, not the estimated 150 KB. WebP at `-q 68` is ~101 KB.
-- **The LCP poster had no `fetchPriority="high"`**, and the video mount raced it. Now prioritized, and the
-  video waits for `load`.
-- **The `force-static` verification note described an impossible failure** — importing a client component
-  cannot flip a route to dynamic.
-- **`HeroVideo` renders an `<img>` in most executions** (mobile, reduced-motion, every server render).
-  Renamed `HeroBackdrop`.
-- **This worktree has no `node_modules`** — added as a Phase 3 prerequisite.
-
-**Kept over an objection:** the `next.config.ts` cache header. Simplicity called it ceremony guarding an
-imperceptible round-trip, but the poster is the LCP resource and is served from `public/` — a revalidation
-round-trip on the LCP element on every repeat visit is exactly what's worth removing. The rename footgun is
-real and is documented in the code comment.
-
-**Deferred, not cut:** a `visibilitychange` pause. Chrome pauses and Safari suspends silent background
-video heuristically, so an explicit guard is redundant in practice — but it's three lines if battery
-complaints ever surface.
+      gate — so a green mobile score proves nothing about the desktop path
 
 ## Acceptance Criteria
 
-- [ ] `/` renders a fullscreen hyperspace video behind the content on desktop
+- [ ] `/` renders a fullscreen hyperspace video behind the content on desktop, filling the viewport at
+      every aspect ratio
 - [ ] Copy sits in a top-left, left-aligned card matching `components/ui/card.tsx` (`#1A1A1E`, 12px
-      radius, no border, 12px padding) **including the CardNotch footer** — two light bars left, notched
-      tab right
+      radius, no border, 12px padding) **including the CardNotch footer**
 - [ ] "Coming soon to iOS." is gone
 - [ ] A pill button matching "Find on Amazon" reads "Join the TestFlight" and links to
       `https://testflight.apple.com/join/pT9n8FCC` in a new tab
 - [ ] Privacy Policy link retained inside the card, still routing to `/privacy`
 - [ ] Viewports <768px and `prefers-reduced-motion: reduce` get the poster with **zero video bytes**
-- [ ] No black flash on hydration
 - [ ] Committed hero assets total ≤ 2 MB
-- [ ] `/` still builds as a static route
-- [ ] `npm run lint` and `npm run build` pass from `admin/`
 
-## Dependencies & Risks
+## Risks
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| `next build` fails on missing Supabase env | High if `.env.local` absent | Populate from `admin/.env.local.example` |
-| Forgetting `npm ci` in the bare worktree | High | Phase 3 prerequisite |
-| MP4 overshoots 2.5 MB | Low — measured at ~1.5 MB | `-crf 28`, then `scale=1600:900` |
 | Loop seam pops visibly | Low — geometry verified identical | Crossfade tail into head |
 | Mobile poster looks soft (~2.3× upscale at DPR 3) | Medium | Re-export a portrait variant from `ossusarchives-hyperspace.rotato` |
+| Notch tab reads as a blob over video | Medium | Phase 3 kill switch: drop the tab, keep the light bars |
 | `immutable` caches a bad encode | Low | Version the filename on any re-encode |
 | Autoplay blocked (iOS Low Power Mode) | Low | Degrades correctly — the poster stays visible |
+| 1080p loop decoding in a background tab | Low | Chrome pauses and Safari suspends silent background video heuristically. If battery complaints surface, add a `visibilitychange` pause (~3 lines) |
 
 **Expect `/`'s LCP to regress in absolute terms** regardless of tuning: this replaces a text-only page with
 a full-bleed image. Poster weight is the only real lever, which is why it's WebP.
@@ -549,9 +501,9 @@ a full-bleed image. Poster weight is the only real lever, which is why it's WebP
 
 ### Internal
 - [admin/app/page.tsx](admin/app/page.tsx) — the file being rewritten
-- [components/buy-on-amazon-button.tsx:54-71](components/buy-on-amazon-button.tsx:54) — button spec
 - [components/ui/card.tsx](components/ui/card.tsx) — card + CardNotch spec
 - [components/book-card.tsx:36](components/book-card.tsx:36) — the book row wrapping itself in that Card
+- [components/buy-on-amazon-button.tsx:54-71](components/buy-on-amazon-button.tsx:54) — button spec
 - [constants/tokens.ts](constants/tokens.ts) / [admin/app/globals.css](admin/app/globals.css) — token parity
 - [admin/middleware.ts:9](admin/middleware.ts:9) — confirms `/` is ungated
 - [admin/lib/env.ts:10](admin/lib/env.ts:10) — build-time env requirement
