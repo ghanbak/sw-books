@@ -31,6 +31,17 @@ const nextConfig: NextConfig = {
 		];
 		return config;
 	},
+	// Unhashed public/ assets default to `max-age=0`, costing a conditional-GET per
+	// load — including on the hero poster, which is the LCP resource. These are
+	// immutable, so a re-encode MUST ship under a new filename (…-1080.v2.mp4).
+	async headers() {
+		return [
+			{
+				source: '/hero/:path*',
+				headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+			},
+		];
+	},
 };
 
 export default nextConfig;
