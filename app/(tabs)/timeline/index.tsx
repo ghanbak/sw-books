@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -30,6 +30,7 @@ export default function TimelineScreen() {
 	const { books } = useBooks();
 	const [activePage, setActivePage] = useState(0);
 	const [listHeight, setListHeight] = useState(0);
+	const listRef = useRef<FlashListRef<Book>>(null);
 
 	// The Timeline shows the whole chronology — canon/legends is signalled per-hero by a
 	// corner badge, not filtered (focused canon filtering lives on Archives/Search).
@@ -67,6 +68,11 @@ export default function TimelineScreen() {
 	);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
+	// Tapping a rail notch jumps the pager to that group's first book.
+	const handleJump = useCallback((page: number) => {
+		listRef.current?.scrollToIndex({ index: page, animated: true });
+	}, []);
+
 	return (
 		<View style={[styles.container, { paddingTop: headerHeight, paddingBottom: insets.bottom }]}>
 			<TabHeaderActions />
@@ -83,6 +89,7 @@ export default function TimelineScreen() {
 					>
 						{listHeight > 0 && (
 							<FlashList
+								ref={listRef}
 								data={data.books}
 								horizontal
 								showsHorizontalScrollIndicator={false}
@@ -98,7 +105,12 @@ export default function TimelineScreen() {
 							/>
 						)}
 					</View>
-					<TimelineRail groups={data.groups} activeIndex={activeGroup} width={width} />
+					<TimelineRail
+						groups={data.groups}
+						activeIndex={activeGroup}
+						width={width}
+						onJump={handleJump}
+					/>
 				</>
 			)}
 		</View>

@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { type ReactNode, useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { tokens } from '@/constants/tokens';
@@ -52,22 +53,24 @@ export default function RootLayout() {
 	if (!ready || initialAurebesh === null) return null;
 
 	return (
-		<FontProvider initialAurebesh={initialAurebesh}>
-			<AuthProvider>
-				<BooksProvider>
-					<UserBooksProvider>
-						<ScanSessionProvider>
-							<ThemeProvider value={appDarkTheme}>
-								<AuthGate>
-									<NavigationStack />
-								</AuthGate>
-								<StatusBar style="light" />
-							</ThemeProvider>
-						</ScanSessionProvider>
-					</UserBooksProvider>
-				</BooksProvider>
-			</AuthProvider>
-		</FontProvider>
+		<GestureHandlerRootView style={{ flex: 1 }}>
+			<FontProvider initialAurebesh={initialAurebesh}>
+				<AuthProvider>
+					<BooksProvider>
+						<UserBooksProvider>
+							<ScanSessionProvider>
+								<ThemeProvider value={appDarkTheme}>
+									<AuthGate>
+										<NavigationStack />
+									</AuthGate>
+									<StatusBar style="light" />
+								</ThemeProvider>
+							</ScanSessionProvider>
+						</UserBooksProvider>
+					</BooksProvider>
+				</AuthProvider>
+			</FontProvider>
+		</GestureHandlerRootView>
 	);
 }
 

@@ -20,7 +20,13 @@ export function eraLabel(order: number): string {
 }
 
 /** One date with at least one book — a notch on the rail. */
-export type TimelineGroup = { order: number; label: string; count: number };
+export type TimelineGroup = {
+	order: number;
+	label: string;
+	count: number;
+	/** Page index of this group's first book — lets the rail scroll the pager to a group. */
+	firstPage: number;
+};
 
 export type TimelineData = {
 	/** Books with a timeline_order, oldest -> newest. One per horizontal page. */
@@ -55,7 +61,14 @@ export function groupBooksByYear(books: Book[]): TimelineData {
 
 	for (const b of ordered) {
 		if (lastOrder === null || b.timeline_order !== lastOrder) {
-			groups.push({ order: b.timeline_order, label: eraLabel(b.timeline_order), count: 0 });
+			// firstPage = this book's page index. pageToGroup holds one entry per already-placed
+			// page, so its current length IS the page index of the book about to be pushed.
+			groups.push({
+				order: b.timeline_order,
+				label: eraLabel(b.timeline_order),
+				count: 0,
+				firstPage: pageToGroup.length,
+			});
 			lastOrder = b.timeline_order;
 		}
 		const group = groups[groups.length - 1];
@@ -64,4 +77,39 @@ export function groupBooksByYear(books: Book[]): TimelineData {
 	}
 
 	return { books: ordered, groups, pageToGroup };
+}
+
+/**
+ * Rail geometry — shared by the rail's transform and the tap/scrub gestures. The rail is
+ * index-spaced: one notch per group, `RAIL_PITCH` points apart (gaps between dates can be
+ * millennia, so it is NOT to-scale). All helpers are pure and marked `'worklet'` so the scrub
+ * gesture can call them on the UI thread; they run identically on the JS thread.
+ */
+export const RAIL_PITCH = 28;
+
+/** Row-local x of a group's tick center. */
+export function groupCenterX(index: number): number {
+	'worklet';
+	return index * RAIL_PITCH + RAIL_PITCH / 2;
+}
+
+/** The row translateX that centers a (possibly fractional) group index under the hero. */
+export function railTranslateX(width: number, groupIndex: number): number {
+	'worklet';
+	return width / 2 - groupCenterX(groupIndex);
+}
+
+/**
+ * Inverse of the rail transform: the (fractional) group index sitting under screen-x `x` for a
+ * given `translateX`. `indexAtScreenX(width/2, railTranslateX(width, k)) === k`.
+ */
+export function indexAtScreenX(x: number, translateX: number): number {
+	'worklet';
+	return (x - translateX - RAIL_PITCH / 2) / RAIL_PITCH;
+}
+
+/** Clamp a group index into `[0, count - 1]`. */
+export function clampIndex(index: number, count: number): number {
+	'worklet';
+	return Math.min(Math.max(index, 0), count - 1);
 }
