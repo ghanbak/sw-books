@@ -10,7 +10,11 @@ export default function TimelineLayout() {
 				headerLargeTitle: true,
 				headerShadowVisible: false,
 				headerTitleStyle: { fontFamily },
-				headerLargeTitleStyle: { fontFamily },
+				// Large-but-compact: shrink the native large title from its ~34pt default so it
+				// occupies less vertical space (this screen is a horizontal pager, so the title
+				// never collapses on scroll and would otherwise permanently eat room). UIKit fixes
+				// the row's insets, so this reclaims a bounded amount — verify on-device.
+				headerLargeTitleStyle: { fontFamily, fontSize: 28, fontWeight: '700' },
 			}}
 		>
 			<Stack.Screen

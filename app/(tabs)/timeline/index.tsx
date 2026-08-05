@@ -7,20 +7,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HoloCover } from '@/components/holo-cover';
 import { TabHeaderActions } from '@/components/tab-header-actions';
 import { TimelineRail } from '@/components/timeline-rail';
-import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
 import { groupBooksByYear } from '@/lib/timeline';
-
-type CanonFilter = 'all' | 'Canon' | 'Legends';
-
-const CANON_OPTIONS: FilterPillOption<CanonFilter>[] = [
-	{ key: 'all', label: 'All' },
-	{ key: 'Canon', label: 'Canon' },
-	{ key: 'Legends', label: 'Legends' },
-];
 
 const VIEW_CONFIG = { itemVisiblePercentThreshold: 60 } as const;
 
@@ -33,18 +24,16 @@ export default function TimelineScreen() {
 	const { width } = useWindowDimensions();
 	const insets = useSafeAreaInsets();
 	// Pager can't use a list header + contentInsetAdjustmentBehavior, so offset the body by the
-	// full header height (not just insets.top) — that puts the filter pills below the large title,
-	// matching Archives/Library. insets.top alone leaves them up in the nav-bar row.
+	// full header height (not just insets.top) — matching Archives/Library. insets.top alone
+	// leaves the content up in the nav-bar row.
 	const headerHeight = useHeaderHeight();
 	const { books } = useBooks();
-	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
 	const [activePage, setActivePage] = useState(0);
 	const [listHeight, setListHeight] = useState(0);
 
-	const data = useMemo(() => {
-		const filtered = canonFilter === 'all' ? books : books.filter((b) => b.canon === canonFilter);
-		return groupBooksByYear(filtered);
-	}, [books, canonFilter]);
+	// The Timeline shows the whole chronology — canon/legends is signalled per-hero by a
+	// corner badge, not filtered (focused canon filtering lives on Archives/Search).
+	const data = useMemo(() => groupBooksByYear(books), [books]);
 
 	const activeGroup = data.pageToGroup[activePage] ?? 0;
 
@@ -68,6 +57,7 @@ export default function TimelineScreen() {
 					coverUri={item.cover_image}
 					title={item.title}
 					author={item.author}
+					canon={item.canon}
 					width={coverW}
 					height={coverH}
 				/>
@@ -80,9 +70,6 @@ export default function TimelineScreen() {
 	return (
 		<View style={[styles.container, { paddingTop: headerHeight, paddingBottom: insets.bottom }]}>
 			<TabHeaderActions />
-			<View style={styles.filters}>
-				<FilterPills options={CANON_OPTIONS} value={canonFilter} onChange={setCanonFilter} />
-			</View>
 
 			{data.books.length === 0 ? (
 				<View style={styles.empty}>
@@ -122,10 +109,6 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: tokens.surface.background,
-	},
-	filters: {
-		paddingHorizontal: 12,
-		paddingVertical: 8,
 	},
 	listWrap: {
 		flex: 1,

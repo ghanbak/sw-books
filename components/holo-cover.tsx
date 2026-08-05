@@ -14,6 +14,7 @@ import Animated, {
 	withTiming,
 } from 'react-native-reanimated';
 
+import { CanonBadge } from '@/components/ui/canon-badge';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { useReduceMotion } from '@/hooks/useAccessibility';
@@ -27,6 +28,8 @@ type HoloCoverProps = {
 	height: number;
 	/** `hero` = animated projection (detail/timeline); `thumb` = static (lists/scan). */
 	variant?: 'hero' | 'thumb';
+	/** Canon/Legends status — when set on a `hero`, overlays a corner badge on the cover. */
+	canon?: string;
 	/** Gyroscope tilt on the hero (default true). Pass false to skip the sensor. */
 	tilt?: boolean;
 	onPress?: () => void;
@@ -49,6 +52,7 @@ export function HoloCover({
 	width,
 	height,
 	variant = 'thumb',
+	canon,
 	tilt,
 	onPress,
 	accessibilityLabel,
@@ -70,9 +74,17 @@ export function HoloCover({
 	if (variant === 'hero') {
 		const baseSpace = Math.max(14, Math.round(height * 0.12));
 		const animated = !reduceMotion;
-		// Hero adds the projector beam + outer bloom around the same holo face.
+		// Hero adds the projector beam + outer bloom around the same holo face, plus the
+		// canon/legends corner badge (thumbs get their badge from the list row instead).
 		const holoFace = (
-			<HoloFace coverUri={coverUri} title={title} author={author} width={width} height={height} />
+			<HoloFace
+				coverUri={coverUri}
+				title={title}
+				author={author}
+				width={width}
+				height={height}
+				canon={canon}
+			/>
 		);
 		// Mount the sensor-bearing hero only when tilt is on, so thumbs and reduce-motion
 		// heroes never subscribe to the device-motion sensor.
@@ -206,6 +218,7 @@ function HoloFace({
 	width,
 	height,
 	glow = true,
+	canon,
 }: {
 	coverUri: string | null;
 	title: string;
@@ -214,6 +227,8 @@ function HoloFace({
 	height: number;
 	/** Outer cyan bloom (hero). Thumbs in lists pass false — tint/scanlines/edge only. */
 	glow?: boolean;
+	/** When set, overlays a Canon/Legends badge in the cover's top corner (hero only). */
+	canon?: string;
 }) {
 	return (
 		<View style={[styles.holoGlow, glow && styles.holoBloom, { width, height }]}>
@@ -238,6 +253,8 @@ function HoloFace({
 				<Scanlines height={height} />
 				<View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.innerGlow]} />
 			</View>
+			{/* Corner badge sits on the unclipped wrapper (full opacity, above the tinted clip). */}
+			{canon ? <CanonBadge canon={canon} style={styles.heroBadge} /> : null}
 		</View>
 	);
 }
@@ -413,5 +430,10 @@ const styles = StyleSheet.create({
 		bottom: 2,
 		left: '50%',
 		borderRadius: 999,
+	},
+	heroBadge: {
+		position: 'absolute',
+		top: 8,
+		left: 8,
 	},
 });
