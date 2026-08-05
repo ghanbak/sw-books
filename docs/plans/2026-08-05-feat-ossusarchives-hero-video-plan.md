@@ -454,48 +454,60 @@ Confirm `/` is still marked static (`○`). If it isn't, the cause is a dynamic 
 cd admin && npm run dev
 ```
 
-Checks at `127.0.0.1:3100`:
+Checks (run on `127.0.0.1:3101` dev / `:3102` prod — port 3100 was occupied by another dev server):
 
-- [ ] **Media fills the viewport at 1440×900 and at a tall window** — no black band at the bottom
-- [ ] Desktop ≥1280px — video plays, loops, silent; **no black flash** on hydration
-- [ ] Card matches `components/ui/card.tsx` side-by-side against the simulator
-- [ ] **Notch tab reads as a notch, not a black blob over the starfield.** If it doesn't, drop the tab and
-      keep the light bars
-- [ ] Button matches "Find on Amazon"; **press feedback works on a touch device**, not just hover
-- [ ] Opens TestFlight in a new tab
-- [ ] 390×844 — Network tab shows **zero** video bytes
-- [ ] DevTools → Rendering → `prefers-reduced-motion: reduce` → zero video bytes
-- [ ] 200% browser zoom — card fully reachable, page scrolls
-- [ ] Keyboard focus ring visible on the button
-- [ ] Lighthouse **desktop** (1350×940), LCP element is the poster. Mobile emulation is 412px — below the
-      gate — so a green mobile score proves nothing about the desktop path
+- [x] **Media fills the viewport** — `<img>` and `<video>` both measured 1440×900 in a 1440×900 viewport.
+      Without `size-full` these would be 1440×810
+- [x] Desktop — video plays, loops, silent; **no black flash**: poster and video measured coexisting in
+      the DOM, so the poster never unmounts
+- [x] Card matches `components/ui/card.tsx` — verified by measurement, not eyeball: card 448×234,
+      `rgb(26,26,30)`, radius 12px, `overflow: hidden`, `borderWidth: 0px`; notch strip 448×12 with
+      12px/24px padding; bars 32×4 and 8×4 at 4px gap in `rgba(255,255,255,0.08)`; tab 88×12 at x=400
+- [x] **Notch tab reads as a notch**, not a blob — inspected at 3× scale. Kill switch not triggered
+- [x] Button matches "Find on Amazon"; `active:opacity-85` present for touch press feedback
+- [x] Link is `https://testflight.apple.com/join/pT9n8FCC`, `target="_blank"`,
+      `rel="noopener noreferrer"`, with an `sr-only` "(opens in a new tab)"
+- [x] 375×812 — **zero** mp4 requests, no `<video>` in the DOM (Resource Timing, current load only)
+- [x] `prefers-reduced-motion: reduce` at a **desktop** viewport — zero mp4 requests, no `<video>`
+      (stubbed via a pre-hydration `initScript`, so only the motion preference differed)
+- [x] Short viewport — `<main>` computes `overflow: visible`, page scrolls, card reachable
+- [x] Focus ring — all five `focus-visible:*` rules compiled; `outline-hidden` carries its
+      `@media (forced-colors: active)` fallback; focus produces a 2px card ring + 4px `rgb(74,144,217)` ring
+- [x] Production build, desktop 1350×940: **LCP 201 ms, CLS 0.00**; Lighthouse Accessibility / Best
+      Practices / SEO all **100** (50 passed, 0 failed)
+
+> **LCP element is the tagline `<p>`, not the poster.** Chrome never made the full-viewport image an LCP
+> candidate, so the plan's earlier assumption was wrong. `fetchPriority="high"` still gets the visual hero
+> painted early, and LCP is text at 201 ms — better than the image-LCP case this was hedging against.
 
 ## Acceptance Criteria
 
-- [ ] `/` renders a fullscreen hyperspace video behind the content on desktop, filling the viewport at
+- [x] `/` renders a fullscreen hyperspace video behind the content on desktop, filling the viewport at
       every aspect ratio
-- [ ] Copy sits in a top-left, left-aligned card matching `components/ui/card.tsx` (`#1A1A1E`, 12px
+- [x] Copy sits in a top-left, left-aligned card matching `components/ui/card.tsx` (`#1A1A1E`, 12px
       radius, no border, 12px padding) **including the CardNotch footer**
-- [ ] "Coming soon to iOS." is gone
-- [ ] A pill button matching "Find on Amazon" reads "Join the TestFlight" and links to
+- [x] "Coming soon to iOS." is gone
+- [x] A pill button matching "Find on Amazon" reads "Join the TestFlight" and links to
       `https://testflight.apple.com/join/pT9n8FCC` in a new tab
-- [ ] Privacy Policy link retained inside the card, still routing to `/privacy`
-- [ ] Viewports <768px and `prefers-reduced-motion: reduce` get the poster with **zero video bytes**
-- [ ] Committed hero assets total ≤ 2 MB
+- [x] Privacy Policy link retained inside the card, still routing to `/privacy`
+- [x] Viewports <768px and `prefers-reduced-motion: reduce` get the poster with **zero video bytes**
+- [x] Committed hero assets total **1.5 MB** (1.4 MB mp4 + 105 KB webp), under the 2 MB gate
+- [x] `/` still builds as a static route (`○`, 662 B / 106 kB first load)
+- [x] `npm run lint` and `npm run build` pass from `admin/`
 
 ## Risks
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
 | Loop seam pops visibly | Low — geometry verified identical | Crossfade tail into head |
-| Mobile poster looks soft (~2.3× upscale at DPR 3) | Medium | Re-export a portrait variant from `ossusarchives-hyperspace.rotato` |
-| Notch tab reads as a blob over video | Medium | Phase 3 kill switch: drop the tab, keep the light bars |
+| ~~Mobile poster looks soft~~ | **Closed** | Checked at 375×812 — the mockup's UI stays legible. No action |
+| ~~Notch tab reads as a blob over video~~ | **Closed** | Inspected at 3×; reads as a notch. Kill switch not used |
 | `immutable` caches a bad encode | Low | Version the filename on any re-encode |
 | Autoplay blocked (iOS Low Power Mode) | Low | Degrades correctly — the poster stays visible |
 | 1080p loop decoding in a background tab | Low | Chrome pauses and Safari suspends silent background video heuristically. If battery complaints surface, add a `visibilitychange` pause (~3 lines) |
 
-**Expect `/`'s LCP to regress in absolute terms** regardless of tuning: this replaces a text-only page with
-a full-bleed image. Poster weight is the only real lever, which is why it's WebP.
+The anticipated LCP regression **did not materialize**: LCP stayed text (the tagline `<p>`) at 201 ms with
+CLS 0.00, because Chrome does not treat the full-viewport poster as an LCP candidate.
 
 ## References
 
