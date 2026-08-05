@@ -18,6 +18,11 @@ No DB, no auth, no new routes. The page stays `force-static`.
 **Revised 2026-08-05** after simplicity, TypeScript, and performance reviews. See
 [Review revisions](#review-revisions) for what changed and why.
 
+**Rebased onto `911a9e3`** ("Native-first navigation redesign + holographic covers", PR #9), which
+rewrote the app's card and book-row components. The card spec below is re-derived from the new shared
+[components/ui/card.tsx](components/ui/card.tsx) — it now has **no border**, **12px padding**, and a
+**datapad notch footer**. The Amazon button spec was re-checked and is unchanged.
+
 ## Problem Statement / Motivation
 
 - `/` is a placeholder ([admin/app/page.tsx:13-27](admin/app/page.tsx:13)): centered text, no product
@@ -109,15 +114,35 @@ as `cwebp -q 68` is **101 KB**. WebP works for both `<img src>` and `<video post
 
 ### Style targets — measured from the app
 
-**Card** — "Cards (datapad style)", [app/book/[id].tsx:407-416](app/book/[id].tsx:407):
+**Card** — [components/ui/card.tsx](components/ui/card.tsx), the shared shell that
+[components/book-card.tsx:36](components/book-card.tsx:36) wraps every book row in. It has **no border**
+and carries a skeuomorphic **datapad notch footer**:
 
 ```ts
-backgroundColor: tokens.surface.card,        // #1A1A1E  → bg-card
-borderRadius: 12,                            //          → rounded-[12px]  (⚠️ Tailwind rounded-xl = 14px here)
-padding: 16,                                 //          → p-4
-borderWidth: StyleSheet.hairlineWidth,       //          → border (1px is the web-equivalent weight)
-borderColor: tokens.border.subtle,           // rgba(255,255,255,0.08) → border-border
+// card
+backgroundColor: tokens.surface.card,   // #1A1A1E → bg-card
+borderRadius: 12,                       //         → rounded-[12px]  (⚠️ Tailwind rounded-xl = 14px here)
+borderWidth: 0,                         //         → NO border utility
+overflow: 'hidden',                     //         → overflow-hidden (clips the notch tab)
+// body
+padding: 12,                            //         → p-3
+// notchStrip — 12px tall, sits below the body, inside the card
+height: 12, paddingHorizontal: 12, paddingRight: 24,   // → h-3 pl-3 pr-6, flex, items-start, justify-between
+// lightBars (left): two bars, gap 4
+{ width: 32, height: 4, borderRadius: 2, bg: tokens.border.subtle }   // → h-1 w-8 rounded-[2px] bg-border
+{ width: 8,  height: 4, borderRadius: 2, bg: tokens.border.subtle }   // → h-1 w-2 rounded-[2px] bg-border
+// notchTab (right)
+{ width: 88, height: 12, borderTopLeftRadius: 16, borderTopRightRadius: 16,
+  bg: tokens.surface.background }       // #0A0A0C → h-3 w-[88px] rounded-t-[16px] bg-background
 ```
+
+Every measurement lands on Tailwind's standard scale (`h-3`=12, `h-1`=4, `w-8`=32, `w-2`=8, `gap-1`=4,
+`p-3`/`pl-3`=12, `pr-6`=24), so only the radii and the 88px tab need arbitrary values.
+
+> The notch tab is filled with the *screen background* color so it reads as a cutout of the card. On the
+> hero it sits over video rather than over `#0A0A0C`, so it renders as a solid near-black tab instead of a
+> true cutout. That's fine — the video's own field is near-black behind the card — and a real cutout would
+> need CSS masking for no visible gain.
 
 **Button** — [components/buy-on-amazon-button.tsx:54-71](components/buy-on-amazon-button.tsx:54):
 
@@ -157,7 +182,8 @@ admin/
 │  │ │ A datapad for your…   │       lives here,       │  │
 │  │ │ [ ⧉ Join the TestFlight ]     dead-center)      │  │
 │  │ │ Privacy Policy        │                        │  │
-│  │ └───────────────────────┘                        │  │
+│  │ │ ▬ ▪         ╭──────╮  │  ← CardNotch footer     │  │
+│  │ └─────────────┴──────┴──┘                        │  │
 │  └──────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────┘
 ```
@@ -270,30 +296,40 @@ export default function Home() {
 		<main className="relative min-h-svh bg-background">
 			<HeroBackdrop />
 			<div className="relative p-6 sm:p-10 lg:p-16">
-				{/* Matches the app's datapad card — app/book/[id].tsx "Cards (datapad style)" */}
-				<div className="w-full max-w-md space-y-4 rounded-[12px] border border-border bg-card p-4 text-left">
-					<div className="space-y-2">
-						<h1 className="font-semibold text-2xl tracking-tight sm:text-3xl">Ossus Archives</h1>
-						<p className="text-muted-foreground text-sm leading-relaxed">
-							A datapad for your Star Wars library — track every novel across Canon and Legends.
-						</p>
+				{/* Mirrors components/ui/card.tsx — the shell every book row uses */}
+				<div className="w-full max-w-md overflow-hidden rounded-[12px] bg-card text-left">
+					<div className="space-y-4 p-3">
+						<div className="space-y-2">
+							<h1 className="font-semibold text-2xl tracking-tight sm:text-3xl">Ossus Archives</h1>
+							<p className="text-muted-foreground text-sm leading-relaxed">
+								A datapad for your Star Wars library — track every novel across Canon and Legends.
+							</p>
+						</div>
+						{/* Matches components/buy-on-amazon-button.tsx */}
+						<a
+							href={TESTFLIGHT_URL}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="flex h-[52px] w-full items-center justify-center gap-[10px] rounded-full bg-primary font-semibold text-[16px] text-primary-foreground transition-opacity hover:opacity-85 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+						>
+							<ExternalLink size={18} strokeWidth={2.5} aria-hidden="true" />
+							Join the TestFlight
+							<span className="sr-only">(opens in a new tab)</span>
+						</a>
+						<nav>
+							<Link href="/privacy" className="text-muted-foreground text-sm hover:underline">
+								Privacy Policy
+							</Link>
+						</nav>
 					</div>
-					{/* Matches components/buy-on-amazon-button.tsx */}
-					<a
-						href={TESTFLIGHT_URL}
-						target="_blank"
-						rel="noopener noreferrer"
-						className="flex h-[52px] w-full items-center justify-center gap-[10px] rounded-full bg-primary font-semibold text-[16px] text-primary-foreground transition-opacity hover:opacity-85 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-					>
-						<ExternalLink size={18} strokeWidth={2.5} aria-hidden="true" />
-						Join the TestFlight
-						<span className="sr-only">(opens in a new tab)</span>
-					</a>
-					<nav>
-						<Link href="/privacy" className="text-muted-foreground text-sm hover:underline">
-							Privacy Policy
-						</Link>
-					</nav>
+					{/* CardNotch — the datapad footer from components/ui/card.tsx */}
+					<div aria-hidden="true" className="flex h-3 items-start justify-between pl-3 pr-6">
+						<div className="flex items-center gap-1">
+							<div className="h-1 w-8 rounded-[2px] bg-border" />
+							<div className="h-1 w-2 rounded-[2px] bg-border" />
+						</div>
+						<div className="h-3 w-[88px] rounded-t-[16px] bg-background" />
+					</div>
 				</div>
 			</div>
 		</main>
@@ -481,8 +517,9 @@ complaints ever surface.
 ## Acceptance Criteria
 
 - [ ] `/` renders a fullscreen hyperspace video behind the content on desktop
-- [ ] Copy sits in a top-left, left-aligned card matching the app's datapad card (`#1A1A1E`, 12px radius,
-      `rgba(255,255,255,0.08)` border, 16px padding)
+- [ ] Copy sits in a top-left, left-aligned card matching `components/ui/card.tsx` (`#1A1A1E`, 12px
+      radius, no border, 12px padding) **including the CardNotch footer** — two light bars left, notched
+      tab right
 - [ ] "Coming soon to iOS." is gone
 - [ ] A pill button matching "Find on Amazon" reads "Join the TestFlight" and links to
       `https://testflight.apple.com/join/pT9n8FCC` in a new tab
@@ -513,7 +550,8 @@ a full-bleed image. Poster weight is the only real lever, which is why it's WebP
 ### Internal
 - [admin/app/page.tsx](admin/app/page.tsx) — the file being rewritten
 - [components/buy-on-amazon-button.tsx:54-71](components/buy-on-amazon-button.tsx:54) — button spec
-- [app/book/[id].tsx:407-416](app/book/[id].tsx:407) — datapad card spec
+- [components/ui/card.tsx](components/ui/card.tsx) — card + CardNotch spec
+- [components/book-card.tsx:36](components/book-card.tsx:36) — the book row wrapping itself in that Card
 - [constants/tokens.ts](constants/tokens.ts) / [admin/app/globals.css](admin/app/globals.css) — token parity
 - [admin/middleware.ts:9](admin/middleware.ts:9) — confirms `/` is ungated
 - [admin/lib/env.ts:10](admin/lib/env.ts:10) — build-time env requirement
