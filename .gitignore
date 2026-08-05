@@ -67,3 +67,4 @@ expo-env.d.ts
 # @end expo-cli
 # Phase 4.5 calibration workspace (personal shelf photos + local sweep harness)
 .calibration/
+.worktrees
