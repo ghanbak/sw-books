@@ -68,9 +68,11 @@ export default function TimelineScreen() {
 	);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
-	// Tapping a rail notch jumps the pager to that group's first book.
+	// Tapping or scrubbing the rail moves the pager to that group's first book. Not animated:
+	// a scrub fires this on every date crossed, and queued scroll animations would lag behind
+	// the finger (and an animated jump across millennia is a long blur, not a transition).
 	const handleJump = useCallback((page: number) => {
-		listRef.current?.scrollToIndex({ index: page, animated: true });
+		listRef.current?.scrollToIndex({ index: page, animated: false });
 	}, []);
 
 	return (
