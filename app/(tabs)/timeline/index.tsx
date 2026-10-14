@@ -72,9 +72,15 @@ export default function TimelineScreen() {
 	// Tapping or scrubbing the rail moves the pager to that group's first book. Not animated:
 	// a scrub fires this on every date crossed, and queued scroll animations would lag behind
 	// the finger (and an animated jump across millennia is a long blur, not a transition).
-	const handleJump = useCallback((page: number) => {
-		listRef.current?.scrollToIndex({ index: page, animated: false });
-	}, []);
+	// scrollToOffset, not scrollToIndex: every page is exactly one screen wide, so the offset
+	// is exact — scrollToIndex estimates the position of pages FlashList hasn't measured yet,
+	// and a fast scrub to a far date could land several pages off.
+	const handleJump = useCallback(
+		(page: number) => {
+			listRef.current?.scrollToOffset({ offset: page * width, animated: false });
+		},
+		[width],
+	);
 
 	return (
 		<View style={[styles.container, { paddingTop: headerHeight, paddingBottom: insets.bottom }]}>

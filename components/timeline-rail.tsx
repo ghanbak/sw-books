@@ -73,6 +73,16 @@ export function TimelineRail({
 	// scrub/tap target immediately — the pager's viewability callback lags behind a drag, so
 	// following activeIndex alone left the label frozen on the starting date until release.
 	const [targetIndex, setTargetIndex] = useState<number | null>(null);
+	// Fallback for the pendingIndex guard: if the pager never reports the scrub target (it
+	// landed elsewhere), hand control back to the pager instead of freezing the rail.
+	const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const [resync, setResync] = useState(0);
+	useEffect(
+		() => () => {
+			if (settleTimer.current) clearTimeout(settleTimer.current);
+		},
+		[],
+	);
 	const shownIndex = targetIndex ?? activeIndex;
 	const active = groups[shownIndex];
 
@@ -89,7 +99,7 @@ export function TimelineRail({
 		}
 		lastGroup.value = activeIndex;
 		translateX.value = withTiming(railTranslateX(width, activeIndex), { duration: 220 });
-	}, [activeIndex, width, translateX, scrubbing, lastGroup]);
+	}, [activeIndex, width, translateX, scrubbing, lastGroup, resync]);
 
 	// Drive the pager to a group (JS thread): remember the target, buzz, scroll.
 	const driveTo = useCallback(
@@ -98,10 +108,18 @@ export function TimelineRail({
 			if (!group) return;
 			pendingIndex.current = index;
 			setTargetIndex(index);
+			// Re-armed on every crossing; fires once the scrub has been quiet for a moment.
+			if (settleTimer.current) clearTimeout(settleTimer.current);
+			settleTimer.current = setTimeout(() => {
+				if (scrubbing.value || pendingIndex.current === null) return;
+				pendingIndex.current = null;
+				setTargetIndex(null);
+				setResync((n) => n + 1); // re-run the paging effect: follow the pager again
+			}, 600);
 			Haptics.selectionAsync();
 			onJump(group.firstPage);
 		},
-		[groups, onJump],
+		[groups, onJump, scrubbing],
 	);
 
 	// Rail travel limits — keep the first and last notch reachable, nothing beyond.
