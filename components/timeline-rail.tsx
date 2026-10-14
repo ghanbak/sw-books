@@ -87,6 +87,7 @@ export function TimelineRail({
 	const active = groups[shownIndex];
 
 	// Paging mode: follow the pager, unless the finger (or a pending scrub target) owns the rail.
+	// biome-ignore lint/correctness/useExhaustiveDependencies: `resync` is a deliberate re-run trigger (the settle fallback bumps it to make the rail follow the pager again).
 	useEffect(() => {
 		if (scrubbing.value) return;
 		if (pendingIndex.current !== null) {
