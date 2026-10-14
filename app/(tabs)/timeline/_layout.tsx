@@ -9,6 +9,10 @@ export default function TimelineLayout() {
 			screenOptions={{
 				headerLargeTitle: true,
 				headerShadowVisible: false,
+				// Transparent so the cover's hologram glow can show behind the title instead of
+				// being cut off by an opaque bar. The screen already pads its content by
+				// useHeaderHeight(), so nothing slides under the title.
+				headerTransparent: true,
 				headerTitleStyle: { fontFamily },
 				// Large-but-compact: shrink the native large title from its ~34pt default so it
 				// occupies less vertical space (this screen is a horizontal pager, so the title

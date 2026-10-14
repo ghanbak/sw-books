@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { Film, Tv } from 'lucide-react-native';
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -16,12 +16,13 @@ import {
 	RAIL_PITCH,
 	type TimelineGroup,
 	clampIndex,
-	fractionalIndexForOrder,
-	groupCenterX,
 	indexAtScreenX,
 	railTranslateX,
 } from '@/lib/timeline';
-import { TIMELINE_ANCHORS } from '@/lib/timeline-anchors';
+import { TIMELINE_ANCHORS, layoutAnchorPills } from '@/lib/timeline-anchors';
+
+// Wide enough for the longest (24-char) pill label.
+const PILL_SLOT_W = 180;
 
 /**
  * The notch rail beneath the Timeline hero. One tick per year-with-books, evenly
@@ -44,7 +45,6 @@ export function TimelineRail({
 	/** Jump the pager to a page — fired when the user taps or scrubs the rail. */
 	onJump: (page: number) => void;
 }) {
-	const active = groups[activeIndex];
 	const count = groups.length;
 
 	const translateX = useSharedValue(railTranslateX(width, activeIndex));
@@ -59,13 +59,22 @@ export function TimelineRail({
 	// scrubbing flag alone can't prevent, since it clears before that callback lands).
 	const pendingIndex = useRef<number | null>(null);
 	const [isScrubbing, setIsScrubbing] = useState(false);
+	// What the rail SHOWS (active notch, date label, which markers get names). Mirrors the
+	// scrub/tap target immediately — the pager's viewability callback lags behind a drag, so
+	// following activeIndex alone left the label frozen on the starting date until release.
+	const [targetIndex, setTargetIndex] = useState<number | null>(null);
+	const shownIndex = targetIndex ?? activeIndex;
+	const active = groups[shownIndex];
 
 	// Paging mode: follow the pager, unless the finger (or a pending scrub target) owns the rail.
 	useEffect(() => {
 		if (scrubbing.value) return;
 		if (pendingIndex.current !== null) {
 			// translateX is already where the scrub put it; just wait for the pager to agree.
-			if (activeIndex === pendingIndex.current) pendingIndex.current = null;
+			if (activeIndex === pendingIndex.current) {
+				pendingIndex.current = null;
+				setTargetIndex(null);
+			}
 			return;
 		}
 		lastGroup.value = activeIndex;
@@ -78,6 +87,7 @@ export function TimelineRail({
 			const group = groups[index];
 			if (!group) return;
 			pendingIndex.current = index;
+			setTargetIndex(index);
 			Haptics.selectionAsync();
 			onJump(group.firstPage);
 		},
@@ -128,28 +138,33 @@ export function TimelineRail({
 		transform: [{ translateX: translateX.value }],
 	}));
 
-	// Films/TV placed on the same index-spaced axis as the notches (lerped between the two
-	// dates they fall between), so they ride the one shared translateX with the ticks.
-	const anchors = useMemo(
-		() =>
-			TIMELINE_ANCHORS.map((a) => ({
-				...a,
-				x: groupCenterX(fractionalIndexForOrder(a.timeline_order, groups)),
-			})),
-		[groups],
+	// Film/TV marker pills on the same index-spaced axis as the notches, riding the one
+	// shared translateX. Re-laid out as the active date changes so the markers nearest the
+	// current position get their names (see layoutAnchorPills).
+	const pills = useMemo(
+		() => layoutAnchorPills(TIMELINE_ANCHORS, groups, shownIndex),
+		[groups, shownIndex],
 	);
 
 	return (
 		<View style={styles.wrap}>
 			<View pointerEvents="none" style={styles.anchorsWindow}>
 				<Animated.View style={[styles.anchorRow, rowStyle]}>
-					{anchors.map((a) => (
-						<View key={`${a.kind}-${a.title}`} style={[styles.anchor, { left: a.x }]}>
-							{a.kind === 'film' ? (
-								<Film size={11} color={tokens.text.hint} strokeWidth={2} />
-							) : (
-								<Tv size={11} color={tokens.text.hint} strokeWidth={2} />
-							)}
+					{pills.map((p) => (
+						<View key={p.key} style={[styles.pillSlot, { left: p.x - PILL_SLOT_W / 2 }]}>
+							<View style={styles.pill}>
+								<SymbolView
+									name={p.kind === 'film' ? 'film' : 'tv'}
+									size={10}
+									tintColor={tokens.text.secondary}
+									weight="semibold"
+								/>
+								{p.expanded && (
+									<Text style={styles.pillLabel} numberOfLines={1}>
+										{p.label}
+									</Text>
+								)}
+							</View>
 						</View>
 					))}
 				</Animated.View>
@@ -159,7 +174,7 @@ export function TimelineRail({
 					<Animated.View style={[styles.row, rowStyle]}>
 						{groups.map((g, i) => (
 							<View key={g.order} style={styles.slot}>
-								<View style={i === activeIndex ? styles.tickActive : styles.tick} />
+								<View style={i === shownIndex ? styles.tickActive : styles.tick} />
 							</View>
 						))}
 					</Animated.View>
@@ -184,23 +199,42 @@ const styles = StyleSheet.create({
 		overflow: 'hidden',
 		justifyContent: 'center',
 	},
-	// Film/TV markers along the top of the rail, clipped to the same window as the ticks.
+	// Film/TV marker pills along the top of the rail, clipped to the screen width.
 	anchorsWindow: {
 		width: '100%',
-		height: 14,
+		height: 20,
 		overflow: 'hidden',
 		justifyContent: 'center',
 	},
 	anchorRow: {
 		position: 'absolute',
 		left: 0,
-		height: 14,
+		top: 0,
+		height: 20,
 	},
-	anchor: {
+	// Fixed-width slot centered on the marker's x; the pill centers itself inside it, so
+	// no measurement pass is needed to center a pill of unknown width.
+	pillSlot: {
 		position: 'absolute',
-		width: 12,
-		marginLeft: -6,
+		top: 0,
+		width: PILL_SLOT_W,
+		height: 20,
 		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	pill: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 3,
+		height: 18,
+		paddingHorizontal: 6,
+		borderRadius: 9,
+		backgroundColor: tokens.rail.anchorPill,
+	},
+	pillLabel: {
+		fontSize: 10,
+		fontWeight: '600',
+		color: tokens.text.secondary,
 	},
 	row: {
 		position: 'absolute',

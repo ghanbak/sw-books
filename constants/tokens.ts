@@ -34,6 +34,10 @@ export const tokens = {
 		error: '#CC4444',
 		success: '#4A90D9',
 	},
+	// Timeline rail: film/TV marker pills that float over the hologram glow.
+	rail: {
+		anchorPill: 'rgba(0,0,0,0.55)',
+	},
 	// Hologram cover projection (HoloCover): cyan beam + glowing base emitter.
 	holo: {
 		cyan: '#3DE0FF',

@@ -14,6 +14,7 @@ import { useBooks } from '@/lib/hooks';
 import { groupBooksByYear } from '@/lib/timeline';
 
 const VIEW_CONFIG = { itemVisiblePercentThreshold: 60 } as const;
+const PAGER_OVERRIDES = { style: { overflow: 'visible' } } as const;
 
 /**
  * Timeline tab — a horizontal, snap-paged scroll through the catalog in chronological
@@ -92,6 +93,12 @@ export default function TimelineScreen() {
 						{listHeight > 0 && (
 							<FlashList
 								ref={listRef}
+								// UIScrollView clips to its bounds by default (RN maps `overflow` to
+								// clipsToBounds), cutting the hologram's bloom off at the pager's edges.
+								// FlashList wraps the scroll view in its own (overflow: hidden) view, so
+								// both need it: `style` reaches the wrapper, overrideProps the scroll view.
+								style={styles.pager}
+								overrideProps={PAGER_OVERRIDES}
 								data={data.books}
 								horizontal
 								showsHorizontalScrollIndicator={false}
@@ -126,6 +133,9 @@ const styles = StyleSheet.create({
 	},
 	listWrap: {
 		flex: 1,
+	},
+	pager: {
+		overflow: 'visible',
 	},
 	page: {
 		alignItems: 'center',
