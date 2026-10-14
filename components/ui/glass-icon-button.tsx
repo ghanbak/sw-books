@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react-native';
+import { type SFSymbol, SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { tokens } from '@/constants/tokens';
@@ -7,13 +7,12 @@ import { GlassView, liquidGlassAvailable } from '@/lib/glass';
 const SIZE = 36;
 
 type Props = {
-	icon: LucideIcon;
+	/** SF Symbol name, e.g. `xmark`. */
+	icon: SFSymbol;
 	onPress: () => void;
 	accessibilityLabel: string;
 	/** Tints the icon with the primary accent (e.g. an active favorite). */
 	active?: boolean;
-	/** Fills the icon (e.g. a filled star when favorited). */
-	filled?: boolean;
 };
 
 /**
@@ -21,13 +20,7 @@ type Props = {
  * circle when glass isn't available (iOS < 26, Android, Expo Go). Step 1 baseline;
  * enriched in the design-primitives step (reduce-transparency, container merging).
  */
-export function GlassIconButton({
-	icon: Icon,
-	onPress,
-	accessibilityLabel,
-	active,
-	filled,
-}: Props) {
+export function GlassIconButton({ icon, onPress, accessibilityLabel, active }: Props) {
 	const iconColor = active ? tokens.accent.primary : tokens.text.primary;
 	return (
 		<Pressable
@@ -43,7 +36,7 @@ export function GlassIconButton({
 			) : (
 				<View style={[StyleSheet.absoluteFill, styles.fallback]} />
 			)}
-			<Icon size={18} color={iconColor} fill={filled ? iconColor : 'transparent'} strokeWidth={2} />
+			<SymbolView name={icon} size={18} tintColor={iconColor} weight="medium" />
 		</Pressable>
 	);
 }

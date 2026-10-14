@@ -1,7 +1,16 @@
 import { useRouter } from 'expo-router';
-import { ArrowLeftRight, Check, LayoutGrid, List, Search } from 'lucide-react-native';
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import {
+	ActivityIndicator,
+	FlatList,
+	KeyboardAvoidingView,
+	Platform,
+	Pressable,
+	StyleSheet,
+	TextInput,
+	View,
+} from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -136,7 +145,7 @@ export function ShelfScanReview({
 			<Animated.View style={styles.overlay} entering={FadeIn.duration(200)}>
 				<View style={styles.doneBody}>
 					<View style={styles.doneCheck}>
-						<Check size={36} color={tokens.text.primary} strokeWidth={3} />
+						<SymbolView name="checkmark" size={36} tintColor={tokens.text.primary} weight="bold" />
 					</View>
 					<Text style={styles.doneTitle} accessibilityRole="header">
 						{addedCount === 1 ? '1 book added to Owned' : `${addedCount} books added to Owned`}
@@ -180,7 +189,11 @@ export function ShelfScanReview({
 						accessibilityLabel="List view"
 						accessibilityState={{ selected: view === 'list' }}
 					>
-						<List size={16} color={view === 'list' ? tokens.text.primary : tokens.text.secondary} />
+						<SymbolView
+							name="list.bullet"
+							size={16}
+							tintColor={view === 'list' ? tokens.text.primary : tokens.text.secondary}
+						/>
 					</Pressable>
 					<Pressable
 						style={[styles.viewToggleButton, view === 'grid' && styles.viewToggleActive]}
@@ -189,9 +202,10 @@ export function ShelfScanReview({
 						accessibilityLabel="Grid view"
 						accessibilityState={{ selected: view === 'grid' }}
 					>
-						<LayoutGrid
+						<SymbolView
+							name="square.grid.2x2"
 							size={16}
-							color={view === 'grid' ? tokens.text.primary : tokens.text.secondary}
+							tintColor={view === 'grid' ? tokens.text.primary : tokens.text.secondary}
 						/>
 					</Pressable>
 				</View>
@@ -316,7 +330,9 @@ function ReviewRow({
 				accessibilityLabel={`${book.title} by ${book.author.join(', ')}${owned ? ', already owned' : ''}`}
 			>
 				<View style={[styles.checkbox, selected && styles.checkboxOn]}>
-					{selected && <Check size={14} color={tokens.text.primary} strokeWidth={3} />}
+					{selected && (
+						<SymbolView name="checkmark" size={14} tintColor={tokens.text.primary} weight="bold" />
+					)}
 				</View>
 				{/* Cover is decorative here, so taps reach the row
 				    and VoiceOver doesn't announce a nameless extra button. */}
@@ -355,7 +371,7 @@ function ReviewRow({
 				accessibilityRole="button"
 				accessibilityLabel={`Wrong match? Swap ${book.title}`}
 			>
-				<ArrowLeftRight size={16} color={tokens.text.secondary} />
+				<SymbolView name="arrow.left.arrow.right" size={16} tintColor={tokens.text.secondary} />
 			</Pressable>
 		</View>
 	);
@@ -400,7 +416,7 @@ function ReviewTile({
 				</View>
 				{selected && (
 					<View style={styles.tileCheck}>
-						<Check size={14} color={tokens.text.primary} strokeWidth={3} />
+						<SymbolView name="checkmark" size={14} tintColor={tokens.text.primary} weight="bold" />
 					</View>
 				)}
 				{match.bucket === 'low' && !owned && (
@@ -472,7 +488,7 @@ function SwapSheet({
 						Not “{match.book.title}”?
 					</Text>
 					<View style={styles.searchBox}>
-						<Search size={16} color={tokens.text.hint} />
+						<SymbolView name="magnifyingglass" size={16} tintColor={tokens.text.hint} />
 						<TextInput
 							style={styles.searchInput}
 							value={query}

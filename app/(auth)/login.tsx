@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { Apple } from "lucide-react-native";
+import { SymbolView } from "expo-symbols";
 import { Alert, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -61,7 +61,7 @@ export default function LoginScreen() {
             style={[styles.button, styles.appleButton]}
             onPress={handleApple}
           >
-            <Apple size={18} color="#000" strokeWidth={2.5} fill="#000" />
+            <SymbolView name="apple.logo" size={18} tintColor="#000" />
             <Text style={styles.appleButtonText}>Continue with Apple</Text>
           </Pressable>
         )}
