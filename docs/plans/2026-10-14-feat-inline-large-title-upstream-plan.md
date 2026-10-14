@@ -44,8 +44,8 @@ so `npm ci` — locally and on EAS — reapplies the patches.
 
 | Patch | Change |
 |---|---|
-| `patches/react-native-screens+4.25.2.patch` | New `largeTitleInline` prop on `RNSScreenStackHeaderConfig`: codegen spec (`src/fabric/ScreenStackHeaderConfigNativeComponent.ts`), `.h` property, Fabric `updateProps`, and the apply step — `largeTitle && largeTitleInline` → `…Inline` on iOS 17+ (falls back to `Always`). TS types updated. |
-| `patches/expo-router+56.2.11.patch` | New `headerLargeTitleInline` native-stack option (types) passed through `useHeaderConfigProps` as `largeTitleInline`. |
+| `patches/react-native-screens+4.26.2.patch` | New `largeTitleInline` prop on `RNSScreenStackHeaderConfig`: codegen spec (`src/fabric/ScreenStackHeaderConfigNativeComponent.ts`), `.h` property, Fabric `updateProps`, and the apply step — `largeTitle && largeTitleInline` → `…Inline` on iOS 17+ (falls back to `Always`). TS types updated. |
+| `patches/expo-router+56.2.21.patch` | New `headerLargeTitleInline` native-stack option (types) passed through `useHeaderConfigProps` as `largeTitleInline`. |
 
 Usage — `app/(tabs)/timeline/_layout.tsx`:
 
@@ -55,10 +55,16 @@ screenOptions={{ headerLargeTitle: true, headerLargeTitleInline: true, … }}
 
 ### Maintenance rules
 
+- **Both patched packages are pinned to exact versions** in `package.json`
+  (`react-native-screens` 4.26.2, `expo-router` 56.2.21) so a lockfile regeneration can't
+  silently pull a version the patches weren't made for. `expo install --check` accepts them.
+- **Ported once already:** the Expo 56.0.12 → 56.0.23 upgrade moved both packages; every
+  patch anchor still existed and the patches were regenerated unchanged in size.
+
 - **Native change → native rebuild.** Changing these patches needs `pod install` (codegen
   regenerates the props struct) and a new dev-client / EAS build, not just a JS reload.
 - **Every Expo SDK / react-native-screens bump:** `patch-package` keys patches by exact
-  version (`+4.25.2`). If the version changes, `npm ci` fails loudly on the postinstall —
+  version (`+4.26.2`). If the version changes, `npm ci` fails loudly on the postinstall —
   re-apply the edits to the new version and regenerate the patch
   (`npx patch-package react-native-screens expo-router`), or delete the patches if upstream
   has shipped the feature.

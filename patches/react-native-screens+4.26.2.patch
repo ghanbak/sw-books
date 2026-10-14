@@ -1,8 +1,8 @@
 diff --git a/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.h b/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.h
-index 919b984..7343f86 100644
+index 8a41697..f02d413 100644
 --- a/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.h
 +++ b/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.h
-@@ -32,6 +32,8 @@ NS_ASSUME_NONNULL_BEGIN
+@@ -34,6 +34,8 @@ NS_ASSUME_NONNULL_BEGIN
  @property (nonatomic, retain) UIColor *backgroundColor;
  @property (nonatomic, retain) UIColor *color;
  @property (nonatomic) BOOL largeTitle;
@@ -12,10 +12,10 @@ index 919b984..7343f86 100644
  @property (nonatomic, retain) NSNumber *largeTitleFontSize;
  @property (nonatomic, retain) NSString *largeTitleFontWeight;
 diff --git a/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm b/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
-index 5970e3e..287447a 100644
+index 1c84484..71cc700 100644
 --- a/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
 +++ b/node_modules/react-native-screens/ios/RNSScreenStackHeaderConfig.mm
-@@ -512,6 +512,13 @@ + (void)updateViewController:(UIViewController *)vc
+@@ -523,6 +523,13 @@ + (void)updateViewController:(UIViewController *)vc
    }
    navitem.largeTitleDisplayMode =
        config.largeTitle ? UINavigationItemLargeTitleDisplayModeAlways : UINavigationItemLargeTitleDisplayModeNever;
@@ -29,7 +29,7 @@ index 5970e3e..287447a 100644
  #endif
  
    UINavigationBarAppearance *appearance = [self buildAppearance:vc withConfig:config];
-@@ -1021,6 +1028,7 @@ - (void)updateProps:(react::Props::Shared const &)props oldProps:(react::Props::
+@@ -1031,6 +1038,7 @@ - (void)updateProps:(react::Props::Shared const &)props oldProps:(react::Props::
    _hideShadow = newScreenProps.hideShadow;
  
    _largeTitle = newScreenProps.largeTitle;
@@ -38,7 +38,7 @@ index 5970e3e..287447a 100644
      _largeTitleFontFamily = RCTNSStringFromStringNilIfEmpty(newScreenProps.largeTitleFontFamily);
    }
 diff --git a/node_modules/react-native-screens/lib/typescript/types.d.ts b/node_modules/react-native-screens/lib/typescript/types.d.ts
-index 3b384e0..e3d4bf3 100644
+index 10a3134..cfdd4dd 100644
 --- a/node_modules/react-native-screens/lib/typescript/types.d.ts
 +++ b/node_modules/react-native-screens/lib/typescript/types.d.ts
 @@ -664,6 +664,11 @@ export interface ScreenStackHeaderConfigProps extends ViewProps {
@@ -54,7 +54,7 @@ index 3b384e0..e3d4bf3 100644
       * Controls the color of the navigation header when the edge of any scrollable content reaches the matching edge of the navigation bar.
       */
 diff --git a/node_modules/react-native-screens/src/fabric/ScreenStackHeaderConfigNativeComponent.ts b/node_modules/react-native-screens/src/fabric/ScreenStackHeaderConfigNativeComponent.ts
-index ba2479d..67711d3 100644
+index a80d9fe..bee60f0 100644
 --- a/node_modules/react-native-screens/src/fabric/ScreenStackHeaderConfigNativeComponent.ts
 +++ b/node_modules/react-native-screens/src/fabric/ScreenStackHeaderConfigNativeComponent.ts
 @@ -53,6 +53,7 @@ export interface NativeProps extends ViewProps {
@@ -66,7 +66,7 @@ index ba2479d..67711d3 100644
    largeTitleFontSize?: CT.Int32 | undefined;
    largeTitleFontWeight?: string | undefined;
 diff --git a/node_modules/react-native-screens/src/types.tsx b/node_modules/react-native-screens/src/types.tsx
-index 76a83f3..89e2b4a 100644
+index 9c3ab4c..4f30ede 100644
 --- a/node_modules/react-native-screens/src/types.tsx
 +++ b/node_modules/react-native-screens/src/types.tsx
 @@ -768,6 +768,11 @@ export interface ScreenStackHeaderConfigProps extends ViewProps {
