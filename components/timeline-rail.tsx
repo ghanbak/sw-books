@@ -23,6 +23,9 @@ import { TIMELINE_ANCHORS, layoutAnchorPills } from '@/lib/timeline-anchors';
 
 // Wide enough for the longest (24-char) pill label.
 const PILL_SLOT_W = 180;
+// One stacked row of marker pills, and the gap between the lowest row and the notches.
+const PILL_ROW_H = 22;
+const STEM_GAP = 4;
 
 /**
  * The notch rail beneath the Timeline hero. One tick per year-with-books, evenly
@@ -139,47 +142,66 @@ export function TimelineRail({
 	}));
 
 	// Film/TV marker pills on the same index-spaced axis as the notches, riding the one
-	// shared translateX. Re-laid out as the active date changes so the markers nearest the
-	// current position get their names (see layoutAnchorPills).
-	const pills = useMemo(
-		() => layoutAnchorPills(TIMELINE_ANCHORS, groups, shownIndex),
-		[groups, shownIndex],
-	);
+	// shared translateX. Stacked into rows where they'd overlap (see layoutAnchorPills);
+	// the layout is date-independent, so pills don't reshuffle while scrubbing.
+	const anchorLayout = useMemo(() => layoutAnchorPills(TIMELINE_ANCHORS, groups), [groups]);
 
 	return (
 		<View style={styles.wrap}>
-			<View pointerEvents="none" style={styles.anchorsWindow}>
-				<Animated.View style={[styles.anchorRow, rowStyle]}>
-					{pills.map((p) => (
-						<View key={p.key} style={[styles.pillSlot, { left: p.x - PILL_SLOT_W / 2 }]}>
-							<View style={styles.pill}>
-								<SymbolView
-									name={p.kind === 'film' ? 'film' : 'tv'}
-									size={10}
-									tintColor={tokens.text.secondary}
-									weight="semibold"
-								/>
-								{p.expanded && (
+			<View style={styles.ticksBlock}>
+				{/* Pills float upward from the notches into the empty space under the cover, so
+				    the stack costs no layout height; each has a stem down to its date. */}
+				<View
+					pointerEvents="none"
+					style={[styles.anchorsArea, { height: anchorLayout.rows * PILL_ROW_H + STEM_GAP }]}
+				>
+					<Animated.View style={[styles.anchorRow, rowStyle]}>
+						{/* Two passes: all stems first, then all pills, so a stem never draws over a
+						    neighboring pill. */}
+						{anchorLayout.pills.map((p) => (
+							<View
+								key={`stem-${p.key}`}
+								style={[
+									styles.stem,
+									{ left: p.x - 0.5, height: p.row * PILL_ROW_H + STEM_GAP + 1 },
+								]}
+							/>
+						))}
+						{anchorLayout.pills.map((p) => (
+							<View
+								key={p.key}
+								style={[
+									styles.pillSlot,
+									{ left: p.x - PILL_SLOT_W / 2, bottom: p.row * PILL_ROW_H + STEM_GAP },
+								]}
+							>
+								<View style={styles.pill}>
+									<SymbolView
+										name={p.kind === 'film' ? 'film' : 'tv'}
+										size={10}
+										tintColor={tokens.text.secondary}
+										weight="semibold"
+									/>
 									<Text style={styles.pillLabel} numberOfLines={1}>
 										{p.label}
 									</Text>
-								)}
-							</View>
-						</View>
-					))}
-				</Animated.View>
-			</View>
-			<GestureDetector gesture={Gesture.Race(pan, tap)}>
-				<View style={styles.ticksWindow}>
-					<Animated.View style={[styles.row, rowStyle]}>
-						{groups.map((g, i) => (
-							<View key={g.order} style={styles.slot}>
-								<View style={i === shownIndex ? styles.tickActive : styles.tick} />
+								</View>
 							</View>
 						))}
 					</Animated.View>
 				</View>
-			</GestureDetector>
+				<GestureDetector gesture={Gesture.Race(pan, tap)}>
+					<View style={styles.ticksWindow}>
+						<Animated.View style={[styles.row, rowStyle]}>
+							{groups.map((g, i) => (
+								<View key={g.order} style={styles.slot}>
+									<View style={i === shownIndex ? styles.tickActive : styles.tick} />
+								</View>
+							))}
+						</Animated.View>
+					</View>
+				</GestureDetector>
+			</View>
 			{active && (
 				<Text style={[styles.label, isScrubbing && styles.labelScrubbing]}>{active.label}</Text>
 			)}
@@ -199,26 +221,35 @@ const styles = StyleSheet.create({
 		overflow: 'hidden',
 		justifyContent: 'center',
 	},
-	// Film/TV marker pills along the top of the rail, clipped to the screen width.
-	anchorsWindow: {
+	ticksBlock: {
 		width: '100%',
-		height: 20,
-		overflow: 'hidden',
-		justifyContent: 'center',
+	},
+	// Film/TV marker pills: sit directly on top of the notches (bottom: 100% of ticksBlock) and
+	// grow upward over the pager's empty space instead of taking layout height.
+	anchorsArea: {
+		position: 'absolute',
+		left: 0,
+		right: 0,
+		bottom: '100%',
 	},
 	anchorRow: {
 		position: 'absolute',
 		left: 0,
 		top: 0,
-		height: 20,
+		bottom: 0,
+	},
+	stem: {
+		position: 'absolute',
+		bottom: 0,
+		width: 1,
+		backgroundColor: tokens.rail.anchorStem,
 	},
 	// Fixed-width slot centered on the marker's x; the pill centers itself inside it, so
 	// no measurement pass is needed to center a pill of unknown width.
 	pillSlot: {
 		position: 'absolute',
-		top: 0,
 		width: PILL_SLOT_W,
-		height: 20,
+		height: PILL_ROW_H,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
