@@ -3,6 +3,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Viewport wider than the 16:9 hero video: object-cover crops it top and bottom, so
+   the centered phone fills more of the height and the copy needs tighter spacing. */
+@custom-variant widescreen (@media (min-aspect-ratio: 16/9));
+
 /*
  * Ossus Archives admin — dark cinematic datapad palette.
  * Tokens mirror the mobile app's design system (see CLAUDE.md). The tool is
