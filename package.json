@@ -76,7 +76,7 @@
 		"p-limit": "6.2.0",
 		"tsx": "^4.21.0",
 		"typescript": "~6.0.3",
-		"vitest": "^4.1.7",
+		"vitest": "^4.1.11",
 		"zod": "^4.4.3"
 	},
 	"overrides": {
