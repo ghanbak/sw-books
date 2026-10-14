@@ -8,6 +8,11 @@ export default function TimelineLayout() {
 		<Stack
 			screenOptions={{
 				headerLargeTitle: true,
+				// Large title inline with the bar buttons (scan / profile) instead of on its own row
+				// below them. UIKit's .inline large-title mode (iOS 17+) — not exposed by Expo Router
+				// or react-native-screens yet, so it comes from our patches (see patches/ and
+				// docs/plans/2026-10-14-feat-inline-large-title-upstream-plan.md).
+				headerLargeTitleInline: true,
 				headerShadowVisible: false,
 				// Transparent so the cover's hologram glow can show behind the title instead of
 				// being cut off by an opaque bar. The screen already pads its content by
