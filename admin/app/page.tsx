@@ -50,7 +50,7 @@ export default function Home() {
 				className="pointer-events-none absolute inset-x-0 bottom-0 h-48 sm:h-64"
 				style={BOTTOM_SCRIM}
 			/>
-			<header className="relative flex flex-col items-center gap-3 px-6 pt-8 text-center sm:pt-12 widescreen:pt-6">
+			<header className="relative flex flex-col items-center gap-3 px-6 pt-8 text-center text-halo sm:pt-12 widescreen:pt-6">
 				<h1
 					className={`${oxanium.className} flex items-center gap-3 font-bold text-2xl tracking-tight sm:text-3xl`}
 				>
@@ -85,7 +85,7 @@ export default function Home() {
 				<nav>
 					<Link
 						href="/privacy"
-						className="text-foreground/75 text-sm hover:text-foreground hover:underline"
+						className="text-foreground/75 text-halo text-sm hover:text-foreground hover:underline"
 					>
 						Privacy Policy
 					</Link>
