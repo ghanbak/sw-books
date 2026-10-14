@@ -129,7 +129,8 @@ propose a component-API surface: `<Stack.Title large="inline">` (today `large` i
 - [x] Patch react-native-screens + expo-router locally; `patch-package` + `postinstall`.
 - [x] Verify a clean `npm ci` reapplies both patches.
 - [x] Enable `headerLargeTitleInline` on Timeline.
-- [ ] Verify on the iPhone 17 Pro (iOS 26.4) simulator and a physical device.
+- [x] Verify on the iPhone 17 Pro (iOS 26.4) simulator.
+- [ ] Verify on a physical device.
 - [ ] File the react-native-screens issue (draft above) and offer the PR.
 - [ ] Follow-up PR to React Navigation once screens merges.
 - [ ] When an Expo SDK ships both: switch `headerLargeTitleInline` to the official option,
