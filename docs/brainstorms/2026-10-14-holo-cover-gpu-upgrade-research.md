@@ -95,25 +95,34 @@ iOS 26 adds nothing specific beyond Liquid Glass, which we already use.
 
 None of the installed skills cover Skia shaders, WebGPU or three.js.
 
-**Candidates to add.** All are third-party; read each SKILL.md before installing.
+**Candidates to add.** All are third-party; read each SKILL.md before installing. Install counts are from skills.sh as of 2026-10-14, sorted high to low within each group.
 
-| Skill | Covers | Install |
-|---|---|---|
-| `software-mansion-labs/skills` → `animations` | Reanimated 4, Skia, react-native-webgpu, TypeGPU, Reanimated↔WebGPU worklets, GPU particles | `npx skills add software-mansion-labs/skills --skill animations --agent claude-code` |
-| `andreev-danila/skills` → `reanimated-skia-performance` | Skia RuntimeEffect with animated uniforms, diagnosing jank | `npx skills add andreev-danila/skills --skill reanimated-skia-performance --agent claude-code` |
-| `tristanmanchester/agent-skills` → `react-native-skia` | Skia in Expo, RuntimeShader | `npx skills add https://github.com/tristanmanchester/agent-skills --skill react-native-skia` |
-| madebyecho `react-native-skia-shaders` | SkSL techniques: SDFs, noise, lighting, post-processing | via skillsmp.com |
-| `enzed/r3f-skills` → `r3f-shaders`, `r3f-postprocessing` | R3F `shaderMaterial`, bloom (web-first; only useful if we take option C) | `npx skills add enzed/r3f-skills --skill r3f-shaders --agent claude-code` |
-| `OpenAEC-Foundation/Three.js-Claude-Skill-Package` | 24 skills: three r160+, R3F, WebGPU (web-first) | clone into `.claude/skills` |
-| `vladimirbrejcha/ios-ai-skills` → `swiftui-animation` | SwiftUI `colorEffect`/`layerEffect`/`ShaderLibrary`, with a `metal-shaders.md` reference | `npx skillscat add vladimirbrejcha/ios-ai-skills/swiftui-animation` |
-| `dpearson2699/swift-ios-skills` → `realitykit` / `charleswiltgen/axiom` → `axiom-realitykit` | RealityKit `RealityView` (only if we try that path) | `npx -y skills add charleswiltgen/axiom --skill axiom-realitykit --agent claude-code` |
+| Skill | skills.sh installs | Covers | Install |
+|---|---|---|---|
+| **Skia / React Native GPU (option A)** | | | |
+| `andreev-danila/skills` → `reanimated-skia-performance` | **944** | Skia RuntimeEffect with animated uniforms, diagnosing jank | `npx skills add andreev-danila/skills --skill reanimated-skia-performance --agent claude-code` |
+| `tristanmanchester/agent-skills` → `react-native-skia` | 112 | Skia in Expo, RuntimeShader | `npx skills add https://github.com/tristanmanchester/agent-skills --skill react-native-skia` |
+| `software-mansion-labs/skills` → `animations` | 27 | Reanimated 4, Skia, react-native-webgpu, TypeGPU, Reanimated↔WebGPU worklets, GPU particles. Low count, but published by Reanimated's own maintainers | `npx skills add software-mansion-labs/skills --skill animations --agent claude-code` |
+| `madebyecho/agent-skills` → `react-native-skia-shaders` | 4 | 25+ SkSL techniques ported from GLSL: SDFs, noise, lighting, post-processing | `npx skills add madebyecho/agent-skills --skill react-native-skia-shaders` |
+| **WebGPU / three.js (option C)** | | | |
+| `enzed/r3f-skills` → `r3f-shaders` / `r3f-postprocessing` | 1.8K / 1.8K | R3F `shaderMaterial`, bloom. Web-first | `npx skills add enzed/r3f-skills --skill r3f-shaders --agent claude-code` |
+| `software-mansion-labs/skills` → `typegpu` | 1.5K | TypeGPU 0.12, `'use gpu'` TS→WGSL. Web-focused; the page doesn't mention RN | `npx skills add software-mansion-labs/skills --skill typegpu --agent claude-code` |
+| `OpenAEC-Foundation/Three.js-Claude-Skill-Package` | 124–148 per skill (3.2K total across 24) | three r160+, R3F, Drei, WebGPU (`threejs-impl-webgpu`: 129), shaders (`threejs-syntax-shaders`: 137). Web-first | `npx skills add OpenAEC-Foundation/Three.js-Claude-Skill-Package --skill <name>` |
+| **iOS native (option B)** | | | |
+| `dpearson2699/swift-ios-skills` → `realitykit` | 3.1K | RealityKit `RealityView` (only if we try that path) | `npx -y skills add dpearson2699/swift-ios-skills --skill realitykit --agent claude-code` |
+| `charleswiltgen/axiom` → `axiom-realitykit` | 153 | RealityKit, migrating from SceneKit | `npx -y skills add charleswiltgen/axiom --skill axiom-realitykit --agent claude-code` |
+| `vladimirbrejcha/ios-ai-skills` → `swiftui-animation` | 8 | SwiftUI `colorEffect`/`layerEffect`/`ShaderLibrary`, with a `metal-shaders.md` reference | `npx skills add vladimirbrejcha/ios-ai-skills --skill swiftui-animation` |
 
-**Picks for option A:** Software Mansion `animations` plus `reanimated-skia-performance`. **For option B, add:** `swiftui-animation`.
+What the counts say:
+- Usage of React Native GPU skills is thin. Only `reanimated-skia-performance` has real adoption.
+- The skills with large counts (r3f, typegpu, the realitykit skill) target web or native Swift, not React Native.
+
+**Picks for option A:** `reanimated-skia-performance` (most used) plus Software Mansion `animations` (fewest installs, but the publisher maintains Reanimated, worklets and TypeGPU). **For option B, add:** `swiftui-animation` (barely used; read it before relying on it).
 
 ## Not verified
 - Measured Skia and Dawn binary sizes, Canvas init time, and GPU memory per instance.
 - Whether the SDK 56 pin of Skia 2.6.2 conflicts with 2.15.x. Check what `npx expo install` resolves.
-- The contents and maintenance status of the third-party skills (I only saw directory listings).
+- The contents and maintenance status of the third-party skills. I checked install counts on skills.sh but haven't read their SKILL.md files.
 
 ## Sources
 - https://github.com/wcandillon/react-native-skia · https://wcandillon.github.io/react-native-skia/docs/getting-started/migration
