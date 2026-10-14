@@ -1,4 +1,5 @@
 import { ExternalLink } from 'lucide-react';
+import { Oxanium } from 'next/font/google';
 import Link from 'next/link';
 import { HeroBackdrop } from './_components/hero-backdrop';
 
@@ -6,6 +7,27 @@ import { HeroBackdrop } from './_components/hero-backdrop';
 export const dynamic = 'force-static';
 
 const TESTFLIGHT_URL = 'https://testflight.apple.com/join/pT9n8FCC';
+
+// Heading face (SIL OFL). Variable font, so every weight ships in one self-hosted file.
+const oxanium = Oxanium({ subsets: ['latin'] });
+
+// Eased scrim: sample a smoothstep curve into gradient stops. A linear fade leaves a
+// visible edge where it ends; smoothstep flattens both ends so it melts into the video.
+// Mixing the --background token (rather than a literal) keeps the scrim themeable.
+const smoothstep = (t: number) => t * t * (3 - 2 * t);
+
+function easedScrim(direction: 'to bottom' | 'to top', samples = 15) {
+	const stops = Array.from({ length: samples }, (_, i) => {
+		const t = i / (samples - 1);
+		const alpha = Math.round((1 - smoothstep(t)) * 1000) / 10;
+		const pos = Math.round(t * 1000) / 10;
+		return `color-mix(in srgb, var(--background) ${alpha}%, transparent) ${pos}%`;
+	});
+	return `linear-gradient(${direction}, ${stops.join(', ')})`;
+}
+
+const TOP_SCRIM = { backgroundImage: easedScrim('to bottom') };
+const BOTTOM_SCRIM = { backgroundImage: easedScrim('to top') };
 
 export const metadata = {
 	title: 'Ossus Archives — Star Wars Book Tracker',
@@ -20,14 +42,18 @@ export default function Home() {
 			    it occupies — the centered phone stays clear. */}
 			<div
 				aria-hidden="true"
-				className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-linear-to-b from-background/90 to-transparent sm:h-64"
+				className="pointer-events-none absolute inset-x-0 top-0 h-48 sm:h-64"
+				style={TOP_SCRIM}
 			/>
 			<div
 				aria-hidden="true"
-				className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-linear-to-t from-background/90 to-transparent sm:h-64"
+				className="pointer-events-none absolute inset-x-0 bottom-0 h-48 sm:h-64"
+				style={BOTTOM_SCRIM}
 			/>
 			<header className="relative flex flex-col items-center gap-3 px-6 pt-8 text-center sm:pt-12 widescreen:pt-6">
-				<h1 className="flex items-center gap-3 font-semibold text-2xl tracking-tight sm:text-3xl">
+				<h1
+					className={`${oxanium.className} flex items-center gap-3 font-bold text-2xl tracking-tight sm:text-3xl`}
+				>
 					{/* Square source art — round it to iOS's ~22.4% corner ratio so it reads as an app icon */}
 					<img
 						src="/app-icon.png"
@@ -38,7 +64,7 @@ export default function Home() {
 					/>
 					Ossus Archives
 				</h1>
-				<p className="max-w-md text-balance text-foreground/85 text-sm leading-relaxed sm:text-base lg:max-w-2xl">
+				<p className="max-w-md text-balance font-semibold text-foreground/85 text-sm leading-relaxed sm:text-base lg:max-w-2xl">
 					A datapad for your Star Wars library — track every novel across Canon and Legends.
 				</p>
 			</header>
