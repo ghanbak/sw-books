@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
 	runOnJS,
@@ -19,7 +19,12 @@ import {
 	indexAtScreenX,
 	railTranslateX,
 } from '@/lib/timeline';
-import { TIMELINE_ANCHORS, layoutAnchorPills } from '@/lib/timeline-anchors';
+import {
+	type MediaKind,
+	TIMELINE_ANCHORS,
+	layoutAnchorPills,
+	truncateAnchorTitle,
+} from '@/lib/timeline-anchors';
 
 // Wide enough for the longest (24-char) pill label.
 const PILL_SLOT_W = 180;
@@ -62,6 +67,8 @@ export function TimelineRail({
 	// scrubbing flag alone can't prevent, since it clears before that callback lands).
 	const pendingIndex = useRef<number | null>(null);
 	const [isScrubbing, setIsScrubbing] = useState(false);
+	// Which "+N" marker pill (same-date set) is fanned out, if any.
+	const [expandedKey, setExpandedKey] = useState<string | null>(null);
 	// What the rail SHOWS (active notch, date label, which markers get names). Mirrors the
 	// scrub/tap target immediately — the pager's viewability callback lags behind a drag, so
 	// following activeIndex alone left the label frozen on the starting date until release.
@@ -105,6 +112,7 @@ export function TimelineRail({
 	const pan = Gesture.Pan()
 		.onBegin(() => {
 			scrubbing.value = true;
+			runOnJS(setExpandedKey)(null);
 			startTx.value = translateX.value;
 			runOnJS(setIsScrubbing)(true);
 		})
@@ -145,6 +153,12 @@ export function TimelineRail({
 	// shared translateX. Stacked into rows where they'd overlap (see layoutAnchorPills);
 	// the layout is date-independent, so pills don't reshuffle while scrubbing.
 	const anchorLayout = useMemo(() => layoutAnchorPills(TIMELINE_ANCHORS, groups), [groups]);
+	const expanded = anchorLayout.pills.find((p) => p.key === expandedKey);
+	// The expanded set stacks upward from its pill's row, so it may need more height.
+	const anchorRows = Math.max(
+		anchorLayout.rows,
+		expanded ? expanded.row + expanded.members.length : 0,
+	);
 
 	return (
 		<View style={styles.wrap}>
@@ -152,41 +166,51 @@ export function TimelineRail({
 				{/* Pills float upward from the notches into the empty space under the cover, so
 				    the stack costs no layout height; each has a stem down to its date. */}
 				<View
-					pointerEvents="none"
-					style={[styles.anchorsArea, { height: anchorLayout.rows * PILL_ROW_H + STEM_GAP }]}
+					pointerEvents="box-none"
+					style={[styles.anchorsArea, { height: anchorRows * PILL_ROW_H + STEM_GAP }]}
 				>
-					<Animated.View style={[styles.anchorRow, rowStyle]}>
-						{/* Two passes: all stems first, then all pills, so a stem never draws over a
-						    neighboring pill. */}
+					<Animated.View pointerEvents="box-none" style={[styles.anchorRow, rowStyle]}>
+						{/* Stems first, then pills, so a stem never draws over a neighboring pill. */}
 						{anchorLayout.pills.map((p) => (
 							<View
 								key={`stem-${p.key}`}
+								pointerEvents="none"
 								style={[
 									styles.stem,
 									{ left: p.x - 0.5, height: p.row * PILL_ROW_H + STEM_GAP + 1 },
 								]}
 							/>
 						))}
-						{anchorLayout.pills.map((p) => (
-							<View
-								key={p.key}
-								style={[
-									styles.pillSlot,
-									{ left: p.x - PILL_SLOT_W / 2, bottom: p.row * PILL_ROW_H + STEM_GAP },
-								]}
-							>
-								<View style={styles.pill}>
-									<SymbolView
-										name={p.kind === 'film' ? 'film' : 'tv'}
-										size={10}
-										tintColor={tokens.text.secondary}
-										weight="semibold"
-									/>
-									<Text style={styles.pillLabel} numberOfLines={1}>
-										{p.label}
-									</Text>
-								</View>
-							</View>
+						{anchorLayout.pills.map((p) =>
+							p === expanded ? null : (
+								<MarkerPill
+									key={p.key}
+									x={p.x}
+									row={p.row}
+									kind={p.kind}
+									label={p.label}
+									onPress={p.members.length > 1 ? () => setExpandedKey(p.key) : undefined}
+									accessibilityLabel={
+										p.members.length > 1
+											? `${p.members[0]?.title} and ${p.members.length - 1} more. Shows all.`
+											: p.label
+									}
+								/>
+							),
+						)}
+						{/* The fanned-out set draws last (on top) on a darker pill, first member on the
+						    original row and the rest stacked above it. Tap any of them to fold it back. */}
+						{expanded?.members.map((m, i) => (
+							<MarkerPill
+								key={`expanded-${m.kind}-${m.title}`}
+								x={expanded.x}
+								row={expanded.row + i}
+								kind={m.kind}
+								label={truncateAnchorTitle(m.title)}
+								raised
+								onPress={() => setExpandedKey(null)}
+								accessibilityLabel={`${m.title}. Collapses the list.`}
+							/>
 						))}
 					</Animated.View>
 				</View>
@@ -205,6 +229,55 @@ export function TimelineRail({
 			{active && (
 				<Text style={[styles.label, isScrubbing && styles.labelScrubbing]}>{active.label}</Text>
 			)}
+		</View>
+	);
+}
+
+function MarkerPill({
+	x,
+	row,
+	kind,
+	label,
+	raised,
+	onPress,
+	accessibilityLabel,
+}: {
+	x: number;
+	row: number;
+	kind: MediaKind;
+	label: string;
+	/** Drawn above other pills (an expanded set) — more opaque so it reads over them. */
+	raised?: boolean;
+	onPress?: () => void;
+	accessibilityLabel: string;
+}) {
+	return (
+		<View
+			pointerEvents="box-none"
+			style={[styles.pillSlot, { left: x - PILL_SLOT_W / 2, bottom: row * PILL_ROW_H + STEM_GAP }]}
+		>
+			<Pressable
+				onPress={onPress}
+				disabled={!onPress}
+				hitSlop={6}
+				accessibilityRole={onPress ? 'button' : 'text'}
+				accessibilityLabel={accessibilityLabel}
+				style={({ pressed }) => [
+					styles.pill,
+					raised && styles.pillRaised,
+					pressed && styles.pillPressed,
+				]}
+			>
+				<SymbolView
+					name={kind === 'film' ? 'film' : 'tv'}
+					size={10}
+					tintColor={tokens.text.secondary}
+					weight="semibold"
+				/>
+				<Text style={styles.pillLabel} numberOfLines={1}>
+					{label}
+				</Text>
+			</Pressable>
 		</View>
 	);
 }
@@ -261,6 +334,12 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 6,
 		borderRadius: 9,
 		backgroundColor: tokens.rail.anchorPill,
+	},
+	pillRaised: {
+		backgroundColor: tokens.rail.anchorPillRaised,
+	},
+	pillPressed: {
+		opacity: 0.6,
 	},
 	pillLabel: {
 		fontSize: 10,

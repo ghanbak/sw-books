@@ -22,30 +22,32 @@ const span = (p: AnchorPill) => {
 };
 
 describe('layoutAnchorPills', () => {
-	it('gives every marker its own labeled pill — no merging', () => {
+	it('merges markers on the same date into one "+N" pill that keeps every member', () => {
 		const anchors: TimelineAnchor[] = [
 			{ title: 'The Mandalorian', kind: 'series', timeline_order: 9 },
 			{ title: 'Ahsoka', kind: 'series', timeline_order: 9 },
 			{ title: 'Skeleton Crew', kind: 'series', timeline_order: 9 },
 		];
 		const { pills, rows } = layoutAnchorPills(anchors, groups);
-		expect(pills.map((p) => p.label).sort()).toEqual([
+		expect(pills).toHaveLength(1);
+		expect(rows).toBe(1);
+		expect(pills[0]?.label).toBe('The Mandalorian +2');
+		expect(pills[0]?.members.map((m) => m.title)).toEqual([
+			'The Mandalorian',
 			'Ahsoka',
 			'Skeleton Crew',
-			'The Mandalorian',
 		]);
-		// all three sit on the same date, so they must stack into three rows
-		expect(rows).toBe(3);
-		expect(new Set(pills.map((p) => p.row)).size).toBe(3);
 	});
 
-	it('never lets two pills in the same row overlap', () => {
-		const anchors: TimelineAnchor[] = Array.from({ length: 12 }, (_, i) => ({
+	it('stacks overlapping pills on different dates instead of hiding any', () => {
+		const anchors: TimelineAnchor[] = Array.from({ length: 6 }, (_, i) => ({
 			title: `Some Fairly Long Title ${i}`,
 			kind: i % 2 ? 'film' : 'series',
-			timeline_order: 5 + (i % 4),
+			timeline_order: 5 + i,
 		}));
-		const { pills } = layoutAnchorPills(anchors, groups);
+		const { pills, rows } = layoutAnchorPills(anchors, groups);
+		expect(pills).toHaveLength(6);
+		expect(rows).toBeGreaterThan(1);
 		for (const a of pills) {
 			for (const b of pills) {
 				if (a === b || a.row !== b.row) continue;
@@ -65,7 +67,7 @@ describe('layoutAnchorPills', () => {
 			groups,
 		);
 		expect(rows).toBe(1);
-		expect(pills.every((p) => p.row === 0)).toBe(true);
+		expect(pills.every((p) => p.row === 0 && p.members.length === 1)).toBe(true);
 	});
 
 	it('truncates very long titles', () => {

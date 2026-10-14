@@ -60,20 +60,24 @@ export const TIMELINE_ANCHORS: TimelineAnchor[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Pill layout. Every marker gets its own labeled pill. Markers sit on an index-spaced
-// rail only RAIL_PITCH (28pt) apart and several share a year (four shows at 9 ABY), so
-// pills that would overlap are stacked into rows: first-fit by left edge, which uses the
-// fewest rows for a set of intervals. Row 0 sits right above the notches. The layout
-// doesn't depend on the current date, so pills never reshuffle mid-scrub.
-// Widths are estimated (no measurement pass), with a margin so real text never collides.
+// Pill layout. Markers sit on an index-spaced rail only RAIL_PITCH (28pt) apart and
+// several share a year (four shows at 9 ABY). Markers on the same date merge into one
+// pill ("The Mandalorian +3") that the rail can expand on tap; pills on different dates
+// that would still overlap are stacked into rows (first-fit by left edge — the fewest
+// rows for a set of intervals), so nothing is hidden. Row 0 sits right above the
+// notches. The layout doesn't depend on the current date, so pills never reshuffle
+// mid-scrub. Widths are estimated (no measurement pass), with a margin for safety.
 // ---------------------------------------------------------------------------
 
 export type AnchorPill = {
 	key: string;
-	/** Row-local x of the marker's date (rides the rail's translateX). */
+	/** Row-local x of the markers' date (rides the rail's translateX). */
 	x: number;
 	kind: MediaKind;
+	/** "Title" or "Title +N" when several markers share the date. */
 	label: string;
+	/** Every marker on this date, in curated order (first = the one named in `label`). */
+	members: TimelineAnchor[];
 	/** 0 = the row right above the notches; higher rows stack upward. */
 	row: number;
 };
@@ -85,13 +89,14 @@ const PILL_ICON = 10;
 const PILL_GAP = 3;
 const PILL_CHAR_W = 5.8; // ~10pt semibold glyph advance, rounded up for safety
 const PILL_SPACING = 6;
+const CLUSTER_PX = 6;
 const MAX_LABEL_CHARS = 24;
 
 export function estimatePillWidth(label: string): number {
 	return PILL_PAD_X * 2 + PILL_ICON + PILL_GAP + label.length * PILL_CHAR_W;
 }
 
-function truncate(title: string): string {
+export function truncateAnchorTitle(title: string): string {
 	return title.length > MAX_LABEL_CHARS ? `${title.slice(0, MAX_LABEL_CHARS - 1)}…` : title;
 }
 
@@ -101,25 +106,47 @@ export function layoutAnchorPills(
 ): AnchorLayout {
 	if (groups.length === 0 || anchors.length === 0) return { pills: [], rows: 0 };
 
+	// 1. Position every marker and merge those that land on (nearly) the same spot.
 	const placed = anchors
-		.map((a, i) => {
-			const label = truncate(a.title);
-			const x = groupCenterX(fractionalIndexForOrder(a.timeline_order, groups));
-			const half = estimatePillWidth(label) / 2;
-			return { a, i, label, x, lo: x - half, hi: x + half };
-		})
-		.sort((p, q) => p.lo - q.lo || p.i - q.i);
+		.map((a, i) => ({ a, i, x: groupCenterX(fractionalIndexForOrder(a.timeline_order, groups)) }))
+		.sort((p, q) => p.x - q.x || p.i - q.i);
+	const clusters: { x: number; members: TimelineAnchor[] }[] = [];
+	for (const p of placed) {
+		const last = clusters[clusters.length - 1];
+		if (last && p.x - last.x <= CLUSTER_PX) last.members.push(p.a);
+		else clusters.push({ x: p.x, members: [p.a] });
+	}
 
-	// rowEnds[r] = right edge (plus spacing) of the last pill placed in row r.
+	// 2. Stack any pills that still overlap into rows.
+	const sized = clusters
+		.map((c) => {
+			const first = c.members[0] as TimelineAnchor;
+			const extra = c.members.length - 1;
+			const label =
+				extra > 0
+					? `${truncateAnchorTitle(first.title)} +${extra}`
+					: truncateAnchorTitle(first.title);
+			const half = estimatePillWidth(label) / 2;
+			return { c, first, label, lo: c.x - half, hi: c.x + half };
+		})
+		.sort((p, q) => p.lo - q.lo);
+
 	const rowEnds: number[] = [];
-	const pills = placed.map(({ a, label, x, lo, hi }) => {
+	const pills = sized.map(({ c, first, label, lo, hi }) => {
 		let row = rowEnds.findIndex((end) => lo >= end);
 		if (row === -1) {
 			row = rowEnds.length;
 			rowEnds.push(0);
 		}
 		rowEnds[row] = hi + PILL_SPACING;
-		return { key: `${a.kind}-${a.title}`, x, kind: a.kind, label, row };
+		return {
+			key: c.members.map((m) => `${m.kind}-${m.title}`).join('|'),
+			x: c.x,
+			kind: first.kind,
+			label,
+			members: c.members,
+			row,
+		};
 	});
 
 	return { pills, rows: rowEnds.length };
