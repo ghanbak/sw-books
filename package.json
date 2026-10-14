@@ -71,13 +71,13 @@
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.0",
 		"@types/react": "~19.2.14",
-		"csv-parse": "^6.2.1",
+		"csv-parse": "^7.0.2",
 		"csv-stringify": "^6.7.0",
 		"p-limit": "6.2.0",
 		"patch-package": "8.0.1",
 		"tsx": "^4.21.0",
 		"typescript": "~6.0.3",
-		"vitest": "^4.1.7",
+		"vitest": "^4.1.11",
 		"zod": "^4.4.3"
 	},
 	"overrides": {

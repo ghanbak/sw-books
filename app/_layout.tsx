@@ -1,4 +1,3 @@
-import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { DarkTheme, ThemeProvider } from 'expo-router/react-navigation';
 import * as SplashScreen from 'expo-splash-screen';
@@ -33,17 +32,13 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-	const [fontsLoaded] = useFonts({
-		'sacul-high-alphabet': require('@/assets/fonts/sacul-high-alphabet.otf'),
-		'sacul-basic': require('@/assets/fonts/sacul-basic.otf'),
-	});
 	const [initialAurebesh, setInitialAurebesh] = useState<boolean | null>(null);
 
 	useEffect(() => {
 		loadAurebeshPref().then(setInitialAurebesh);
 	}, []);
 
-	const ready = fontsLoaded && initialAurebesh !== null;
+	const ready = initialAurebesh !== null;
 
 	useEffect(() => {
 		if (!ready) return;

@@ -3,6 +3,17 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Viewport wider than the 16:9 hero video: object-cover crops it top and bottom, so
+   the centered phone fills more of the height and the copy needs tighter spacing. */
+@custom-variant widescreen (@media (min-aspect-ratio: 16/9));
+
+/* Soft dark halo for text drawn over the hero video: keeps it legible when a bright
+   streak passes behind it. Built from the background token so it follows the theme. */
+@utility text-halo {
+	text-shadow: 0 1px 2px color-mix(in srgb, var(--background) 60%, transparent), 0 0 12px
+		color-mix(in srgb, var(--background) 70%, transparent);
+}
+
 /*
  * Ossus Archives admin — dark cinematic datapad palette.
  * Tokens mirror the mobile app's design system (see CLAUDE.md). The tool is
