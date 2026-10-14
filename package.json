@@ -55,7 +55,6 @@
 		"expo-text-extractor": "^2.0.0",
 		"expo-web-browser": "~56.0.6",
 		"isbn3": "^2.0.7",
-		"lucide-react-native": "^1.8.0",
 		"react": "19.2.3",
 		"react-content-loader": "^7.1.2",
 		"react-dom": "19.2.3",
