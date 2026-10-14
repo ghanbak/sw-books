@@ -5,6 +5,7 @@ import {
 	RAIL_PITCH,
 	clampIndex,
 	eraLabel,
+	fractionalIndexForOrder,
 	groupBooksByYear,
 	indexAtScreenX,
 	railTranslateX,
@@ -101,5 +102,37 @@ describe('rail geometry', () => {
 		expect(clampIndex(-3, 10)).toBe(0);
 		expect(clampIndex(99, 10)).toBe(9);
 		expect(clampIndex(4, 10)).toBe(4);
+	});
+});
+
+describe('fractionalIndexForOrder', () => {
+	// Notches at -100, 0, 50 → indices 0, 1, 2.
+	const groups = groupBooksByYear([
+		book({ title: 'A', timeline_order: -100 }),
+		book({ title: 'B', timeline_order: 0 }),
+		book({ title: 'C', timeline_order: 50 }),
+	]).groups;
+
+	it('returns the exact index for a date that matches a notch', () => {
+		expect(fractionalIndexForOrder(-100, groups)).toBe(0);
+		expect(fractionalIndexForOrder(0, groups)).toBe(1);
+		expect(fractionalIndexForOrder(50, groups)).toBe(2);
+	});
+
+	it('interpolates between the notches a date falls between', () => {
+		expect(fractionalIndexForOrder(-50, groups)).toBeCloseTo(0.5, 10);
+		expect(fractionalIndexForOrder(25, groups)).toBeCloseTo(1.5, 10);
+	});
+
+	it('clamps dates outside the catalog range to the first/last notch', () => {
+		expect(fractionalIndexForOrder(-9999, groups)).toBe(0);
+		expect(fractionalIndexForOrder(9999, groups)).toBe(2);
+	});
+
+	it('is safe for empty and single-notch rails', () => {
+		expect(fractionalIndexForOrder(5, [])).toBe(0);
+		const one = groupBooksByYear([book({ title: 'Solo', timeline_order: 7 })]).groups;
+		expect(fractionalIndexForOrder(-999, one)).toBe(0);
+		expect(fractionalIndexForOrder(999, one)).toBe(0);
 	});
 });

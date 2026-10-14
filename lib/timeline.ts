@@ -113,3 +113,32 @@ export function clampIndex(index: number, count: number): number {
 	'worklet';
 	return Math.min(Math.max(index, 0), count - 1);
 }
+
+/**
+ * Where an arbitrary date falls on the (index-spaced) rail, as a fractional group index —
+ * used to place film/TV anchors between the book notches they sit between. Dates outside
+ * the catalog's range clamp to the first/last notch.
+ *
+ * Relies on `groups` being sorted and strictly increasing in `order` (guaranteed by
+ * `groupBooksByYear`, which only opens a group when the date changes) — that is what makes
+ * the interpolation divide-by-zero-safe.
+ */
+export function fractionalIndexForOrder(order: number, groups: TimelineGroup[]): number {
+	if (groups.length <= 1) return 0;
+	const first = groups[0];
+	const last = groups[groups.length - 1];
+	if (!first || !last) return 0;
+	if (order <= first.order) return 0;
+	if (order >= last.order) return groups.length - 1;
+
+	for (let i = 0; i < groups.length - 1; i++) {
+		const lo = groups[i];
+		const hi = groups[i + 1];
+		if (!lo || !hi) break;
+		if (order >= lo.order && order <= hi.order) {
+			const span = hi.order - lo.order;
+			return span === 0 ? i : i + (order - lo.order) / span;
+		}
+	}
+	return groups.length - 1;
+}

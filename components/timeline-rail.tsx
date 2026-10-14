@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Film, Tv } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -15,9 +16,12 @@ import {
 	RAIL_PITCH,
 	type TimelineGroup,
 	clampIndex,
+	fractionalIndexForOrder,
+	groupCenterX,
 	indexAtScreenX,
 	railTranslateX,
 } from '@/lib/timeline';
+import { TIMELINE_ANCHORS } from '@/lib/timeline-anchors';
 
 /**
  * The notch rail beneath the Timeline hero. One tick per year-with-books, evenly
@@ -124,8 +128,32 @@ export function TimelineRail({
 		transform: [{ translateX: translateX.value }],
 	}));
 
+	// Films/TV placed on the same index-spaced axis as the notches (lerped between the two
+	// dates they fall between), so they ride the one shared translateX with the ticks.
+	const anchors = useMemo(
+		() =>
+			TIMELINE_ANCHORS.map((a) => ({
+				...a,
+				x: groupCenterX(fractionalIndexForOrder(a.timeline_order, groups)),
+			})),
+		[groups],
+	);
+
 	return (
 		<View style={styles.wrap}>
+			<View pointerEvents="none" style={styles.anchorsWindow}>
+				<Animated.View style={[styles.anchorRow, rowStyle]}>
+					{anchors.map((a) => (
+						<View key={`${a.kind}-${a.title}`} style={[styles.anchor, { left: a.x }]}>
+							{a.kind === 'film' ? (
+								<Film size={11} color={tokens.text.hint} strokeWidth={2} />
+							) : (
+								<Tv size={11} color={tokens.text.hint} strokeWidth={2} />
+							)}
+						</View>
+					))}
+				</Animated.View>
+			</View>
 			<GestureDetector gesture={Gesture.Race(pan, tap)}>
 				<View style={styles.ticksWindow}>
 					<Animated.View style={[styles.row, rowStyle]}>
@@ -155,6 +183,24 @@ const styles = StyleSheet.create({
 		height: 32,
 		overflow: 'hidden',
 		justifyContent: 'center',
+	},
+	// Film/TV markers along the top of the rail, clipped to the same window as the ticks.
+	anchorsWindow: {
+		width: '100%',
+		height: 14,
+		overflow: 'hidden',
+		justifyContent: 'center',
+	},
+	anchorRow: {
+		position: 'absolute',
+		left: 0,
+		height: 14,
+	},
+	anchor: {
+		position: 'absolute',
+		width: 12,
+		marginLeft: -6,
+		alignItems: 'center',
 	},
 	row: {
 		position: 'absolute',
