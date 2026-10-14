@@ -80,7 +80,17 @@ export default function BookDetailScreen() {
 		<View style={styles.container}>
 			<Stack.Screen
 				options={{
-					headerLargeTitle: true,
+					// No native large title: the book title is drawn in the body, so a large-title
+					// row here was just an empty band (a big gap above the title) with an opaque
+					// background that cut off the cover's hologram glow.
+					headerLargeTitle: false,
+					// The root stack gives every screen an opaque large-title background, and
+					// react-native-screens applies it to the bar's *scroll-edge* appearance — so at
+					// rest (scrolled to top) it painted a solid band that cut off the cover's glow.
+					// Transparent here, and no material blur: iOS 26+ draws its own soft scroll-edge
+					// effect once content scrolls under the bar.
+					headerLargeStyle: { backgroundColor: 'transparent' },
+					headerBlurEffect: 'none',
 					headerShadowVisible: false,
 					title: '',
 					headerBackTitle: 'Back',
