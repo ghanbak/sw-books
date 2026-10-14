@@ -40,7 +40,7 @@ export function HeroBackdrop() {
 	return (
 		<>
 			<img
-				src="/hero/hyperspace-poster.webp"
+				src="/hero/hyperspace-poster.v2.webp"
 				alt=""
 				width={1920}
 				height={1080}
@@ -52,8 +52,8 @@ export function HeroBackdrop() {
 				// No `preload`: autoPlay already forces the fetch, and the attribute would
 				// only override UA heuristics that back off on constrained connections.
 				<video
-					src="/hero/hyperspace-1080.mp4"
-					poster="/hero/hyperspace-poster.webp"
+					src="/hero/hyperspace-1080.v2.mp4"
+					poster="/hero/hyperspace-poster.v2.webp"
 					autoPlay
 					muted
 					loop
