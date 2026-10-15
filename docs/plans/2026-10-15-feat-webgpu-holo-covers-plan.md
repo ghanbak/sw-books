@@ -6,7 +6,7 @@ branch: claude/cover-art-hologram-3d-676408
 research: docs/brainstorms/2026-10-14-holo-cover-gpu-upgrade-research.md
 supersedes: docs/plans/2026-05-01-feat-3d-book-covers-real-mesh-renderer-plan.md (deferred mesh plan; its gap list is folded in below)
 reviewed: 2026-10-15 (architecture-strategist, performance-oracle, code-simplicity, kieran-typescript) — feedback folded in
-status: draft — revised after review; one scope question open (see Open Questions)
+status: draft — revised after review; open question resolved 2026-10-15 (tap-to-open added)
 ---
 
 # ✨ WebGPU + three.js Hologram Covers
@@ -36,7 +36,7 @@ List thumbnails don't change.
 | Measurement | Gates run on a **Release** device build (spike screen behind an env flag, not `__DEV__`), with Instruments. G3 budget is 8.3 ms at 120 Hz, including `present()`. | perf |
 | Deps | `react-native-webgpu@0.15.1` (now latest). Exact pins via `-- --save-exact`. Correct `--save-dev` syntax. `three/webgpu`-only imports enforced by Biome. `.js` addon paths. No `@webgpu/types`. | TS |
 | Phases | 6 → 4. Hardening folded into each phase's exit criteria. | simplicity |
-| Navigation fact | **Timeline pages aren't tappable today.** Detail is reached from `book-card.tsx` (Archives/Library/Search) and the barcode scanner. The two-renderer case is "Timeline mounted but blurred, detail pushed from another tab". Tap-to-open from the Timeline is an open question. | arch |
+| Navigation fact | **Timeline pages weren't tappable.** Detail was only reachable from `book-card.tsx` (Archives/Library/Search) and the barcode scanner. **Resolved:** tap-to-open added in Phase 2, so Timeline → detail becomes the main two-renderer flow. | arch, user |
 
 **Considered and not adopted:**
 - a `GPUDeviceProvider` at the root (blocks rendering of the whole app tree)
@@ -59,10 +59,7 @@ List thumbnails don't change.
 - **Shared GPU device.** A blurred Timeline pauses.
 - **Shared-element transitions:** RN view → GPU canvas isn't possible. Any future transition targets `HoloFace`.
 - **Platform:** 3D is **iOS-only**. Android and web report `unavailable` and render `HoloFace`.
-
-## Open Questions
-
-1. **Add tap-to-open on Timeline pages?** Today the Timeline is browse-only. Adding `router.push('/book/[id]')` from a page makes "Timeline → detail" the common two-renderer flow, and it's cheap to add in Phase 2. *Default if unanswered: not in scope.*
+- **Tap-to-open (2026-10-15):** tapping a Timeline page opens that book's detail. It uses `router.push(`/book/${book.id}`)`, as `book-card.tsx` does, and it's built in Phase 2.
 
 ## Current State (grounded)
 
@@ -178,7 +175,7 @@ function clearQuadMeshListeners(): void {
 
 ### Stage controller (`stage.ts`): React Compiler-safe
 
-`createHoloStage(context, device, opts) → { setBooks, setSize, setScroll, setReduceMotion, pause, resume, dispose, onFirstFrame }`
+`createHoloStage(context, device, opts) → { setBooks, setSize, setScroll, setReduceMotion, setPressed, pause, resume, dispose, onFirstFrame }`
 
 - **Owns everything:** renderer, scene, pipeline and textures live inside the controller (effect-local), never in React state or render-time refs.
 - **`holo-stage.tsx`** creates the controller in one mount effect. It syncs props through small effects that call setters, keyed on derived primitives (a joined URI string and `width`), not `data.books` identity.
@@ -244,9 +241,13 @@ All geometry is procedural; there are no asset files. Verify TSL node names agai
 ```
 
 - **Cells:**
-  - When `ready`, a cell is a transparent `View` with `accessibilityLabel="{title} by {author}"` and any overlays (no-cover title; canon badges if the timeline-improvements plan ships).
-  - When not `ready`, the cell renders `HoloFace`.
+  - A cell is a `Pressable` with `onPress={() => router.push(`/book/${book.id}`)}` (the `book-card.tsx` idiom), `accessibilityRole="button"` and `accessibilityLabel="{title} by {author}"`.
+  - When `ready`, the cell is transparent and holds any overlays (no-cover title; canon badges if the timeline-improvements plan ships).
+  - When not `ready`, it renders `HoloFace` inside the same `Pressable`.
   - The canvas is `accessible={false}`.
+- **Tap target:** limit the pressable area to the card rectangle (`coverW × coverH`, centred, using the same projection as the cards), not the whole page, so taps on empty space don't navigate.
+- **Swipe vs tap:** the horizontal pan takes over from a `Pressable` once it moves past the touch slop (standard RN behaviour). Verify that flings never trigger a push.
+- **Press feedback:** on press-in, `controller.setPressed(index, true)` briefly brightens the card and emitter through a uniform. Only the canvas reacts, with no RN layer on top. Under reduce motion, use `Haptics.selectionAsync()` instead (`expo-haptics` is already installed).
 - **Scroll sync:**
   - `useAnimatedScrollHandler` writes `contentOffset.x` into a SharedValue on the UI thread. FlashList is wrapped with `Animated.createAnimatedComponent`.
   - Each frame, the loop reads `scrollX.get()` and positions cards with `pager.ts`.
@@ -273,7 +274,14 @@ All geometry is procedural; there are no asset files. Verify TSL node names agai
 - `app/book/[id].tsx` replaces `<HoloCover variant="hero" />` with `<HoloStage books={[book]} />`: the same component, no `scrollX`, an oversized canvas around the 200×300 footprint.
 - **First paint:** `HoloFace` stays mounted until `onFirstFrame`. That fires after the first `present()` + `device.queue.onSubmittedWorkDone()`, which follows `await renderer.compileAsync(scene, camera)` plus one warm-up pipeline render. Then `HoloFace` unmounts, with no animation.
 - **Pausing:** the same `useFocusEffect`/`AppState` rule (detail can be covered by another detail or a modal).
-- **Two live renderers:** with a mounted-but-blurred Timeline, two renderers exist on the shared device. Only detail draws. The counter means the #445 listener clear runs only when the last one is disposed.
+- **Two live renderers: the main flow is now Timeline → tap → detail.**
+  - The Timeline blurs and pauses straight away (no render or present). Its renderer stays alive for 30 s, so coming back within that time resumes at once.
+  - Detail creates its own renderer on the shared device, so only one renderer draws at a time.
+  - The detail cover's encoded bytes are already in the shared cache (the Timeline just loaded them), so detail only pays decode + upload, not the network fetch.
+  - Popping back disposes the detail renderer. The count is still 1, so the #445 listener clear doesn't run. The Timeline resumes.
+  - A visit longer than 30 s disposes the Timeline. Back then shows `HoloFace` until the Timeline re-inits (warm init, G2).
+  - Archives/Library → detail (Timeline mounted but blurred, or never mounted) follows the same rules.
+- **Timeline and detail stages are separate instances:** both canvases are on screen during the push transition, so a single stage can't move between screens.
 
 ## Implementation Phases
 
@@ -320,7 +328,8 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
   - `cardTransform(index, scrollX, pageWidth) → { offset, rotationY, opacity, visible }`
   - `windowIndices(active, count, radius = 1)`
   - the px↔world projection
-  - Tests: `pageWidth === 0` (no NaN), first and last page, overscroll, window at both ends.
+  - `cardRect(pageWidth, pageHeight, coverW, coverH)` → the centred card rectangle in cell coordinates, used for both the tap target and overlay placement
+  - Tests: `pageWidth === 0` (no NaN), first and last page, overscroll, window at both ends, `cardRect` centring.
 - `lib/holo3d/runtime/{gpu,textures,scene,stage}.ts` per the Architecture section. Export `HoloFace`.
 - **Tune on the spike screen** using `__DEV__`-time constants (no preset UI). Compare with Figma node `134:2077` and today's 2D hero. Particles come last and are time-boxed.
 - **Exit:** the user approves the look from simulator screenshots or a recording.
@@ -328,10 +337,12 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
 ### Phase 2 — Timeline
 
 - `components/holo-stage.tsx` (lazy), an `AnimatedFlashList` scroll handler, transparent/`HoloFace` cells by status, pausing + 30 s dispose.
+- **Tap-to-open:** `Pressable` cells limited to the card rectangle, `router.push(`/book/${book.id}`)`, the press-in brighten uniform, and the haptic under reduce motion.
 - **Remove the hero `HoloCover` from the Timeline.**
 - **Exit:**
   - G3 and G7 re-checked on the real screen
   - fling and rail-scrub (if shipped) behave
+  - tapping a card opens the right book; flings and drags never push; taps outside the card don't navigate
   - filter change rebinds textures
   - status ≠ ready shows `HoloFace` (test with `EXPO_PUBLIC_HOLO_3D=0`)
   - VoiceOver reads the cells
@@ -341,8 +352,10 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
 - `<HoloStage books={[book]} />` in `app/book/[id].tsx`, with the `onFirstFrame` swap and pausing.
 - **Delete** `Projector`, `StaticHero`, `TiltedHero` and the `variant`/`tilt` props from `holo-cover.tsx`. Remove `NSMotionUsageDescription` from `app.json` if nothing else uses motion (`expo-sensors` stays only if it's still used elsewhere).
 - **Exit:**
-  - Archives → detail with the Timeline mounted-but-blurred: one drawing renderer, and the #445 clear runs only at count 0
-  - 100 cycles of Timeline ↔ (tab switch) ↔ detail with no memory growth
+  - **Timeline → tap → detail → back:** one drawing renderer at a time; resuming within 30 s needs no re-init; #445 clear runs only at count 0
+  - Archives → detail with the Timeline mounted-but-blurred behaves the same way
+  - 100 cycles of Timeline → tap → detail → back, plus 100 cycles of tab switch → detail, with no memory growth
+  - a detail visit longer than 30 s: back shows `HoloFace`, then the Timeline re-inits
   - background/foreground
   - a **10-minute device soak** (Power Profiler, thermal state), including Low Power Mode at 60 Hz
 - **Degrade order if hot:** bloom off → idle throttle → `unavailable`.
@@ -360,12 +373,13 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
 
 **Functional**
 - [ ] The Timeline renders every hero through **one** canvas and renderer. Cards and their overlays stay in step (≤1 frame) while dragging and flinging.
+- [ ] Tapping a Timeline card opens that book's detail. Drags and flings never navigate, and taps outside the card rectangle don't navigate. Back within 30 s resumes the Timeline at once.
 - [ ] Book detail renders the 3D hero with bloom unclipped. `HoloFace` → 3D has no blank frame.
 - [ ] Books without covers show a tinted card with legible RN title and author.
 - [ ] Archive, Library, added-books sheet and scan review are visually unchanged.
 - [ ] `unavailable` (env switch, non-iOS, no WebGPU, init/frame failure, device loss) shows `HoloFace` on both surfaces, for the rest of the session.
 - [ ] Reduce Motion: no flicker, scanline motion or sway, and no rendering while idle.
-- [ ] VoiceOver reads each Timeline page as "{title} by {author}". The canvas isn't focusable.
+- [ ] VoiceOver reads each Timeline page as a button, "{title} by {author}", and double-tap opens detail. The canvas isn't focusable.
 
 **Performance (Release build, physical device)**
 - [ ] G2: warm first frame <400 ms, cold <1 s, with segments reported.
