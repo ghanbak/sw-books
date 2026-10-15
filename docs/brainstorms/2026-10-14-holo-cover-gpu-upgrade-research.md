@@ -30,7 +30,9 @@ This reverses the May 2026 deferral. Two things answer its cost objection:
 - **One persistent canvas behind the Timeline pager.** There's one GPU device and one renderer. Paging swaps the cover texture and animates the transition. Init and GPU memory are paid once per tab, not once per page.
 - **The detail screen gets its own canvas while it's open.** Pushing it from the Timeline means two canvases are live at once, so it should either share the GPU device or the Timeline should pause rendering while it's covered.
 - **Lists never touch the GPU.**
-- **Open question:** item 8 of the May plan applies. A list thumbnail, which is an RN view, can't shared-element-transition into a GPU canvas. If detail transitions are wanted later, transition into the static `HoloFace` and crossfade to 3D.
+- **Shared-element transitions (agreed):** item 8 of the May plan applies. A list thumbnail, which is an RN view, can't shared-element-transition into a GPU canvas. If detail transitions are wanted later, transition into the static `HoloFace` and crossfade to 3D.
+
+The scope and the points above were agreed with the product owner on 2026-10-14.
 
 The rendering-cost list in [the May plan](../plans/2026-05-01-feat-3d-book-covers-real-mesh-renderer-plan.md#if-we-ever-do-build-the-real-mesh) still applies:
 - disposal
