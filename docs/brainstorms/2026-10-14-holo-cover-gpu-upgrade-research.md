@@ -118,6 +118,44 @@ iOS 26 adds nothing specific beyond Liquid Glass, which we already use.
 3. Move to Skia v3 once it's stable, then decide whether C (a real 3D book on the detail screen) is worth it.
 4. Keep B as the fallback if Skia's binary size or double image decoding turns out to cost too much.
 
+## How 3D has been done in React Native (prior art and docs)
+
+npm figures are monthly downloads, checked 2026-10-14.
+
+| Era / approach | Package (latest, downloads/mo) | Status | Docs |
+|---|---|---|---|
+| **2017+: WebGL over OpenGL ES** — three.js on `expo-gl` via `expo-three` | `expo-gl` 57.0.2 (1.05M) · `expo-three` 8.0.0 (239K) | expo-gl is still shipped, but OpenGL ES is deprecated on Apple. expo-three's repo hasn't been pushed since 2024-07, and developers report slow model loading on the JS thread. | [expo-three](https://github.com/expo/expo-three), [three.js forum](https://discourse.threejs.org/t/threejs-with-react-native-using-expo/20598) |
+| **R3F on native** — `@react-three/fiber/native` over expo-gl | `@react-three/fiber` 9.8.2 | The native path has known performance problems. The WebGPU successor `@react-three/native` isn't on npm, and its README says "do not use yet". | [pmndrs/native](https://github.com/pmndrs/native), [state of R3F in Expo](https://trifonstatkov.medium.com/the-current-state-of-using-react-three-fiber-in-react-native-expo-c65918593eaf) |
+| **Babylon React Native** (Microsoft/Babylon team) — Babylon Native C++ engine | `@babylonjs/react-native` 2.0.6 (1.7K) | Active: released 2026-10-12, peers `react-native: *`, `@babylonjs/core >=9`. The README still says "early phase" (touch input only, single view), and the forum shows people hitting version lag. Babylon, not three.js. | [repo](https://github.com/BabylonJS/BabylonReactNative), [Babylon blog](https://babylonjs.medium.com/babylon-react-native-bringing-3d-and-xr-to-react-native-applications-7928b55acc85) |
+| **ViroReact** — AR/VR scenes | `@reactvision/react-viro` 3.0.3 (20K) | Maintained (ReactVision, 1.8K★, pushed 2026-10-12). Built for AR/VR, so it's the wrong tool for an in-app card. | [repo](https://github.com/ReactVision/viro), [docs](https://docs.viromedia.com/docs/3d-objects) |
+| **Filament** (Margelo) — Google's Filament PBR engine over JSI | `react-native-filament` 1.11.0 (53K) | Maintained but slow (last release 2026-05). Uses glTF and its own declarative API; custom materials need its `matc` compiler. | [repo](https://github.com/margelo/react-native-filament) |
+| **Game engines embedded** — Unity as a Library, Godot | `@azesmway/react-native-unity` (6.7K) · `react-native-godot` (381) | Niche. A whole engine runtime for one view. | — |
+| **2024+: WebGPU (Metal on iOS)** — three.js `WebGPURenderer` on `react-native-webgpu` | `react-native-webgpu` 0.14.2 (140K, 1.3K★, pushed today) | **The current, documented path, and the one we chose.** Backed by Shopify and Software Mansion. Its README still calls it a technical preview. | see below |
+
+**Primary documentation for our stack:**
+- **react-native-webgpu → [Three.js integration](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/integrations/three-js.mdx)** (published at https://wcandillon.github.io/react-native-webgpu/). It covers:
+  - import from `three/webgpu`
+  - a Metro alias for `three/addons`
+  - the `fast-text-encoding` polyfill for Hermes
+  - `@types/three` tsconfig setup
+  - creating `WebGPURenderer` with our own `GPUDevice` (so we can tear it down and share it)
+  - `setAnimationLoop()` + `context.present()` every frame
+  - `await renderer.init()` if we drive frames ourselves
+  - There's also a **hosted Expo template** with a Three.js option. Sibling page: [react-three-fiber.mdx](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/integrations/react-three-fiber.mdx).
+- **The library's example app, [`apps/example/src/ThreeJS/`](https://github.com/wcandillon/react-native-webgpu/tree/main/apps/example/src/ThreeJS)**, has working RN screens that map straight onto our needs:
+  - `PostProcessing.tsx` → bloom
+  - `List.tsx` → canvases in a list or pager
+  - `Memory.tsx` → teardown and leak behaviour
+  - `ToneMapping.tsx`
+  - `Helmet.tsx` → glTF PBR with an HDR environment
+  - `InstancedMesh.tsx` → particles
+  - `Backdrop.tsx`, `Fiber.tsx` (R3F)
+- **Shopify Engineering, [The Future of React Native Graphics: WebGPU, Skia, and Beyond](https://shopify.engineering/webgpu-skia-web-graphics)** (2025): the rationale and roadmap. three.js examples run unchanged on RN WebGPU, and Skia Graphite will let Skia and three.js share a GPU device.
+- **Software Mansion, [react-native-webgpu-worklets](https://github.com/software-mansion-labs/react-native-webgpu-worklets)**: three.js, wgpu-matrix and TypeGPU running on Reanimated worklets on the UI thread. Its last push was 2025-08 (0.3.0, 367/mo), so treat it as a reference; react-native-webgpu now supports worklet runtimes itself.
+- **three.js manual, [WebGPURenderer](https://threejs.org/manual/en/webgpurenderer)** and the official `webgpu_*` examples at r186, for TSL, `RenderPipeline` and bloom.
+
+**Conclusion:** we don't need a third-party skill to learn this stack. The library's own docs plus its example screens are the authoritative reference. A project skill distilled from them, pinned to our versions, beats any skill on skills.sh.
+
 ## Skills for the chosen stack (WebGPU + three.js)
 
 **Method.** I searched the skills.sh search API (`/api/search`) for: webgpu, threejs, three, tsl, typegpu, shader, r3f, react three fiber, webgl, 3d, postprocessing, bloom, wgsl, react-native-webgpu and lighting. Anything under **1,000 installs** was dropped. I then read the SKILL.md and references of each finalist from GitHub; nothing was installed. Install counts are a weak signal: identical "product-photography" clones and browser-evasion skills sit at 18K–94K installs.
