@@ -111,14 +111,38 @@ This is the route for a real book mesh, a volumetric beam, GPU particles and rea
 
 iOS 26 adds nothing specific beyond Liquid Glass, which we already use.
 
-## Recommended path
+## Recommended path (pre-decision; superseded by the decision above)
 1. **Spike A on the Timeline:** Skia 2.15.x, one `HoloShader` component, mounted on the active page ±1, with tilt turned back on.
    - Measure the binary size change, first-frame time when paging, GPU memory over 100 page flips, and FPS on a device. The simulator ignores the gyro.
 2. If the spike holds up, use the same component for the detail hero, and keep thumbnails as they are.
 3. Move to Skia v3 once it's stable, then decide whether C (a real 3D book on the detail screen) is worth it.
 4. Keep B as the fallback if Skia's binary size or double image decoding turns out to cost too much.
 
-## Skills for 3D/shader work
+## Skills for the chosen stack (WebGPU + three.js)
+
+**Method.** I searched the skills.sh search API (`/api/search`) for: webgpu, threejs, three, tsl, typegpu, shader, r3f, react three fiber, webgl, 3d, postprocessing, bloom, wgsl, react-native-webgpu and lighting. Anything under **1,000 installs** was dropped. I then read the SKILL.md and references of each finalist from GitHub; nothing was installed. Install counts are a weak signal: identical "product-photography" clones and browser-evasion skills sit at 18K–94K installs.
+
+**The projects behind the stack don't publish relevant skills.** three.js/mrdoob has none. wcandillon (react-native-webgpu, Skia) has none. pmndrs's best is 248 installs. Shopify's skills are commerce-only, and Margelo's are MMKV, Nitro and VisionCamera. Below are the company-published skills plus the strongest individual ones:
+
+| Skill | Installs | Publisher | Covers our stack? | Fit |
+|---|---|---|---|---|
+| `dgreenheck/webgpu-claude-skill` → `webgpu-threejs-tsl` | 1,282 | Dan Greenheck: three.js educator (threejsroadmap.com, EZ-Tree), 1.2K★ repo | Yes: `three/webgpu` + TSL node materials, `Fn()`, compute, post-processing, device loss. Aligned to **r183** (we're on r186). Examples use the DOM, so they need adapting to the RN canvas. No license. | **High** — shaders and materials |
+| `software-mansion-labs/skills` → `react-native-best-practices` | 5,434 | **Software Mansion** (Reanimated, worklets, TypeGPU), MIT | Its `references/animations/gpu-animations.md` covers the react-native-webgpu canvas and device, the required `context.present()`, passing the device to worklets via `scheduleOnUI`, and minimum versions (Reanimated ≥4.2.1, worklets ≥0.7.2; we meet both). It uses the package's old name `react-native-wgpu`. three.js coverage is about 15 lines, with no TSL. | **High** — RN↔GPU glue |
+| `emalorenzo/three-agent-skills` → `three-best-practices` | 1,331 | Emanuel Lorenzo, individual creative dev | Mostly WebGL-first, but has TSL, mobile-optimization, `shader-mobile` and disposal rules (three 0.182+). Only 26 of ~120 indexed rule files exist, and it recommends the deprecated `renderAsync`. | Medium — performance and disposal |
+| `software-mansion-labs/skills` → `typegpu` | 1,536 | **Software Mansion** | Raw TypeGPU/WGSL, including `@typegpu/react` on RN worklets. Explicitly not three.js. Its setup tells the agent to swap `typescript` for `npm:tsover` and run `npx typegpu --enhance`; we'd decline both. | Medium — only if we add raw compute passes |
+| `expo/skills` → `expo-animation` | 12,563 | **Expo** (with Emil Kowalski), MIT | Reanimated, gestures and router transitions. No WebGPU, three.js or shaders. Runs `npx submit-expo-feedback` for feedback. | Low |
+| `cloudai-x/threejs-skills` (fundamentals, shaders, lighting, postprocessing) | 11K–15K | Anonymous account created 2026-01; one commit dump, never updated | WebGL + GLSL only. Its single WebGPU snippet uses outdated imports and a class r183 renamed. | Low — points to the wrong renderer |
+| `heygen-com/hyperframes` → `three` / `typegpu` | 69K / 51K | **HeyGen** | Browser `WebGLRenderer`/`navigator.gpu` tied to HyperFrames video rendering. Both standalone skills were removed on 2026-06-14. | None |
+| `vercel-labs/json-render` → `react-three-fiber` | 2,247 | **Vercel Labs** | JSON-described R3F scenes for json-render only. | None |
+
+**Picks:**
+1. **`dgreenheck/webgpu-threejs-tsl`** — the three.js layer: TSL materials, the holo shader, bloom.
+2. **Software Mansion `react-native-best-practices`** — the React Native layer: webgpu canvas, worklets, Reanimated-driven uniforms. Its name clashes with the installed Callstack `react-native-best-practices`, so install it under a different name or keep only `references/animations/`.
+3. *(Optional)* `emalorenzo/three-best-practices` for mobile performance and disposal. Ignore its WebGL defaults and `renderAsync` advice.
+
+Read before installing. dgreenheck and emalorenzo have no LICENSE file. Nothing in either runs scripts.
+
+## Earlier skills survey (pre-decision)
 
 **Already installed (`~/.agents/skills`):**
 - `overdrive` — ambitious shader and motion UI
