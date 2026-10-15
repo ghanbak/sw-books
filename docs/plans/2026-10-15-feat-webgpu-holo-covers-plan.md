@@ -5,25 +5,49 @@ date: 2026-10-15
 branch: claude/cover-art-hologram-3d-676408
 research: docs/brainstorms/2026-10-14-holo-cover-gpu-upgrade-research.md
 supersedes: docs/plans/2026-05-01-feat-3d-book-covers-real-mesh-renderer-plan.md (deferred mesh plan; its gap list is folded in below)
-status: draft — not reviewed
+reviewed: 2026-10-15 (architecture-strategist, performance-oracle, code-simplicity, kieran-typescript) — feedback folded in
+status: draft — revised after review; one scope question open (see Open Questions)
 ---
 
 # ✨ WebGPU + three.js Hologram Covers
 
-Replace the 2D `HoloCover` **hero** on the Timeline tab and the book detail screen with a real-time
-3D hologram rendered by three.js (`three/webgpu`, TSL node materials) on `react-native-webgpu` (Metal
-on iOS). It will have:
+Replace the 2D `HoloCover` **hero** on the Timeline tab and the book detail screen with a real-time 3D
+hologram, rendered by three.js (`three/webgpu`, TSL node materials) on `react-native-webgpu` (Metal on iOS). It has:
 - a projector emitter and a volumetric light cone
-- the cover projected onto a floating card, with scanlines, flicker and a chromatic fringe
-- a fresnel rim and a tilt-reactive sheen
-- drifting particles and real bloom
+- the cover projected onto a floating card, with scanlines, flicker and a fresnel rim
+- real bloom
 
 List thumbnails don't change.
 
+## Review changes (2026-10-15)
+
+| Area | Change | From |
+|---|---|---|
+| Fallback | Error boundaries miss async init, frame-loop and `device.lost` failures. Replaced `HoloFallback.tsx` with a **status store** (`useHolo3DStatus()`) that stages report into. Cells and the detail screen branch on it. The fallback is static `HoloFace`, not the old projector hero. | arch, TS, simplicity |
+| Dead code | Delete `Projector` / `StaticHero` / `TiltedHero` and the `variant`/`tilt` props **when each hero site migrates**, not a release later. | simplicity, arch |
+| Scope cuts | No device-loss retry (loss → unavailable for the session). No gyro tilt in v1 (moved to Stretch). No animated crossfade (swap after the first frame is on screen). Chromatic fringe moved after the look is approved. | simplicity |
+| Kill-switch | It's a build-time env switch (`EXPO_PUBLIC_HOLO_3D=0`), not a remote one. It's used to test the fallback path. | arch, TS |
+| Modules | 11 files → 6. One stage component for both surfaces. Imperative controller, so the React Compiler can't hand the frame loop stale values. Runtime modules in `lib/`, kebab-case names. Lazy-loaded so three isn't evaluated at app start. | simplicity, arch, TS |
+| Textures | Cache **encoded bytes**, not decoded bitmaps. Each stage owns its GPU textures for its window only, so nothing is shared to evict. **Mandatory downscale** to ≤640×960. Upload ahead of time with `renderer.initTexture()` while idle, never mid-swipe. | perf, arch, TS |
+| Pausing | `setAnimationLoop(null)` leaves three's internal tick running. Pause means no render/present, driven imperatively by `useFocusEffect` + `AppState`. **Dispose after 30 s blurred**, re-init on focus. | perf, arch |
+| Scroll sync | The "shared clock" claim was wrong. Scroll offset now comes from a Reanimated scroll handler (UI thread) into a SharedValue that the loop reads. New spike gate **G7** measures overlay↔card drift. | perf, arch |
+| Resolution | Pixel ratio capped (≤2; 1.5 on Timeline). Canvas sized to the card + beam band. `antialias: false`. Bloom at reduced scale. Flicker computed on the CPU. | perf |
+| Warm-up | `compileAsync` before the first frame. G2 split into segments. Cold/warm defined. | perf |
+| Measurement | Gates run on a **Release** device build (spike screen behind an env flag, not `__DEV__`), with Instruments. G3 budget is 8.3 ms at 120 Hz, including `present()`. | perf |
+| Deps | `react-native-webgpu@0.15.1` (now latest). Exact pins via `-- --save-exact`. Correct `--save-dev` syntax. `three/webgpu`-only imports enforced by Biome. `.js` addon paths. No `@webgpu/types`. | TS |
+| Phases | 6 → 4. Hardening folded into each phase's exit criteria. | simplicity |
+| Navigation fact | **Timeline pages aren't tappable today.** Detail is reached from `book-card.tsx` (Archives/Library/Search) and the barcode scanner. The two-renderer case is "Timeline mounted but blurred, detail pushed from another tab". Tap-to-open from the Timeline is an open question. | arch |
+
+**Considered and not adopted:**
+- a `GPUDeviceProvider` at the root (blocks rendering of the whole app tree)
+- texture refcounting (made unnecessary by per-stage textures)
+- a separate `params.ts` (`THREE.Color` already does sRGB→linear)
+- worklets Bundle Mode up front (stays a stretch escape hatch)
+
 ## Decisions (user-confirmed 2026-10-14)
 
-- **Stack:** `react-native-webgpu` + three.js WebGPURenderer/TSL. Not Skia, not R3F, not native Metal/RealityKit. The research doc has the comparison.
-- **Scope:** split by the existing `HoloCover` `variant` prop:
+- **Stack:** `react-native-webgpu` + three.js WebGPURenderer/TSL. The research doc has the comparison.
+- **Scope**, split by the existing `HoloCover` `variant` prop:
 
   | Surface | Today | After |
   |---|---|---|
@@ -31,303 +55,365 @@ List thumbnails don't change.
   | Book detail (`app/book/[id].tsx`) | `variant="hero"` | **3D hero** |
   | Archive/Library rows, added-books sheet, scan review | `variant="thumb"` | **Unchanged** |
 
-- **Timeline uses one shared canvas behind the pager**, not one per page.
-- **Detail on top of the Timeline:** both canvases share one GPU device, and the Timeline pauses while it's covered.
-- **Shared-element transitions:** a list thumbnail (an RN view) can't transition into a GPU canvas. Any future transition targets the static `HoloFace`, then crossfades to 3D.
+- **Timeline:** one shared canvas behind the pager, not one per page.
+- **Shared GPU device.** A blurred Timeline pauses.
+- **Shared-element transitions:** RN view → GPU canvas isn't possible. Any future transition targets `HoloFace`.
+- **Platform:** 3D is **iOS-only**. Android and web report `unavailable` and render `HoloFace`.
+
+## Open Questions
+
+1. **Add tap-to-open on Timeline pages?** Today the Timeline is browse-only. Adding `router.push('/book/[id]')` from a page makes "Timeline → detail" the common two-renderer flow, and it's cheap to add in Phase 2. *Default if unanswered: not in scope.*
 
 ## Current State (grounded)
 
 - **`components/holo-cover.tsx`** has two variants:
-  - `thumb` = `HoloFace`: a blue `LinearGradient` tint, the cover with `mixBlendMode: 'luminosity'`, scanline Views, and inset + outer `boxShadow` glow.
-  - `hero` = `HoloFace` + `Projector`, a `LinearGradient` beam and emitter whose opacity pulses via `withRepeat`, plus optional `TiltedHero` (`useAnimatedSensor` ROTATION). Both hero call sites pass `tilt={false}`.
-- **Timeline:** a horizontal `FlashList` pager (`snapToInterval={width}`, `disableIntervalMomentum`) with one `HoloCover` hero per page (`coverW = min(220, width*0.55)`, `coverH = coverW*1.5`). `onViewableItemsChanged` sets `activePage`. The body is offset by `useHeaderHeight()`. `TimelineRail` sits below.
-- **Book detail:** `app/book/[id].tsx` puts a `HoloCover` hero at 200×300 inside a `ScrollView` with `headerLargeTitle`. `book/[id]` is a **root Stack screen**, so the `(tabs)` navigator, and with it the Timeline, **stays mounted underneath**.
-- **Tokens:** `tokens.holo.*` in `constants/tokens.ts` (cyan `#3DE0FF`, tints, scanline, bloom, inner glow). `tokens.surface.background` is `#0A0A0C`.
+  - `thumb` = `HoloFace`: a `LinearGradient` tint + cover with `mixBlendMode: 'luminosity'`, scanline Views, `boxShadow` glow.
+  - `hero` = `HoloFace` + `Projector` (beam/emitter `LinearGradient`s pulsing via `withRepeat`), plus `TiltedHero`, which is dead because both call sites pass `tilt={false}`.
+  - `HoloFace` and `CoverFace` aren't exported.
+- **Timeline:**
+  - a horizontal `FlashList` pager (`snapToInterval={width}`, `disableIntervalMomentum`)
+  - one hero per page: `coverW = min(220, width*0.55)`, `coverH = coverW*1.5`
+  - `renderItem` has **no press handler**
+  - `onViewableItemsChanged` → `activePage` React state → `TimelineRail`
+  - `data.books.length === 0` → empty state replaces `listWrap`
+- **Book detail:** `app/book/[id].tsx`, with a hero at 200×300 inside a `ScrollView` with `headerLargeTitle`. Reached from `components/book-card.tsx` and `components/barcode-scan-panel.tsx`.
+  - `book/[id]` is a root Stack screen pushed over `(tabs)`, which is `NativeTabs` (`expo-router/unstable-native-tabs`).
+- **Covers:** `book.cover_image` is a remote URL from mixed hosts (penguinrandomhouse.com, books.google.com, …). There's no reliable sized-variant API across hosts.
+- **Tokens:** `tokens.holo.*` in `constants/tokens.ts` (no imports, so it's test-safe).
 - **Config:**
-  - Expo SDK 56, RN 0.85.3, New Arch, `reactCompiler: true`, iOS deployment target 16.4
-  - Reanimated 4.3.1, worklets 0.8.3
-  - **No `metro.config.js`** and no `babel.config.js` (Expo defaults)
-  - `tsconfig` extends `expo/tsconfig.base` (`moduleResolution: "bundler"`)
-- **Tests:** Vitest, `environment: 'node'`, `**/*.test.ts`. Only pure TS logic is testable; there's no native or GPU testing.
+  - Expo SDK 56, RN 0.85.3, New Arch, `reactCompiler: true`
+  - Reanimated 4.3.1, worklets 0.8.3, Biome 1.9.4
+  - **No `metro.config.js`**
+  - `tsconfig` extends `expo/tsconfig.base` (`lib: ["DOM","ESNext"]`, `moduleResolution: "bundler"`, `skipLibCheck`)
+  - No `expo-updates`, so no remote config
+- **Tests:** Vitest, `environment: 'node'`, `**/*.test.ts`. Only pure TS; nothing that imports `three` or native modules.
 
 ## Research Findings (from the library's own docs and examples)
 
 Sources:
-- [three.js integration](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/integrations/three-js.mdx)
-- [Canvas](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/getting-started/canvas.mdx)
-- [Native APIs](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/getting-started/native-api.mdx)
-- [React APIs](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/getting-started/react-api.mdx)
-- [Worklets](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/integrations/worklets.mdx)
-- [Expo](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/getting-started/expo.mdx)
-- example screens in [`apps/example/src/ThreeJS/`](https://github.com/wcandillon/react-native-webgpu/tree/main/apps/example/src/ThreeJS): `Cube`, `PostProcessing`, `Memory`, `InstancedMesh`, and `components/makeWebGPURenderer.ts`
+- react-native-webgpu docs: [three.js](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/integrations/three-js.mdx), [Canvas](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/getting-started/canvas.mdx), [Native APIs](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/getting-started/native-api.mdx), [React APIs](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/getting-started/react-api.mdx), [Worklets](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/integrations/worklets.mdx), [Expo](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/getting-started/expo.mdx)
+- example screens in [`apps/example/src/ThreeJS/`](https://github.com/wcandillon/react-native-webgpu/tree/main/apps/example/src/ThreeJS): `Cube`, `PostProcessing`, `Memory`, `InstancedMesh`, `components/makeWebGPURenderer.ts`
 
 | Topic | What the docs say | Consequence for us |
 |---|---|---|
-| Versions | `react-native-webgpu@0.14.2` peers: RN ≥0.81, worklets ≥0.7.2, Reanimated ≥4.2.1. Bundles `react-native-webgpu-dawn@154.3.0`. New Arch only. | ✅ all met. |
-| Expo | Ships a config plugin (`"plugins": ["react-native-webgpu"]`) that turns off Metal API Validation in the Xcode scheme. This is **required on the iOS Simulator**: Dawn trips false positives there. | Add the plugin, then prebuild and rebuild the dev client. |
-| Imports | Always `import * as THREE from "three/webgpu"`, plus `three/tsl`. If you use `three/addons/*` (we will, for `BloomNode` and `RoundedBoxGeometry`), alias bare `three` and `three/webgpu` to `build/three.webgpu.js` in Metro. Addon imports need the `.js` extension for types. | Create `metro.config.js`. |
-| Hermes | Has `TextEncoder` but not `TextDecoder`, which three's core and loaders use. Import `fast-text-encoding` once before any three code. | Polyfill in `app/_layout.tsx`. |
-| Static class blocks | `babel-preset-expo` already includes the transform. | Nothing to do. |
-| Types | `@types/three` exposes `three/webgpu`, `three/tsl` and `three/addons/*` via `exports`. `moduleResolution: "bundler"` honours them. | Nothing to do; pin `@types/three` to match three. |
-| Renderer | `new THREE.WebGPURenderer({ canvas: context.canvas, context, device, antialias })`. **Pass our own `GPUDevice`**, or the renderer requests its own and we can't share or tear it down. Don't call `context.configure()`: the renderer does it. | One shared device for both stages. |
-| Frame loop | `renderer.setAnimationLoop(cb)`, then `context.present()` **after every render**, because RN doesn't swap frames itself. If you drive `render()` yourself, `await renderer.init()` first. | Our loop: update uniforms → `pipeline.render()` → `present()`. |
-| Pixel density | Size the buffer as `canvas.width = canvas.clientWidth * PixelRatio.get()` (and height), and recompute on resize. `getContext` is sync; if the layout size is 0, retry on the next frame. | Handle in the stage's layout effect. |
-| Transparency | Transparent canvas = `opaque={false}` + premultiplied alpha + an alpha-0 clear (on iOS, alphaMode is what controls it). | We render **opaque** with the clear colour set to `tokens.surface.background`: simpler and faster. |
-| Post-processing | `PostProcessing.tsx` uses `new THREE.RenderPipeline(renderer)`, `pass(scene, camera)`, `bloom()` from `three/addons/tsl/display/BloomNode`, and `outputNode = color.add(bloom)`. `PostProcessing` was renamed `RenderPipeline` in r183. | Same pattern for our bloom. |
-| Teardown | `setAnimationLoop(null)` **alone leaks**. `renderer.dispose()` stops three's internal RAF. Known **three r184+ leak** ([#445](https://github.com/wcandillon/react-native-webgpu/issues/445)): stale listeners on the module-level shared `QuadMesh` geometry hold on to disposed backends. The example's `disposeWebGPURenderer()` clears them, "**safe while the app has at most one live renderer**". | We'll briefly have two renderers (detail over Timeline), so clear listeners only when the **last** live renderer is disposed (see the registry below). |
-| Images | RN provides `createImageBitmap(blob \| ArrayBuffer)` for use with `copyExternalImageToTexture`. Three's `TextureLoader` (DOM `<img>`) won't work. | Fetch cover → `createImageBitmap` → `THREE.Texture`. **Not documented: whether three's WebGPU backend accepts RN's ImageBitmap as a texture source. Phase 0 gate G1.** |
-| Assets | Three's loaders take URLs. Register `glb`/`hdr` in Metro `assetExts` and use `Image.resolveAssetSource(require(...)).uri`. Release builds flatten asset paths, so **ship self-contained `.glb`**, not `.gltf` + `.bin`. | Only matters if we add a modelled projector. |
-| Threads | Default: render on the JS thread. Worklet or UI-thread rendering is possible (`installWebGPU()`, device created on JS then passed in), but running whole three scenes off the JS thread needs **experimental Worklets Bundle Mode**. `device.lost` only fires on the main JS runtime. | v1 renders on the JS thread (the library's documented default); off-thread rendering is a stretch phase. |
-| Shared device | `GPUDeviceProvider` / `useMainDevice` share a device, but the provider **renders `null` until the device is ready**. | Don't wrap the app root in it. Use a lazy module singleton instead (below). |
-| Testing | Jest mock `react-native-webgpu/jestSetup.js` exists. | We use Vitest in a node environment, so keep GPU code out of `*.test.ts` modules. |
+| Versions | `react-native-webgpu@0.15.1` (latest; 0.14.2 when research started) peers: RN ≥0.81, worklets ≥0.7.2, Reanimated ≥4.2.1. Bundles Dawn `154.3.0`. New Arch only. | ✅ all met. |
+| Expo | Config plugin `"react-native-webgpu"` turns off Metal API Validation in the Xcode scheme. **Required on the iOS Simulator.** | Add the plugin, then prebuild and rebuild. |
+| Imports | Use `three/webgpu` and `three/tsl`. Using `three/addons/*` needs a Metro alias from `three` and `three/webgpu` → `build/three.webgpu.js`. | Create `metro.config.js`. App code imports **only** `three/webgpu`/`three/tsl` (tsc resolves bare `three` to the WebGL-only types). Enforce with Biome `noRestrictedImports`. |
+| Addon types | `@types/three` maps `./addons/*` → `./examples/jsm/*` with no extension probing. | Use `three/addons/tsl/display/BloomNode.js`, `three/addons/geometries/RoundedBoxGeometry.js`. |
+| Global types | react-native-webgpu augments global `GPUDevice`/`Navigator`. TS 6's lib.dom already has WebGPU types (`lib: ["DOM"]` via the Expo base). `skipLibCheck` hides a `readonly gpu` redeclaration clash. | No tsconfig change. **Don't** add `@webgpu/types`. `navigator.gpu` is typed non-optional, so detect with `'gpu' in navigator`. |
+| Hermes | No `TextDecoder`. Import `fast-text-encoding` before any three code. | Import it at the top of the lazy runtime entry (its only consumer). |
+| Renderer | `new WebGPURenderer({ canvas: context.canvas, context, device, antialias })`. Pass **our own device**. Don't call `context.configure()`. `PostProcessing.tsx` uses `antialias: false`. | Shared device; `antialias: false` (bloom softens edges anyway). |
+| Frame loop | `setAnimationLoop(cb)`. `context.present()` after every render. If you drive `render()` yourself, `await renderer.init()` first. | Loop: update uniforms → `pipeline.render()` → `present()`. |
+| Pixel density | `canvas.width = clientWidth * PixelRatio.get()`. `getContext` is sync; retry on the next frame at zero size. | Cap the ratio (see Resolution policy). |
+| Transparency | Needs `opaque={false}` + premultiplied alpha + an alpha-0 clear. | Render **opaque**, clear colour = `tokens.surface.background`. |
+| Post-processing | `new THREE.RenderPipeline(renderer)`, `pass(scene, camera)`, `bloom()`, `outputNode = color.add(bloom)` (`PostProcessing` was renamed `RenderPipeline` in r183). | Same pattern. |
+| Teardown | `setAnimationLoop(null)` **doesn't stop three's internal rAF**; `dispose()` does. Known r184+ leak [#445](https://github.com/wcandillon/react-native-webgpu/issues/445): clear `QuadMesh` geometry listeners after dispose, "safe while the app has at most one live renderer". | Pausing still has a leftover tick (measure it, see Pausing). Clear listeners only when the live-renderer count reaches 0. `QuadMesh` is exported from `three/webgpu`, so no `any`. |
+| Images | RN `createImageBitmap(blob \| ArrayBuffer)`. Three's DOM `TextureLoader` doesn't work. Whether three accepts RN's `ImageBitmap` as a texture source is **undocumented**. | Gate **G1** (includes resize support). |
+| Threads | Default: the JS thread. Off-thread three needs **experimental** worklets Bundle Mode. `device.lost` and `uncapturederror` only fire on the main JS runtime. | v1 renders on the JS thread. Bundle Mode is a stretch goal. |
+| Shared device | `GPUDeviceProvider` renders `null` until the device is ready. | Lazy module singleton instead. |
 
 ## Architecture
 
 ```
-lib/holo3d/                      pure TS, unit-tested (Vitest)
-  pager.ts                       scroll offset → per-page world X / rotation / visibility
-  texture-window.ts              which page indices need textures (active ±1), LRU eviction order
-  params.ts                      tokens.holo → linear-RGB uniform values; reduce-motion presets
-
-components/holo3d/
-  gpu.ts                         lazy device singleton + renderer registry + safe dispose
-  textures.ts                    cover URI → ImageBitmap → THREE.Texture cache (LRU), disposal
-  scene.ts                       buildHoloScene(): card, emitter, beam, particles, lights, camera
-  materials.ts                   TSL: holoCardMaterial, beamMaterial, emitterMaterial, particleMaterial
-  pipeline.ts                    RenderPipeline + bloom
-  HoloStage.tsx                  <Canvas> + renderer lifecycle + frame loop (multi-card, Timeline)
-  HoloHero3D.tsx                 single-card stage for book detail (+ gyro tilt)
-  HoloFallback.tsx               error boundary → existing static HoloCover hero
+lib/holo3d/pager.ts (+ pager.test.ts)   pure: cardTransform(), windowIndices(), px↔world projection
+lib/holo3d/runtime/gpu.ts               device singleton, live-renderer counter, dispose (#445), status store
+lib/holo3d/runtime/textures.ts          encoded-bytes cache; decode+downscale → THREE.Texture per stage
+lib/holo3d/runtime/scene.ts             card / emitter / beam (/ particles) + TSL materials + bloom pipeline
+lib/holo3d/runtime/stage.ts             createHoloStage(): imperative controller (the only owner of three objects)
+components/holo-stage.tsx               <Canvas> + React wiring; lazy-loaded; one component for both surfaces
 ```
 
-### GPU device and renderer lifecycle (`gpu.ts`)
+- **`lib/holo3d/runtime/*` imports three and must never be imported by `*.test.ts`.** `pager.ts` doesn't import three.
+- **Lazy loading:** `components/holo-stage.tsx` is loaded with `React.lazy(() => import('@/components/holo-stage'))`. The `Suspense` fallback is `HoloFace`, so `three/webgpu` isn't evaluated at app start, or ever on Android/web or when switched off.
+- **Exports:** export `HoloFace` from `components/holo-cover.tsx` (fallback/pending face).
 
-- **Device:** `getHoloDevice(): Promise<GPUDevice>` calls `navigator.gpu.requestAdapter()` → `requestDevice()` once, then memoizes it.
-  - If WebGPU isn't available, the adapter is `null`, or device creation throws, it resolves to `null` and callers render `HoloFallback`.
-  - It subscribes to `device.lost` on the JS runtime: clear the memo, then remount live stages once. A second loss means a permanent fallback for the session.
-- **Renderer registry:** `createHoloRenderer(context, device)` wraps `makeWebGPURenderer` and increments `liveRenderers`. `disposeHoloRenderer(renderer)`:
-  - always calls `setAnimationLoop(null)` and `renderer.dispose()`
-  - clears the `QuadMesh` listeners (#445) only when `liveRenderers` hits 0
-  - **Upgrade note:** re-check #445 before upgrading three. If it's fixed upstream, delete the listener clearing.
-- **No `GPUDeviceProvider` at the root:** it would block the whole app tree on device creation, and request a GPU on launch even for users who never open the Timeline.
+### Status store (`gpu.ts`), replacing the error-boundary fallback
+
+```ts
+type HoloStatus =
+  | { kind: 'pending' }
+  | { kind: 'ready' }
+  | { kind: 'unavailable'; reason: 'disabled' | 'platform' | 'no-webgpu' | 'init' | 'frame' | 'device-lost' };
+export function useHolo3DStatus(): HoloStatus; // useSyncExternalStore over a module store
+```
+
+- **`unavailable` straight away** when:
+  - `process.env.EXPO_PUBLIC_HOLO_3D === '0'` (`'disabled'`)
+  - `Platform.OS !== 'ios'` (`'platform'`)
+  - `!('gpu' in navigator)`, or `requestAdapter()` returns null (`'no-webgpu'`)
+- **Stages report failures:**
+  - `init` / `compileAsync` rejection → `'init'`
+  - the frame callback wraps its body in try/catch, then stops the loop and reports `'frame'`
+  - `device.onuncapturederror` and `device.lost` → `'device-lost'`
+- **Any `unavailable` is sticky for the session.** There's no retry.
+- **Consumers:**
+  - Timeline cells render `HoloFace` when status ≠ `ready`, and transparent cells when `ready`.
+  - Detail renders `HoloFace` until the stage reports its first presented frame, then unmounts it.
+- **Last resort:** a small class error boundary (`getDerivedStateFromError(error: unknown)`), keyed by book id, catches sync render throws only.
+
+### Device and renderer lifecycle (`gpu.ts`)
+
+- **`getHoloDevice(): Promise<GPUDevice | null>`**
+  - requests the adapter and device once, memoized
+  - checks the status first
+  - subscribes to `device.lost` on the JS runtime
+- **`createHoloRenderer(context, device)`** increments `liveRenderers`.
+  - **Every** path decrements it, including when init fails after creation.
+  - Use the repo's `alive` cancellation idiom (`useReduceMotion`), so a device or `init()` that resolves after unmount disposes immediately instead of rendering to a dead canvas.
+- **`disposeHoloRenderer(renderer)`:** `setAnimationLoop(null)` → `dispose()` → decrement. When the count reaches 0, also call `clearQuadMeshListeners()`:
+
+```ts
+import { QuadMesh } from 'three/webgpu';
+type WithListeners = { _listeners?: Record<string, unknown> };
+/** three r184+ leak workaround (react-native-webgpu#445). Delete when fixed upstream. */
+function clearQuadMeshListeners(): void {
+  const { geometry } = new QuadMesh();
+  for (const t of [geometry, geometry.index, ...Object.values(geometry.attributes)]) {
+    if (t) (t as WithListeners)._listeners = {};
+  }
+}
+```
+
+- **Promises:** `init()`, `compileAsync()`, `setAnimationLoop()` and `dispose()` return promises. Always `await` them or explicitly `void` them.
+
+### Stage controller (`stage.ts`): React Compiler-safe
+
+`createHoloStage(context, device, opts) → { setBooks, setSize, setScroll, setReduceMotion, pause, resume, dispose, onFirstFrame }`
+
+- **Owns everything:** renderer, scene, pipeline and textures live inside the controller (effect-local), never in React state or render-time refs.
+- **`holo-stage.tsx`** creates the controller in one mount effect. It syncs props through small effects that call setters, keyed on derived primitives (a joined URI string and `width`), not `data.books` identity.
+- **No stale closures:** the frame loop only reads controller fields, so it can't capture stale props. Never write `ref.current` during render.
+- **Canvas typing:** one helper; no scattered `as HTMLCanvasElement`:
+
+  ```ts
+  const layoutSize = (c: HTMLCanvasElement | OffscreenCanvas) =>
+    'clientWidth' in c ? { w: c.clientWidth, h: c.clientHeight } : null;
+  ```
 
 ### Cover textures (`textures.ts`)
 
-- `loadCoverTexture(uri)` does `fetch(uri)` → `arrayBuffer()` → `createImageBitmap(buf)` → `new THREE.Texture(bitmap)`. It sets:
-  - `colorSpace = SRGBColorSpace`
-  - `generateMipmaps = true` (the card tilts, so it needs mips)
-  - `anisotropy` = 4
-- The cache holds at most **5** textures, keyed by URI. Evicting one calls `texture.dispose()` and `bitmap.close()`. Both stages share the cache.
-  - Each renderer still uploads its own GPU copy; the cache saves the network fetch and decode.
-- **Size:**
-  - Covers can be up to 1200×1800, which is ~8.6 MB RGBA each, plus ~33% for mips.
-  - Five cached means about 57 MB worst case. Check in G4. If it's too much:
-    - use `createImageBitmap` resize options (verify they're supported in RN), or
-    - drop the cache to 3.
-- **Upload cost:** the mesh plan flagged ~30–80 ms on the JS thread for texture upload. Measure in G2. If it's noticeable, prefetch textures for the active page ±1 while the pager is idle.
-- **Books with no cover image (or a failed load):**
-  - The card uses a procedural texture: a solid `getCoverColor(title)` fill with the same scanline treatment.
-  - The title and author render as **RN `Text` in the transparent pager cell above the stage**, the same way the 2D fallback does today.
-  - It's fine that the text isn't projected; it stays legible.
+- **Shared cache of encoded bytes only:** `Map<uri, Promise<ArrayBuffer>>`. Insertion order works as the LRU, with a cap of ~16 (a few hundred KB each). The promise map dedupes concurrent fetches.
+- **Per-stage GPU textures:** each stage decodes and uploads its own textures, for its window only:
+  - Timeline: `windowIndices(activePage, count, 1)`, i.e. ≤3
+  - Detail: 1
+  - A texture is disposed as soon as it leaves the window. No texture is shared between renderers, so neither stage can evict the other's.
+- **Pipeline:**
+  1. bytes → `createImageBitmap` with a **mandatory downscale to ≤640×960** (on-screen max ≈660×990 px). Resize options are verified in G1. If they're unsupported, use the G1 fallback (below).
+  2. `new THREE.Texture(bitmap)`: `SRGBColorSpace`, mipmaps on, anisotropy 2.
+  3. **Pre-upload with `renderer.initTexture(tex)` while idle**: one per frame, never during scroll or momentum.
+  4. `bitmap.close()` after upload.
+  5. Bind to a card only once uploaded. Until then the card shows its no-cover tint.
+- **Memory:** ≤3.3 MB per texture with mips, ×≤4 live (3 Timeline + 1 detail). That's ≈13 MB, compared with ~160 MB in the original plan.
+- **Stale loads:** a load resolving for a URI no longer in the window is dropped. The bytes stay cached, but no bind happens.
+- **No cover, or a failed load:** `uHasCover = 0` mixes a `getCoverColor(title)` uniform colour under the same shader scanlines. Title and author render as RN `Text` in the cell above (mirrors `CoverFace`).
 
-### The hologram look (`scene.ts`, `materials.ts`, `pipeline.ts`)
+### The hologram look (`scene.ts`)
 
-All geometry is procedural in code. No external 3D assets in v1, so there's no asset pipeline and no `.glb`.
+All geometry is procedural; there are no asset files. Verify TSL node names against r186 in Phase 0.
 
-| Element | Geometry | Material (TSL sketch; verify node names against r186) |
+| v1 element | Geometry | Material |
 |---|---|---|
-| **Card** | `RoundedBoxGeometry` (addons), 2:3 aspect, thin depth (~0.02), radius matching the 8pt corner | `MeshBasicNodeMaterial` (unlit, emissive look). `colorNode`:<br>• the cover's `texture()` → luminance → `mix(tintBottom, tintTop, lum)` (the luminosity blend, now in-shader)<br>• scanlines: `fract(uv().y * N - time * speed)` step, at about today's 12pt pitch<br>• chromatic fringe: R/B sampled at `uv() ± dir * k`<br>• flicker: `0.92 + 0.08 * noise(time)`, rare dropout bands<br>• fresnel rim: `pow(1 - abs(dot(normalView, positionViewDirection)), p)` × cyan<br>• tilt sheen: thin-film-ish hue shift driven by a `uTilt` uniform<br>`transparent`, `opacity` ~0.92, `depthWrite: false` |
-| **Emitter** | Flat ring (`RingGeometry`) + disc under the card | Additive, `cyan` × pulse (`sin(time)`, today's 2.8 s period) |
-| **Beam** | Open-ended `CylinderGeometry` / cone from emitter to card bottom | Additive, `side: DoubleSide`, alpha = vertical gradient × soft edges (view-angle falloff) × slow noise streaks. Replaces today's `LinearGradient` cone. |
-| **Particles** | `InstancedMesh` of small quads (~150), pattern from `InstancedMesh.tsx` | Additive sprites, drifting upward in the beam (position from `instanceIndex` + `time` in TSL; no per-frame JS) |
-| **Bloom** | `RenderPipeline`: `pass(scene, camera)` → `bloom(color, strength, radius, threshold)` → `color.add(bloom)` | Same pattern as `PostProcessing.tsx`. Tune so the bloom matches today's `holoBloom` box-shadow. Tone mapping: `NeutralToneMapping` (as in the example) or none; decide in Phase 2. |
+| **Card** | `RoundedBoxGeometry` (addons, `.js`), 2:3, depth ~0.02 | Unlit `MeshBasicNodeMaterial`:<br>• cover `texture()` → luminance → `mix(tintBottom, tintTop, lum)`<br>• scanlines `fract(uv().y * N - time * s)`<br>• fresnel rim `pow(1 - abs(dot(normalView, positionViewDirection)), p)` × cyan<br>• `uTilt` sheen driven by **pager rotation** (Timeline) and a slow idle sway (detail)<br>• `uFlicker` (CPU-computed uniform)<br>`transparent`, `depthWrite: false` |
+| **Emitter** | `RingGeometry` + disc | Additive, cyan × `uPulse` (CPU, 2.8 s period) |
+| **Beam** | Open cone (`CylinderGeometry`) emitter → card | Additive, `DoubleSide`, vertical gradient × edge falloff. Cheap hash noise only (it's the main fill cost). |
+| **Bloom** | `RenderPipeline`: `pass()` → `bloom()` → `add` | Run at **reduced resolution** (r186 API: pass resolution scale; verify). Start with 3–5 levels and cut to 3 if over budget. Tone mapping decided while tuning. |
 
-- **Lights:** none needed (unlit and additive).
-- **Camera:** `PerspectiveCamera` with a low FOV (~30°) so the card looks flat-on at rest.
-- **Colours:** come from `lib/holo3d/params.ts`, converted from `tokens.holo` (sRGB → linear). This keeps theming working (CLAUDE.md principle 5).
-- **Reduce motion:** `params.ts` exports a still preset: no flicker, static scanlines, frozen particles, no tilt. The loop still renders whenever inputs change.
+- **After the look is approved:**
+  - chromatic fringe
+  - flicker dropout bands
+  - **particles**: an `InstancedMesh` of ~150 additive quads with positions in TSL; built last in Phase 1 and time-boxed
+- **Lights and camera:** no lights (unlit and additive). `PerspectiveCamera` at ~30° FOV.
+- **Colours:** `new THREE.Color(token)` from `tokens.holo` (THREE does sRGB→linear; it parses the `rgba()` tokens' RGB and ignores alpha, so alpha comes from material opacity).
+- **Reduce motion:** a `uMotion` uniform (0/1) scales time. While reduce motion is on, the loop **renders only when inputs change** (0 fps idle).
+
+### Resolution policy
+
+- **Pixel ratio:**
+  - Drawing buffer = layout × `min(PixelRatio.get(), 2)`.
+  - The Timeline starts at **1.5** (bloom hides the softness), and Phase 1 tuning confirms it.
+- **Timeline canvas size:** sized to the **card + beam band** (pager width × card height + beam + bloom margin), not the full `listWrap`.
+- **Detail canvas size:** ≈1.5× the card footprint, so the bloom and beam aren't clipped.
 
 ### Timeline: one shared stage behind the pager
 
 ```
 <View listWrap>
-  <HoloStage style={absoluteFill} books={data.books} scrollX={scrollXRef} />   ← one Canvas, one renderer
-  <FlashList horizontal … renderItem={TransparentPage} onScroll={…} />          ← gestures, a11y, overlays
+  <HoloStage style={band} books={data.books} scrollX={scrollX /* SharedValue */} />   one Canvas
+  <AnimatedFlashList horizontal onScroll={scrollHandler} renderItem={Cell} … />        gestures, a11y, overlays
 </View>
 ```
 
-- **Pages become transparent cells.** Each is a `Pressable` with `accessibilityLabel="{title} by {author}"`, plus any overlays: the no-cover title text, and canon badges if the [timeline-improvements plan](2026-07-01-feat-timeline-tab-improvements-plan.md) ships them. The 3D content is behind the list, so FlashList keeps paging, snapping, viewability and VoiceOver.
-- **Scroll sync:** `onScroll` (`scrollEventThrottle={16}`) writes `contentOffset.x` into a ref. The frame loop reads the ref and positions cards with `lib/holo3d/pager.ts`:
-  - `pageX(i) = i * width - scrollX` maps to world X
-  - cards more than one page away are hidden
-  - a slight carousel-style Y-rotation and fade on cards leaving centre
-  - The JS-thread loop and JS-thread scroll events share one clock, so cards stay locked to the finger.
-- **Card pool:** 3 card meshes (previous, active, next) are reused. On `activePage` change, their textures are rebound from the cache. `lib/holo3d/texture-window.ts` decides what to load and evict. One emitter, beam and particle system stays fixed at screen centre: the projector is "the device", and covers slide through its beam.
-- **Pausing** (`setAnimationLoop(null)`, renderer kept alive) when:
-  - the screen isn't focused (`useIsFocused`), e.g. book detail pushed or another tab selected
-  - `AppState !== 'active'`
-  - Resume on refocus without re-init.
-- **Frame rate:** render at display rate while scrolling. When idle, throttle to 30 fps by skipping frames in the loop (the ambient animation doesn't need 120 Hz). Verify in G3 that ProMotion behaves.
-- **Delete** the per-page `HoloCover` hero from `renderItem`.
+- **Cells:**
+  - When `ready`, a cell is a transparent `View` with `accessibilityLabel="{title} by {author}"` and any overlays (no-cover title; canon badges if the timeline-improvements plan ships).
+  - When not `ready`, the cell renders `HoloFace`.
+  - The canvas is `accessible={false}`.
+- **Scroll sync:**
+  - `useAnimatedScrollHandler` writes `contentOffset.x` into a SharedValue on the UI thread. FlashList is wrapped with `Animated.createAnimatedComponent`.
+  - Each frame, the loop reads `scrollX.get()` and positions cards with `pager.ts`.
+  - `pager.ts` exposes one px→world projection, so the overlays and cards share the same mapping.
+  - Card transforms come from the live offset.
+  - The **texture window** keys off the settled `activePage`, so `scrollToIndex` jumps from the rail don't thrash loads.
+  - A residual lag of up to one frame between native overlays and GPU cards is expected; G7 measures it.
+- **Card pool:** 3 meshes (previous, active, next) are re-bound as the window moves. One emitter and beam stay fixed at screen centre, and covers slide through the beam.
+- **Pausing:** done imperatively, never through re-rendering state:
+  - `useFocusEffect` → `controller.pause()` / `resume()`
+  - `AppState` listener → the same
+  - Pause = no `render()`/`present()`.
+  - After **30 s blurred**, or on background, `dispose()`. Focus re-inits, showing `HoloFace` until the first frame.
+  - Phase 0 measures the leftover three tick while paused. If it's >0.1 ms/frame or shows in the Energy gauge, dispose on blur immediately.
+- **Frame rate:**
+  - Display rate while scrolling.
+  - An idle throttle is **only added if G3 or the soak test calls for it**: a frame-count divisor from the measured rAF interval (÷4 at 120 Hz, ÷2 at 60 Hz). Idle = no scroll and no momentum for 150 ms.
+  - Verify `CADisableMinimumFrameDurationOnPhone` in the prebuilt `Info.plist`; without it, rAF is capped at 60 Hz.
+- **Empty state:** an empty catalog unmounts the stage and disposes it. Re-init when books return is accepted (rare).
+- **Remove** the per-page `HoloCover` hero.
 
-### Book detail: single-card hero
+### Book detail hero
 
-- `HoloHero3D` replaces `<HoloCover variant="hero" />` in `app/book/[id].tsx`. It's the same scene with one card and no pager.
-  - The canvas is **larger than the card** (≈1.5× the card, centred) so bloom and the beam aren't clipped. Layout keeps the current 200×300 card footprint.
-- **First paint:** show static `HoloFace` straight away, then crossfade to the canvas once the first frame is presented. This covers device and init latency, and doubles as the future shared-element target.
-- **Tilt:** bring the gyro back for this hero. `useAnimatedSensor(ROTATION)`, baseline latched, clamped to ±15° (logic from `TiltedHero`), drives card rotation and `uTilt`.
-  - The value is read from the JS-thread frame loop (`sensor.sensor.value`), so no worklet transform strings are built.
-  - This avoids the device-only crash class in memory `project_reanimated_sensor_worklet_crash`.
-  - Gated on reduce motion, as today. The simulator doesn't produce motion events, so verify on a device.
-- **Timeline paused:** the Timeline is unfocused while detail is up, so its loop is paused and only one renderer is drawing. Both share the device.
-
-### Fallbacks
-
-`HoloFallback` (error boundary + `getHoloDevice() === null`) renders the **existing** `HoloCover` hero code path for:
-- no WebGPU
-- device loss after the retry
-- an init or shader-compile throw
-- a feature flag kill-switch: `HOLO_3D_ENABLED` in `constants/` (on by default once shipped)
-
-So the old `Projector` / `TiltedHero` code stays until Phase 5.
+- `app/book/[id].tsx` replaces `<HoloCover variant="hero" />` with `<HoloStage books={[book]} />`: the same component, no `scrollX`, an oversized canvas around the 200×300 footprint.
+- **First paint:** `HoloFace` stays mounted until `onFirstFrame`. That fires after the first `present()` + `device.queue.onSubmittedWorkDone()`, which follows `await renderer.compileAsync(scene, camera)` plus one warm-up pipeline render. Then `HoloFace` unmounts, with no animation.
+- **Pausing:** the same `useFocusEffect`/`AppState` rule (detail can be covered by another detail or a modal).
+- **Two live renderers:** with a mounted-but-blurred Timeline, two renderers exist on the shared device. Only detail draws. The counter means the #445 listener clear runs only when the last one is disposed.
 
 ## Implementation Phases
 
-### Phase 0 — Spike and go/no-go (throwaway screen, ~1 day)
+### Phase 0 — Install, spike and go/no-go
 
-Install and configure (below), then build a dev-only screen `app/dev/holo-spike.tsx` (`__DEV__` only). It shows **one remote cover** on a textured `RoundedBox` card with the bloom pipeline.
+**Install** (exact pins: three breaks APIs between minors):
 
-**Gates.** Each needs a pass, or a documented workaround, before Phase 1:
-- **G1 Texture path:** an RN `createImageBitmap` result renders correctly as a `THREE.Texture`: right orientation, sRGB, mips.
-  - Fallback: build a raw `GPUTexture` via `copyExternalImageToTexture` and wrap it for three. Investigate if G1 fails, because it decides feasibility.
-- **G2 Init latency** on device: canvas mount → first presented frame. Target < 400 ms warm, < 1 s cold. Also measure the per-texture upload cost.
-- **G3 Frame time** on device: JS-thread frame cost < 4 ms at 60 fps with bloom on. Check ProMotion. If it's over budget, evaluate worklets Bundle Mode early.
-- **G4 Memory:** GPU and process memory over **100 mount/unmount cycles** (the `Memory.tsx` method) and 100 texture swaps. No growth after GC.
-- **G5 Size:**
-  - JS bundle delta via `npx expo export --platform ios` (three's WebGPU build)
-  - **IPA size delta** (the Dawn xcframework is the unknown; Apple's over-the-air download limit isn't at risk, but report the number)
-- **G6 Simulator:** works with the config plugin; Metal validation is off after `prebuild --clean`.
+```
+npx expo install react-native-webgpu@0.15.1 three@0.186.1 fast-text-encoding@1.0.6 -- --save-exact
+npx expo install @types/three@0.186.0 -- --save-dev --save-exact
+```
 
-**Output:** append measurements to the research doc and decide go/no-go with the user.
+- `@types/three` tracks major.minor, so 0.186.0 is correct for three 0.186.1.
+- **Lockfile:** review the `package-lock.json` diff for expo or expo-asset drift (memory `project_npm_ci_not_install`), commit it, then `npm ci`.
+- **`app.json`:** add the `"react-native-webgpu"` plugin.
+- **`metro.config.js`** (new): `getDefaultConfig` + the documented `three` alias.
+- **`biome.json`:** add `style/noRestrictedImports`, restricting `three` (use `three/webgpu`).
+- **Rebuild:**
+  - simulator: prebuild + dev client on the iPhone 17 Pro / iOS 26.4 simulator by UDID (memory `project_simulator_target_device`), with Metro launched via the worktree's own expo binary (memory `project_nested_worktree_metro_root`)
+  - device: a **Release build** (`npx expo run:ios --device --configuration Release`, or an internal EAS build)
 
-### Phase 1 — Foundation
+**Spike screen:** `app/dev/holo-spike.tsx`, reachable only when `EXPO_PUBLIC_HOLO_SPIKE=1`, so it works in Release. It has:
+- one remote cover on a `RoundedBox` card with bloom
+- a transparent FlashList with text overlays over a canvas band (for G7)
+- a mount/unmount loop (the `Memory.tsx` method)
 
-- **Dependencies:** `npx expo install react-native-webgpu three fast-text-encoding` and `npx expo install -- --save-dev @types/three`.
-  - Pin **exact** `three@0.186.1` and `@types/three@0.186.0`: three breaks APIs between minors (`PostProcessing`→`RenderPipeline` in r183, the #445 leak in r184).
-  - Commit `package-lock.json`; use `npm ci` afterwards (memory: `project_npm_ci_not_install`).
-- **`app.json`:** add `"react-native-webgpu"` to `plugins`.
-- **`metro.config.js`** (new): `getDefaultConfig(__dirname)` + the `three`/`three/webgpu` → `build/three.webgpu.js` alias from the docs.
-- **`app/_layout.tsx`:** `import 'fast-text-encoding'` as the first import.
-- **Rebuild native:** prebuild and rebuild the dev client, on the iPhone 17 Pro / iOS 26.4 simulator by UDID (memory: `project_simulator_target_device`). Launch Metro via the worktree's own expo binary (memory: `project_nested_worktree_metro_root`).
-- **Pure modules + tests:** `lib/holo3d/pager.ts`, `texture-window.ts`, `params.ts`, each with `*.test.ts`:
-  - page → X / rotation / visibility at boundaries (first and last page, overscroll)
-  - texture window at list ends
-  - LRU order
-  - token → linear RGB
-- `components/holo3d/gpu.ts`, `textures.ts`, `HoloFallback.tsx`, and the `HOLO_3D_ENABLED` flag.
+**Gates.** Measured on a Release device build with Instruments. Each needs a pass, or a documented workaround, before Phase 1:
 
-### Phase 2 — The hologram look
+| Gate | Pass | How to measure |
+|---|---|---|
+| **G1 Texture path** | RN `createImageBitmap` → `THREE.Texture` renders correctly (orientation, sRGB, mips), **and** downscaling to ≤640×960 works. Fallback if not: upload a raw `GPUTexture` via `copyExternalImageToTexture` + a render-pass downscale. Deciding this is feasible gates the whole project. | Visual + a timing log |
+| **G2 First frame** | Warm (second mount in the same session): <400 ms. Cold (first launch after install, empty Metal shader cache): <1 s, with `HoloFace` showing meanwhile. Report segments: device / init / `compileAsync` / texture / first submit. | `performance.now()` marks + Metal System Trace |
+| **G3 Frame time** | Loop body p50/p95/max **including** `getCurrentTexture()` + `present()` ≤ 8.3 ms p95 at 120 Hz. GPU frame time and pass count recorded. No hitches while paging during the `activePage` re-render. If over budget: bloom levels → 3 → resolution scale → then evaluate Bundle Mode. | Instruments: Time Profiler, Metal System Trace, Animation Hitches |
+| **G4 Memory** | No growth after GC over 100 mount/unmount cycles + 100 texture swaps. Leftover tick on a paused renderer measured. | `Memory.tsx` method + Allocations |
+| **G5 Size** | JS bundle delta (`npx expo export --platform ios`) and **IPA delta** (Dawn) reported and accepted by the user. | export / archive |
+| **G6 Simulator** | Runs with the config plugin after `prebuild --clean`. | — |
+| **G7 Scroll drift** | A 120 Hz screen recording of a slow drag and a fling: overlay text and card stay in step (≤1 frame). | Screen recording |
 
-- `scene.ts`, `materials.ts`, `pipeline.ts` per the table above, built in the dev spike screen (now a tuning screen). That screen gets preset toggles for:
-  - reduce-motion still
-  - bloom on/off
-  - with and without a cover
-- Compare against the Figma projected-cover node (`134:2077`) and today's 2D hero, side by side on the simulator.
+**Output:** measurements are appended to the research doc. Go/no-go with the user.
+
+### Phase 1 — Runtime and the look
+
+- `lib/holo3d/pager.ts` + `pager.test.ts`:
+  - `cardTransform(index, scrollX, pageWidth) → { offset, rotationY, opacity, visible }`
+  - `windowIndices(active, count, radius = 1)`
+  - the px↔world projection
+  - Tests: `pageWidth === 0` (no NaN), first and last page, overscroll, window at both ends.
+- `lib/holo3d/runtime/{gpu,textures,scene,stage}.ts` per the Architecture section. Export `HoloFace`.
+- **Tune on the spike screen** using `__DEV__`-time constants (no preset UI). Compare with Figma node `134:2077` and today's 2D hero. Particles come last and are time-boxed.
 - **Exit:** the user approves the look from simulator screenshots or a recording.
 
-### Phase 3 — Timeline integration
+### Phase 2 — Timeline
 
-- `HoloStage.tsx`: canvas sizing (pixel ratio, resize), the card pool, scroll sync, the texture window, focus/AppState pause, idle throttling.
-- Timeline screen: transparent `TransparentPage` cells with a11y labels and the no-cover title overlay; the stage behind; remove the hero `HoloCover` from `renderItem`.
-- Verify:
-  - fast flings
-  - scrubbing via the rail if it lands
-  - filter changes, which change the `data.books` identity, so rebind textures
-  - first and last page
-  - an empty catalog (the existing empty state, with no stage mounted)
+- `components/holo-stage.tsx` (lazy), an `AnimatedFlashList` scroll handler, transparent/`HoloFace` cells by status, pausing + 30 s dispose.
+- **Remove the hero `HoloCover` from the Timeline.**
+- **Exit:**
+  - G3 and G7 re-checked on the real screen
+  - fling and rail-scrub (if shipped) behave
+  - filter change rebinds textures
+  - status ≠ ready shows `HoloFace` (test with `EXPO_PUBLIC_HOLO_3D=0`)
+  - VoiceOver reads the cells
 
-### Phase 4 — Book detail hero
+### Phase 3 — Book detail and cleanup
 
-- `HoloHero3D.tsx`: an oversized canvas, the `HoloFace` → 3D crossfade, gyro tilt (gated on reduce motion).
-- Push detail from the Timeline:
-  - the Timeline loop pauses
-  - detail renders
-  - pop back: the detail renderer is disposed (no listener clearing, since the Timeline renderer is still live) and the Timeline resumes without re-init
-- Deep link straight into detail with no Timeline mounted: a single renderer, so listener clearing happens on dispose.
+- `<HoloStage books={[book]} />` in `app/book/[id].tsx`, with the `onFirstFrame` swap and pausing.
+- **Delete** `Projector`, `StaticHero`, `TiltedHero` and the `variant`/`tilt` props from `holo-cover.tsx`. Remove `NSMotionUsageDescription` from `app.json` if nothing else uses motion (`expo-sensors` stays only if it's still used elsewhere).
+- **Exit:**
+  - Archives → detail with the Timeline mounted-but-blurred: one drawing renderer, and the #445 clear runs only at count 0
+  - 100 cycles of Timeline ↔ (tab switch) ↔ detail with no memory growth
+  - background/foreground
+  - a **10-minute device soak** (Power Profiler, thermal state), including Low Power Mode at 60 Hz
+- **Degrade order if hot:** bloom off → idle throttle → `unavailable`.
+- Update the research doc status, and add a `CLAUDE.md` Design Context line for the 3D hero.
 
-### Phase 5 — Hardening and cleanup
+### Stretch (separate plans)
 
-- Repeat G2–G4 on device across the real flows: Timeline ↔ detail × 100, tab switching, background/foreground.
-- **Device loss:** simulate via `device.destroy()` in a dev action, then check that the retry and then the fallback work.
-- **VoiceOver:** pages read title and author; the canvas is `accessible={false}` / `importantForAccessibility="no-hide-descendants"`.
-- **Remove dead code:** once both hero sites have migrated and the flag has been on for a release, delete `HoloCover`'s `hero` branch (`Projector`, `StaticHero`, `TiltedHero`, `variant`/`tilt` props) but keep `HoloFace` (the thumbs plus the fallback/crossfade face). Until then, the hero path stays as `HoloFallback`'s target.
-- Update `CLAUDE.md` Design Context with a line on the 3D hero, and update the research doc's status.
-- Optional follow-up: write a project skill `.claude/skills/holo-3d` from this plan's verified patterns, pinned to our versions.
-
-### Stretch (not in scope; separate plans)
-
-- **Off-JS-thread rendering** via worklets Bundle Mode (experimental), if G3 shows JS-thread contention while paging.
-- **A modelled projector base:** a self-contained `.glb` from Blender, loaded via `GLTFLoader` and Metro `assetExts`.
-- **Skia v3 composition** (shared Dawn device, zero-copy) if we later want 2D effects layered over the 3D.
+- **Gyro tilt** on the detail hero: read `sensor.sensor.get()` in the JS loop; watch the device-only crash class in memory `project_reanimated_sensor_worklet_crash`.
+- **Off-JS-thread rendering** via worklets Bundle Mode, if G3 shows contention.
+- **A modelled projector base**: a self-contained `.glb`, Metro `assetExts`, `GLTFLoader`.
+- **Skia v3 composition** (shared Dawn device).
+- **A shared-element transition** into `HoloFace`.
 
 ## Acceptance Criteria
 
 **Functional**
-- [ ] Timeline renders every hero through **one** canvas and renderer. Cards track the finger during paging with no visible lag, and snap with the pager.
-- [ ] Book detail renders the 3D hero with bloom unclipped. The `HoloFace` → 3D crossfade has no blank frame.
-- [ ] Books without covers show a tinted card with legible title and author.
-- [ ] Archive, Library, added-books sheet and scan review are visually unchanged (`thumb` path untouched).
-- [ ] If WebGPU is unavailable, init fails, the device is lost twice, or the flag is off, every hero falls back to today's 2D hero.
-- [ ] Reduce Motion: no flicker, scanline motion, particles drift or tilt. The look is otherwise the same.
+- [ ] The Timeline renders every hero through **one** canvas and renderer. Cards and their overlays stay in step (≤1 frame) while dragging and flinging.
+- [ ] Book detail renders the 3D hero with bloom unclipped. `HoloFace` → 3D has no blank frame.
+- [ ] Books without covers show a tinted card with legible RN title and author.
+- [ ] Archive, Library, added-books sheet and scan review are visually unchanged.
+- [ ] `unavailable` (env switch, non-iOS, no WebGPU, init/frame failure, device loss) shows `HoloFace` on both surfaces, for the rest of the session.
+- [ ] Reduce Motion: no flicker, scanline motion or sway, and no rendering while idle.
 - [ ] VoiceOver reads each Timeline page as "{title} by {author}". The canvas isn't focusable.
 
-**Performance (physical device, measured in Phase 0 and again in Phase 5)**
-- [ ] First 3D frame on detail is < 400 ms warm. Timeline stage init is < 1 s cold, with the static face showing meanwhile.
-- [ ] JS-thread frame cost < 4 ms at 60 fps while paging. No dropped frames on the pager.
-- [ ] No memory growth after 100 Timeline↔detail cycles and 100 page swaps (after GC).
-- [ ] Rendering is paused when the screen is unfocused or the app is backgrounded (CPU/GPU ≈ 0 for the stage).
-- [ ] JS bundle and IPA size deltas are reported and accepted.
+**Performance (Release build, physical device)**
+- [ ] G2: warm first frame <400 ms, cold <1 s, with segments reported.
+- [ ] G3: loop p95 ≤8.3 ms at 120 Hz, including `present()`. No hitches while paging.
+- [ ] G4: no memory growth over 100 cycles. Live cover textures ≤4 at ≤640×960.
+- [ ] Paused stages don't render. Leftover tick measured, and acted on if over threshold. A blurred Timeline is disposed after 30 s.
+- [ ] 10-minute soak: no thermal throttling to `.serious`.
+- [ ] G5: JS and IPA deltas accepted.
 
 **Quality gates**
-- [ ] `npm run lint`, `npm test`, and `npx tsc --noEmit` pass.
-- [ ] `lib/holo3d/*` has unit tests.
-- [ ] The simulator runs with the config plugin; flows are verified on a physical device. Gyro and perf are device-only.
+- [ ] `npm run lint` (including the `three` import restriction), `npm test`, and `npx tsc --noEmit` pass. No `any`.
+- [ ] `pager.test.ts` covers the edge cases above.
 
 ## Edge Cases
 
-- **Zero-size layout** on first mount: `getContext` returns null → retry with `requestAnimationFrame` (per the docs).
-- **Rotation / iPad split view:** the app is portrait-only, but `supportsTablet` is on, so recompute buffer size on `clientWidth` change.
-- **Fast flings across many pages:** the texture window lags behind. Show the procedural tint until the cover arrives, and never block the frame on a load.
-- **The same book opened twice in a row:** a cache hit means no fetch.
-- **Cover URL 404 or decode failure:** the procedural texture plus the RN title overlay, mirroring `CoverFace`'s `onError`.
-- **Filter change while textures are loading:** cancel stale loads by checking the URI on resolve.
-- **React Compiler:** keep three objects in refs created inside effects (never in render), and give `HoloStage` stable effect deps. The mesh plan warned the compiler can stale-pin a texture across cover changes, so test a cover change on a mounted detail screen.
+- **Zero-size layout:** `getContext` returns null, so retry on the next rAF (documented).
+- **iPad / size change:** recompute the buffer when `clientWidth` changes.
+- **Fast flings across many pages:** cards show the no-cover tint until their texture finishes uploading. A frame never waits on a load.
+- **Cover 404 or decode failure:** `uHasCover = 0` + the RN title overlay.
+- **Filter change:** the derived URI key changes → the window rebinds, and stale loads are dropped.
+- **Unmount during async device or init:** the `alive` guard disposes, and the counter decrements.
+- **React Compiler:** a cover change on a mounted detail screen rebinds (no stale pin), verified explicitly.
 
 ## Dependencies and Risks
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| RN `ImageBitmap` not accepted as a three texture source | Medium | Gate G1 on day 1; raw `GPUTexture` wrap as fallback. |
-| `react-native-webgpu` is a "technical preview" | Medium | Pin versions, keep the kill-switch flag and 2D fallback, and test on device before every bump. |
-| three API churn between minors (r183 rename, r184 leak) | High over time | Pin exact versions; the upgrade checklist re-checks #445 and the `RenderPipeline`/`bloom` APIs. |
-| JS-thread contention (FlashList + React + render loop) | Medium | Light scene (≤3 cards, ~6 draw calls), idle throttling, pause when unfocused; Bundle Mode is the stretch escape hatch. |
-| IPA size growth from Dawn | Unknown | Measure in G5 and decide with the user. |
-| Battery/thermal from continuous animation | Medium | 30 fps when idle, pause when unfocused or backgrounded, reduce-motion still mode. |
-| Simulator isn't representative (perf, gyro) | Certain | Device runs are required for perf and tilt sign-off. A physical iPhone can't reach the dev server (memory: `feedback_expo_go_device`), so use a device build (`npx expo run:ios --device` or an internal EAS build). |
+| RN `ImageBitmap` or resize not accepted by three | Medium | G1 on day 1. Raw `GPUTexture` + render-pass downscale fallback. |
+| `react-native-webgpu` "technical preview" (0.14→0.15 in a day) | Medium | Exact pins, the status store fallback, a device test before any bump. |
+| three API churn (r183 rename, r184 leak) | High over time | Exact pins. The upgrade checklist re-checks #445, `RenderPipeline`, `bloom`, pass resolution scale. |
+| JS-thread contention (FlashList + React + loop on Hermes, no JIT) | Medium | Capped resolution, reduced-scale bloom, CPU uniforms, pausing; then Bundle Mode. |
+| Fill cost (full-ratio buffer, beam overdraw, bloom chain) | Medium | Resolution policy, band-sized canvas, cheap beam noise. |
+| IPA growth (Dawn) | Unknown | G5; user decides. |
+| Battery and thermal | Medium | Pausing, 30 s dispose, soak test, degrade order. |
+| Simulator not representative (perf) | Certain | Release device builds for G2–G4 and G7. A physical iPhone can't reach the dev server (memory `feedback_expo_go_device`), so a Release device build is required anyway. |
 
 ## Alternatives Considered
 
-The research doc has the full comparison. In short:
-- **Skia SkSL:** cheapest, but no real geometry or lighting.
-- **Native Metal / RealityKit:** iOS-only, outside Reanimated, more Swift.
-- **R3F:** native support isn't ready (`@react-three/native` says "do not use yet"), and we don't need JSX scene graphs for ≤3 objects.
-- **Per-page canvases:** N devices, pipelines and inits. The shared stage pays once.
+The research doc has the full comparison. Within this approach:
+- **Per-page canvases:** N devices, pipelines and inits.
+- **R3F:** native support isn't ready, and there's no need for JSX scene graphs with ≤3 objects.
+- **The old projector hero as the fallback:** keeps ~150 LOC of dead 2D animation alive. `HoloFace` is enough.
 
 ## References
 
 **Internal**
 - [Research and decision](../brainstorms/2026-10-14-holo-cover-gpu-upgrade-research.md)
-- [components/holo-cover.tsx](../../components/holo-cover.tsx), [app/(tabs)/timeline/index.tsx](../../app/(tabs)/timeline/index.tsx), [app/book/[id].tsx](../../app/book/[id].tsx), [constants/tokens.ts](../../constants/tokens.ts)
+- [components/holo-cover.tsx](../../components/holo-cover.tsx), [app/(tabs)/timeline/index.tsx](../../app/(tabs)/timeline/index.tsx), [app/book/[id].tsx](../../app/book/[id].tsx), [components/book-card.tsx](../../components/book-card.tsx), [constants/tokens.ts](../../constants/tokens.ts), [hooks/useAccessibility.ts](../../hooks/useAccessibility.ts)
 - [Deferred mesh plan (gap list)](2026-05-01-feat-3d-book-covers-real-mesh-renderer-plan.md#if-we-ever-do-build-the-real-mesh), [Timeline improvements plan](2026-07-01-feat-timeline-tab-improvements-plan.md)
 
 **External**
