@@ -15,9 +15,22 @@ related:
 
 **Build on `react-native-webgpu` + three.js (`three/webgpu`, TSL).** The goal is real 3D assets and lighting, which rules out a 2D shader: we want geometry, lights that move across surfaces, a beam with volume, particles and bloom. That puts option C, not option A, at the centre of the work.
 
+**Scope.** The split follows the existing `HoloCover` `variant` prop:
+
+| Surface | Today | After |
+|---|---|---|
+| Timeline tab (`app/(tabs)/timeline/index.tsx`) | `variant="hero"` | **New 3D cover** |
+| Book detail (`app/book/[id].tsx`) | `variant="hero"` | **New 3D cover** |
+| Archive/Library rows (`components/book-card.tsx`) | `variant="thumb"` | Unchanged: current `HoloCover` and styles |
+| Added-books sheet, shelf scan review | `variant="thumb"` | Unchanged |
+
+`HoloCover`'s `thumb` path and its styles (tint, luminosity blend, scanlines, edge glow) stay as they are. The 3D cover is a new component used only on the two hero surfaces, and `HoloFace` stays as its placeholder while loading and its fallback when there's no GPU. Once nothing uses the old `hero` variant (projector beam, gyro tilt), it can be removed.
+
 This reverses the May 2026 deferral. Two things answer its cost objection:
 - **One persistent canvas behind the Timeline pager.** There's one GPU device and one renderer. Paging swaps the cover texture and animates the transition. Init and GPU memory are paid once per tab, not once per page.
-- **Thumbnails stay static `HoloFace`.** Only heroes use GPU.
+- **The detail screen gets its own canvas while it's open.** Pushing it from the Timeline means two canvases are live at once, so it should either share the GPU device or the Timeline should pause rendering while it's covered.
+- **Lists never touch the GPU.**
+- **Open question:** item 8 of the May plan applies. A list thumbnail, which is an RN view, can't shared-element-transition into a GPU canvas. If detail transitions are wanted later, transition into the static `HoloFace` and crossfade to 3D.
 
 The rendering-cost list in [the May plan](../plans/2026-05-01-feat-3d-book-covers-real-mesh-renderer-plan.md#if-we-ever-do-build-the-real-mesh) still applies:
 - disposal
