@@ -144,7 +144,7 @@ npm figures are monthly downloads, checked 2026-10-14.
   - There's also a **hosted Expo template** with a Three.js option. Sibling page: [react-three-fiber.mdx](https://github.com/wcandillon/react-native-webgpu/blob/main/apps/docs/content/docs/integrations/react-three-fiber.mdx).
 - **The library's example app, [`apps/example/src/ThreeJS/`](https://github.com/wcandillon/react-native-webgpu/tree/main/apps/example/src/ThreeJS)**, has working RN screens that map straight onto our needs:
   - `PostProcessing.tsx` → bloom
-  - `List.tsx` → canvases in a list or pager
+  - (`List.tsx` is only the example app's menu, not a list of canvases)
   - `Memory.tsx` → teardown and leak behaviour
   - `ToneMapping.tsx`
   - `Helmet.tsx` → glTF PBR with an HDR environment
