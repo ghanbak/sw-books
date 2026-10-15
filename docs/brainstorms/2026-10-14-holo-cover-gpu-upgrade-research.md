@@ -2,7 +2,7 @@
 title: "Research: GPU/shader upgrade for the hologram cover (Timeline tab)"
 type: research
 date: 2026-10-14
-status: research — no decision yet
+status: decided (2026-10-14) — WebGPU + three.js (option C)
 related:
   - components/holo-cover.tsx
   - app/(tabs)/timeline/index.tsx
@@ -10,6 +10,25 @@ related:
 ---
 
 # Hologram cover: GPU and shader upgrade research
+
+## Decision (2026-10-14)
+
+**Build on `react-native-webgpu` + three.js (`three/webgpu`, TSL).** The goal is real 3D assets and lighting, which rules out a 2D shader: we want geometry, lights that move across surfaces, a beam with volume, particles and bloom. That puts option C, not option A, at the centre of the work.
+
+This reverses the May 2026 deferral. Two things answer its cost objection:
+- **One persistent canvas behind the Timeline pager.** There's one GPU device and one renderer. Paging swaps the cover texture and animates the transition. Init and GPU memory are paid once per tab, not once per page.
+- **Thumbnails stay static `HoloFace`.** Only heroes use GPU.
+
+The rendering-cost list in [the May plan](../plans/2026-05-01-feat-3d-book-covers-real-mesh-renderer-plan.md#if-we-ever-do-build-the-real-mesh) still applies:
+- disposal
+- texture downsampling and mipmaps
+- crossfading from the static face while the renderer starts
+- bridging Reanimated values to the render loop
+- a 100-cycle leak test
+
+Its stack note needs updating: the package is now `react-native-webgpu`, and R3F is maintained but its native support isn't ready (see the table below).
+
+Skills research comes next, scoped to this stack.
 
 ## Current state
 
