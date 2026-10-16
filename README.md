@@ -6,7 +6,7 @@ Sign in with Apple or Google, browse the curated catalog, scan ISBN barcodes to 
 
 ## Stack
 
-- **App** — Expo SDK 54 (managed, CNG workflow), Expo Router, React Native 0.81, TypeScript strict
+- **App** — Expo SDK 56 (managed, CNG workflow), Expo Router, React Native 0.85, TypeScript strict
 - **Backend** — Supabase (Postgres + Auth + Row-Level Security)
 - **Lint / format** — Biome
 - **Test** — Vitest
@@ -54,7 +54,7 @@ If `pod install` fails with `Encoding::CompatibilityError`, your shell locale is
 
 ## Auth
 
-Google and Apple Sign-In are wired natively (no OAuth web redirect). External setup — hosted Supabase project, Google Cloud OAuth clients, Apple Service ID + key — is documented in `docs/plans/2026-04-29-auth-setup-checklist.md` (local-only; `/docs` is gitignored).
+Google and Apple Sign-In are wired natively (no OAuth web redirect). External setup — hosted Supabase project, Google Cloud OAuth clients, Apple Service ID + key — is documented in [docs/plans/2026-04-29-auth-setup-checklist.md](docs/plans/2026-04-29-auth-setup-checklist.md).
 
 In `__DEV__` builds, the **Continue as Dev User** button signs in as `dev@ossusarchives.local` against your local Supabase, bypassing OAuth entirely. Useful when iterating on UI without going through the provider dance.
 
@@ -71,7 +71,7 @@ Cloud builds run on EAS Build. Profiles in [eas.json](eas.json), each tied to an
 | `preview`            | internal · ad-hoc device           | `preview`      | test the real (Release) app on registered devices |
 | `production`         | App Store                          | `production`   | TestFlight / App Store                            |
 
-All iOS profiles are pinned to the `macos-sequoia-15.6-xcode-26.1` build image (see the VisionCamera note below). Builds take ~15–20 min.
+iOS profiles use EAS's default build image for the SDK. Builds take ~15–20 min.
 
 ### Preview — test on your device
 
@@ -131,9 +131,15 @@ eas update --channel preview --message "…"
 
 To roll back, republish a previous update to the channel (`eas update:republish`) or view history with `eas update:list`. Apple allows OTA for fixes and features, but not for changing the app's core purpose.
 
-Fuller setup (credentials, Apple Developer prerequisites, env/secrets via `eas env:create`) is in `docs/guides/setup-guide.md` (local-only).
+Fuller setup (credentials, Apple Developer prerequisites, env/secrets via `eas env:create`) is in [docs/guides/setup-guide.md](docs/guides/setup-guide.md).
 
-> **VisionCamera / Xcode 26 note.** [`plugins/withVisionCameraNoOptimizer.js`](plugins/withVisionCameraNoOptimizer.js) forces `SWIFT_OPTIMIZATION_LEVEL=-Onone` on the VisionCamera/Nitro pods: `react-native-vision-camera` v5 crashes the Swift optimizer under Release whole-module optimization on Xcode 26 ([mrousavy/react-native-vision-camera#3743](https://github.com/mrousavy/react-native-vision-camera/issues/3743)). The Xcode 26.1 image pin and this plugin can be revisited/retired once upstream ships a fix.
+### Native build fixes
+
+`ios/` is generated, so native workarounds live in config plugins and patches — both re-apply on every prebuild/EAS build:
+
+- [`plugins/withPodsMinDeploymentTarget.js`](plugins/withPodsMinDeploymentTarget.js) — raises pod targets below the app's iOS 16.4 deployment target. Xcode 27 rejects targets below iOS 15, which several Google/RN pods still declare.
+- [`plugins/withGoogleModularHeaders.js`](plugins/withGoogleModularHeaders.js) — opts Google Sign-In's transitive pods into modular headers so `pod install` can integrate them. `Podfile.lock` is gitignored, so pod versions float per build.
+- [`patches/`](patches) — `react-native-screens` and `expo-router` are patched (patch-package) to add an inline large-title option used on Timeline. Both are pinned to exact versions because patches are keyed to them; an Expo upgrade must re-port the patches. Details: [docs/plans/2026-10-14-feat-inline-large-title-upstream-plan.md](docs/plans/2026-10-14-feat-inline-large-title-upstream-plan.md).
 
 ## Commands
 
@@ -160,8 +166,10 @@ you via `--prefix`, so never `cd admin` to run them.
 ```
 app/                    Expo Router routes (file-based)
   (auth)/login.tsx        Sign-in screen
-  (tabs)/                 Catalog · Shelf · Scanner · Profile
+  (tabs)/                 Archives · Library · Search · Timeline
   book/[id].tsx           Book detail
+  scan.tsx                Barcode + shelf scanner (full-screen modal)
+  profile.tsx             Account sheet
 components/             Shared RN components
 hooks/                  Custom hooks
 lib/
@@ -169,6 +177,8 @@ lib/
   supabase.ts             Supabase client + dev fallback
   types.ts                Generated from Supabase (do not hand-edit)
 constants/              Design tokens
+plugins/                Expo config plugins (native build fixes)
+patches/                patch-package patches (applied on postinstall)
 scripts/                Seed + data utilities
 supabase/               Migrations + local config (config.toml, seed.sql)
 data/                   Source CSV for the catalog
@@ -241,6 +251,6 @@ delete books removed from the CSV — remove those in the dashboard.
 See [CLAUDE.md](CLAUDE.md). Highlights:
 
 - Native `ios/` and `android/` are **gitignored** — Expo's CNG workflow regenerates them from `app.json` on every `expo prebuild`. Don't hand-edit; do native config via plugins.
-- `/docs` is gitignored — plans, brainstorms, and guides are local-only working notes.
+- `docs/` holds plans, brainstorms, and guides.
 - Biome for formatting and linting (not ESLint or Prettier).
 - `lib/types.ts` is generated; regenerate with `npm run db:types` after schema changes.

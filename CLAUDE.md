@@ -4,7 +4,7 @@ Star Wars book tracker mobile app built with Expo (React Native) + Supabase.
 
 ## Stack
 
-- **Framework:** Expo SDK 54 (managed workflow) with Expo Router
+- **Framework:** Expo SDK 56 (managed workflow) with Expo Router
 - **Database:** Supabase (Postgres + Auth + RLS)
 - **Language:** TypeScript (strict mode)
 - **Linting:** Biome (not ESLint/Prettier)
