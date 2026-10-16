@@ -7,6 +7,12 @@
 		"icon": "./assets/images/icon.png",
 		"scheme": "ossusarchives",
 		"userInterfaceStyle": "dark",
+		"runtimeVersion": {
+			"policy": "fingerprint"
+		},
+		"updates": {
+			"url": "https://u.expo.dev/d3eb2684-ad86-490c-8089-a07203ad7027"
+		},
 		"ios": {
 			"supportsTablet": true,
 			"bundleIdentifier": "com.ghanbak.ossusarchives",
@@ -69,6 +75,7 @@
 			],
 			"expo-apple-authentication",
 			"./plugins/withGoogleModularHeaders.js",
+			"./plugins/withPodsMinDeploymentTarget.js",
 			"expo-image",
 			"expo-status-bar"
 		],

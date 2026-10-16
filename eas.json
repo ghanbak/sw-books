@@ -5,6 +5,7 @@
 	},
 	"build": {
 		"development": {
+			"channel": "development",
 			"developmentClient": true,
 			"distribution": "internal",
 			"ios": {
@@ -12,6 +13,7 @@
 			}
 		},
 		"development-device": {
+			"channel": "development",
 			"developmentClient": true,
 			"distribution": "internal",
 			"autoIncrement": true,
@@ -20,12 +22,14 @@
 			}
 		},
 		"preview": {
+			"channel": "preview",
 			"distribution": "internal",
 			"ios": {
 				"resourceClass": "m-medium"
 			}
 		},
 		"production": {
+			"channel": "production",
 			"distribution": "store",
 			"autoIncrement": true,
 			"ios": {

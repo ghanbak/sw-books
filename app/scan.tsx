@@ -3,7 +3,6 @@ import { useCameraPermissions } from 'expo-camera';
 import { openSettings } from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from 'expo-router/react-navigation';
-import { X } from 'lucide-react-native';
 import { type MutableRefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -101,7 +100,11 @@ export default function ScanScreen() {
 	// Rendered in every state; top-left so it never overlaps the centered mode switcher.
 	const closeButton = (
 		<View style={[styles.closeSlot, { top: insets.top + 8 }]} pointerEvents="box-none">
-			<GlassIconButton icon={X} accessibilityLabel="Close scanner" onPress={() => router.back()} />
+			<GlassIconButton
+				icon="xmark"
+				accessibilityLabel="Close scanner"
+				onPress={() => router.back()}
+			/>
 		</View>
 	);
 

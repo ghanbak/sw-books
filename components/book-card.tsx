@@ -3,6 +3,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { HoloCover } from '@/components/holo-cover';
+import { CanonBadge } from '@/components/ui/canon-badge';
 import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
@@ -50,14 +51,7 @@ export const BookCard = memo(function BookCard({ book }: { book: Book }) {
 						<Text style={styles.author} numberOfLines={1}>
 							{book.author.join(', ')}
 						</Text>
-						<View
-							style={[
-								styles.badge,
-								book.canon === 'Canon' ? styles.canonBadge : styles.legendsBadge,
-							]}
-						>
-							<Text style={styles.badgeText}>{book.canon.toUpperCase()}</Text>
-						</View>
+						<CanonBadge canon={book.canon} style={styles.badge} />
 					</View>
 					{dataPoints.length > 0 && (
 						<View style={styles.data}>
@@ -105,22 +99,7 @@ const styles = StyleSheet.create({
 	},
 	badge: {
 		alignSelf: 'flex-start',
-		paddingHorizontal: 6,
-		paddingVertical: 2,
-		borderRadius: 4,
 		marginTop: 2,
-	},
-	canonBadge: {
-		backgroundColor: tokens.badge.canon,
-	},
-	legendsBadge: {
-		backgroundColor: tokens.badge.legends,
-	},
-	badgeText: {
-		color: tokens.text.primary,
-		fontSize: 10,
-		fontWeight: '700',
-		letterSpacing: 0.5,
 	},
 	data: {
 		width: 96,
