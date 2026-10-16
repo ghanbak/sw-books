@@ -14,8 +14,8 @@ Sign in with Apple or Google, browse the curated catalog, scan ISBN barcodes to 
 ## Quickstart
 
 ```bash
-# 1. Install
-npm install
+# 1. Install (exactly what package-lock.json pins)
+npm ci
 
 # 2. Configure env
 cp .env.example .env
@@ -43,6 +43,13 @@ npx expo run:ios
 > the simulator, not a physical device (the device can't reach the dev server on
 > this setup).
 
+> **`npm ci`, not `npm install`.** `npm ci` installs exactly what `package-lock.json`
+> pins and never rewrites it — the same install EAS runs in the cloud. `npm install`
+> can drift Expo packages within their semver ranges, which has broken iOS builds
+> here. To add or upgrade a dependency, use `npx expo install <pkg>` (it picks the
+> version matching the Expo SDK), then commit the lockfile. Either way, `postinstall`
+> re-applies the `patches/` (patch-package) — see the output for `✔` per package.
+
 If `pod install` fails with `Encoding::CompatibilityError`, your shell locale isn't UTF-8. One-shot fix: prepend `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` to the prebuild command. Permanent fix: add those exports to `~/.zshrc`.
 
 ## Auth
@@ -55,13 +62,14 @@ The Apple Sign-In Supabase client secret JWT expires every 6 months — a schedu
 
 ## Builds & distribution (EAS)
 
-Cloud builds run on EAS Build. Three profiles in [eas.json](eas.json):
+Cloud builds run on EAS Build. Profiles in [eas.json](eas.json), each tied to an EAS Update channel:
 
-| Profile       | Distribution                       | Use                                                       |
-| ------------- | ---------------------------------- | --------------------------------------------------------- |
-| `development` | internal · dev client · simulator  | local dev client                                          |
-| `preview`     | internal · ad-hoc device           | test the real (Release) app on registered devices         |
-| `production`  | App Store                          | TestFlight / App Store                                    |
+| Profile              | Distribution                       | Update channel | Use                                               |
+| -------------------- | ---------------------------------- | -------------- | ------------------------------------------------- |
+| `development`        | internal · dev client · simulator  | `development`  | local dev client                                  |
+| `development-device` | internal · dev client · device     | `development`  | dev client on a registered iPhone                 |
+| `preview`            | internal · ad-hoc device           | `preview`      | test the real (Release) app on registered devices |
+| `production`         | App Store                          | `production`   | TestFlight / App Store                            |
 
 All iOS profiles are pinned to the `macos-sequoia-15.6-xcode-26.1` build image (see the VisionCamera note below). Builds take ~15–20 min.
 
@@ -79,6 +87,17 @@ eas build --profile preview --platform ios
 
 Only UDIDs registered via `eas device:create` can install an internal build; an unregistered device build succeeds but won't install.
 
+### Versioning
+
+`package.json` `version` is the single source of truth for the marketing version (`1.2.0`). Bump it with `npm version` on a clean `main` — never by hand:
+
+```bash
+npm version minor        # new features: 1.1.0 → 1.2.0  (patch for fixes, major for big releases)
+git push --follow-tags   # pushes the version commit + its vX.Y.Z tag
+```
+
+The `version` lifecycle script ([scripts/sync-app-version.mjs](scripts/sync-app-version.mjs)) copies the new version into `app.json` `expo.version` so they can't drift. Bump before each App Store release — a version that's already been released can't take new builds. The build number is separate and owned by EAS (below).
+
 ### Production — TestFlight / App Store
 
 ```bash
@@ -92,6 +111,26 @@ eas submit --profile production --platform ios
 
 `production` sets `autoIncrement: true` with `appVersionSource: "remote"`, so EAS owns the build number — don't bump it by hand. Submit credentials (Apple ID, ASC app ID, team ID) live in `eas.json` under `submit.production`. After upload, App Store Connect takes ~10–30 min to process before the build shows in TestFlight.
 
+### OTA updates — EAS Update
+
+JS and asset changes can ship over the air with [EAS Update](https://docs.expo.dev/eas-update/introduction/) — no new build or App Store review. Installed apps check for an update on launch, download it in the background, and run it on the **next** cold launch.
+
+```bash
+# Publish the current JS bundle to every production build it's compatible with
+eas update --channel production --message "Fix rail label on scrub"
+
+# Try it on a preview build first
+eas update --channel preview --message "…"
+```
+
+**What can ship OTA:** anything in JS/TS and bundled assets (screens, components, styles, logic, images).
+
+**What needs a new build** (`eas build` → TestFlight → review): adding/upgrading a native module or the Expo SDK, changes to `app.json` native fields or `plugins/`, and edits to `patches/` (they touch native code).
+
+**Compatibility is automatic.** `app.json` sets `runtimeVersion: { policy: "fingerprint" }`: the runtime version is a hash of the native layer (native deps, config plugins, `patches/`). An update only reaches builds with the same fingerprint, so a JS update that depends on new native code can't land on an old binary and crash it — it simply waits for users to install the new build. Run `npm ci` before `eas build` / `eas update`, since the fingerprint is computed from your local `node_modules`.
+
+To roll back, republish a previous update to the channel (`eas update:republish`) or view history with `eas update:list`. Apple allows OTA for fixes and features, but not for changing the app's core purpose.
+
 Fuller setup (credentials, Apple Developer prerequisites, env/secrets via `eas env:create`) is in `docs/guides/setup-guide.md` (local-only).
 
 > **VisionCamera / Xcode 26 note.** [`plugins/withVisionCameraNoOptimizer.js`](plugins/withVisionCameraNoOptimizer.js) forces `SWIFT_OPTIMIZATION_LEVEL=-Onone` on the VisionCamera/Nitro pods: `react-native-vision-camera` v5 crashes the Swift optimizer under Release whole-module optimization on Xcode 26 ([mrousavy/react-native-vision-camera#3743](https://github.com/mrousavy/react-native-vision-camera/issues/3743)). The Xcode 26.1 image pin and this plugin can be revisited/retired once upstream ships a fix.
@@ -103,6 +142,9 @@ Fuller setup (credentials, Apple Developer prerequisites, env/secrets via `eas e
 | `npx expo run:ios`            | Build + install the dev build, launch on simulator  |
 | `npm start`                   | Start Metro; serve JS to the installed dev build (not Expo Go) |
 | `npx expo prebuild --clean`   | Regenerate `ios/` and `android/` from `app.json`    |
+| `npm ci`                      | Install exactly what the lockfile pins (+ apply `patches/`) |
+| `npm version minor`           | Bump the marketing version (`package.json` + `app.json`) and tag |
+| `eas update --channel production` | Ship a JS-only update over the air              |
 | `npm run lint` / `lint:fix`   | Biome check / autofix                               |
 | `npm run db:reset`            | Reset local Supabase, apply migrations, run seed    |
 | `npm run db:types`            | Regenerate `lib/types.ts` from local Supabase       |
