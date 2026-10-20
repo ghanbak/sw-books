@@ -77,13 +77,13 @@ Stored keys: `dramatis_personae`, `characters`, `organisms`, `droids`, `events`,
 
 Entry: `{ name, page?, markers?, note?, depth? }` — optional keys omitted when empty.
 - `name` — wikilink label (else target). ~0.1% of entries are unlinked plain text → `page` absent.
-- `page` — wikilink target when it differs from `name` (e.g. `Mitth'raw'nuruodo/Legends`).
+- `page` — wikilink target (normalized, e.g. `Mitth'raw'nuruodo/Legends`), **always set for a linked entry**, even when it equals `name` — so linked vs plain text is distinguishable and the app can link names out (decided in Phase 2; `parseEnrichment` still accepts older rows without it).
 - `markers` — from inline templates: `{{1st}}` first, `{{1stm}}` first_mentioned, `{{1stc}}` first_canon, `{{1stID|x}}` first_identified, `{{1str}}` first_before_retcon, `{{Mo}}` mentioned, `{{Imo}}` indirect_mention, `{{ID|x}}` identified_as, `{{Flash}}` flashback, `{{Hologram}}` hologram, `{{Vision|x}}` vision, `{{Voice}}` voice, `{{Ghost}}` ghost, `{{Po}}` picture, `{{Co}}` cover, `{{Wreck}}` wreckage, `{{Ret}}` retcon. Mention-only = `mentioned` | `indirect_mention` | `first_mentioned`.
 - `note` — `{{C|…}}` free text ("Statue only", "unborn"), alias text (`"Threepio"`), template arguments (`{{ID|Yagai}}`, `{{Vision|Luke Skywalker}}`), or the dramatis personae role (`Jedi Knight (female Twi'lek)`).
 - `depth` — list nesting (`**` = 1; up to 5 in locations), e.g. *Battle of Endor* under *Galactic Civil War*.
 - Ignore `{{!}}` (column break) and `{{'s}}` (render as `'s`).
 
-Payload: 14–50 KB per book → detail-only embed stands.
+Payload: 14–50 KB per book (measured in Phase 2: avg 36 KB, max 111 KB) → detail-only embed stands.
 
 #### Deliberately left out
 - **`era_detail`** — the `{{Book}}` infobox has no era field. The only era signal is the `{{Top|rwm|<code>}}` icon code (`rote`, `rofo`, `tnr`, `thr`; Legends `imp`, `reb`, `new`, `njo`, `old`), which is coarse and duplicates `books.era`. Phase 2 may use it to cross-check `books.era`, not to store.
@@ -101,11 +101,35 @@ npm run db:types            # regenerates lib/types.ts
 docker exec -i supabase_db_ossus-archives psql -U postgres -v ON_ERROR_STOP=1 -q < supabase/tests/book_enrichment_test.sql
 npm test && npx tsc --noEmit
 ```
-Prod: not applied. `supabase db push` is a separate, explicit step.
+Prod: migration pushed 2026-10-20 (`supabase db push`, by the user); table empty until the Phase 2 sync is applied.
 
-### Phase 2 — Enrichment sync
-- `scripts/enrich-wookieepedia.ts` — for promoted books, fetch `{{Book}}` + section content via the v1 client/parse, extract characters/appearances/timeline detail, upsert on `book_id` gated by `content_hash`. Writes **only** the satellite. Compliant UA, ≤3 concurrent, honor 429.
-- **Acceptance:** re-sync with no wiki change is a no-op (hash gate); missing/redirected pageids flagged, not silently dropped.
+### Phase 2 — Enrichment sync ✅
+`npm run catalog:enrich` → [scripts/enrich-wookieepedia.ts](../../scripts/enrich-wookieepedia.ts). Dry-run by default; `--apply` writes; `--production` targets prod (read-only unless `--apply`, then the typed project-ref prompt, same guard as `apply-catalog-changeset.ts`). Flags: `--allow-shrink`, `--verbose`.
+
+- **Parser** — [lib/wookieepedia/appearances.ts](../../lib/wookieepedia/appearances.ts) (pure): `parseAppearancesWikitext` → the stored `appearances` shape (optional keys and empty categories omitted; `parseAppearances` restores defaults). Every `{{App}}` on the page; `c-`/`l-` fold to base, `other characters` → `characters`, `dramatis personae` kept with the role as `note`. Entry = leading wikilink (label/target, link trail, quoted phrases) + residual text as note; no leading link → plain text, no `page` (incl. possessives like `[[Jabba]]'s palace`). `{{!}}`, `{{'s}}`, comments, refs handled; unknown templates/params are dropped and counted in `diagnostics`, never thrown. `buildTimelineNotes` keeps `{{C|…}}` as "(…)" and joins `<br>` segments with "; ". Tests: [appearances.test.ts](../../lib/wookieepedia/appearances.test.ts) against pinned real fixtures in `lib/wookieepedia/__fixtures__/` (canon *A New Dawn*, Legends *Heir to the Empire*, NJO *Star by Star*).
+- **Marker vocabulary extended** (full-catalog run surfaced them; additive, `parseEnrichment` unchanged otherwise): `{{1stcm}}` first_canon_mentioned (mention-only), `{{1stp}}` first_pictured, `{{1stdesc}}` first_described, `{{Ho}}` heard, `{{Corpse}}` corpse, `{{Unborn}}` unborn, `{{Sim}}` simulation, `{{Holocron}}` holocron, `{{Qo}}` quote; `{{Crawl}}` → mentioned + note "opening crawl". `first*` arguments ("simultaneous with …") are publication metadata and not kept.
+- **Not stored:** bold sub-group headings inside a category (`'''Food and beverages'''`, `'''Rogue Squadron'''` — 227 across the catalog). Entries are kept; the grouping is lost. Additive `group?` key later if Phase 3 wants it.
+- **Mapping** — [lib/wookieepedia/enrich-sync.ts](../../lib/wookieepedia/enrich-sync.ts) `buildMapping`: persisted `book_enrichment.source_pageid` rows are the mapping and are never re-pointed. Books without a row map from the discovery CSV + `classify` (MATCHED/DIFFERS; AMBIGUOUS/NEW skipped). Refused: synthetic pageids (sidecar missing), a pageid claimed by two books, a book matched by two pages. No separate mapping file.
+- **Fetch** — `fetchPagesByIds` ([client.ts](../../lib/wookieepedia/client.ts)): by **pageid** (the stable anchor; a move keeps the id), ≤50 per request, serial, compliant UA, 429 backoff, `rvcontinue` followed. Redirects are **not** followed.
+- **Lifecycle / guards** (`planStep`): `missing`, now-a-`redirect` (target title reported), `not_book` (no `{{Book}}` and no `{{App}}`), `emptied` (entries → 0) and `shrunk` (< 50% of ≥ 20 entries; `--allow-shrink` accepts) are **flagged, last good row kept**.
+- **Hash gate** — `content_hash` = sha256 of canonical (key-sorted) JSON of the stored content: `source_pageid`, `source_title`, `source_url`, `license`, `attribution`, `timeline_notes`, `appearances`. Excludes `fetched_at` and `source_revision_id`, so a prose-only wiki edit writes nothing. A page move (title/url change) does write. `source_revision_id`/`fetched_at` therefore record the revision/time the *current content* was first seen.
+- **Writes** — only `book_enrichment`, upsert on `book_id`, only hash-changed rows, batches of ≤25 rows / ≤1 MB (~11 batches for a full load). If the table is missing on the target (PostgREST `PGRST205`/`42P01`) the run stops with "run `supabase db push` first".
+- **No backup step:** the table is re-derivable from the wiki at any time (and was empty in prod at first sync); a partial failure resumes on re-run via the hash gate.
+
+#### Verification (2026-10-20)
+- Local: `npm run catalog:restore` (276 rows from `data/catalog-backup.csv`, prod ids) → dry-run → `--apply`: **269 inserted** in 11 batches, 0 flagged → re-run: **0 writes** (269 unchanged; `updated_at`/`fetched_at` fingerprint identical). After the always-set-`page` change: `--apply` rewrote **265** rows (4 empty-appearances rows unchanged), then a re-run wrote 0.
+- Payload (always-set `page`): 9.48 MB total, avg 36.1 KB, largest *Mask of Fear* 111.0 KB (then *Life Debt* 92.2 KB, *Victory's Price* 84.5 KB). Was 7.32 MB / 77.1 KB before. Corpus: 150,822 entries, 0 unknown templates/params, 8 unbulleted lines.
+- No page (7): `a-new-hope-novelization`, `empire-strikes-back-novelization`, `return-of-the-jedi-novelization`, `dooku-jedi-lost`, `legacy-of-the-jedi-secrets-of-the-jedi`, `lost-tribe-of-the-sith-collected`, `luke-skywalker-shadows-of-mindor` (not in the discovery set; pin by hand in Phase 4). 0 AMBIGUOUS against the current catalog.
+- Rows with empty `appearances` (page has no `{{App}}`; still carry backlink + timeline): `ahsoka-a-novelization-of-season-one`, `heir-to-the-empire-the-20th-anniversary-edition`, `star-wars-starfighter`, `stories-of-jedi-and-sith`.
+- Anon embed `books?select=*,book_enrichment(*)` returns an object (null when absent); `parseEnrichment` narrows it; anon POST → 401/42501. `supabase/tests/book_enrichment_test.sql` PASS with data loaded. Missing-table guard verified live (table renamed locally → clean stop, exit 1).
+- Prod: `--production` dry-run (read-only) → 269 inserts, 9.48 MB, identical plan. **Not applied.**
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=<local secret> npm run catalog:enrich            # dry-run, local
+SUPABASE_SERVICE_ROLE_KEY=<local secret> npm run catalog:enrich -- --apply
+npm run catalog:enrich -- --production                                     # dry-run vs prod
+npm run catalog:enrich -- --production --apply                             # prod write (typed ref)
+```
 
 ### Phase 3 — App integration
 - `lib/hooks.ts` — detail-only embed `from('books').select('*, book_enrichment(*)')`; `parseEnrichment` narrowing.
@@ -117,7 +141,7 @@ Prod: not applied. `supabase db push` is a separate, explicit step.
 
 ## Acceptance Criteria
 - [ ] `book_enrichment` migration + dual-read RLS + service-role writes; reseed-safe; delete cascades.
-- [ ] Sync writes only the satellite, content-hash-gated, idempotent; stale/missing pageids flagged.
+- [x] Sync writes only the satellite, content-hash-gated, idempotent; stale/missing pageids flagged.
 - [ ] Detail-only embed; `Json` narrowed via `parseEnrichment`; 1:1-as-array handled.
 - [ ] Detail screen shows enrichment + attribution backlink when present; unchanged otherwise.
 - [ ] Facts + backlink only in MVP; any prose behind the attribution component.

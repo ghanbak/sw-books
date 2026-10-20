@@ -39,6 +39,15 @@ function loadPageIdByTitle(): Map<string, number> {
 	return out;
 }
 
+/**
+ * Real Wookieepedia pageids from the meta sidecar. `loadDiscovered` falls back
+ * to a synthetic `1_000_000 + index` id when the sidecar is absent; anything
+ * that must address the wiki by id (the enrichment sync) checks membership here.
+ */
+export function discoveryPageIds(): Set<number> {
+	return new Set(loadPageIdByTitle().values());
+}
+
 /** sha256 of the discovery CSV, so a changeset records exactly what it was built from. */
 export function discoveryCsvSha256(): string {
 	return createHash('sha256').update(readFileSync(DISCOVERY_CSV)).digest('hex');

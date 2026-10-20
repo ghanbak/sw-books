@@ -40,14 +40,17 @@ export type RawPage = {
 
 type QueryEnvelope = {
 	batchcomplete?: boolean;
-	continue?: { cmcontinue?: string; continue?: string };
+	continue?: { cmcontinue?: string; rvcontinue?: string; continue?: string };
 	query?: {
 		categorymembers?: Array<{ pageid: number; ns: number; title: string }>;
 		pages?: Array<{
 			pageid?: number;
 			ns?: number;
-			title: string;
+			title?: string;
 			missing?: boolean;
+			invalid?: boolean;
+			/** `prop=info`: the page is a redirect. */
+			redirect?: boolean;
 			revisions?: Array<{
 				revid?: number;
 				slots?: { main?: { content?: string } };
@@ -170,7 +173,7 @@ export async function fetchPages(titles: readonly string[]): Promise<RawPage[]> 
 			redirects: '1',
 		});
 		for (const p of body.query?.pages ?? []) {
-			if (p.missing || p.pageid == null) continue;
+			if (p.missing || p.pageid == null || p.title == null) continue;
 			const rev = p.revisions?.[0];
 			const wikitext = rev?.slots?.main?.content;
 			if (!wikitext) continue;
@@ -184,4 +187,81 @@ export async function fetchPages(titles: readonly string[]): Promise<RawPage[]> 
 		}
 	}
 	return pages;
+}
+
+/**
+ * The fetch outcome for one requested pageid. Pageids are the stable anchor
+ * (a page move keeps its id; the old title becomes a NEW redirect page), so the
+ * enrichment sync fetches by id and never follows redirects: a stored id that
+ * now IS a redirect (article merged/replaced) or is gone must be flagged, not
+ * silently re-pointed at another article.
+ */
+export type PageFetch =
+	| { readonly status: 'ok'; readonly page: RawPage }
+	| { readonly status: 'missing'; readonly pageid: number }
+	| {
+			readonly status: 'redirect';
+			readonly pageid: number;
+			readonly title: string;
+			/** Redirect target title from `#REDIRECT [[…]]`, when parseable. */
+			readonly target: string | null;
+	  };
+
+const REDIRECT_LINE = /^\s*#REDIRECT\s*:?\s*\[\[([^\]|#]+)/i;
+
+/**
+ * Fetch pages by pageid in ≤50-id batches (`prop=revisions|info`, main-slot
+ * wikitext + revid), WITHOUT `redirects=1`. Follows `rvcontinue` when the API
+ * splits a large batch. Returns one result per requested id, in request order.
+ */
+export async function fetchPagesByIds(pageids: readonly number[]): Promise<PageFetch[]> {
+	const byId = new Map<number, PageFetch>();
+	for (const batch of chunk([...new Set(pageids)], MAX_TITLES_PER_BATCH)) {
+		if (batch.length === 0) continue;
+		const content = new Map<number, { wikitext: string; revid: number | null }>();
+		const meta = new Map<number, { title: string; redirect: boolean; missing: boolean }>();
+		let cont: Record<string, string> = {};
+		do {
+			const body = await request({
+				action: 'query',
+				prop: 'revisions|info',
+				rvprop: 'content|ids',
+				rvslots: 'main',
+				pageids: batch.join('|'),
+				...cont,
+			});
+			for (const p of body.query?.pages ?? []) {
+				if (p.pageid == null) continue;
+				meta.set(p.pageid, {
+					title: p.title ?? '',
+					redirect: p.redirect === true,
+					missing: p.missing === true || p.invalid === true,
+				});
+				const rev = p.revisions?.[0];
+				const wikitext = rev?.slots?.main?.content;
+				if (wikitext != null) content.set(p.pageid, { wikitext, revid: rev?.revid ?? null });
+			}
+			const next = body.continue;
+			cont = next?.rvcontinue ? { rvcontinue: next.rvcontinue, continue: next.continue ?? '' } : {};
+		} while (cont.rvcontinue);
+
+		for (const id of batch) {
+			const m = meta.get(id);
+			const c = content.get(id);
+			if (!m || m.missing || !c) {
+				byId.set(id, { status: 'missing', pageid: id });
+				continue;
+			}
+			const redirectTo = c.wikitext.match(REDIRECT_LINE)?.[1]?.trim() ?? null;
+			if (m.redirect || redirectTo) {
+				byId.set(id, { status: 'redirect', pageid: id, title: m.title, target: redirectTo });
+				continue;
+			}
+			byId.set(id, {
+				status: 'ok',
+				page: { pageid: id, title: m.title, wikitext: c.wikitext, revid: c.revid, imageUrl: null },
+			});
+		}
+	}
+	return pageids.map((id) => byId.get(id) ?? { status: 'missing', pageid: id });
 }

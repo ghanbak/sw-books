@@ -72,6 +72,16 @@ export const APPEARANCE_MARKERS = [
 	'cover', // {{Co}} Cover only
 	'wreckage', // {{Wreck}} Wreckage only
 	'retcon', // {{Ret}} Retcon
+	// Added in Phase 2 after a full-catalog sync surfaced them:
+	'first_canon_mentioned', // {{1stcm}} First canonically mentioned
+	'first_pictured', // {{1stp}} First pictured
+	'first_described', // {{1stdesc}} First described
+	'heard', // {{Ho}} Heard only
+	'corpse', // {{Corpse}} Appears as a corpse
+	'unborn', // {{Unborn}} Unborn fetus
+	'simulation', // {{Sim}} Appears in simulation
+	'holocron', // {{Holocron}} Appears in holocron
+	'quote', // {{Qo}} Quote only
 ] as const;
 
 export type AppearanceMarker = (typeof APPEARANCE_MARKERS)[number];
@@ -81,12 +91,16 @@ const MENTION_MARKERS: ReadonlySet<AppearanceMarker> = new Set([
 	'mentioned',
 	'indirect_mention',
 	'first_mentioned',
+	'first_canon_mentioned',
 ]);
 
 export type AppearanceEntry = {
 	/** Display label (the wikilink label, else target). */
 	readonly name: string;
-	/** Wiki link target, e.g. `Mitth'raw'nuruodo/Legends`. */
+	/** Wiki link target, e.g. `Mitth'raw'nuruodo/Legends`. Set for every linked
+	 *  entry (even when equal to `name`); null = unlinked plain text. Rows synced
+	 *  before this rule may omit it for links whose target equals the name — a
+	 *  re-sync rewrites them (the content hash changes). */
 	readonly page: string | null;
 	readonly markers: readonly AppearanceMarker[];
 	/** Free text: `{{C|…}}` comments, alias, `{{ID}}`/`{{Vision}}` arguments, or a

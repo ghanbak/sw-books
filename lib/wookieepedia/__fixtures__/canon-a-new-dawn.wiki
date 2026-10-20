@@ -1,0 +1,724 @@
+{{Top|rwm|rote|italics=1}}
+{{Otheruses|New Dawn}}
+{{Book
+|image=[[File:ANewDawn.png]]
+|title=''A New Dawn''
+|author=*[[John Jackson Miller]]
+*[[Dave Filoni]] {{C|Foreword}}
+|cover artist=*[[Scott Biel]] {{C|Jacket design}}
+*[[Douglas Wheatley|Doug Wheatley]] {{C|Jacket art}}
+*[[Elizabeth A. D. Eno|Elizabeth Eno]] {{C|Book design}}
+*[[Norma Jean Fochs]] {{C|Author photo}}
+|illustrator=
+|editor=
+|publisher=[[Del Rey]]
+|early release=
+|release date=[[September 2]], [[2014]]<ref name="Penguin">{{PenguinRandomHouse|url=books/240647/a-new-dawn-star-wars-by-john-jackson-miller|text=A New Dawn: Star Wars|oldversion=20150518052209}}</ref>
+|intl release=
+|rereleased=
+|media type=*Hardcover
+*Paperback<ref name="Penguin-Paperback">{{PenguinRandomHouse|url=books/240647/a-new-dawn-star-wars-by-john-jackson-miller/9780553391473|text=A New Dawn: Star Wars}} {{C|Paperback}}</ref>
+*eBook
+|pages=400
+|isbn=9780553392869
+|isbn2=
+|isbn3=
+|audiobook=[[A New Dawn (audiobook)|Audiobook]]
+|timeline=[[11 BBY]]<ref name="AND Date">''[[Star Wars: Timelines]]'' dates the events of ''A New Dawn'' to [[11 BBY]].</ref>
+|series=
+|preceded by=
+|followed by=
+}}
+{{Quote|This is the first novel integrating input from the Lucasfilm Story Group, which manages story concepts across all media, and so in addition to working with Random House's team I both got inspiration and feedback from the series' executive producers, Dave Filoni, Simon Kinberg, and Greg Weisman, as well as Pablo Hidalgo, Jennifer Heddle, and Leland Chee.|John Jackson Miller, on ''A New Dawn''|<ref name="Faraway-New" />}}
+'''''A New Dawn''''' is a [[canon]] novel written by [[John Jackson Miller]], with a foreword by [[Dave Filoni]]. It was the first novel to be set in the current ''[[Star Wars]]'' canon, and it serves as a prequel to the animated television series ''[[Star Wars Rebels]]''. The novel was first published by [[Del Rey]] on [[September 2]], [[2014]], alongside an [[A New Dawn (audiobook)|audiobook]] version. ''A New Dawn'' was later published in ''[[The Rise of the Empire]]'' ([[2015]]). The book had several initial working titles, including '''''Loose Cannon''''' and '''''Rogue Elements'''''.
+
+==Publisher's summary==
+''Ever since the Jedi were marked for death and forced to flee Coruscant, Kanan Jarrus has devoted himself to staying alive rather than serving the Force. Wandering the galaxy alone, from one anonymous job to another, he avoids trouble&mdash;especially with the Empire&mdash;at all costs. So when he discovers a deadly conflict brewing between ruthless Imperial forces and desperate revolutionaries, he's not about to get caught in the crossfire. Then the brutal death of a friend at the Empire's hands forces the ex-Jedi to make a choice: bow down to fear, or stand up and fight.''
+
+''But Jarrus won't be fighting alone. Unlikely allies, including a bomb-throwing radical, a former Imperial surveillance agent, a vengeful security officer, and the mysterious Hera Syndulla&mdash;an agent provocateur with motives of her own&mdash;team up with Jarrus to challenge the Empire. As a crisis of apocalyptic proportions unfolds on the planet Gorse, they must stand together against one of the Empire's most fearsome enforcers&mdash;for the sake of a world and its people.''
+
+==Opening crawl==
+{{OpeningCrawl
+|name=A NEW DAWN
+|text=For a thousand generations, the Jedi Knights brought peace and order
+to the Galactic Republic, aided by their connection to the mystical en-
+ergy field known as the Force. But they were betrayed&mdash;and the whole
+galaxy has paid the price. It is the Age of the Empire.
+
+Now Emperor Palpatine, once chancellor of the Republic and se-
+cretly a Sith follower of the dark side of the Force, has brought his own
+peace and order to the galaxy. Peace, through brutal repression&mdash;and
+order, through increasing control of his subjects' lives.
+
+But even as the Emperor tightens his iron grip, others have begun to
+question his means and motives. And still others, whose lives were de-
+stroyed by Palpatine's machinations, lay scattered about the galaxy like
+unexploded bombs, waiting to go off....}}
+
+==Plot summary==
+===Prologue===
+During the [[Clone Wars]], a young Caleb Dume attends a lesson by the [[Jedi Master]] [[Obi-Wan Kenobi]] about the [[Imperial Palace|Jedi Temple's]] beacon. The beacon can be used to summon the Jedi back to Coruscant. Caleb creates an atmosphere of unease among the [[Padawan]]s and their masters when he queries whether the beacon can also be used to warn the Jedi not to return to the Temple. Sure enough, Master Kenobi uses the Temple's beacon to warn the Jedi not to return to the Temple following the [[Great Jedi Purge]].
+
+A while later, after asking Master Kenobi, Dume asked his master [[Depa Billaba]] what a Jedi must do if warned away from the Temple but no further orders come. She counsels that the answer will perhaps come to him in a different form.
+
+===Phase One: Ignition===
+The Galactic Empire has a [[thorilide]]-mining operation in the [[Gorse system]] based on the planet Gorse and its moon [[Cynda]]. With production behind schedule, the Empire dispatches the Imperial technocrat [[Count]] [[Denetrius Vidian]] to restore production to acceptable levels. He travels to the Gorse system on the [[Imperial-class Star Destroyer|Imperial Star Destroyer]] ''[[Ultimatum]]'', which is commanded by [[Captain]] [[Rae Sloane]], a second point-of-view character. To demonstrate that the Empire will no longer tolerate production delays, Count Vidian destroys a laggard freighter holding up the moonward convoy called the ''[[Cynda Dreaming]]''. Vidian also takes an interest in Gorse's labor and environmental problems. The arrival of the ''Ultimatum'' is witnessed by the [[Twi'lek]] Hera Syndulla, who has been tracking Vidian's activities. By masking another ship's transponder, Hera is able to sneak her ship ''[[Ghost]]'' into the space traffic.
+
+Meanwhile, Caleb has adopted the pseudonym Kanan Jarrus and taken a job as a freight pilot. Kanan travels to the Gorse system on the freighter [[Moonglow-72|''Expedient'']], which is hauling [[Baradium bisulfate]] for [[Moonglow Polychemical]]. Kanan's co-pilot is his landlord [[Okadiah Garson]], who runs a [[cantina]] called [[The Asteroid Belt]] on Gorse. After verifying his ship's ID transponder with Captain Sloane, Kanan lands at a mine on Cynda. With Gorse's thorilide mines exhausted, the Empire had begun mining Cynda, which hitherto had been a nature preserve. These mining operations had caused extensive damage to much of the moon's crystalline caverns. Kanan catches a Gorse local named [[Skelly]], a Clone Wars veteran, remonstrating with the [[Besalisk]] [[Lal Grallik]], the chief of Moonglow Polychemical, to suspend blasting operations beyond [[Zone Forty-Two]], where he plans to conduct a test bombing. Despite being friends with Skelly, Kanan does not back him up because his job depends on hauling baradium bisulfate, which is used to blow up the caverns for extraction.
+
+Unknown to Skelly, his conversation with Lal is being monitored by [[Zaluna Myder]], a [[Sullustan]] surveillance operator working for [[Myder's Mynocks]], a surveillance subdivision of [[Transcept Media Solutions]], a security company working for the Empire. Since Skelly's criticism of mining operations is seen as a threat to progress, her supervisor contacts the Imperial authorities, who send [[stormtrooper]]s to Level Thirty-Nine to arrest Skelly. The stormtroopers try to apprehend Skelly but the former detonations expert escapes by exploding a large cylinder which crushes his pursuers. Now a fugitive, Skelly flees into hiding.
+
+Meanwhile on Cynda, Count Vidian begins his tour of the planet's mining complex. He begins dismissing the oldest workers due to their advanced age. When the [[Neimoidian]] Director [[Palfa]] protests the summary dismissals, Vidian personally beats him to death with his mechanical hands. When Vidian accosts Okadiah, Kanan springs to his defense. Following a brief but heated exchange, Vidian and his stormtroopers leave to deal with the incident on Cynda's Level Thirty-Nine. In the background, Hera infiltrates the facility and knocks out a stormtrooper who gets in her way. She also witnesses the brief confrontation between Vidian and Kanan.
+
+Skelly plants a test bomb in Zone Forty-Two which disrupts the Imperial mining operations on Cynda. Kanan and his fellow miners Okadiah and [[Yelkin]] find the bomb and barely escape a massive explosion, which damages the surrounding catacombs. Count Vidian is addressing a droidmaster and three aides when the floor beneath them collapses due to the explosion. Due to his cybernetic body, he manages to dig himself out. Count Vidian and Captain Sloan dispatch Imperial reinforcements from the ''Ultimatum'' to hunt Skelly down. Vidian's manhunt is compounded by his rival [[Baron]] [[Lero Danthe]] announcing that the [[Darth Sidious|Emperor]] had increased Cynda's weekly thorilide output by 50 percent.
+
+Meanwhile, Kanan and his companions have a tense reunion with Skelly, who defends his actions on the grounds that the Empire's mining operations were destroying Cynda. Unwilling to get into trouble with the Empire, Kanan decides to hand Skelly over to the Imperial authorities at Moonglow's shipyard. On the ''Ghost'', Hera decides to find Skelly and arranged a meeting with [[Hetto]], an employee on Transcept Media and a fellow member of Myder's Mynocks. However, Hetto is arrested by Imperial personnel, who have been monitoring his [[HoloNet]] activities. Before his arrest, he told her that he had been meeting someone on HoloNet and had left a [[Data cube|datacube]] in a potted plant. After finding Hetto's data cube, Zaluna soon discovers that Hetto's mysterious contact is Hera Syndulla.
+
+Count Vidian is contacted by Lal Grallik, who informs him that he has captured the fugitive Skelly. Before Imperial forces can take Skelly into custody, Hera hires the criminal gang known as the [[Sarlaccs]] to stage a fight outside the Moonglow's headquarters so that she could rescue Skelly. Due to the distraction, Hera is able to rescue Skelly. However, the gang's leader [[Charko]] turns on Hera and tries to rob her. Before the Sarlaccs can assault her, Kanan comes to the Twi'lek's aid and helps her defeat the gang. The two then part company.
+
+Aboard the ''Ultimatum'', Captain Sloane and [[commander]] [[Nibiru Chamas]] discuss Count Vidian's micromanagement (including shutting down a [[medcenter]]) and his background. While his biography claims that Vidian was an engineer at a Corellian starship design firm who contracted [[Shilmer's syndrome]], Chamas doubts the authenticity of that account. Meanwhile, at his home in [[Gorse City]]'s [[Crispus Commons]], Skelly encounters Hera, who had hoped to recruit him as a rebel operative. However, she quickly dismisses him as a crank and leaves, believing that she wasted her time rescuing him. However, she receives a note from Okadiah Garson telling her to meet him at The Asteroid Belt bar, which he owns. Using Hetto's data cube, Zaluna also heads to the Asteroid Belt to meet Hera.
+
+At The Asteroid Belt, Kanan swiftly defeats another miner whom he had encountered in an earlier bar fight at [[Philo's Fueling Station]] in [[Shaketown]]. Shortly thereafter, Kanan is joined by Okadiah, Zaluna, and finally Hera. Hera reveals that she had come looking for Hetto, who had contacted her about abuses of authority in the Gorse system via HoloNet. Zaluna informs Hera that Hetto was arrested by the Empire but that he had downloaded sensitive Imperial information onto the Transcept database including a visit to Gorse by a mysterious man named [[Denetrius Vidian|Lemuel Tharsa]] twenty years ago. Zaluna then quickly departs shortly before the arrival of Skelly.
+
+Skelly informs Kanan, Okadiah, and Hera that Count Vidian is coming to inspect Moonglow in a few hours. Seeking an opportunity to take Vidian out, Skelly asks his allies for help in securing an ID to get through the security cordon around that part of Shaketown. Due to Skelly's reckless nature, Hera and Kanan are reluctant to help. Before they can leave, an Imperial patrol enters the bar searching for Skelly. Kanan, Hera, and Okadiah outwit the stormtroopers by hiding Skelly in a closet and claiming that an intoxicated [[Wookiee]] is inside.
+
+After the stormtroopers leave, Hera convinces Kanan to lend her his Moonglow security card so that she can enter the facility and spy on Count Vidian to find out why he is interested in the Gorse system. While he is wary of getting into trouble with the Empire, he agrees to lead Hera there on the condition that "no crazy stuff" takes place. Hera also takes an interest in Lemuel Tharsa, a mining consultant doing freelance work for the Imperial government. She suspects that he is somehow connected to Count Vidian and believes that Moonglow will have the answers she is looking for.
+
+===Phase Two: Reaction===
+Captain Sloane and Count Vidian travel in the Imperial [[shuttle]] [[Truncheon (Lambda-class)|''Truncheon'']] to inspect the Moonglow Polychemical [[factory]] in Shaketown. For the tour, they are hosted by the Besalisk chief operating officer [[Lal Grallik]] and her husband [[Gord Grallik|Gord]]. Meanwhile, Kanan and Hera infiltrate the factory in a [[Speeder bus/Legends|hoverbus]] disguised as factory workers. Meanwhile, Skelly infiltrates the factory through the sewers with the help of the chef [[Drakka]]. However, Skelly is quickly spotted by Vidian, who assaults him after Skelly tries to hand him a [[Hologram disc/Legends|Holodisc]] in an attempt to save Cynda. Sloane and her stormtroopers attempt to apprehend Skelly, but he flees onto the conveyor-belt system.
+
+Following Skelly's escape, Kanan is spotted and detained by Sloane. After learning from [[Baron]] [[Lero Danthe]] that the Empire has tripled Cynda's thorilide output, an irritated Vidian callously murders Lal by throwing her into a bath of [[xenoboric acid]]. Desiring to increase production, Vidian dismisses Skelly's warning. Hera witnesses Vidian in the act of murdering Lal and informs Gord that Vidian murdered his wife. Initially disbelieving the rebel, he changes his mind when he sees the security monitor. Later, Hera convinces Captain Sloane to release Kanan by presenting his missing ID card.
+
+Vidian and his entourage prepare to depart on their shuttle, but it is destroyed by a bomb planted by Skelly. Vidian and Sloane survive the explosion, but several Imperials are killed. Following the blast, a vengeful Gord attempts to attack Vidian for murdering his wife but is beaten up by several stormtroopers. Vidian commandeers the hoverbus in order to reach the spaceport in Highground. Kanan and Hera commandeer a nearby hover truck and follow Vidian, determined to kill him once and for all. Hera suspects that Vidian is up to something. Skelly also follows on a stolen [[speeder bike]].
+
+At the spaceport, Vidian prepares to leave on the shuttle [[Cudgel (Lambda-class)|''Cudgel'']] for Sloane's Star Destroyer ''Ultimatum''. Before he can leave, Skelly destroys the shuttle with an explosive. Kanan and Hera arrive at the spaceport followed by a vengeful Gord. Vidian spots Kanan and Hera and orders them to surrender. The two escape when Gord attacks Vidian, giving them enough time to flee on their commandeered hoverbus with Skelly. After killing Gord, Vidian reprimands Captain Sloane for the poor security arrangements and issues an alert for Skelly and his companions, emphasizing that the former is to be shot while the latter brought to him.
+
+Kanan, Hera, and Skelly escape the spaceport on their stolen hoverbus pursued by several [[K79-S80 Imperial Troop Transport|Imperial Troop Transports]] and two [[TIE/ln space superiority starfighter|TIE fighters]]. Following a wild pursuit through the streets of [[Gorse City]], the rebels lose their Imperial pursuers and dump the wrecked bus in [[The Pits]]. After landing the hoverbus in a quarry, they find that Zaluna had accidentally stowed aboard the bus' toilet. Due to the bus' thick door, Zaluna had been unable to call for help. Kanan and Hera strike up an alliance with Skelly to stop Count Vidian. The three rebels are joined by Zaluna, who wants to make amends for running the surveillance camera that got him arrested. Meanwhile, Vidian and Sloane depart on a third shuttle, ''[[Bastinade]]''. The Imperials are shamefaced by the loss of the transports, TIE fighters, and their quarry.
+
+With the help of Zaluna, the fugitives make their way back to their safe house at The Asteroid Belt, where they are sheltered by the sympathetic Okadiah. During a private meeting, Hera tells her new-found allies that it is better for opponents of the Empire to work together rather than staging lone wolf attacks on the Empire. Zaluna's decision to aid the rebels is further promoted by the news that she had lost her job at Transcept Media Solutions due to her ties to Hetto. The rebels also examine a recording device that Zaluna had located on the hoverbus and learn that Vidian is planning to blow up Cynda in order to mine the moon's thorilide reserves. The rebels quickly realize that this was why Vidian had left Moonglow abruptly. Vidian had used Skelly's research on the moon's brittle surface as an inspiration for his scheme to meet the Empire's new thorilide quota.
+
+Meanwhile, using Skelly's information, Count Vidian along with [[Lieutenant]] [[Kanna Deltic]] and Captain Sloane discuss their plans to blow up Cynda using [[Baradium-357]] explosives. Sloane fears that destroying the moon would also cause the brittle thorilide molecules to dissolve. But Vidian is determined to proceed with his plans for reasons which he has not fully disclosed. The following day, the Imperials begin bombing the part of Cynda where mining operations had been occurring. This explosion is witnessed by many in Gorse City including Kanan and his companions. Seeking to stop Count Vidian, the rebels travel on Kanan's cargo hauler [[Moonglow-72|''Expedient'']] to Cynda. Upon landing on Cynda, they find a dying Okadiah at the site of the explosion. Kanan comforts Okadiah in his last moments.
+
+Aboard the ''Ultimatum'', Count Vidian expresses delight at the successful test bombing. Having received a report from the mining expert Lemuel Tharsa that 97% of the thorilide molecules in the test zone remained intact, he decides to proceed with his plan to destroy Cynda. Tharsa also claimed that Cynda would have enough thorilide for the next two thousand years. However, Sloane is skeptical of the report and suspicious of Lemuel. Vidian is also unperturbed that the test bombing had killed many mining personnel and justifies his decision to sacrifice their lives to maintaining the secrecy of his project. Count Vidian sees the Cynda gambit as an opportunity to outmaneuver his rival Baron Danthe and gain the Emperor's favor.
+
+Imperial forces impose restrictions on space traffic in the Gorse system to facilitate Vidian's plan and order all empty mining cargo ships to follow the ''Ultimatum'' to the [[Calcoraan system]]. To hide Vidian's true agenda, Imperial HoloNews reported that Vidian was trying to stabilize the moon. After hearing the report, Skelly and Hera realize that [[Calcoraan]] is a major Imperial supply base in the sector and that Vidian plans to import a large quantity of baradium-357 into the Gorse system. The four rebels decide to travel to the Imperial depot on Calcoraan to stop Vidian's plot. Kanan agrees to serve as the pilot on the condition that Hera serve as the group's tactician.
+
+===Phase Three: Detonation===
+Despite her personal misgivings about the ethics of Count Vidian's plan, Captain Sloane still facilitates the marshalling of the mining fleet to the [[Calcoraan Depot]], where massive stocks of thorilide reserves await them. While watching Vidian's staff preparing his personal starship ''[[Forager]]'' for the operation, Sloane is briefed by the Imperial science officer [[Lieutenant]] [[Kanna Deltic]], who theorizes that the destruction of Cynda will cause debris to fall on Gorse. Later, Sloane is contacted by Baron Danthe, who was unaware of Vidian's project, and tells her to contact him if she had the "smallest need," a veiled warning about the Count.
+
+Meanwhile, Kanan and the rebels follow the mining fleet to the Calcoraan system. Upon arriving, Kanan learns that his ship ''Expedient'' had been renamed "Imperial Provisional Seventy-Two." Shortly thereafter, Zaluna reveals that the Imperial authorities had blamed Cynda Moonglow for the blast on Cynda and dissolved the company. As they approach the depot, Hera tells them to load the ship while she destroys the station. Kanan convinces her not to follow that plan and to instead come up with another plan to falsify the data in order to deter the Empire from ever considering destroying planetoids again. The rebels then don [[hazmat suit]]s to enter the facility.
+
+On Calcoraan Depot, Captain Sloane accompanies Count Vidian on a tour of the station. When they come across several heat-proof [[mining drone]]s from Baron Danthe's firm being reverse-engineered, Vidian claims that they were being checked for maintenance. Vidian then departs on the pretext of finalizing his report to the Emperor. In Vidian's absence, Kanan and his comrades shove a droid into a tube to disrupt the loading process. The rebel infiltrators then find themselves under Count Vidian's medlab. In private, Vidian reflects on his origins as a safety inspector for a mining company. After contracting a degenerative flesh disease that destroyed his body, Vidian spent two years being unable to communicate until he got the attention of a medical droid. After being rebuilt as a [[cyborg]], Vidian took revenge on the mining companies by writing reports that discouraged surface mining on Gorse and many worlds. Knowing the Emperor's fascination with creating world-destroying weapons, Vidian wants to use Cynda's destruction as a case study for future Imperial projects.
+
+Kanan and Hera attempt to attack Vidian, but he senses their presence due to the advanced sensors in his body. Using his cybernetic armored body, Vidian overpowers the intruders. Before he can torture them, the Count is incapacitated by an Imperial [[Interrogation droid|interrogator droid]] that was hijacked by Skelly, who injects a sleeping potion into his body. After downloading Vidian's brain into a nearby computer console, the rebels discover that Vidian's true reason for wanting to destroy Gorse is to disintegrate the moon's thorilide reserves. This is part of an elaborate plot to discredit his rival Baron Danthe and gain favor with the Emperor. The rebels discover that Vidian's true name was Lemuel Tharsa and that he falsified reports while pretending that Lemuel was a separate individual.
+
+In order to expose Vidian's deception, the rebels decide to send a correct report about Cynda to the Emperor. Mimicking Vidian's voice, Kanan lures Captain Sloane into the Count's medlab. After restraining Sloane with a stasis beam, Kanan claims he is an Imperial agent and tells her to send a corrected report on Cynda to the Emperor, using the communication facilities on her Star Destroyer. Having completed their mission, the rebels depart on the ''Expedient'' to return to Gorse in order to warn the people of the impending cataclysm.
+
+After freeing herself and Count Vidian, Sloane informed him about the "Emperor's agent." While aware of Vidian's true agenda, she still complied with his orders to dispatch the ''Ultimatum'' and other Imperial forces to the Gorse system to stop the rebels. Meanwhile, aboard the ''Expedient'', Kanan and Hera attended to Skelly's injuries which he had sustained during an earlier fight with Vidian on Gorse. Despite Kanan's rapport with Hera, he still did not disclose his Jedi past to her. Hera also talked with Zaluna and urged her to break her mental chain to the Empire and to overcome her fear.
+
+Upon arriving above Cynda, the rebels found that Count Vidian was trying to accelerate the moon's destruction by injecting xenoboric acid into its surface. Shortly thereafter, Vidian's ship ''Forager'' arrived to commence the moon's destruction. To disrupt the operations, Kanan used the ship's intercom to frighten the mining ship crew. At Kanan's instruction, Hera used the ''Expedient'' to harass the TIE fighters escorting the mining convoy. After a brief dogfight and pursuit, the rebels landed the ''Expedient'' in the ''Forager''{{'s}} rear hangar bay. Skelly had brought a bag of improvised explosives with which he intended to kill Vidian and destroy his ship.
+The rebels fought their way through the ship's factory complex as they made their way to confront Vidian on the bridge.
+
+Meanwhile, Captain Sloane received a priority-one message from the Emperor. Despite the intruders aboard his ship, Count Vidian was adamant in proceeding with the detonation of the explosives. While trying to tamper with the ship's security cameras, Zaluna was captured by Vidian and his stormtroopers. Seeing Zaluna hurt, Kanan attacked Vidian. Zaluna attempted to shoot the cyborg but was blinded instead. Hera then entered the fray and turned the tables by charging into the room with a [[hover-forklift]]. Despite the intruders, Vidian was unperturbed since the detonation was only four minutes away.
+
+Aboard the ''Ultimatum'', Sloane deduced that Vidian's scheme to destroy Cynda and its thorilide reserves was part of a plot to discredit Baron Danthe and then herself and her crew. She also discovered that Vidian had defrauded the people of Gorse by concealing reports of thorilide on the planet's day side. Vowing to stop Vidian's plan, she ordered her crew to rescind the Detonation Control link to ''Forager'' and gave orders for her stormtroopers to arrest Count Vidian. She charged the Count with presenting false testimony to the Emperor and attempting to destroy strategic assets.
+
+Unperturbed, Vidian revealed that he had a card up his sleeve: his ship ''Forager'' alone had control of the detonation. Before his crew could restore the uplink, Sloane ordered her stormtroopers to kill Vidian's ship crew. As the ''Ultimatum'' and other Imperial ship's began bombarding the ''Forager'', a three-way battle ensued aboard the ship between Vidian, the rebels, and Sloane's stormtroopers. As the ship began to take damage from the Imperial bombardment, Kanan saved Hera from a falling catwalk by using the Force to intercept the falling object. However, he cautioned her not to tell anyone about his powers. Together, Kanan along with Hera and Zaluna escaped the doomed vessel in an [[escape pod]]. Meanwhile, a wounded Skelly caught up with Vidian and detonated his bag of explosives, killing the both of them. The ensuing explosion destroyed the ''Forager'' and anything around it. Kanan and his rebel comrades narrowly avoided the falling debris. Through the Force, Kanan sensed that Skelly had triggered the explosion and died killing Vidian. Their escape pod descended into Gorse's atmosphere.
+
+===Epilogue===
+Following the death of Count Vidian, the Empire covered up the events in the Gorse system by claiming that Vidian had died from a relapse of [[Shilmer's syndrome]]. Meanwhile, Baron Danthe was granted oversight of the Gorse system and immediately commenced mining operations on Gorse's dayside using heat-resistant drones. Sloane reflected on her encounter with the "mysterious agent" of the Emperor known as Kanan and wondered whether he was a rival to Vidian, not realizing that he was a Jedi. Due to her efforts to stop Vidian, Sloane was made the commander of the ''Ultimatum'' and continued working for her new boss, Baron Danthe. Meanwhile, the blinded Zaluna started a new life on an agrarian world with the help of Hera and Kanan. After dropping off Zaluna, the two rebels decided to continue their adventures together aboard Hera's ship, the ''Ghost''.
+
+==Development==
+{{Quote|I like to keep my characters in motion as a writer&mdash;but sometimes, the writers are the ones in motion. So it was in March, while I was finishing ''Star Wars: A New Dawn'', my new novel for Random House.|John Jackson Miller|<ref name="Faraway-Secret" />}}
+[[John Jackson Miller]] had just finished and published [[Kenobi (novel)|''Kenobi'']] and was looking for his next project when [[Del Rey]] approached him to write a tie-in novel for the then-forthcoming ''[[Star Wars Rebels]]'' television series, as they were interested in doing a novel focused on the show's heroes. Once Miller was briefed about the series, he made proposals which led to feedback from [[Dave Filoni]] and the other producers, resulting in a conference call with Filoni, after which the book was approved.<ref name="Blogspot">{{Blogspot|subdomain=elrecovecodelgeek|url=2020/01/entrevista-john-jackson-miller-y-he.html|name=El Recoveco del Geek|text=Entrevista: John Jackson Miller|date=2020-01-30}}</ref> [[Simon Kinberg]] and [[Greg Weisman]] assisted Miller too.<ref name="insider150">[[Star Wars Insider 150|''Star Wars Insider'' 150]]</ref>
+
+Early in the writing process, Miller had several working titles for the book. The first one was ''Loose Cannon'' as Miller wanted to evoke the whimsical tone of the book. However, the title was left behind as the story progressed and became more serious in tone.<ref name="JJM Name 1">{{TikTok|username=johnjacksonmiller|url=video/7656512154002066719|name=[[John Jackson Miller]]|text=More on the naming of books: the title of my #StarWars A NEW DAWN novel probably sounds like a simple reference to A NEW HOPE. But while that was in there, I had several working titles in mind, some of which survived in other ways. More on the other titles to come! #starwarsrebels #writing #booktok|date=2026-06-28}}</ref> Another working title was ''Rogue Elements''&mdash;which Miller ended up moving on from but was later reused for the [[2021]] [[Wikipedia:Star Trek|''Star Trek'']] novel [[w:c:memory-alpha:Rogue Elements|''Picard: Rogue Elements'']] due to its thematic similarities to ''A New Dawn''.<ref name="JJM Name 2">{{TikTok|username=johnjacksonmiller|url=video/7656567025015311647|name=[[John Jackson Miller]]|text=Continuing my look at the naming of the #StarWars novel A NEW DAWN, I get into my second working title, and how it ultimately connected to a #StarTrek novel of mine which has thematic similarities. #writing #booktok|date=2026-06-28}}</ref>
+
+Miller finished writing the novel in [[March]] [[2014]],<ref name="Faraway-Secret">{{Faraway|subdomain=blog|url=2014/04/my-secret-star-wars-mission-and-no.html|text=My secret Star Wars mission (and no Bothans died in the process!)}}</ref> though it was not publicly announced until [[April 25]]. ''A New Dawn'' was said to be the first narrative product created in collaboration with the [[Lucasfilm Story Group]].<ref name="Faraway-New">{{Faraway|url=blog/2014/04/25/my-new-novel-star-wars-new-dawn-rises|text=My new novel: STAR WARS: A NEW DAWN rises at Random House!}}</ref> Miller was two-thirds of the way through writing the novel when he was informed that it would be the first novel within the new ''[[Star Wars]]'' [[canon]].<ref name="Blogspot" /> The jacket proof for the novel was finalized by [[July 8]], with the novel itself set to enter press and printing the following week.<ref name="Facebook-Jacket">{{Facebook|username=people/Star-Wars-Books/100064411132431|url=photo.php?fbid=10152549421773713|name=[[Del Rey]]|date=2014-07-08|quote=The final jacket proof for John Jackson Miller's STAR WARS: A NEW DAWN featuring gorgeous original art by Doug Wheatley is routing in our Del Rey office this week and will be on press and printing next week.}}</ref>
+
+Prior to the novel's wide release, uncorrected, paperback proofs of ''A New Dawn'' were given away for free during the 2014 [[Wikipedia:San Diego Comic-Con|San Diego Comic-Con]]. The giveaways were at select times, and Miller was on hand to autograph the exclusive editions. The edition includes excerpts for the then-upcoming novels [[Tarkin (novel)|''Tarkin'']], ''[[Heir to the Jedi]]'', and ''[[Lords of the Sith]]''.<ref name="Facebook-Exclusive">{{Facebook|username=people/Star-Wars-Books/100064411132431|url=photo.php?fbid=10152486361568713|name=[[Del Rey]]|date=2014-06-12}}</ref>
+
+[[File:Crucible-CoverConceptSketch.jpg|thumb|left|250px|''Crucible'' concept adapted for ''A New Dawn'']]
+The composition for the cover art of the Brazilian edition of ''A New Dawn'' published by [[Editora Aleph]] originated from a concept sketch made by [[Two Dots]] while working on the cover of the [[Star Wars Legends|''Star Wars'' Legends]] novel [[Crucible (novel)|''Crucible'']]. Although a different cover was selected for ''Crucible'', the publisher liked the second concept and asked Two Dots to adapt it for the characters of ''A New Dawn''. The original sketch featured the characters of [[Luke Skywalker/Legends|Luke Skywalker]], [[Leia Organa Solo/Legends|Leia Organa]], and [[Han Solo/Legends|Han Solo]] with an [[X-wing starfighter/Legends|X-wing starfighter]], which were replaced by Hera Syndulla, Kanan Jarrus, and the ''Ghost'' in the version for ''A New Dawn''.<ref name="Two Dots Art Station">{{ArtStation|username=seedseven|url=artwork/OGAPJ|name=seed Seven|text=STAR WARS A New Dawn (official)}}</ref>
+
+==Media==
+{{Mediacat|from=1|imagecat=Images from A New Dawn (novel)}}
+===Editions===
+*{{C|No ISBN}}; [[July 24]], [[2014]]; [[Del Rey]]; Exclusive Advance Reader's Edition<ref name="ARC">''A New Dawn'', Exclusive Advance Reader's Edition</ref>
+*{{ISBN|9780553392869}}; [[September 2]], 2014; Del Rey; US hardcover<ref name="Penguin" />
+*{{ISBN|9780553392876}}; September 2, 2014; Del Rey; US eBook<ref name="Penguin-eBook">{{PenguinRandomHouse|url=books/240647/a-new-dawn-star-wars-by-john-jackson-miller/9780553392876|text=A New Dawn: Star Wars}} {{C|eBook}}</ref>
+*{{ISBN|9780553391473}}; [[March 31]], [[2015]]; Del Rey; US mass market paperback<ref name="Penguin-Paperback" />
+*{{ISBN|9780593872819}}; [[June 18]], [[2024]]; [[Random House Worlds]]; US paperback<ref name="Penguin-Paperback" />
+
+===Cover gallery===
+====American====
+<gallery>
+File:ANewDawn-ExclusiveAdvanceReadersEdition.jpg|Exclusive Advance Reader's Edition
+File:ANewDawn.png|US hardcover
+File:AND_Back_cover_final.jpg|Back cover
+File:ANewDawn-Paperback.jpg|US paperback
+</gallery>
+
+====International====
+{{ScrollBox|content=
+<gallery>
+File:A_New_Dawn_Brazilian.jpg|Brazilian Portuguese-language edition
+File:A_New_Dawn_Brazilian_cover.png|Full cover art
+File:A_New_Dawn_Czech_cover.jpg|Czech-language edition
+File:A_New_Dawn_French_paperback_cover.jpg|French-language paperback
+File:A_New_Dawn_French_ebook_cover.jpg|French-language eBook
+File:A_New_Dawn_German_Cover.jpg|German-language edition
+File:A_New_Dawn_cover_RU.jpg|Russian-language edition
+</gallery>
+}}
+
+==Appearances==
+<onlyinclude>{{App
+|characters=
+*[[Depa Billaba]]
+*[[Ketticus Brayl]] {{1st}}
+*[[Ketticus Brayl's wife]] {{1stm}}
+*[[Cauley]] {{1st}}
+*[[Nibiru Chamas]] {{1st}}
+*[[Charko]] {{1st}}
+*[[Tarlor Choh]] {{1st}}
+*[[Lero Danthe]] {{1st}}
+*[[Kanna Deltic]] {{1st}}
+*[[Dooku]] {{Mo}}
+*[[Drakka]] {{1st}}
+*[[Okadiah Garson]] {{1st}}
+*[[Gord Grallik]] {{1st}}
+*[[Lal Grallik]] {{1st}}
+*[[Grievous]] {{Mo}}
+*[[Hetto]] {{1st}}
+*[[Kanan Jarrus]]/Caleb Dume {{1stID|Caleb Dume}}
+*[[Kanan Jarrus' father]] {{1stm}}
+*[[Yale Karlsen]] {{1stm}}
+*[[Obi-Wan Kenobi]]
+{{!}}
+*[[Ki-Adi-Mundi]] {{Mo}}
+*[[Plo Koon]] {{Mo}}
+*[[Mayor of Shaketown]] {{1st}}
+*[[Zaluna Myder]] {{1st}}
+*[[Zaluna Myder's mother]] {{1stm}}
+*[[Jocasta Nu]] {{Mo}}
+*[[Palfa]] {{1st}}
+*[[Darth Sidious|Sheev Palpatine]] {{Mo}}
+*[[Skelly]] {{1st}}
+*[[Rae Sloane]] {{1st}}
+*[[Cham Syndulla]] {{Mo}}
+*[[Hera Syndulla]]
+*[[Unidentified Galactic Republic general]] {{1stm}}
+*[[Unidentified Zeltron youngling]] {{1st}}
+*[[Anakin Skywalker|Darth Vader]] {{Mo}}
+*[[Denetrius Vidian]]/Lemuel Tharsa {{1st}}
+*[[Yelkin]] {{1st}}
+|organisms=
+*[[Exogorth]] {{Mo}}
+*[[Feline]]
+**[[Cat]]
+***[[Tooka]]
+*[[Gundark]] {{Mo}}
+*[[Insect]] {{Mo}}
+*[[Mynock]] {{Mo}}
+*[[Primate]] {{Mo}}
+*[[Rodent]] {{Mo}} {{1stID|rodent}}
+**[[Eskrat]] {{1stm}}
+**[[Rat]] {{Mo}}
+*[[Sand monkey]] {{1stm}}
+*[[Sarlacc]] {{Mo}}
+|droids=
+*[[Chauffeur droid]] {{1st}}
+*[[Interrogation droid|Interrogator droid]]
+*[[Loader droid]] {{1st}}
+*[[Medical droid]]
+**[[FX-series medical assistant droid]]
+***[[FX-4 medical assistant droid]] {{1st}}
+*[[Mining drone]] {{1st}}
+*[[Probe droid]]
+**[[Viper probe droid]]
+*[[Service droid]]
+**[[GG-class serving droid]] {{1st}}
+|events=
+*[[Republic Era]]
+**[[Clone Wars]] {{Mo}}
+***[[Battle of Coruscant]] {{Mo}}
+***[[Battle of Slag's Pit]] {{1stm}}
+*[[Imperial Era]] {{1stID|Age of the Empire}}
+**[[Galactic Civil War]] {{Imo}}
+**[[Gorse Conflict]] {{1st}}
+**[[Great Jedi Purge]] {{Mo}}
+**[[Ryloth Insurgency]] {{Imo}}
+*[[Proclamation of the New Order]] {{Mo}}
+|locations=
+*[[Cato Neimoidia]] {{Mo}}
+*[[Core Worlds]]
+**[[Alderaan]] {{Mo}}
+**[[Corellia]] {{1stm}}
+**[[Corulag]] {{1stm}}
+**[[Corusca sector]]
+***[[Coruscant subsector]]
+****[[Coruscant system]]
+*****[[Coruscant]]
+******[[Imperial City|Galactic City]]
+*******[[Federal District]]
+********[[Imperial Palace|Jedi Temple]]
+*********[[Jedi Temple central security station]]
+**[[Ganthel]] {{1stm}}
+*[[Inner Rim Territories]]
+**[[Calcoraan system]] {{1st}}
+***[[Calcoraan]] {{1st}}
+****[[Calcoraan Depot]] {{1st}}
+*****[[Loading station 77]] {{1st}}
+**[[Gorse system]] {{1st}}
+***[[Cynda]] {{1st}}
+****[[Zone Thirty-Nine]] {{1st}}
+****[[Zone Forty-Two]] {{1st}}
+****[[Zone Sixty-Six]] {{1st}}
+***[[Gorse]] {{1st}}
+****[[Calladan's field]] {{1stm}}
+****[[Gorse City]] {{1st}}
+*****[[Crispus Commons]] {{1st}}
+******[[Crispus Commons bomb shelter]] {{1st}}
+******[[Skelly's apartment]] {{1st}}
+*****[[Gorse City jail]] {{1stm}}
+*****[[Gorse City sewer system]] {{1st}}
+*****[[Old Miners' Highway]] {{1st}}
+*****[[The Pits]] {{1st}}
+******[[The Asteroid Belt]] {{1st}}
+******[[Okadiah's flophouse]] {{1st}}
+*****[[Shaketown]] {{1st}}
+******[[Beggar's Hill]] {{1st}}
+******[[Bogan Boulevard]] {{1st}}
+*******[[Drakka's Diner]] {{1st}}
+******[[Moonglow Polychemical refinery]] {{1st}}
+******[[Philo's Fueling Station]] {{1st}}
+*****[[Skelly's apartment]] {{1st}}
+*****[[World Window Plaza]] {{1st}}
+*****[[Zaluna Myder's apartment]] {{1stm}}
+****[[Highground]] {{1st}}
+*****[[Unidentified spaceport (Gorse)|Unidentified spaceport]] {{1st}}
+{{!}}
+*[[Naboo]] {{Mo}}
+*[[Outer Rim Territories]] {{Mo}}
+**[[Kessel]] {{Mo}}
+**[[Mustafar]] {{Mo}}
+**[[Mygeeto]] {{Mo}}
+**[[Ryloth]] {{Imo}}
+*[[Slag's Pit]] {{1stm}}
+*[[Unidentified agricultural planet]] {{1st}}
+**[[Zaluna Myder's house]] {{1st}}
+*[[Wor Tandell]] {{1stm}}
+|organizations=
+*[[Advisor]]
+*[[Alliance to Restore the Republic]] {{Imo}}
+*[[Baron]]
+*[[Bartender]]
+*[[Calladan Chemworks]] {{1stm}}
+*[[Chef]]
+*[[Cyndan Mining Guild]] {{1st}}
+**[[Director]] {{1st}}
+*[[Dalborg Mining]] {{1st}}
+*[[Doctor]] {{Mo}}
+*[[Emissary]] {{Mo}}
+*[[Engineer]] {{Mo}}
+*[[Foreman]]
+*[[Galactic Empire]]
+**[[Count]]
+**[[Galactic Emperor]] {{Mo}}
+**[[Governor]] {{Mo}}
+**[[HoloNet News]]
+**[[Imperial Academy]] {{Mo}}
+***[[Defiance Flight Training Institute|''Defiance'' Flight Training Institute]] {{1stm}} {{Imo}}
+**[[Imperial cabinet]] {{1stm}}
+**[[Imperial HoloNews]] {{1st}}
+**[[Imperial Military]]
+***[[Imperial Army]]
+****[[Stormtrooper Corps]]
+*****[[Stormtrooper]]
+***[[Imperial Navy]]
+****[[Admiralty (Imperial)|Admiralty]] {{1stm}}
+****[[Imperial Navy's officer corps]]
+****[[Imperial Starfighter Corps]]
+*****[[Imperial Starfighter Pilot|TIE fighter pilot]]
+****[[Science officer]] {{1st}}
+****[[Tactical officer]] {{1st}}
+**[[Imperial Officer Corps]]
+***[[Imperial officer]]
+**[[Imperial Ruling Council]] {{Imo}}
+***[[Emperor's adviser]]
+*[[Galactic Republic]] {{Mo}}
+**[[Grand Army of the Republic]] {{Imo}}
+***[[Clone trooper]] {{Mo}}
+**[[Supreme Chancellor]] {{Mo}}
+*[[Gorse blood cult]] {{1st}}
+*[[Gorse City's animal control department]] {{1stm}}
+*[[Gorse Space Traffic Control]] {{1st}}
+{{!}}
+*[[Interstellar Thorilide Guild]] {{1stm}}
+*[[Introsphere]] {{1stm}}
+*[[Jedi]]
+**[[Jedi Order]]
+***[[Chief Librarian]] {{Imo}}
+***[[Jedi High Council]] {{Mo}}
+***[[Jedi Knight]] {{Mo}}
+***[[Jedi Master]]
+***[[Jedi Initiate|Jedi youngling]]
+***[[Padawan]]
+*[[Journalist]] {{Mo}}
+*[[Lord]]
+*[[Mayor]] {{1st}}
+*[[Medtech Industries]] {{1stm}}
+*[[Minerax Consulting]] {{1st}}
+*[[Miner]] {{1st}}
+*[[Mining Guild]] {{1st}}
+*[[Moonglow Polychemical]] {{1st}}
+*[[Morale officer]] {{1st}}
+*[[Officer]]
+**[[Captain]]
+**[[Ensign]] {{1st}}
+**[[Lieutenant]]
+*[[Pilot]]
+*[[Confederacy of Independent Systems|Separatists]] {{Mo}}
+*[[Sarlaccs]] {{1st}}
+*[[Security guard]]
+*[[Sienar Fleet Systems]] {{Mo}}
+*[[Sith]] {{Mo}}
+**[[Dark Lord of the Sith]] {{Mo}}
+**[[Darth]] {{Mo}}
+**[[Sith Lord]] {{Imo}}
+*[[Skywalker family]] {{Mo}}
+*[[Slicer]] {{1st}}
+*[[Soldier]]
+*[[Syndulla clan]]
+*[[Transcept Media Solutions]] {{1st}}
+**[[Myder's Mynocks]] {{1st}}
+|species=
+*[[Besalisk]]
+*[[Chagrian]]
+*[[Devaronian]]
+*[[Human]]
+**[[Chalactan]]
+**[[Corellian]]
+**[[Coruscanti]]
+*[[Ithorian]] {{1stID|Hammerhead}}
+*[[Kel Dor]] {{Mo}}
+*[[Klatooinian]] {{C|Prosthetic hand only}}
+*[[Muun]]
+*[[Neimoidian]]
+*[[Sullustan]]
+*[[Trandoshan]] {{Mo}}
+*[[Twi'lek]]
+*[[Ugnaught]]
+*[[Wookiee]] {{Mo}}
+*[[Zeltron]] {{1st}}
+|vehicles=
+*[[Escape pod]]
+*[[Heavy-duty bulk-loader vehicle]] {{1st}}
+*[[Icecrawler]] {{1st}}
+*[[Podracer]] {{Imo}}
+*[[Repulsorcraft]] {{1stID|Recon transport}}
+**[[Hover-forklift]] {{1st}}
+**[[Speeder bus|Hoverbus]] {{1st}}
+***[[Smoothride]] {{1st}}
+****[[Mark Six Smoothride]] {{1st}}
+**[[Hovercab]] {{1stm}}
+**[[Repulsorcart|Hovercart]] {{1st}}
+**[[Speeder truck|Hovertruck]] {{1st}}
+**[[Hovervan]] {{1stm}}
+**[[K79-S80 Imperial Troop Transport]] {{1stID|Recon transport}}
+**[[Speeder]]
+***[[Speeder bike]]
+*[[Speeder bus]]
+*[[Starship]]
+**[[Bomber]]
+***[[Light bomber]]
+**[[Capital ship]]
+***[[Star Destroyer]]
+****[[Imperial-class Star Destroyer|''Imperial''-class Star Destroyer]]
+*****[[Imperial I-class Star Destroyer|''Imperial I''-class Star Destroyer]]
+******''[[Ultimatum]]'' {{1stID|''Ultimatum''}}
+**[[Cruiser]]
+***[[Gozanti-class cruiser|''Gozanti''-class cruiser]]
+**''[[Forager]]'' {{1st}}
+**[[Freighter]]
+***''[[Cynda Dreaming]]'' {{1st}}
+***''[[Moonglow-72]]'' {{1st}}
+***[[Light freighter]]
+****[[VCX series]]
+*****[[VCX-100 light freighter]]
+******''[[Ghost]]''
+**[[Shuttle]]
+***[[Abecederian line]]
+****[[Lambda-class T-4a shuttle|''Lambda''-class T-4a shuttle]]
+*****''[[Bastinade]]'' {{1st}}
+*****[[Cudgel (Lambda-class)|''Cudgel'']] {{1st}}
+*****[[Truncheon (Lambda-class)|''Truncheon'']] {{1st}}
+**[[Starfighter]]
+***[[TIE series|TIE fighter series]]
+****[[TIE/ln space superiority starfighter]]
+****[[TIE/sa tactical bomber|TIE/sa bomber]]
+**[[Transport]]
+*[[Walker]] {{Mo}}
+**[[AT-series|All-terrain vehicle]] {{Mo}}
+***[[All Terrain Armored Transport]] {{Mo}}
+|technology=
+*[[Armor]]
+**[[Stormtrooper armor]]
+**[[Darth Vader's armor|Darth Varder's armor]] {{Mo}}
+*[[Biometrics]] {{1st}}
+*[[Bioscan]]
+*[[Blaster]]
+**[[Blaster pistol]]
+***[[Blurrg-1120 holdout blaster]] {{1st}}
+***[[DL-18 blaster pistol]]
+****[[Kanan's blaster]] {{1st}}
+**[[Blaster rifle]]
+***[[E-11 medium blaster rifle]]
+*[[Breath mask]] {{1stID|Oxygen mask}}
+*[[Camera]]
+**[[Visitractic 830 factory surveillance cam]] {{1st}}
+*[[Code cylinder]]
+*[[Comlink]]
+*[[Computer]]
+*[[Cybernetics]]
+**[[Optical implant]] {{1st}}
+*[[Data cube]] {{1st}}
+*[[Datapad]]
+*[[Droid]]
+*[[Electrobinoculars]]
+*[[Turbolift|Elevator]]
+*[[Environment suit|EVA suit]] {{1stID|Environment suit}}
+**[[Hazmat suit]]
+*[[Grappling hook]]
+*[[Grenade]]
+**[[Sonic grenade]] {{1st}}
+**[[Thermal detonator]]
+{{!}}
+*[[Headset]]
+*[[Hologram]]
+*[[Hologram disc]]
+*[[HoloNet]]
+*[[Holoprojector]]
+*[[Hyperdrive]] {{Mo}}
+*[[Identification Friend or Foe transponder|ID transponder]] {{1st}}
+*[[Improvised explosive device/Canon|Improvised explosive device]] {{1st}}
+*[[Jedi beacon]]
+*[[Laser cannon]]
+**[[L-s1 laser cannon]]
+*[[Lightsaber]]
+**[[Kanan Jarrus' lightsaber]] {{1st}}
+*[[Macrobinoculars]]
+*[[Melee weapon]]
+**[[Knife]]
+***[[Vibroblade]]
+*[[Officer's disk]]
+*[[Pistol]]
+*[[Repulsorlift]]
+*[[Satellite]] {{1stm}}
+*[[Sensor]]
+**[[Motion sensor|Motion detector]] {{Mo}}
+*[[Stasis field]]
+*[[Stuncuffs]]
+*[[Turbolaser]]
+|miscellanea=
+*[[Acceleration couch]] {{1stID|Acceleration couch}}
+*[[Acid]]
+**[[Xenoboric acid]] {{1st}}
+*[[Alcohol]]
+**[[Ale]] {{Mo}} {{1stID|ale}}
+***[[Trandoshan ale]] {{Mo}} {{1stID|Trandoshan ale}}
+**[[Liquor]] {{1stID|liquor}}
+*[[Asteroid]]
+*[[Asteroid field]] {{Mo}}
+*[[Astrogation]]
+*[[Aurebesh]]
+*[[Bacta]]
+*[[Baradium]] {{1st}}
+**[[Baradium-357]] {{1st}}
+**[[Baradium bisulfate]] {{1st}}
+*[[Bath]] {{Mo}}
+*[[Blanket]]
+**[[Thermo-wrap]] {{1st}}
+*[[Blood]]
+*[[Bone]]
+*[[Bridge (starship)|Bridge]]
+*[[Caf]] {{1stc}} {{1stID|Caf}}
+*[[Cantina]]
+*[[Cargo manifest]]
+*[[Casino]] {{Mo}}
+*[[Chromyl chloride]] {{1stm}}
+*[[City]]
+*[[Clothing]]
+**[[Glove]]
+**[[Hat]]
+**[[Imperial military uniforms]]
+***[[Rank insignia plaque]]
+**[[Kilt]] {{1st}}
+*[[Color]]
+*[[Coma]] {{1stm}}
+*[[Comet]] {{Mo}}
+*[[Convoy]]
+*[[Cortosis]] {{1st}}
+*[[Currency]]
+**[[Galactic Credit Standard|Credit]] {{1stID|"Imperial credit" and "Confederacy credit"}}
+***[[Credit chip]]
+*[[Cyborg]]
+*[[Death]]
+*[[Death mark]] {{Mo}}
+*[[Deity]] {{Mo}}
+*[[Diamond]] {{Mo}}
+*[[Disease]]
+**[[Shilmer's syndrome]] {{1stm}}
+*[[Durasteel]]
+*''[[Environmental Action Gazette]]'' {{1stm}}
+*[[Erg]] {{1stm}}
+*[[Eye]]
+{{!}}
+*[[Factory]]
+*[[Fishing]] {{Mo}}
+*[[Fleet]]
+*[[Foodstuff]]
+**[[Cake]] {{Mo}}
+***[[Flatcake]] {{Mo}} {{1stID|flatcake}}
+**[[Nutrient paste|Food paste]] {{1st}}
+**[[Stew]]
+*[[The Force]]
+**[[Dark side of the Force]] {{Mo}}
+**[[Force power]]
+***[[Force jump]]
+***[[Mind trick]] {{Imo}}
+***[[Telekinesis]]
+**[[Force-sensitive]]
+*[[Forest nymph]] {{1stm}}
+*[[Galaxy]]
+*[[Garbage compactor]] {{Mo}} {{1stID|trash compactor}}
+*[[Gas]]
+**[[Oxygen]]
+*[[Glass]]
+*[[Gold]]
+*[[Groundquake]]
+*[[Unarmed combat|Hand-to-hand combat]] {{Mo}}
+*[[Humanoid]]
+*[[Hurricane]] {{1stm}}
+*[[Hyperspace]]
+*[[Jedi temple]]
+*[[Jedi training]] {{Mo}}
+*[[Kidney stone]] {{1stm}}
+*[[Kilogram]] {{1st}}
+*[[Kilometer]] {{Mo}}
+*[[Labor camp]] {{Mo}}
+*[[Language]]
+**[[Galactic Basic Standard]]
+**[[Shyriiwook]] {{Imo}}
+*[[Lekku]]
+*[[Lightsaber combat]] {{Mo}}
+*[[Limb]]
+*"[[May the Force be with you]]"
+*[[Military rank]]
+*[[Mineralogist]] {{1stm}}
+*[[Mining]]
+*[[Navy]]
+*[[New Imperials]] {{1st}}
+*[[Orbit]]
+*[[Order 66]] {{Mo}}
+{{!}}
+*[[Permacrete]] {{1st}}
+*[[Personality transplant]] {{1stm}}
+*[[Planet]]
+**[[Double planet]] {{1stm}}
+*[[Planetary science]] {{1stm}}
+*[[Plant]]
+**[[Flower]]
+**[[Nightfern]] {{1st}}
+**[[Tree]]
+**[[Yettice]] {{1st}}
+*[[Plastoid]]
+*[[Podracing]] {{Mo}}
+*[[Realspace]]
+*[[Sabacc]] {{1st}}
+*[[Security Condition One]] {{1st}}
+*[[Gender|Sexes]]
+*[[Skillet]] {{1st}}
+*[[Snow globe]] {{1stm}}
+*[[Species]]
+*[[Star]]
+*[[Starbird (symbol)|Starbird]] {{Co}}
+*[[Steel]] {{1stID|Steel}}
+*[[Death|Suicide]]
+*[[Super Star Destroyer]] {{Mo}}
+*[[Synthflesh]] {{1st}}
+*[[Synthskin]] {{1stID|Synthskin}}
+*[[Thorilide]] {{1st}}
+*[[Throne]]
+*[[Time]]
+**[[Second]]
+**[[Standard day]]
+**[[Standard month]] {{Mo}}
+**[[Standard week]]
+**[[Standard year]] {{Mo}}
+*[[Titanium]] {{Mo}}
+*[[Torture]] {{Mo}}
+*[[Treason]]
+*[[Universe]]
+*[[University]] {{Mo}}
+*[[Fighter wing|Wing]]
+*[[Xenophobia]] {{Imo}}
+*[[Youngling]]
+*[[Zoo]] {{Mo}}
+}}</onlyinclude>
+
+==Sources==
+{{ScrollBox|
+*<!-- 2014-04-25 -->{{SW|url=news/disney-publishing-worldwide-and-random-house-announce-relaunch-of-star-wars-adult-fiction-line|text=Disney Publishing Worldwide and Random House Announce Relaunch of Star Wars Adult Fiction Line}}
+*<!-- 2014-04-25 -->{{SW|url=news/the-legendary-star-wars-expanded-universe-turns-a-new-page|text=The Legendary Star Wars Expanded Universe Turns a New Page}}
+*<!-- 2014-06-10 -->{{InsiderCite|150|Launchpad|Launch Pad}}
+*<!-- 2014-07-08 -->{{SW|url=news/star-wars-rebels-and-more-at-san-diego-comic-con-2014|text=''Star Wars Rebels'' and More at San Diego Comic-Con 2014 - UPDATED!}}
+*<!-- 2014-07-25 -->{{SW|url=news/sdcc-2014-star-wars-a-new-dawn-panel-liveblog|text=SDCC 2014: ''Star Wars: A New Dawn'' Panel &ndash; Liveblog}}
+*<!-- 2014-07-25 -->{{SW|url=news/sdcc-2014-the-heroes-of-star-wars-rebels-panel-liveblog|text=SDCC 2014: "The Heroes of ''Star Wars Rebels''" Panel - Liveblog}}
+*<!-- 2014-07-29 -->{{SW|url=news/star-wars-invades-comic-con|text=''Star Wars'' Invades Comic-Con}}
+*<!-- 2014-09-02 -->{{SW|url=news/the-journey-to-star-wars-a-new-dawn|text=The Journey to ''Star Wars: A New Dawn''|nolive=1}}
+*<!-- 2014-09-05 -->{{SW|url=news/a-new-dawn-title-needed|text=A New Dawn for Star Wars Storytelling|nolive=1}}
+*<!-- 2014-09-09 -->{{InsiderCite|152|Rebel Rouser: Greg Weisman|reprint=1}}
+*<!-- 2014-09-09 -->{{InsiderCite|152|The Making of A New Dawn|The Making of ''A New Dawn''}}
+*<!-- 2014-09-09 -->{{InsiderCite|152|Blaster}}
+*<!-- 2014-12-09 -->{{InsiderCite|154|Blaster}}
+*<!-- 2015-01-20 -->{{InsiderCite|155|Vanessa's View}}
+*<!-- 2015-04-21 -->{{InsiderCite|157|Blaster}}
+*<!-- 2015-06-09 -->{{InsiderCite|158|Marvel Comics 2015: A Marvel Galaxy}}
+*<!-- 2015-07-10 -->{{SW|url=news/sdcc-2015-star-wars-publishing-panel-liveblog|text=SDCC 2015: ''Star Wars'' Publishing Panel Liveblog}}
+*<!-- 2015-09-22 -->{{InsiderCite|160|Join Us!}}
+*<!-- 2016-04-26 -->{{SW|url=news/5-of-rae-sloanes-greatest-moments|text=5 of Rae Sloane's Greatest Moments}}
+*<!-- 2018-03-05 -->{{SW|url=news/a-guide-to-star-wars-rebels-books-and-comics|text=A Guide to ''Star Wars Rebels'' Books and Comics}}
+*<!-- 2020-12-01 -->{{SW|url=news/4-star-wars-books-to-read-after-finishing-squadrons|text=4 ''Star Wars'' Books to Read After Finishing ''Squadrons''}}
+*<!-- 2021-06-23 -->{{SW|url=news/star-wars-summer-reading-list|text=Looking for a ''Star Wars'' Summer Reading List? Found One, You Have!}}
+*<!-- 2022-08-19 -->{{SW|url=news/10-hera-syndulla-greatest-moments|text=10 of Hera Syndulla's Greatest Moments}}
+*<!-- 2024-04-30 -->{{InsiderCite|225|John Jackson Miller: The Living Prose}}
+*<!-- 2024-07-11 -->{{SW|url=news/the-acolyte-cortosis-the-mandalorian-beskar|text=Heavy Metals: Exploring Cortosis and Beskar}}
+}}
+
+==Notes and references==
+{{Reflist}}
+
+==External links==
+*{{PenguinRandomHouse|url=books/240647/a-new-dawn-star-wars-by-john-jackson-miller|text=A New Dawn: Star Wars}}
+
+{{RiseOfTheEmpireNav}}
+{{DelReyTimeline}}
+
+{{Interlang
+|cs=Nový úsvit
+|de=Eine neue Dämmerung#kanon
+|es=Un Nuevo Despertar (novela)
+|fi=A New Dawn
+|fr=Une Nouvelle Aube
+|ja=新たなる夜明け
+|ka=ახალი განთიადი (რომანი)
+|ko=A New Dawn (소설)
+|pl=Nowy świt
+|pt=Um Novo Amanhecer
+}}
+
+{{DEFAULTSORT:New Dawn, A}}
+[[Category:Canon adult novels]]
+[[Category:Star Wars Rebels]]
