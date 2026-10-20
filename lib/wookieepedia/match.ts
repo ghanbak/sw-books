@@ -12,8 +12,13 @@
  *   1. ISBN-13 set intersection + corroboration — a shared ISBN alone is NOT
  *      decisive (omnibus / box-set / reissue editions reuse ISBNs); it must be
  *      corroborated by a matching normalized title or an overlapping author
- *      surname set, else it downgrades to review (AMBIGUOUS).
+ *      surname set, else it downgrades to review (AMBIGUOUS). Author-only
+ *      corroboration also downgrades when the title independently identifies a
+ *      DIFFERENT row (a same-author ISBN misfiled on the wrong series entry).
  *   2. Normalized title + FULL author-surname set + canon (exact).
+ *   2b. Same, but one title is the other minus leading `Series: ` segments
+ *      ("The New Jedi Order: Destiny's Way" ↔ "Destiny's Way"); generic
+ *      remainders ("A Junior Novel", "Expanded Edition") never count.
  *   3. Fuzzy title (token-sort ratio ≥ threshold) — review-only, never an
  *      automatic match; always AMBIGUOUS.
  *
@@ -38,7 +43,7 @@ export type CatalogBook = BookFields & { id?: string | null };
 export type MatchClass = 'NEW' | 'MATCHED' | 'DIFFERS' | 'AMBIGUOUS';
 
 /** How the decisive (or downgraded) step reached its verdict. */
-export type MatchMethod = 'isbn' | 'title-author' | 'fuzzy' | 'none';
+export type MatchMethod = 'isbn' | 'title-author' | 'title-prefix' | 'fuzzy' | 'none';
 
 /** One wiki-owned field whose catalog value differs from the discovered value.
  *  A suggestion only — never auto-applied. */
@@ -100,6 +105,58 @@ const ARRAY_FIELDS = new Set(['author', 'isbn', 'format']);
  */
 export function normalizeTitleKey(title: string): string {
 	return slugify(cleanTitle(title));
+}
+
+/**
+ * A stripped remainder that names a generic edition/format, not a work —
+ * "A Junior Novel", "Expanded Edition", "The 20th Anniversary Edition",
+ * "A Star Wars Story", "A Princess Leia Adventure". Never a match key, or two
+ * different junior novels by the same author could collapse onto one row.
+ */
+const GENERIC_REMAINDER =
+	/(?:^|-)(?:novel|novelization|edition|adventure)$|^a-star-wars-story(?:-|$)/;
+
+/**
+ * Normalized keys of `title` with one or more LEADING `Series: ` segments
+ * stripped ("The New Jedi Order: Enemy Lines II: Rebel Stand" →
+ * "enemy-lines-ii-rebel-stand", "rebel-stand"). Only leading segments are
+ * dropped (a trailing "…: A Junior Novel" keeps the edition distinct), generic
+ * remainders are excluded, and the full title's own key is NOT included.
+ *
+ * A variant is only ever compared against the OTHER side's FULL key (never
+ * variant ↔ variant), and step 2b additionally requires the full author set +
+ * canon, so a prefix strip alone cannot merge two different books.
+ */
+export function prefixVariantKeys(title: string): Set<string> {
+	const segments = cleanTitle(title)
+		.split(/\s*:\s+/)
+		.map((s) => s.trim())
+		.filter(Boolean);
+	const out = new Set<string>();
+	for (let i = 1; i < segments.length; i++) {
+		const key = slugify(segments.slice(i).join(': '));
+		if (key && !GENERIC_REMAINDER.test(key)) out.add(key);
+	}
+	return out;
+}
+
+/** Whether one title is the other with a leading series prefix removed. */
+function prefixRelated(
+	aKey: string,
+	aVariants: ReadonlySet<string>,
+	bKey: string,
+	bVariants: ReadonlySet<string>,
+): boolean {
+	return (aKey !== '' && bVariants.has(aKey)) || (bKey !== '' && aVariants.has(bKey));
+}
+
+/** Whether two titles name the same work: equal normalized keys, or one is the
+ *  other minus a leading series prefix. Title-only — callers add author/canon. */
+export function titlesCorrespond(a: string, b: string): boolean {
+	const aKey = normalizeTitleKey(a);
+	const bKey = normalizeTitleKey(b);
+	if (aKey && aKey === bKey) return true;
+	return prefixRelated(aKey, prefixVariantKeys(a), bKey, prefixVariantKeys(b));
 }
 
 /** Surname (last normalized token) of a single author name. */
@@ -244,6 +301,7 @@ function diffFields(d: DiscoveredBook, c: CatalogBook): FieldDiff[] {
 type Prepared = {
 	readonly book: CatalogBook;
 	readonly titleKey: string;
+	readonly titleVariants: Set<string>;
 	readonly surnames: Set<string>;
 	readonly isbns: Set<string>;
 };
@@ -254,6 +312,7 @@ function prepare(catalog: readonly CatalogBook[]): Map<string, Prepared[]> {
 		const p: Prepared = {
 			book,
 			titleKey: normalizeTitleKey(book.title),
+			titleVariants: prefixVariantKeys(book.title),
 			surnames: authorSurnameSet(book.author),
 			isbns: isbn13Set(book.isbn),
 		};
@@ -305,19 +364,63 @@ function byCodeUnit(a: string, b: string): number {
 
 /** Classify a single discovered row against the catalog partitioned by canon.
  *  NEW rows get `proposedSlug` filled in a later batch pass. */
+/** Title-identity candidates (no ISBN): exact key, and series-prefix variants,
+ *  each requiring the FULL author-surname set. Same-canon rows only. */
+type TitleIdentity = { readonly exact: Prepared[]; readonly prefix: Prepared[] };
+
+function titleIdentity(
+	dTitleKey: string,
+	dVariants: ReadonlySet<string>,
+	dSurnames: Set<string>,
+	sameCanon: readonly Prepared[],
+): TitleIdentity {
+	if (!dTitleKey) return { exact: [], prefix: [] };
+	const authored = sameCanon.filter((p) => setsEqual(p.surnames, dSurnames));
+	const exact = authored.filter((p) => p.titleKey === dTitleKey);
+	const prefix = exact.length
+		? []
+		: authored.filter((p) => prefixRelated(p.titleKey, p.titleVariants, dTitleKey, dVariants));
+	return { exact, prefix };
+}
+
+/** The single title-identified row (exact, else prefix), or null when none/many. */
+function uniqueTitleMatch(t: TitleIdentity): Prepared | null {
+	if (t.exact.length) return t.exact.length === 1 ? (t.exact[0] as Prepared) : null;
+	return t.prefix.length === 1 ? (t.prefix[0] as Prepared) : null;
+}
+
 function classifyOne(d: DiscoveredBook, byCanon: Map<string, Prepared[]>): Classification {
 	const sameCanon = byCanon.get(d.canon) ?? [];
 	const dTitleKey = normalizeTitleKey(d.title);
+	const dVariants = prefixVariantKeys(d.title);
 	const dSurnames = authorSurnameSet(d.author);
 	const dIsbns = isbn13Set(d.isbn);
+	const identity = titleIdentity(dTitleKey, dVariants, dSurnames, sameCanon);
 
 	// Step 1 — ISBN-13 intersection + corroboration.
 	if (dIsbns.size > 0) {
 		const isbnCands = sameCanon.filter((p) => setsOverlap(p.isbns, dIsbns));
 		if (isbnCands.length === 1) {
 			const c = isbnCands[0] as Prepared;
-			const corroborated = c.titleKey === dTitleKey || setsOverlap(c.surnames, dSurnames);
-			if (corroborated) return matchedOrDiffers(d, c.book, 'isbn');
+			const titleCorroborates =
+				c.titleKey === dTitleKey ||
+				prefixRelated(c.titleKey, c.titleVariants, dTitleKey, dVariants);
+			if (titleCorroborates) return matchedOrDiffers(d, c.book, 'isbn');
+			if (setsOverlap(c.surnames, dSurnames)) {
+				// Author-only corroboration. If the title independently identifies a
+				// DIFFERENT row, the shared ISBN is likely misfiled on `c` (same-author
+				// series books: an X-Wing ISBN on the wrong X-Wing row) — never merge.
+				const t = uniqueTitleMatch(identity);
+				if (t && t.book.slug !== c.book.slug) {
+					return ambiguous(
+						d,
+						[c, t],
+						'isbn',
+						`shared ISBN is on "${c.book.slug}" but title + author identify "${t.book.slug}" (possible misfiled ISBN) — review`,
+					);
+				}
+				return matchedOrDiffers(d, c.book, 'isbn');
+			}
 			return ambiguous(
 				d,
 				isbnCands,
@@ -331,20 +434,28 @@ function classifyOne(d: DiscoveredBook, byCanon: Map<string, Prepared[]>): Class
 	}
 
 	// Step 2 — normalized title + FULL author-surname set + canon.
-	if (dTitleKey) {
-		const taCands = sameCanon.filter(
-			(p) => p.titleKey === dTitleKey && setsEqual(p.surnames, dSurnames),
+	if (identity.exact.length === 1)
+		return matchedOrDiffers(d, (identity.exact[0] as Prepared).book, 'title-author');
+	if (identity.exact.length > 1) {
+		return ambiguous(
+			d,
+			identity.exact,
+			'title-author',
+			'title + author set matches multiple catalog rows — review',
 		);
-		if (taCands.length === 1)
-			return matchedOrDiffers(d, (taCands[0] as Prepared).book, 'title-author');
-		if (taCands.length > 1) {
-			return ambiguous(
-				d,
-				taCands,
-				'title-author',
-				'title + author set matches multiple catalog rows — review',
-			);
-		}
+	}
+
+	// Step 2b — one title is the other minus a leading series prefix ("The New
+	// Jedi Order: Destiny's Way" ↔ "Destiny's Way"), FULL author set + canon.
+	if (identity.prefix.length === 1)
+		return matchedOrDiffers(d, (identity.prefix[0] as Prepared).book, 'title-prefix');
+	if (identity.prefix.length > 1) {
+		return ambiguous(
+			d,
+			identity.prefix,
+			'title-prefix',
+			'series-prefix title + author set matches multiple catalog rows — review',
+		);
 	}
 
 	// Step 3 — fuzzy title (review-only, never an automatic match).
@@ -433,6 +544,27 @@ export function classify(
 		catalogSlugs,
 	);
 	return results;
+}
+
+/**
+ * Build a lookup: discovered row → the single catalog row its TITLE + FULL
+ * author set + canon identify (exact key, else series-prefix variant), ignoring
+ * ISBNs entirely. Null when none or several. Used to tell which book an ISBN
+ * really belongs to, independently of the (possibly misfiled) ISBN arrays.
+ */
+export function createTitleIndex(
+	catalog: readonly CatalogBook[],
+): (d: DiscoveredBook) => CatalogBook | null {
+	const byCanon = prepare(catalog);
+	return (d) => {
+		const t = titleIdentity(
+			normalizeTitleKey(d.title),
+			prefixVariantKeys(d.title),
+			authorSurnameSet(d.author),
+			byCanon.get(d.canon) ?? [],
+		);
+		return uniqueTitleMatch(t)?.book ?? null;
+	};
 }
 
 /** Catalog books not resolved by any discovered row (informational). Keyed by

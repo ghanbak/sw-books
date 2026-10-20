@@ -21,7 +21,6 @@ import { createClient } from '@supabase/supabase-js';
 import { type CatalogOverrides, buildBookFields } from '../lib/catalog';
 import { parseCsv } from '../lib/csv/read';
 import type { Database } from '../lib/types';
-import type { DiscoveredBook } from '../lib/wookieepedia/derive';
 import {
 	type CatalogBook,
 	type Classification,
@@ -29,76 +28,13 @@ import {
 	classify,
 	unmatchedCatalog,
 } from '../lib/wookieepedia/match';
-import { cleanTitle } from '../lib/wookieepedia/parse';
+import { loadDiscovered } from './lib/load-discovered';
 
 const ROOT = resolve(__dirname, '..');
-const DISCOVERY_CSV = resolve(ROOT, 'data', 'discovery', 'books-discovered.csv');
-const DISCOVERY_META = resolve(ROOT, 'data', 'discovery', 'discovery-meta.json');
 const BOOKS_CSV = resolve(ROOT, 'data', 'books.csv');
 
 const PROD = process.argv.includes('--production');
 const FORCE_DEV = process.argv.includes('--dev');
-
-// --- Loading the discovered rows ---------------------------------------------
-
-/** Split a `;`-joined discovery CSV cell into a trimmed, non-empty list. */
-function splitCell(raw: string | undefined): string[] {
-	return (raw ?? '')
-		.split(';')
-		.map((s) => s.trim())
-		.filter(Boolean);
-}
-
-type MetaPage = { pageid: number; title: string };
-
-/** Map cleaned page title → source_pageid from the gitignored meta sidecar. */
-function loadPageIdByTitle(): Map<string, number> {
-	const out = new Map<string, number>();
-	try {
-		const meta = JSON.parse(readFileSync(DISCOVERY_META, 'utf-8')) as { pages?: MetaPage[] };
-		for (const p of meta.pages ?? []) {
-			const key = cleanTitle(p.title);
-			if (!out.has(key)) out.set(key, p.pageid);
-		}
-	} catch {
-		// Sidecar absent (gitignored) — source_pageid falls back to a stable index.
-	}
-	return out;
-}
-
-/** Load data/discovery/books-discovered.csv into `DiscoveredBook[]`. */
-function loadDiscovered(): DiscoveredBook[] {
-	const records = parseCsv(readFileSync(DISCOVERY_CSV, 'utf-8'));
-	const pageIdByTitle = loadPageIdByTitle();
-	return records.map((rec, index) => {
-		const isbn = splitCell(rec.isbn);
-		const format = splitCell(rec.format);
-		const seriesOrder = (rec.series_order ?? '').trim();
-		const timelineOrder = (rec.timeline_order ?? '').trim();
-		const title = (rec.title ?? '').trim();
-		return {
-			title,
-			slug: (rec.slug ?? '').trim(),
-			author: splitCell(rec.author),
-			cover_image: (rec.cover_image ?? '').trim() || null,
-			canon: (rec.canon ?? '').trim(),
-			date_published: (rec.date_published ?? '').trim() || null,
-			format: format.length ? format : null,
-			isbn,
-			primary_isbn: isbn[0] ?? null,
-			language: (rec.language ?? '').trim() || 'English',
-			publisher: (rec.publisher ?? '').trim() || null,
-			series_name: (rec.series_name ?? '').trim() || null,
-			series_order: seriesOrder ? Number.parseInt(seriesOrder, 10) : null,
-			timeline_order: timelineOrder ? Number.parseFloat(timelineOrder) : null,
-			synopsis: (rec.synopsis ?? '').trim() || null,
-			type: (rec.type ?? '').trim(),
-			era: (rec.era ?? '').trim() || null,
-			// Stable fallback keeps the slug tiebreaker deterministic without the sidecar.
-			source_pageid: pageIdByTitle.get(cleanTitle(title)) ?? 1_000_000 + index,
-		};
-	});
-}
 
 // --- Loading the catalog ------------------------------------------------------
 
@@ -221,7 +157,7 @@ function report(results: Classification[], src: CatalogSource, catalog: CatalogB
 	const differs = (byClass.get('DIFFERS') ?? []).slice().sort(byTitle);
 	w(`\nDIFFERS (${differs.length}) — wiki-owned fields that differ (suggestions, not applied):\n`);
 	for (const r of differs) {
-		w(`  • ${r.discovered.title}  [${r.discovered.canon}] → ${r.matchSlug}\n`);
+		w(`  • ${r.discovered.title}  [${r.discovered.canon}] → ${r.matchSlug} (${r.method})\n`);
 		for (const d of r.diffs) {
 			w(`      ${d.field}: catalog "${d.catalog}"  ⇐ wiki "${d.discovered}"\n`);
 		}

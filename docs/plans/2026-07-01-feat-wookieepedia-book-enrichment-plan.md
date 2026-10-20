@@ -153,9 +153,47 @@ CC BY-SA 3.0 (text only; **cover art is publisher-copyright — do not rehost**)
 `lib/wookieepedia/match.ts` — ISBN+corroboration → title+author-set+canon → fuzzy(review); classify NEW/DIFFERS/UNMATCHED at diff-time; slug via `slugify`+`ensureUniqueSlug` against live DB slugs.
 **Acceptance:** existing books resolve as matches (no duplicate NEWs); Canon/Legends twins stay distinct; a shared-ISBN omnibus is NOT auto-merged; ISBN normalizer unit tests pass.
 
-### Phase 3 — Human-gated promotion (local admin)
+### Phase 3 — Human-gated promotion (local admin) — superseded for the first bulk pass by the 2026-10-20 changeset revision below
 Extend local admin `/diff`; NEW → `createBook` (OL/Google fills type/cover/isbn); DIFFERS → suggestions; slug re-checked at promote-time; `catalog:backup` after.
 **Acceptance:** operator promotes NEW inserts and applies/ignores suggestions; `data/books.csv` never crawler-overwritten; discovery review is local-only (not on the Vercel deploy); Legends rows get a valid `type` via lookup before insert (no CHECK violation).
+
+### Phase 3 revision (2026-10-20): reviewable changeset + gated apply
+
+Replaces the per-row admin `/diff` promotion for this first bulk pass. The user approves a change file; nothing is applied by the tooling's author.
+
+**Decisions (user, authoritative):**
+1. **Existing rows: `date_published` + `format` only.** The wiki date wins when it differs, compared at the raw infobox precision: a month-only wiki date ("February 1996", stored padded as `1996-02-01`) does not overwrite a catalog day in that same month. `format` is an additive, ordered, deduped union. Catalog formats come first and none are removed, mirroring `ordered_text_union`. "Hard Cover" ≡ "Hardcover". Author, timeline, series, publisher, synopsis, cover and every other field stay untouched.
+2. **ISBNs: never add or merge wiki ISBNs.** The only ISBN change is a **conflict fix**, for a catalog ISBN that the wiki assigns to a *different* book. Ownership is decided by title + full author set + canon, never by the (suspect) ISBN arrays. The misfiled ISBN is replaced in place by the holder row's own wiki ISBN; an ISBN the row already carries is preferred. `primary_isbn` follows when it was the removed ISBN, so `primary_isbn ∈ isbn[]` holds. Any unclear link is **flagged, not fixed**: no owner row, no holder wiki page, the wiki listing the ISBN on both pages, the replacement held elsewhere, or Open Library contradicting. Open Library's title for the moved ISBN is recorded as independent evidence.
+3. **NEW inserts include every edition variant**: junior novelizations, Expanded Editions, and the 2017 Egmont "(paperback novel)" OT junior novelizations, which are distinct Canon works, not the Legends Foster/Glut/Kahn novelizations. **Excluded:** "Untitled Boba Fett novel" and "The Odyssey of Star Wars: An Epic Poem". `type` comes from the Canon tier bucket, or for Legends from OL/GB audience evidence (`lib/wookieepedia/audience.ts`):
+   - Google Books BISAC outranks Open Library work subjects, which aggregate kids' reissues.
+   - Only one consistent adult/YA label decides. Juvenile-only, conflicting or ISBN-less rows get `needs_type: true` and no `type`.
+   - Calibration against the full prod catalog: 162/185 rows decided, 0 wrong.
+   - Operator overrides go in `data/discovery/type-overrides.json`.
+   - `cover_image` comes from the OL/GB lookup by ISBN only, never the wiki image.
+   - `synopsis` is null, because catalog synopses are hand-written one-liners.
+4. **Apply mechanism.**
+   - `scripts/build-catalog-changeset.ts --production` (read-only) writes a deterministic `data/discovery/catalog-changeset.json` plus a `.md` summary. Sections are sorted by slug. Lookups are cached in the gitignored `data/discovery/lookup-cache.json`.
+   - Update identity is computed against the catalog *as it will be after the ISBN fixes*, so a misfiled ISBN can't route one book's facts onto another.
+   - `scripts/apply-catalog-changeset.ts` is a dry-run by default. Real writes need `--apply --production`, a clean pre-flight (no `needs_type`, no conflicts), the typed project-ref prompt (as in `seed.ts`), and a fresh, complete `npm run catalog:backup` that the script runs and verifies.
+   - Writes go in order: ISBN fixes, updates (named columns only, keyed by `id` + `slug`), then inserts (plain insert, never upsert; each slug is re-checked immediately before its insert).
+   - Optimistic concurrency: each step re-reads its live row. Live = `after` → skip; live = `before` → write; anything else → stop.
+   - **No transaction.** supabase-js has none, so each row is its own write. The run stops at the first conflict or error; completed rows stay written. Every step is idempotent, so re-running resumes at the failed row. The restore point is `data/catalog-backup.csv`.
+
+**Follow-up decisions (2026-10-20, after the first review):**
+- **Never-published works are excluded.** The 9 titles are listed explicitly in `EXCLUDED_TITLES` with a reason each, and any page tagged `{{Canceled}}` is also auto-excluded at build time, so future runs don't regress. The auto-rule additionally caught *The Mandalorian and Grogu: The Deluxe Junior Novelization*, whose solicitations were pulled.
+- **The 18 flagged date updates are accepted.** Each approval in `APPROVED_DATE_UPDATES` is keyed by slug + the exact `before>after` value. Updates carry `review_status: approved | pending`, so a rebuild that proposes a different date comes back as pending.
+- **Cover fixes are a separate change kind (`cover_fixes`).** A cover URL built from a removed (misfiled) ISBN is rebuilt from the corrected ISBN via the Open Library candidate builder, with the same HEAD/`MIN_COVER_BYTES` check as inserts. The apply step writes `cover_image` only, keyed by `id`. When there is no valid OL cover, or the cover is already used by another row, the case goes to review instead. This covers `red-harvest` and `brotherhood`.
+- **Edition variants own their ISBN.** A wiki ISBN on a base row that belongs to an edition with no catalog row moves off the base row, but only when that edition really becomes an insert in the same changeset; otherwise the case is flagged, so a fix never drops an ISBN. This covers *Heir to the Empire: The 20th Anniversary Edition*, which is inserted and gets 9780345528292.
+
+- **Insert data cleanup.** *Star Wars: Starfighter (junior novelization)* and *The Vow of Silver Dawn* are excluded because their data is incomplete. Insert publishers are normalized:
+  - A run-together multi-imprint value keeps the US/primary imprint. The four values are listed explicitly in `PUBLISHER_SPLITS`.
+  - A spelling or punctuation variant of an existing catalog publisher takes the catalog's spelling (`Disney–Lucasfilm Press` → `Disney Lucasfilm Press`).
+  - Distinct imprints (Random House Worlds, Del Rey, Egmont UK Ltd) are never merged.
+  - Every changed value is listed under `publisher_changes` and in the `.md`.
+
+**Matcher changes:**
+- **Step 2b, series-prefix titles.** One title may be the other minus leading `Series: ` segments: "The New Jedi Order: Destiny's Way" ↔ "Destiny's Way". This still requires the full author set + canon. Generic remainders such as "A Junior Novel" and "Expanded Edition" never count, and a stripped variant is only compared to the other side's full title.
+- **Misfiled-ISBN guard.** An ISBN corroborated only by author is downgraded to AMBIGUOUS when the title identifies a different row. This caught *X-Wing: The Bacta War* being merged onto `x-wing-rogue-squadron`.
 
 ## Part 2: In-universe enrichment (follow-up plan)
 

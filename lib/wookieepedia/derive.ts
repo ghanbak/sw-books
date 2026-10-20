@@ -26,7 +26,12 @@ export type { BookType } from './categories';
 export type DiscoveredBook = BookFields & { source_pageid: number };
 
 /** Infobox parameter keys that hold a release date, in preference order. */
-const DATE_KEYS = ['release date', 'publication date', 'published', 'first published'] as const;
+export const DATE_KEYS = [
+	'release date',
+	'publication date',
+	'published',
+	'first published',
+] as const;
 /** Infobox keys that may hold ISBNs (the `{{Book}}` template uses isbn/isbn2/isbn3). */
 const ISBN_KEYS = ['isbn', 'isbn2', 'isbn3', 'isbn4'] as const;
 

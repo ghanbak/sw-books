@@ -99,6 +99,36 @@ export function parseWikiDate(raw: string): string | null {
 	return parseDate(cleaned);
 }
 
+/** How precise a wiki release date is. `parseWikiDate` pads a partial date to
+ *  the 1st ("February 1996" → 1996-02-01), so callers need this to avoid
+ *  treating the padding as a real day. */
+export type DatePrecision = 'day' | 'month' | 'year';
+
+const MONTH =
+	/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i;
+
+/** Precision of a raw infobox date value, or null when it has no year. */
+export function wikiDatePrecision(raw: string): DatePrecision | null {
+	const text = stripWikiMarkup(raw).replace(/^\s*(?:c\.|circa)\s*/i, '');
+	if (/\b\d{4}-\d{2}-\d{2}\b/.test(text)) return 'day';
+	if (!/\b\d{4}\b/.test(text)) return null;
+	if (!MONTH.test(text)) return 'year';
+	// A day is a 1–2 digit number (optionally ordinal) that is not the year.
+	return /(?:^|[^\d])\d{1,2}(?:st|nd|rd|th)?(?:[^\d]|$)/i.test(text.replace(/\b\d{4}\b/g, ''))
+		? 'day'
+		: 'month';
+}
+
+/**
+ * Whether a page is marked canceled (never published) — Wookieepedia tags these
+ * with `{{Canceled|novels}}` (also the `{{Cancelled}}` spelling). Ignores the
+ * text inside `<nowiki>` / comments so a mention can't trip it.
+ */
+export function isCanceledPage(wikitext: string): boolean {
+	const text = wikitext.replace(/<!--[\s\S]*?-->/g, '').replace(/<nowiki>[\s\S]*?<\/nowiki>/gi, '');
+	return /\{\{\s*cancell?ed\s*(?:\||\}\})/i.test(text);
+}
+
 /** One parsed timeline token: the signed year plus its era. */
 type TimelineToken = { readonly year: number; readonly era: 'BBY' | 'ABY' };
 

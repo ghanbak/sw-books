@@ -53,6 +53,8 @@ scripts/primary-isbn-verification.txt
 
 # Wookieepedia discovery — volatile crawl metadata (timestamps, revids, cover URLs)
 data/discovery/discovery-meta.json
+# OL / Google Books / wiki lookup cache for scripts/build-catalog-changeset.ts
+data/discovery/lookup-cache.json
 
 # testing
 coverage/
