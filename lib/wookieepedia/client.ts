@@ -100,11 +100,12 @@ async function request(params: Record<string, string>): Promise<QueryEnvelope> {
 	);
 }
 
-/**
- * All namespace-0 page members of a category (`cmtype=page`), following
- * `cmcontinue` defensively. Order follows the API (sortkey) — callers sort.
- */
-export async function fetchCategoryMembers(category: string): Promise<CategoryMember[]> {
+/** Shared `list=categorymembers` fetch for one `cmtype`, following `cmcontinue`
+ *  defensively. Order follows the API (sortkey) — callers sort. */
+async function fetchMembers(
+	category: string,
+	cmtype: 'page' | 'subcat',
+): Promise<CategoryMember[]> {
 	const title = category.replace(/^category:/i, '');
 	const members: CategoryMember[] = [];
 	let cmcontinue: string | undefined;
@@ -114,8 +115,9 @@ export async function fetchCategoryMembers(category: string): Promise<CategoryMe
 			list: 'categorymembers',
 			cmtitle: `Category:${title}`,
 			cmlimit: '500',
-			cmtype: 'page',
-			cmnamespace: '0',
+			cmtype,
+			// Pages live in ns 0; sub-categories in ns 14.
+			cmnamespace: cmtype === 'subcat' ? '14' : '0',
 			...(cmcontinue ? { cmcontinue } : {}),
 		});
 		for (const m of body.query?.categorymembers ?? []) {
@@ -124,6 +126,23 @@ export async function fetchCategoryMembers(category: string): Promise<CategoryMe
 		cmcontinue = body.continue?.cmcontinue;
 	} while (cmcontinue);
 	return members;
+}
+
+/**
+ * All namespace-0 page members of a category (`cmtype=page`), following
+ * `cmcontinue` defensively. Order follows the API (sortkey) — callers sort.
+ */
+export function fetchCategoryMembers(category: string): Promise<CategoryMember[]> {
+	return fetchMembers(category, 'page');
+}
+
+/**
+ * All direct sub-categories of a category (`cmtype=subcat`). Titles keep their
+ * `Category:` namespace prefix (as the API returns them). Used to recurse one
+ * level into a bucket's series sub-categories.
+ */
+export function fetchSubcategories(category: string): Promise<CategoryMember[]> {
+	return fetchMembers(category, 'subcat');
 }
 
 function chunk<T>(items: readonly T[], size: number): T[][] {

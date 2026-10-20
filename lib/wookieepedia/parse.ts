@@ -26,26 +26,54 @@ export type ParsedBook = {
 	readonly infobox: InfoboxFields;
 };
 
+/** Remove `<ref>…</ref>` and self-closing `<ref …/>`, INCLUDING the nested
+ *  citation-template content inside the ref. */
+function dropRefs(s: string): string {
+	return s.replace(/<ref\b[^>]*\/>/gi, '').replace(/<ref\b[^>]*>[\s\S]*?<\/ref>/gi, '');
+}
+
+/**
+ * Remove balanced `{{…}}` templates innermost-first, so NESTED citation
+ * templates inside a field value — `{{SW}}`, `{{Twitter}}`, `{{Blog}}`,
+ * `{{SWYouTube}}`, `{{Cite…}}`, `{{C|Part 1}}`, `{{Flash}}` — are fully stripped,
+ * not just a single outer template. The loop bound caps nesting depth.
+ */
+function dropTemplates(input: string): string {
+	let s = input;
+	for (let i = 0; i < 8 && s.includes('{{'); i++) {
+		s = s.replace(/\{\{[^{}]*\}\}/g, '');
+	}
+	return s;
+}
+
+/**
+ * Remove citations (refs + nested templates) from a RAW field value while
+ * PRESERVING structural separators (`<br>`, newlines, `*`/`#`/`;` bullets). The
+ * multi-value splitter in `derive.ts` calls this BEFORE it splits, because a
+ * citation's inner text routinely contains the very delimiters the splitter uses
+ * (`#StarWars`, `&#124;`, `;`) — splitting first shatters a `{{SW}}`/`{{Twitter}}`
+ * across pieces, leaving an unbalanced `{{…` that leaks as `Author{{Twitter|…}}`.
+ */
+export function stripCitations(raw: string): string {
+	return dropTemplates(dropRefs(raw));
+}
+
 /**
  * Strip wiki markup to plain text: drop `<ref>…</ref>` (and self-closing refs)
  * with their contents, unwrap `[[target|label]]`→label and `[[target]]`→target,
- * remove remaining templates/HTML/bold-italic, decode a few entities, and
- * collapse whitespace.
+ * remove remaining (incl. nested) templates/HTML/bold-italic, decode a few
+ * entities, and collapse whitespace.
  */
 export function stripWikiMarkup(raw: string): string {
-	let s = raw;
-	// <ref>…</ref> and <ref … /> — remove tag AND nested citation content first.
-	s = s.replace(/<ref\b[^>]*\/>/gi, '');
-	s = s.replace(/<ref\b[^>]*>[\s\S]*?<\/ref>/gi, '');
+	// <ref>…</ref> (+ nested citation content) first.
+	let s = dropRefs(raw);
 	// <br>, <br/> → space; other HTML tags → removed.
 	s = s.replace(/<br\s*\/?>/gi, ' ');
 	s = s.replace(/<[^>]+>/g, '');
 	// [[target|label]] → label ; [[target]] → target.
 	s = s.replace(/\[\[(?:[^\]|]*\|)?([^\]]+)\]\]/g, '$1');
-	// Remaining {{templates}} → drop (non-nested; refs already gone).
-	for (let i = 0; i < 5 && s.includes('{{'); i++) {
-		s = s.replace(/\{\{[^{}]*\}\}/g, '');
-	}
+	// Remaining {{templates}}, nested-aware (refs already gone).
+	s = dropTemplates(s);
 	// Bold/italic apostrophe markup.
 	s = s.replace(/'{2,}/g, '');
 	// A couple of common entities.
@@ -71,22 +99,51 @@ export function parseWikiDate(raw: string): string | null {
 	return parseDate(cleaned);
 }
 
+/** One parsed timeline token: the signed year plus its era. */
+type TimelineToken = { readonly year: number; readonly era: 'BBY' | 'ABY' };
+
+/**
+ * Match every timeline token in a stripped value. A token is a start number
+ * (optionally the LEFT side of a `X–Y` dash range, since the era attaches to the
+ * whole range — `67-65 BBY` means "67 to 65 BBY", start 67), followed by an era.
+ * The number may carry thousands commas (`25,793 BBY`). The era, not any stray
+ * range dash, determines the sign — so a leading `-` is never read as negative.
+ */
+const TIMELINE_TOKEN = /(\d[\d,]*(?:\.\d+)?)(?:\s*[-–—]\s*\d[\d,]*(?:\.\d+)?)?\s*(BBY|ABY)/gi;
+
 /**
  * Parse an in-universe timeline value to a signed year matching the app's
- * `timeline_order` convention (BBY → negative, ABY → positive). Handles the
- * `c.`/`circa` qualifier and ranges (`19 BBY–18 BBY` → takes the start). Returns
- * null when no `<number> BBY|ABY` token is present.
+ * `timeline_order` convention (BBY → negative, ABY → positive).
+ *
+ * Bugs this fixes vs. the naive "first `-?\d+ BBY`" match:
+ *   1. Sign — the sign comes ONLY from BBY/ABY. A range dash (`67-65 BBY`) is no
+ *      longer misread as a negative magnitude (which flipped Darth Plagueis to
+ *      +65 instead of -67).
+ *   2. Commas — thousands separators are kept, so `25,793 BBY` → -25793, not -793.
+ *   3. Range / flashback selection — timelines are noisy and human-reviewed, so
+ *      the heuristic is deliberately simple: when tokens span BOTH eras, ancient
+ *      BBY values are almost always flashbacks, so the primary setting is the
+ *      first ABY token (the frame story) — fixes Crosscurrent (41 ABY, not
+ *      -5000) and Millennium Falcon (43 ABY, not -60). Otherwise take the first
+ *      token: the start of the book's span (Darth Plagueis → -67).
+ *
+ * Returns null when no `<number> BBY|ABY` token is present.
  */
 export function parseTimeline(raw: string): number | null {
 	const text = stripWikiMarkup(raw);
 	if (!text) return null;
-	// First "<number> BBY|ABY" token wins (range start).
-	const m = text.match(/(-?\d+(?:\.\d+)?)\s*(BBY|ABY)/i);
-	if (!m) return null;
-	const magnitude = Number.parseFloat(m[1] ?? '');
-	if (Number.isNaN(magnitude)) return null;
-	const era = (m[2] ?? '').toUpperCase();
-	return era === 'BBY' ? -magnitude : magnitude;
+	const tokens: TimelineToken[] = [];
+	for (const m of text.matchAll(TIMELINE_TOKEN)) {
+		const magnitude = Number.parseFloat((m[1] ?? '').replace(/,/g, ''));
+		if (Number.isNaN(magnitude)) continue;
+		const era = (m[2] ?? '').toUpperCase() as 'BBY' | 'ABY';
+		tokens.push({ year: era === 'BBY' ? -magnitude : magnitude, era });
+	}
+	if (tokens.length === 0) return null;
+	// Mixed eras → ancient-BBY flashback + ABY frame: take the first ABY token.
+	const firstAby = tokens.find((t) => t.era === 'ABY');
+	if (firstAby && tokens.some((t) => t.era === 'BBY')) return firstAby.year;
+	return (tokens[0] as TimelineToken).year;
 }
 
 /** Walk a balanced `{{Book … }}` template out of the wikitext (brace-aware). */

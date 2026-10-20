@@ -66,26 +66,33 @@ Live-verified against `starwars.fandom.com` (MediaWiki 1.43.8, 2026-07-01), comp
 ### Action API vs. REST — decided
 **Primary: Action API (`api.php`)** (only API with category listing; batched multi-title facts; section-level intro; `parsetree`). **REST (`rest.php`) optional** for the per-page `license`+`latest.id` object. Dead paths: legacy `/api/v1` (Nirvana, Cloudflare 403), Wikimedia `/api/rest_v1/summary` (403 on Fandom). `prop=extracts` not installed.
 
-### Enumeration recipe (live-verified)
+### Enumeration recipe (live-verified; revised 2026-10-20 to close the sub-category gap)
 
-Union all, dedupe on `pageid`; `cmtype=page&cmnamespace=0`:
+Per bucket, union the FLAT page members with the page members of each non-excluded
+DIRECT sub-category (one level deep), dedupe on `pageid`; `cmtype=page&cmnamespace=0`
+for pages, `cmtype=subcat&cmnamespace=14` to map a bucket's subcats. Across buckets,
+first bucket in order claims a shared `pageid`.
 
-| Category | ~count | `canon` | `type` (from category) |
-| --- | --- | --- | --- |
-| `Category:Canon adult novels` | 48 | Canon | Adult Novel |
-| `Category:Canon young-adult novels` | 17 | Canon | YA Novel |
-| `Category:Canon middle-grade novels` | 29 | Canon | Middle Grade Novel |
-| `Category:Legends novels` (flat) | 86 | Legends | *unset → resolved via OL/Google at promotion* |
+| Bucket | flat | +subcats | union | `canon` | `type` (inherited by subcat members) |
+| --- | --- | --- | --- | --- | --- |
+| `Category:Canon adult novels` | 50 | THR adult | 58 | Canon | Adult Novel |
+| `Category:Canon young-adult novels` | 18 | THR YA | 26 | Canon | YA Novel |
+| `Category:Canon middle-grade novels` | 31 | THR junior, Join the Resistance, Servants of the Empire | 46 | Canon | Middle Grade Novel |
+| `Category:Legends novels` | 84 | X-Wing, New Jedi Order, Legacy of the Force, Fate of the Jedi, Coruscant Nights, Old Republic, Clone Wars (+tie-in), Empire and Rebellion, Essential Legends Collection | 162 | Legends | *unset → resolved via OL/Google at promotion* |
 
-≈ **180 novels**. **Exclude** `Canon novels` (container), `*young-reader*` (picture books), `*novellas*`/`*eNovellas*`, `*graphic novels*` (comics), `*novel series*` (containers). Legends subcats are series groupings already covered by the flat list — dedupe on union.
+Global union ≈ **292 pages → 283 rows** after the `{{Book}}` infobox filter (9 container/boxed-set/interview/dramatis-personae pages have no `{{Book}}` and are dropped).
 
-**Request plan (~8–10 requests, <10s):** 4× `list=categorymembers&cmlimit=500&cmtype=page&cmnamespace=0` (with defensive `cmcontinue`), then ~4× `action=query&prop=revisions|pageimages&rvprop=content|ids&rvslots=main&piprop=original&titles=…(≤50)…&formatversion=2&redirects=1`.
+**Why recursion is required:** many novels live ONLY in series sub-categories, never in the flat parent. Legends series subcats (X-Wing ×10, NJO ×24, LOTF, FOTJ, Coruscant Nights, Old Republic, …) and the Canon **High Republic** novels — which sit in `Star Wars: The High Republic {adult,young-adult,junior} novels`, *sub-categories of the three Canon tier buckets* — were all missing from the flat-only crawl (~88 catalog novels undiscovered). A classify run against prod exposed this; one-level recursion closes it (gap 88 → 13, the residual being title-form mismatches the operator reconciles in `/diff` plus correctly-excluded audio-drama/young-reader/short-story items).
 
-**Drift guard (added per architecture review):** assert each category returns members within an expected band (committed fixture, e.g. `Canon adult novels ≥ 40`); if a category collapses to ~0 or an unexpected sibling appears, **fail loudly and do not overwrite the CSV**. `canon`/`type` derive from *which category*, so a silent taxonomy change would otherwise produce a clean-but-wrong CSV.
+**Exclude** (applied to top-level buckets AND to subcats during recursion): `Canon novels` (container), `*young-reader*` (picture books; catches `Legends young-reader novels`), `*novellas*`/`*eNovellas*`, `*graphic novels*` (comics), `*novel series*` (containers; catches `Legends novel series`), `*audiobooks*` (audio editions). The `{{Book}}` infobox filter is the final safety net for non-novel pages inside a kept subcat.
+
+**Request plan (~25–30 requests, <15s):** per bucket, 1× `list=categorymembers&cmtype=page` + 1× `cmtype=subcat` + 1× `cmtype=page` for each kept subcat (all with defensive `cmcontinue`), then ~6× `action=query&prop=revisions|pageimages&rvprop=content|ids&rvslots=main&piprop=original&titles=…(≤50)…&formatversion=2&redirects=1`.
+
+**Drift guard:** assert each bucket's FULL union count (flat ∪ kept-subcat members, pre-infobox) is within a committed band (adult 45–85, YA 18–45, MG 34–70, Legends 135–200, vs live 58/26/46/162); if a bucket collapses or an unexpected sibling appears, **fail loudly and do not overwrite the CSV**. `canon`/`type` derive from *which bucket*, so a silent taxonomy change would otherwise produce a clean-but-wrong CSV.
 
 ### Field-derivation rules
-- **`canon`** ← crawl bucket (most reliable at scale). **`type`** ← Canon subcat; Legends left unset for OL/Google resolution.
-- **`author`, `publisher`, `date_published`, `isbn`, `timeline_order`** ← `{{Book}}` infobox (~100%). Clean `[[links]]`/`<ref>`/`{{templates}}`. **`date_published`** → ISO via the catalog's `parseDate`. **`timeline_order`** is separate: parse "15 BBY"→ `-15`, "2 ABY"→ `2` (matches the app's `timeline_order < 0 ⇒ BBY` convention); ranges take the start value. Never feed a BBY string to `parseDate`.
+- **`canon`** ← crawl bucket (most reliable at scale). **`type`** ← Canon tier bucket. Under recursion a subcat member inherits its PARENT bucket's `canon` + `type`, because the subcat is a subcategory of that tier (membership is transitive — a THR-adult book IS a Canon-adult book), so no tier is guessed. Legends `type` stays unset (resolved via OL/Google at promotion). If a future source reaches a Canon book ONLY via a non-tier category, leave `type` unset — do not add such a category as a recursing bucket.
+- **`author`, `publisher`, `date_published`, `isbn`, `timeline_order`** ← `{{Book}}` infobox (~100%). Clean `[[links]]`/`<ref>`/`{{templates}}` — including NESTED citation templates (`{{SW}}`, `{{Twitter}}`, `{{SWYouTube}}`, `{{Cite…}}`) inside a field value; the multi-value splitter strips citations BEFORE splitting so a citation's inner `#`/`;`/`&#124;` can't shatter a template into the author. Co-authors split on `<br>`/newline/`*`/`#`/`;`/` & `/` and `. **`date_published`** → ISO via the catalog's `parseDate`. **`timeline_order`** is separate: the sign comes only from BBY→`-`/ABY→`+`; thousands commas are kept (`25,793 BBY`→`-25793`); a range (`67-65 BBY`) takes the start (`-67`); and when tokens span BOTH eras the ancient BBY is treated as a flashback so the first ABY token wins (Crosscurrent `41`, Millennium Falcon `43`) — timeline is noisy and human-reviewed. Never feed a BBY string to `parseDate`.
 - **`series`/`series_order`** ← infobox `series` (~33%) + `preceded/followed by`; leave null when absent (don't fabricate).
 - **`cover_image`** ← `pageimages` URL as a **reference only** (publisher-copyright; keep the OpenLibrary cover pipeline as the real source).
 
@@ -138,8 +145,9 @@ CC BY-SA 3.0 (text only; **cover art is publisher-copyright — do not rehost**)
 ## Implementation Phases (v1)
 
 ### Phase 1 — Crawl & build the discovery CSV
-`lib/wookieepedia/{client,parse,derive}.ts` + `categories` config (4 buckets + exclusions + drift-guard bands) + `scripts/discover-wookieepedia.ts` (`--dry-run` prints per-category counts; emits deterministic CSV + gitignored meta sidecar).
-**Acceptance:** ~180 rows across 4 categories; comics/picture-books/novellas absent; byte-identical re-run; drift guard fails loudly on a collapsed category.
+`lib/wookieepedia/{client,parse,derive}.ts` + `categories` config (4 buckets, each recursing one level into non-excluded direct sub-categories; exclusions; per-bucket union drift-guard bands) + `scripts/discover-wookieepedia.ts` (`--dry-run` prints per-bucket flat/subcat/union counts; emits deterministic CSV + gitignored meta sidecar recording kept/skipped subcats). `client.ts` adds `fetchSubcategories` (`cmtype=subcat`).
+**Acceptance:** ~283 rows across 4 buckets incl. one-level subcat recursion (X-Wing, NJO, LOTF, FOTJ, Coruscant Nights, Old Republic, Canon High Republic now covered); comics/picture-books/novellas/audiobooks/series-containers absent; byte-identical re-run; drift guard fails loudly on a collapsed bucket.
+**Revision 2026-10-20:** closed the sub-category enumeration gap (flat-only crawl missed ~88 catalog novels) and fixed three infobox parse bugs the prod classify run surfaced — nested citation-template stripping, `&` co-author split, and `timeline_order` sign/comma/flashback handling. See the Enumeration recipe + Field-derivation rules above.
 
 ### Phase 2 — Match & classify against the live DB
 `lib/wookieepedia/match.ts` — ISBN+corroboration → title+author-set+canon → fuzzy(review); classify NEW/DIFFERS/UNMATCHED at diff-time; slug via `slugify`+`ensureUniqueSlug` against live DB slugs.

@@ -19,6 +19,15 @@ describe('stripWikiMarkup', () => {
 			'January 5, 2021',
 		);
 	});
+
+	it('strips nested citation templates in a field value, not just the outer one', () => {
+		// Twitter citation with braces and pipes inside — must vanish entirely.
+		expect(
+			stripWikiMarkup('[[Claudia Gray]]{{Twitter|DelReyStarWars|status/1|quote=So excited!}}'),
+		).toBe('Claudia Gray');
+		// Nested template inside a template.
+		expect(stripWikiMarkup('[[Greg Rucka]]{{SW|url={{PAGENAME}}|text=News}}')).toBe('Greg Rucka');
+	});
 });
 
 describe('parseWikiDate', () => {
@@ -46,6 +55,34 @@ describe('parseTimeline', () => {
 
 	it('takes the start of a range', () => {
 		expect(parseTimeline('[[19 BBY]]–[[18 BBY]]')).toBe(-19);
+	});
+
+	it('reads the era for the sign, never a range dash (Darth Plagueis → -67)', () => {
+		// `67-65 BBY` = "67 to 65 BBY"; the era applies to the whole range, start 67.
+		// The leading dash of `-65` must NOT be read as a negative magnitude (+65 bug).
+		expect(parseTimeline('[[67 BBY/Legends|67]]-[[65 BBY/Legends|65 BBY]] {{C|Part 1}}')).toBe(-67);
+	});
+
+	it('keeps thousands separators (25,793 BBY → -25793, not -793)', () => {
+		expect(parseTimeline('[[25,793 BBY]]')).toBe(-25793);
+		expect(parseTimeline('25,793 BBY')).toBe(-25793);
+	});
+
+	it('mixed-era timeline: ancient BBY is a flashback, ABY frame wins', () => {
+		// Crosscurrent: 5000 BBY flashback + 41 ABY frame → 41, not -5000.
+		expect(parseTimeline('*[[5000 BBY/Legends|5000 BBY]] {{Flash}}\n*[[41 ABY]]')).toBe(41);
+		// Millennium Falcon: four BBY flashbacks + 43 ABY frame → 43, not -60.
+		expect(
+			parseTimeline(
+				'*[[60 BBY/Legends|60 BBY]] {{Flash}}\n*[[19 BBY/Legends|19 BBY]] {{Flash}}\n*[[43 ABY]]',
+			),
+		).toBe(43);
+	});
+
+	it('all-BBY multi-value keeps the first (earliest) token', () => {
+		expect(
+			parseTimeline('[[67 BBY|67]]-[[65 BBY|65 BBY]]<br />[[54 BBY|54]]-[[52 BBY|52 BBY]]'),
+		).toBe(-67);
 	});
 
 	it('returns null without a BBY/ABY token', () => {

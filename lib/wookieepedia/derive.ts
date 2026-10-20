@@ -16,6 +16,7 @@ import {
 	normalizeIsbn,
 	parseTimeline,
 	parseWikiDate,
+	stripCitations,
 	stripWikiMarkup,
 } from './parse';
 
@@ -32,11 +33,18 @@ const ISBN_KEYS = ['isbn', 'isbn2', 'isbn3', 'isbn4'] as const;
 /**
  * Split a multi-value infobox value (co-authors, media-type list) on the
  * structural delimiters wiki editors use — `<br>`, newlines, `*`/`#` bullets,
- * and `;` — then reduce each piece to plain text. Order preserved; caller sorts.
+ * `;`, ` & ` (e.g. `Michael Reaves & Maya Kaathryn Bohnhoff`), and ` and ` —
+ * then reduce each piece to plain text. Order preserved; caller sorts.
+ *
+ * Citations (refs + nested templates) are stripped FIRST via `stripCitations`,
+ * because a `{{SW}}`/`{{Twitter}}` citation's inner text contains the very
+ * delimiters below (`#`, `;`, `&#124;`); splitting first would shatter it and
+ * leak markup like `Claudia Gray{{Twitter|…}}` as an author. The ` & ` split
+ * requires surrounding whitespace so it never breaks a `&ndash;`/`&amp;` entity.
  */
 function splitInfoboxList(raw: string): string[] {
-	return raw
-		.split(/<br\s*\/?>|\r?\n|[*#;]|(?:,\s*and\s+)|(?:\s+and\s+)/i)
+	return stripCitations(raw)
+		.split(/<br\s*\/?>|\r?\n|[*#;]|\s+&\s+|(?:,\s*and\s+)|(?:\s+and\s+)/i)
 		.map((piece) => stripWikiMarkup(piece))
 		.filter(Boolean);
 }

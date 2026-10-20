@@ -24,7 +24,12 @@ import {
 	checkDrift,
 	isExcludedCategory,
 } from '../lib/wookieepedia/categories';
-import { type CategoryMember, fetchCategoryMembers, fetchPages } from '../lib/wookieepedia/client';
+import {
+	type CategoryMember,
+	fetchCategoryMembers,
+	fetchPages,
+	fetchSubcategories,
+} from '../lib/wookieepedia/client';
 import { type DiscoveredBook, deriveBook } from '../lib/wookieepedia/derive';
 import { parseBook } from '../lib/wookieepedia/parse';
 
@@ -34,11 +39,64 @@ const META_PATH = resolve(DISCOVERY_DIR, 'discovery-meta.json');
 
 const DRY_RUN = process.argv.includes('--dry-run');
 
+/** A bucket's full enumeration: flat members ∪ one-level kept-subcat members
+ *  (de-duped on `pageid`), plus the subcat bookkeeping for the report + sidecar. */
+type BucketCrawl = {
+	readonly bucket: CategoryBucket;
+	/** Flat + recursed members, de-duped on pageid (order: API/sortkey). */
+	readonly members: CategoryMember[];
+	readonly directCount: number;
+	readonly keptSubcats: string[];
+	readonly skippedSubcats: string[];
+};
+
 type CrawlResult = {
-	readonly buckets: Array<{ bucket: CategoryBucket; members: CategoryMember[] }>;
+	readonly buckets: BucketCrawl[];
 	/** pageid → the bucket that claimed it (first bucket in order wins). */
 	readonly byPageId: Map<number, { member: CategoryMember; bucket: CategoryBucket }>;
 };
+
+/** Enumerate one bucket: flat page members plus, when `recurseSubcats`, the page
+ *  members of each non-excluded direct sub-category. De-duped on pageid within
+ *  the bucket; every member inherits the bucket's canon + type downstream. */
+async function crawlBucket(bucket: CategoryBucket): Promise<BucketCrawl> {
+	process.stdout.write(`Fetching Category:${bucket.category} … `);
+	const byId = new Map<number, CategoryMember>();
+	for (const m of await fetchCategoryMembers(bucket.category)) {
+		if (!byId.has(m.pageid)) byId.set(m.pageid, m);
+	}
+	const directCount = byId.size;
+
+	const keptSubcats: string[] = [];
+	const skippedSubcats: string[] = [];
+	if (bucket.recurseSubcats) {
+		const subcats = await fetchSubcategories(bucket.category);
+		for (const sc of subcats) {
+			const name = sc.title.replace(/^category:/i, '');
+			if (isExcludedCategory(sc.title)) {
+				skippedSubcats.push(name);
+				continue;
+			}
+			keptSubcats.push(name);
+			for (const m of await fetchCategoryMembers(sc.title)) {
+				if (!byId.has(m.pageid)) byId.set(m.pageid, m);
+			}
+		}
+	}
+
+	const members = [...byId.values()];
+	const suffix = bucket.recurseSubcats
+		? ` + ${keptSubcats.length} subcat(s) → ${members.length} union`
+		: '';
+	process.stdout.write(`${directCount} flat${suffix}\n`);
+	return {
+		bucket,
+		members,
+		directCount,
+		keptSubcats: keptSubcats.sort(),
+		skippedSubcats: skippedSubcats.sort(),
+	};
+}
 
 async function crawl(): Promise<CrawlResult> {
 	// Sanity: a committed bucket must never match an excluded category.
@@ -48,14 +106,12 @@ async function crawl(): Promise<CrawlResult> {
 		}
 	}
 
-	const buckets: CrawlResult['buckets'] = [];
+	const buckets: BucketCrawl[] = [];
 	const byPageId = new Map<number, { member: CategoryMember; bucket: CategoryBucket }>();
 	for (const bucket of CATEGORY_BUCKETS) {
-		process.stdout.write(`Fetching Category:${bucket.category} … `);
-		const members = await fetchCategoryMembers(bucket.category);
-		process.stdout.write(`${members.length} members\n`);
-		buckets.push({ bucket, members });
-		for (const member of members) {
+		const crawled = await crawlBucket(bucket);
+		buckets.push(crawled);
+		for (const member of crawled.members) {
 			if (!byPageId.has(member.pageid)) byPageId.set(member.pageid, { member, bucket });
 		}
 	}
@@ -63,13 +119,17 @@ async function crawl(): Promise<CrawlResult> {
 }
 
 function reportCounts(crawlResult: CrawlResult): void {
-	process.stdout.write('\nPer-category counts:\n');
-	for (const { bucket, members } of crawlResult.buckets) {
+	process.stdout.write('\nPer-bucket counts (flat ∪ one-level kept subcats, deduped):\n');
+	for (const { bucket, members, directCount, keptSubcats } of crawlResult.buckets) {
 		const drift = checkDrift(bucket, members.length);
 		const flag = drift.ok ? 'ok' : `OUT OF BAND [${bucket.band[0]}–${bucket.band[1]}]`;
 		process.stdout.write(
-			`  ${bucket.category.padEnd(28)} ${String(members.length).padStart(4)}  ${flag}\n`,
+			`  ${bucket.category.padEnd(28)} ${String(members.length).padStart(4)}` +
+				`  (flat ${directCount}, +${keptSubcats.length} subcat)  ${flag}\n`,
 		);
+		if (keptSubcats.length) {
+			process.stdout.write(`      subcats: ${keptSubcats.join(' | ')}\n`);
+		}
 	}
 	const unionTotal = crawlResult.byPageId.size;
 	const rawTotal = crawlResult.buckets.reduce((n, b) => n + b.members.length, 0);
@@ -145,7 +205,10 @@ async function main(): Promise<void> {
 	const meta = {
 		crawled_at: new Date().toISOString(),
 		categories: Object.fromEntries(
-			crawlResult.buckets.map(({ bucket, members }) => [bucket.category, members.length]),
+			crawlResult.buckets.map(({ bucket, members, directCount, keptSubcats, skippedSubcats }) => [
+				bucket.category,
+				{ union: members.length, flat: directCount, keptSubcats, skippedSubcats },
+			]),
 		),
 		union_total: crawlResult.byPageId.size,
 		rows: sorted.length,

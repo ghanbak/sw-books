@@ -7,13 +7,15 @@ const CANON_ADULT: CategoryBucket = {
 	category: 'Canon adult novels',
 	canon: 'Canon',
 	type: 'Adult Novel',
-	band: [40, 75],
+	recurseSubcats: true,
+	band: [45, 85],
 };
 const LEGENDS: CategoryBucket = {
 	category: 'Legends novels',
 	canon: 'Legends',
 	type: null,
-	band: [65, 110],
+	recurseSubcats: true,
+	band: [135, 200],
 };
 
 function parsed(overrides: Partial<ParsedBook> = {}): ParsedBook {
@@ -60,6 +62,43 @@ describe('deriveBook', () => {
 		const row = deriveBook(parsed(), LEGENDS);
 		expect(row.canon).toBe('Legends');
 		expect(row.type).toBe('');
+	});
+
+	it('strips nested citation templates inside the author field (real failures)', () => {
+		// Real wiki: author link + a <ref> wrapping a {{Twitter}}/{{SW}} citation
+		// whose quote text contains `#`/`&#124;` — the splitter delimiters. Must
+		// come through clean, never as `Claudia Gray{{Twitter|…}}`.
+		const bloodline = deriveBook(
+			parsed({
+				infobox: {
+					author:
+						'[[Claudia Gray]]<ref name="x">{{Twitter|DelReyStarWars|status/1|quote=So excited #StarWars coming 2016.|archivefile=File:X.jpg}}</ref>',
+				},
+			}),
+			CANON_ADULT,
+		);
+		expect(bloodline.author).toEqual(['Claudia Gray']);
+
+		const thrawn = deriveBook(
+			parsed({
+				infobox: {
+					author:
+						'[[Timothy Zahn]]<ref name="r">{{SWYouTube|HBVhBsN1H7Q|Rebels Season 3 Panel &#124; Celebration 2016}}</ref>',
+				},
+			}),
+			CANON_ADULT,
+		);
+		expect(thrawn.author).toEqual(['Timothy Zahn']);
+	});
+
+	it('splits co-authors on ` & ` as well as bullets/`;`', () => {
+		const row = deriveBook(
+			parsed({
+				infobox: { author: '[[Michael Reaves]] & [[Maya Kaathryn Bohnhoff]]' },
+			}),
+			CANON_ADULT,
+		);
+		expect(row.author).toEqual(['Maya Kaathryn Bohnhoff', 'Michael Reaves']);
 	});
 
 	it('sorts and dedupes multi-value cells; nulls absent scalars', () => {
