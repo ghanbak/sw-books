@@ -28,7 +28,7 @@ export type ParsedBook = {
 
 /** Remove `<ref>…</ref>` and self-closing `<ref …/>`, INCLUDING the nested
  *  citation-template content inside the ref. */
-function dropRefs(s: string): string {
+export function dropRefs(s: string): string {
 	return s.replace(/<ref\b[^>]*\/>/gi, '').replace(/<ref\b[^>]*>[\s\S]*?<\/ref>/gi, '');
 }
 
@@ -176,11 +176,39 @@ export function parseTimeline(raw: string): number | null {
 	return (tokens[0] as TimelineToken).year;
 }
 
+/**
+ * Bodies of every balanced `{{<name> … }}` template in the wikitext, in order
+ * (brace-aware, so nested templates/links stay inside). `name` matches the
+ * template name exactly (case-insensitive), so `App` never matches
+ * `IncompleteApp` or `AppNav`. Unbalanced trailing templates are ignored.
+ */
+export function extractTemplates(wikitext: string, name: string): string[] {
+	const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	const open = new RegExp(`\\{\\{\\s*${escaped}\\s*(?=[|}\\n])`, 'gi');
+	const out: string[] = [];
+	let from = 0;
+	while (from < wikitext.length) {
+		open.lastIndex = from;
+		const m = open.exec(wikitext);
+		if (!m) break;
+		const body = balancedBody(wikitext, m.index + 2);
+		if (body === null) break;
+		out.push(body);
+		from = m.index + 2 + body.length + 2;
+	}
+	return out;
+}
+
 /** Walk a balanced `{{Book … }}` template out of the wikitext (brace-aware). */
 function extractBookTemplate(wikitext: string): string | null {
 	const open = wikitext.match(/\{\{\s*Book\s*(?=[|}\n])/i);
 	if (!open || open.index === undefined) return null;
-	const start = open.index + 2; // past the opening `{{`
+	return balancedBody(wikitext, open.index + 2);
+}
+
+/** From `start` (just past an opening `{{`), the template body up to its
+ *  matching `}}`, or null when unbalanced. */
+function balancedBody(wikitext: string, start: number): string | null {
 	let brace = 1;
 	let bracket = 0;
 	let i = start;
@@ -213,7 +241,7 @@ function extractBookTemplate(wikitext: string): string | null {
 }
 
 /** Split template body on top-level `|` (ignoring `|` inside `{{}}`/`[[]]`). */
-function splitTopLevelFields(body: string): string[] {
+export function splitTopLevelFields(body: string): string[] {
 	const parts: string[] = [];
 	let brace = 0;
 	let bracket = 0;

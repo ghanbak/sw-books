@@ -12,6 +12,7 @@ import { type Result, err, ok } from './result';
 import { applyOwnedOptimistic, mergeServerRows } from './shelf';
 import { supabase } from './supabase';
 import type { Database } from './types';
+import { type Enrichment, parseEnrichment } from './wookieepedia/enrichment';
 
 export type Book = Database['public']['Tables']['books']['Row'];
 export type UserBook = Database['public']['Tables']['user_books']['Row'];
@@ -257,4 +258,106 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
  */
 export function useUserBooks() {
 	return useContext(UserBooksContext);
+}
+
+// --- Book enrichment (Wookieepedia) ---------------------------------------------
+
+/** Columns `parseEnrichment` reads. Never embedded in the catalog query (rows reach ~110 KB). */
+const ENRICHMENT_COLUMNS =
+	'book_id, source_pageid, source_title, source_url, source_revision_id, license, attribution, fetched_at, timeline_notes, appearances';
+
+/** bookId → narrowed enrichment (null = the book has no row). Successful fetches only. */
+const enrichmentCache = new Map<string, Enrichment | null>();
+const enrichmentInflight = new Map<string, Promise<Enrichment | null>>();
+
+function fetchBookEnrichment(bookId: string): Promise<Enrichment | null> {
+	const pending = enrichmentInflight.get(bookId);
+	if (pending) return pending;
+	const request = (async () => {
+		const { data, error } = await supabase
+			.from('book_enrichment')
+			.select(ENRICHMENT_COLUMNS)
+			.eq('book_id', bookId)
+			.maybeSingle();
+		if (error) throw new Error(error.message);
+		const enrichment = data ? parseEnrichment(data) : null;
+		enrichmentCache.set(bookId, enrichment);
+		return enrichment;
+	})().finally(() => {
+		enrichmentInflight.delete(bookId);
+	});
+	enrichmentInflight.set(bookId, request);
+	return request;
+}
+
+export type BookEnrichmentStatus = 'loading' | 'ready' | 'error';
+
+type BookEnrichmentState = {
+	bookId: string | undefined;
+	status: BookEnrichmentStatus;
+	enrichment: Enrichment | null;
+	/** True when the value came from the module cache on mount (skip the fade-in). */
+	fromCache: boolean;
+};
+
+function stateFromCache(bookId: string | undefined): BookEnrichmentState {
+	if (bookId !== undefined && enrichmentCache.has(bookId)) {
+		return {
+			bookId,
+			status: 'ready',
+			enrichment: enrichmentCache.get(bookId) ?? null,
+			fromCache: true,
+		};
+	}
+	return { bookId, status: 'loading', enrichment: null, fromCache: false };
+}
+
+/**
+ * A book's `book_enrichment` row, narrowed through `parseEnrichment`. Module-level cache:
+ * the Characters sheet reuses what the detail screen fetched. Errors aren't cached, so the
+ * next mount (or `retry`) refetches.
+ */
+export function useBookEnrichment(bookId: string | undefined) {
+	const [state, setState] = useState<BookEnrichmentState>(() => stateFromCache(bookId));
+	const [attempt, setAttempt] = useState(0);
+
+	useEffect(() => {
+		// `attempt` re-runs the fetch on retry.
+		void attempt;
+		if (bookId === undefined) return;
+		if (enrichmentCache.has(bookId)) {
+			setState((prev) =>
+				prev.bookId === bookId && prev.status === 'ready' ? prev : stateFromCache(bookId),
+			);
+			return;
+		}
+		let alive = true;
+		setState((prev) =>
+			prev.bookId === bookId && prev.status === 'loading'
+				? prev
+				: { bookId, status: 'loading', enrichment: null, fromCache: false },
+		);
+		fetchBookEnrichment(bookId).then(
+			(enrichment) => {
+				if (alive) setState({ bookId, status: 'ready', enrichment, fromCache: false });
+			},
+			(e: unknown) => {
+				console.warn('[book_enrichment] fetch failed:', e instanceof Error ? e.message : e);
+				if (alive) setState({ bookId, status: 'error', enrichment: null, fromCache: false });
+			},
+		);
+		return () => {
+			alive = false;
+		};
+	}, [bookId, attempt]);
+
+	const retry = useCallback(() => setAttempt((n) => n + 1), []);
+	// A bookId change renders once before the effect runs: answer from the cache meanwhile.
+	const current = state.bookId === bookId ? state : stateFromCache(bookId);
+	return {
+		status: current.status,
+		enrichment: current.enrichment,
+		fromCache: current.fromCache,
+		retry,
+	};
 }

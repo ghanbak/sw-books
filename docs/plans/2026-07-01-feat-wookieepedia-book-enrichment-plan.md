@@ -144,12 +144,12 @@ CC BY-SA 3.0 (text only; **cover art is publisher-copyright — do not rehost**)
 
 ## Implementation Phases (v1)
 
-### Phase 1 — Crawl & build the discovery CSV
+### Phase 1 — Crawl & build the discovery CSV ✅
 `lib/wookieepedia/{client,parse,derive}.ts` + `categories` config (4 buckets, each recursing one level into non-excluded direct sub-categories; exclusions; per-bucket union drift-guard bands) + `scripts/discover-wookieepedia.ts` (`--dry-run` prints per-bucket flat/subcat/union counts; emits deterministic CSV + gitignored meta sidecar recording kept/skipped subcats). `client.ts` adds `fetchSubcategories` (`cmtype=subcat`).
 **Acceptance:** ~283 rows across 4 buckets incl. one-level subcat recursion (X-Wing, NJO, LOTF, FOTJ, Coruscant Nights, Old Republic, Canon High Republic now covered); comics/picture-books/novellas/audiobooks/series-containers absent; byte-identical re-run; drift guard fails loudly on a collapsed bucket.
 **Revision 2026-10-20:** closed the sub-category enumeration gap (flat-only crawl missed ~88 catalog novels) and fixed three infobox parse bugs the prod classify run surfaced — nested citation-template stripping, `&` co-author split, and `timeline_order` sign/comma/flashback handling. See the Enumeration recipe + Field-derivation rules above.
 
-### Phase 2 — Match & classify against the live DB
+### Phase 2 — Match & classify against the live DB ✅
 `lib/wookieepedia/match.ts` — ISBN+corroboration → title+author-set+canon → fuzzy(review); classify NEW/DIFFERS/UNMATCHED at diff-time; slug via `slugify`+`ensureUniqueSlug` against live DB slugs.
 **Acceptance:** existing books resolve as matches (no duplicate NEWs); Canon/Legends twins stay distinct; a shared-ISBN omnibus is NOT auto-merged; ISBN normalizer unit tests pass.
 
@@ -157,9 +157,11 @@ CC BY-SA 3.0 (text only; **cover art is publisher-copyright — do not rehost**)
 Extend local admin `/diff`; NEW → `createBook` (OL/Google fills type/cover/isbn); DIFFERS → suggestions; slug re-checked at promote-time; `catalog:backup` after.
 **Acceptance:** operator promotes NEW inserts and applies/ignores suggestions; `data/books.csv` never crawler-overwritten; discovery review is local-only (not on the Vercel deploy); Legends rows get a valid `type` via lookup before insert (no CHECK violation).
 
-### Phase 3 revision (2026-10-20): reviewable changeset + gated apply
+### Phase 3 revision (2026-10-20): reviewable changeset + gated apply ✅
 
 Replaces the per-row admin `/diff` promotion for this first bulk pass. The user approves a change file; nothing is applied by the tooling's author.
+
+**Applied to prod 2026-10-21** by the user (`npm run catalog:apply -- --apply`): 149/149 steps — 5 ISBN fixes, 2 cover fixes, 51 updates, 91 inserts. Prod went from 185 to 276 books. A follow-up dry-run shows every step as skip (0 conflicts). Backups: pre-apply `f7b01a4` (185 rows), post-apply `a1e3e4b` (276 rows).
 
 **Decisions (user, authoritative):**
 1. **Existing rows: `date_published` + `format` only.** The wiki date wins when it differs, compared at the raw infobox precision: a month-only wiki date ("February 1996", stored padded as `1996-02-01`) does not overwrite a catalog day in that same month. `format` is an additive, ordered, deduped union. Catalog formats come first and none are removed, mirroring `ordered_text_union`. "Hard Cover" ≡ "Hardcover". Author, timeline, series, publisher, synopsis, cover and every other field stay untouched.
@@ -197,33 +199,7 @@ Replaces the per-row admin `/diff` promotion for this first bulk pass. The user 
 
 ## Part 2: In-universe enrichment (follow-up plan)
 
-**Now its own plan:** [2026-07-01-feat-wookieepedia-enrichment-satellite-plan.md](2026-07-01-feat-wookieepedia-enrichment-satellite-plan.md). Summary retained here for continuity. Adds a **1:1 satellite `book_enrichment`** (PK=FK→`books.id` `ON DELETE CASCADE`) for characters/appearances/timeline detail + provenance (`source_pageid`, `source_url`, `license`, `attribution`, `fetched_at`, `content_hash`), surfaced on `app/book/[id].tsx` with a "View on Wookieepedia" attribution backlink.
-
-```mermaid
-erDiagram
-    books ||--o| book_enrichment : "1:1 enriches"
-    books ||--o{ user_books : shelves
-    book_enrichment {
-        uuid book_id PK_FK "→ books.id ON DELETE CASCADE"
-        bigint source_pageid "stable anchor"
-        text source_url
-        text license "CC-BY-SA-3.0"
-        timestamptz fetched_at
-        text content_hash "gate; hash normalized fields, not raw wikitext"
-        jsonb characters
-        jsonb appearances
-        text timeline_notes
-    }
-```
-
-Part-2 notes captured from review (to honor when written):
-- **Satellite over columns**, same DB — correct (independent RLS/provenance/cadence; no hot-row bloat).
-- **RLS:** mirror the base table's **dual read policies** (`authenticated` *and* `anon`), or the anon PostgREST embed returns null enrichment; **no** client-role write policy.
-- **Merge:** no `merge_books()` change needed — `ON DELETE CASCADE` drops the loser's enrichment; re-sync repopulates if the survivor lacked it.
-- **Read:** embed `book_enrichment(*)` **only on the detail query**, not the shelf list (jsonb payload bloat); handle supabase-js one-to-one-as-array (`[0]` / view / `!left`).
-- **Types:** narrow generated `Json` via a `parseEnrichment(row): Enrichment` boundary — app never indexes raw `Json`.
-- **`pageid` lifecycle:** quarantine mapped pageids that go `missing` or resolve via `redirects` — never silently drop/re-point.
-- **`content_hash`** covers normalized stored fields (not raw wikitext) so cosmetic wiki edits don't churn `fetched_at`.
+**Shipped as its own plan:** [2026-07-01-feat-wookieepedia-enrichment-satellite-plan.md](2026-07-01-feat-wookieepedia-enrichment-satellite-plan.md), which is authoritative for the schema, sync and app UI. Phases 1–3 are done (migration pushed and 269 rows synced to prod; Timeline + Characters cards and the characters sheet on branch `feat/wookieepedia-enrichment`). Only the optional Phase 4 (admin surfacing) remains.
 
 ## Edge cases
 - **Legends `type`** → filled by OL/Google at promotion; CSV leaves it unset; DB CHECK satisfied only at insert.
@@ -237,18 +213,18 @@ Part-2 notes captured from review (to honor when written):
 - **Slug TOCTOU** → re-check against DB at promote-time.
 
 ## Acceptance Criteria (v1)
-- [ ] Deterministic `data/discovery/books-discovered.csv` (~180 novels; comics/picture-books excluded; catalog-shape, no `match_class` column; byte-identical re-run).
-- [ ] `canon`/`type` from category (Legends `type` unset → filled at promotion); infobox facts cleaned; timeline vs date handled separately; volatile metadata in the gitignored sidecar.
-- [ ] Drift guard aborts (no overwrite) if a category collapses / an unexpected sibling appears.
-- [ ] Match cascade resolves existing books as matches (no dup NEWs); shared-ISBN not auto-merged; Canon/Legends twins distinct; ISBN normalizer + slug-tiebreaker unit-tested.
-- [ ] Promotion is local-admin-only, human-gated: NEW → `createBook` (+OL/Google fill), DIFFERS → suggestions; no auto-upsert; `data/books.csv` never crawler-overwritten; slug re-checked at promote-time.
-- [ ] Facts-only in v1 (no prose); enrichment satellite/app UI deferred to Part 2.
+- [x] Deterministic `data/discovery/books-discovered.csv` (283 novels after sub-category recursion; comics/picture-books excluded; catalog-shape, no `match_class` column; byte-identical re-run).
+- [x] `canon`/`type` from category (Legends `type` unset → filled at promotion); infobox facts cleaned; timeline vs date handled separately; volatile metadata in the gitignored sidecar.
+- [x] Drift guard aborts (no overwrite) if a category collapses / an unexpected sibling appears.
+- [x] Match cascade resolves existing books as matches (no dup NEWs); shared-ISBN not auto-merged; Canon/Legends twins distinct; ISBN normalizer + slug-tiebreaker unit-tested.
+- [x] Promotion is human-gated: a reviewed changeset applied by the user through the gated script (Phase 3 revision), with OL/Google filling Legends `type`; no auto-upsert; `data/books.csv` never crawler-overwritten; slug re-checked at apply time.
+- [x] Facts-only in v1 (no prose); enrichment satellite/app UI shipped separately as Part 2.
 
 ## Resolved decisions
 1. **Legends `type`** → resolved via OL/Google Books lookup at promotion (user call); no default fabricated, no migration.
 2. **Middle-Grade** kept a distinct `type` (category is clean).
 3. **v1 = discovery; enrichment = Part 2** (per simplicity review + directive focus).
-4. **Promotion path** = local admin only (per architecture P0).
+4. **Promotion path** = local admin only (per architecture P0). Superseded for the first bulk pass on 2026-10-20 by the reviewed changeset + gated apply script; the local admin stays the path for one-off edits.
 
 ## Risks
 - **Fandom ToU / rate limits** — tiny volume, UA, documented API; serial+backoff, resumable.
