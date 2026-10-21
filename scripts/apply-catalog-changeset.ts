@@ -4,6 +4,12 @@
  *   npx tsx scripts/apply-catalog-changeset.ts --production            # dry-run vs PROD (read-only)
  *   npx tsx scripts/apply-catalog-changeset.ts --production --apply    # real writes (prompts)
  *   …  --changeset <path>                                             # another changeset file
+ *   …  --changeset data/discovery/catalog-cleanup.json                # the cleanup changeset
+ *
+ * Two changeset kinds share this engine: the Wookieepedia changeset
+ * (lib/wookieepedia/changeset.ts) and the cleanup changeset
+ * (`"kind": "catalog-cleanup"`, lib/wookieepedia/cleanup.ts — ISBN repairs,
+ * cover fills, drafted synopsis fills; written in that order).
  *
  * Real writes require BOTH --apply and --production, then:
  *   1. no blocking problems (any insert with needs_type / invalid type refuses the run);
@@ -12,8 +18,9 @@
  *   4. a fresh `npm run catalog:backup` (run here; refuses if it fails, or the
  *      backup file isn't fresh / doesn't hold every live row).
  *
- * Writes, in order: ISBN fixes → cover fixes → updates → inserts. ISBN fixes, cover fixes and updates
- * touch only their named columns, keyed by `id`; inserts are plain inserts
+ * Writes, in order: ISBN fixes → cover fixes → updates → inserts (cleanup: ISBN fixes → cover
+ * fills → synopsis fills). Every non-insert step touches only its named columns, keyed by `id`
+ * (+ slug); inserts are plain inserts
  * (never upsert-on-slug), and each slug is re-checked right before its insert.
  *
  * Partial-failure behavior (supabase-js has no client transactions): each row
@@ -31,14 +38,20 @@ import { parseCsv } from '../lib/csv/read';
 import {
 	type LiveState,
 	type Step,
+	type StepKind,
 	blockingProblems,
+	cleanupBlockingProblems,
 	planAll,
+	planCleanup,
 	planCoverFix,
 	planInsert,
 	planIsbnFix,
+	planIsbnMembershipFix,
+	planSynopsisFill,
 	planUpdate,
 } from '../lib/wookieepedia/apply-plan';
 import type { Changeset } from '../lib/wookieepedia/changeset';
+import { CLEANUP_KIND, type CleanupChangeset } from '../lib/wookieepedia/cleanup';
 import { isLocal, makeClient, resolveCredentials } from './_supabase';
 
 const ROOT = resolve(__dirname, '..');
@@ -53,7 +66,7 @@ const CHANGESET = resolve(
 const BACKUP = resolve(ROOT, 'data', 'catalog-backup.csv');
 const BACKUP_MAX_AGE_MS = 10 * 60 * 1000;
 const LIVE_COLUMNS =
-	'id, slug, title, canon, isbn, primary_isbn, date_published, format, cover_image';
+	'id, slug, title, canon, isbn, primary_isbn, date_published, format, cover_image, synopsis';
 
 const supabase = makeClient(PROD);
 const w = (s: string) => process.stdout.write(`${s}\n`);
@@ -76,7 +89,7 @@ async function readOne(column: 'id' | 'slug', value: string): Promise<LiveState 
 
 function describe(step: Step, i: number, total: number): string {
 	const mark = step.action === 'apply' ? '→' : step.action === 'skip' ? '·' : '✗';
-	return `  ${mark} [${String(i + 1).padStart(3)}/${total}] ${step.kind.padEnd(9)} ${step.slug}: ${step.action.toUpperCase()} — ${step.reason}`;
+	return `  ${mark} [${String(i + 1).padStart(3)}/${total}] ${step.kind.padEnd(13)} ${step.slug}: ${step.action.toUpperCase()} — ${step.reason}`;
 }
 
 /** Same project-ref prompt as scripts/seed.ts. Required for any non-local write. */
@@ -164,25 +177,76 @@ async function replan(cs: Changeset, step: Step): Promise<Step> {
 	return planUpdate(cs.updates.find((u) => u.id === step.id) as Changeset['updates'][number], live);
 }
 
+async function replanCleanup(cs: CleanupChangeset, step: Step): Promise<Step> {
+	const live = await readOne('id', step.id as string);
+	if (step.kind === 'isbn_fix') {
+		const f = cs.isbn_fixes.find((x) => x.id === step.id);
+		return planIsbnMembershipFix(f as CleanupChangeset['isbn_fixes'][number], live);
+	}
+	if (step.kind === 'cover_fix') {
+		const c = cs.cover_fills.find((x) => x.id === step.id);
+		return planCoverFix(c as CleanupChangeset['cover_fills'][number], live);
+	}
+	const s = cs.synopsis_fills.find((x) => x.id === step.id);
+	return planSynopsisFill(s as CleanupChangeset['synopsis_fills'][number], live);
+}
+
+/** One loaded changeset: its plan, blocking problems, and per-step re-planner. */
+type Loaded = {
+	readonly label: string;
+	/** The script that rebuilds this changeset after a conflict. */
+	readonly builder: string;
+	readonly asOf: string;
+	readonly kinds: readonly StepKind[];
+	readonly plan: Step[];
+	readonly problems: string[];
+	readonly replan: (step: Step) => Promise<Step>;
+};
+
+function load(raw: unknown, live: readonly LiveState[]): Loaded {
+	if ((raw as { kind?: unknown }).kind === CLEANUP_KIND) {
+		const cs = raw as CleanupChangeset;
+		return {
+			label: 'Catalog cleanup changeset',
+			builder: 'scripts/build-catalog-cleanup.ts',
+			asOf: cs.as_of,
+			kinds: ['isbn_fix', 'cover_fix', 'synopsis_fill'],
+			plan: planCleanup(cs, live),
+			problems: cleanupBlockingProblems(cs),
+			replan: (step) => replanCleanup(cs, step),
+		};
+	}
+	const cs = raw as Changeset;
+	return {
+		label: 'Catalog changeset',
+		builder: 'scripts/build-catalog-changeset.ts',
+		asOf: cs.as_of,
+		kinds: ['isbn_fix', 'cover_fix', 'update', 'insert'],
+		plan: planAll(cs, live),
+		problems: blockingProblems(cs),
+		replan: (step) => replan(cs, step),
+	};
+}
+
 async function main(): Promise<void> {
 	const { url } = resolveCredentials(PROD);
-	const cs = JSON.parse(readFileSync(CHANGESET, 'utf-8')) as Changeset;
+	const raw: unknown = JSON.parse(readFileSync(CHANGESET, 'utf-8'));
 	const live = await readLive();
-	const plan = planAll(cs, live);
-	const problems = blockingProblems(cs);
+	const cs = load(raw, live);
+	const { plan, problems } = cs;
 
-	w(`\n═══ Catalog changeset ${APPLY ? 'APPLY' : 'DRY-RUN'} ═══`);
+	w(`\n═══ ${cs.label} ${APPLY ? 'APPLY' : 'DRY-RUN'} ═══`);
 	w(
-		`Target: ${isLocal(url) ? 'LOCAL' : 'PRODUCTION'} (${live.length} live rows) · changeset ${CHANGESET.replace(`${ROOT}/`, '')} (as_of ${cs.as_of})`,
+		`Target: ${isLocal(url) ? 'LOCAL' : 'PRODUCTION'} (${live.length} live rows) · changeset ${CHANGESET.replace(`${ROOT}/`, '')} (as_of ${cs.asOf})`,
 	);
 	plan.forEach((s, i) => w(describe(s, i, plan.length)));
 
 	const count = (kind: Step['kind'], action: Step['action']) =>
 		plan.filter((s) => s.kind === kind && s.action === action).length;
 	w('\nPlan:');
-	for (const kind of ['isbn_fix', 'cover_fix', 'update', 'insert'] as const) {
+	for (const kind of cs.kinds) {
 		w(
-			`  ${kind.padEnd(9)} apply ${count(kind, 'apply')} · skip ${count(kind, 'skip')} · conflict ${count(kind, 'conflict')}`,
+			`  ${kind.padEnd(13)} apply ${count(kind, 'apply')} · skip ${count(kind, 'skip')} · conflict ${count(kind, 'conflict')}`,
 		);
 	}
 	const conflicts = plan.filter((s) => s.action === 'conflict');
@@ -191,9 +255,7 @@ async function main(): Promise<void> {
 		for (const p of problems) w(`  ✗ ${p}`);
 	}
 	if (conflicts.length)
-		w(
-			`\nCONFLICTS — ${conflicts.length}; rebuild the changeset (scripts/build-catalog-changeset.ts) and re-review.`,
-		);
+		w(`\nCONFLICTS — ${conflicts.length}; rebuild the changeset (${cs.builder}) and re-review.`);
 
 	if (!APPLY) {
 		w('\nDry-run only — nothing written. Real writes need --apply --production.');
@@ -224,7 +286,7 @@ async function main(): Promise<void> {
 		if (planned.action !== 'apply') continue;
 		let step = planned;
 		try {
-			step = await replan(cs, planned);
+			step = await cs.replan(planned);
 			if (step.action === 'skip') {
 				w(describe(step, i, plan.length));
 				continue;
@@ -233,7 +295,7 @@ async function main(): Promise<void> {
 			await write(step);
 			done++;
 			w(
-				`  ✓ [${String(i + 1).padStart(3)}/${plan.length}] ${step.kind.padEnd(9)} ${step.slug}: ${step.reason}`,
+				`  ✓ [${String(i + 1).padStart(3)}/${plan.length}] ${step.kind.padEnd(13)} ${step.slug}: ${step.reason}`,
 			);
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);

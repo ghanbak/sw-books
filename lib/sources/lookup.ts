@@ -221,6 +221,42 @@ export async function lookupCandidatesFor(input: {
 	return settled(ol, gb);
 }
 
+/** The ISBN-13s a Google Books volume lists (ISBN-10s converted). */
+export function gbVolumeIsbns(info: {
+	industryIdentifiers?: Array<{ type: string; identifier: string }>;
+}): string[] {
+	const out = new Set<string>();
+	for (const id of info.industryIdentifiers ?? []) {
+		const n = toIsbn13(id.identifier);
+		if (n) out.add(n);
+	}
+	return [...out];
+}
+
+/**
+ * Google Books' `isbn:` index misses volumes its keyword search finds. Search
+ * by title + author and keep the first hit whose OWN identifiers include one of
+ * `isbns` — identity stays ISBN-anchored, so a same-titled book can't slip in.
+ */
+export async function findGbVolumeByTitleWithIsbn(input: {
+	isbns: readonly string[];
+	title: string;
+	author: string;
+}): Promise<{ isbn: string; volumeId: string; cover_image: string | null } | null> {
+	const q = encodeURIComponent(`${input.title} ${input.author}`.trim());
+	const res = await fetchVolumes<{
+		items?: Array<{ id?: string; volumeInfo?: GbVolumeInfo }>;
+	}>(q, { maxResults: 10 });
+	for (const item of res?.items ?? []) {
+		const info = item.volumeInfo;
+		if (!info || !item.id) continue;
+		const isbn = gbVolumeIsbns(info).find((i) => input.isbns.includes(i));
+		if (!isbn) continue;
+		return { isbn, volumeId: item.id, cover_image: mapGbVolumeInfo(info).cover_image ?? null };
+	}
+	return null;
+}
+
 // --- Audience signals (for resolving `type`) ---------------------------------
 
 /**
