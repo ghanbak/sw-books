@@ -20,8 +20,10 @@ import { createHash } from 'node:crypto';
 import type { PageEnrichmentContent, StoredAppearances } from './appearances';
 import type { PageFetch, RawPage } from './client';
 import type { Classification } from './match';
+import { wikiUrl } from './url';
 
-export const WIKI_BASE_URL = 'https://starwars.fandom.com/wiki/';
+// Moved to `./url` (app-safe, no `node:crypto`); re-exported for existing callers.
+export { WIKI_BASE_URL, wikiUrl } from './url';
 export const ENRICHMENT_LICENSE = 'CC-BY-SA-3.0';
 export const ENRICHMENT_ATTRIBUTION = 'Wookieepedia contributors';
 
@@ -29,14 +31,6 @@ export const ENRICHMENT_ATTRIBUTION = 'Wookieepedia contributors';
 export const SHRINK_RATIO = 0.5;
 /** Rows with fewer entries than this are too small for the shrink guard to mean anything. */
 export const SHRINK_MIN_ENTRIES = 20;
-
-/** Wiki article URL for a page title (MediaWiki `_` form; `/` and `:` kept literal). */
-export function wikiUrl(title: string): string {
-	const path = encodeURIComponent(title.replace(/ /g, '_'))
-		.replace(/%2F/g, '/')
-		.replace(/%3A/g, ':');
-	return `${WIKI_BASE_URL}${path}`;
-}
 
 // --- Rows + content hash ------------------------------------------------------
 

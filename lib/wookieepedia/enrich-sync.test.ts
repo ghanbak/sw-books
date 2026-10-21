@@ -15,9 +15,9 @@ import {
 	countEntries,
 	isMissingTableError,
 	planStep,
-	wikiUrl,
 } from './enrich-sync';
 import type { Classification, MatchClass } from './match';
+import { wikiUrl } from './url';
 
 const book = (slug: string, id = `id-${slug}`): MapBook => ({
 	id,

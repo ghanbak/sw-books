@@ -125,6 +125,18 @@ function NavigationStack() {
 					sheetCornerRadius: 24,
 				}}
 			/>
+			{/* Characters sheet (book detail "See all"): full height only; system corner radius
+          matches the iOS 27 kit sheet. Header + search are drawn in the screen. */}
+			<Stack.Screen
+				name="characters/[id]"
+				options={{
+					presentation: 'formSheet',
+					headerShown: false,
+					sheetAllowedDetents: [1.0],
+					sheetGrabberVisible: true,
+					contentStyle: { backgroundColor: tokens.surface.background },
+				}}
+			/>
 		</Stack>
 	);
 }

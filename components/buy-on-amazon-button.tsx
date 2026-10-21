@@ -1,10 +1,9 @@
-import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
-import * as WebBrowser from 'expo-web-browser';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { openInAppBrowser } from '@/lib/external-link';
 
 type Props = {
 	url: string;
@@ -12,18 +11,11 @@ type Props = {
 };
 
 export function BuyOnAmazonButton({ url, onInfoPress }: Props) {
-	async function handlePress() {
-		await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-		await WebBrowser.openBrowserAsync(url, {
-			presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-		});
-	}
-
 	return (
 		<View style={styles.row}>
 			<Pressable
 				style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-				onPress={handlePress}
+				onPress={() => openInAppBrowser(url)}
 				accessibilityRole="button"
 				accessibilityLabel="Find this book on Amazon"
 			>
