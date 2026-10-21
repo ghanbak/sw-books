@@ -26,6 +26,11 @@ function parseEnvFile(path: string): Record<string, string> {
 	return out;
 }
 
+/** The gitignored `.env.production` as a key → value map (empty when absent). */
+export function productionEnv(): Record<string, string> {
+	return parseEnvFile(resolve(__dirname, '..', '.env.production'));
+}
+
 export function isLocal(url: string): boolean {
 	return url.includes('127.0.0.1') || url.includes('localhost');
 }

@@ -21,6 +21,8 @@
 		"catalog:export:prod": "npx tsx scripts/export-db-to-csv.ts --production",
 		"catalog:backup": "bash scripts/catalog-backup.sh",
 		"catalog:restore": "npx tsx scripts/restore-from-backup.ts",
+		"catalog:changeset": "npx tsx scripts/build-catalog-changeset.ts --production",
+		"catalog:apply": "npx tsx scripts/apply-catalog-changeset.ts --production",
 		"admin": "npm --prefix admin run dev",
 		"admin:install": "npm --prefix admin install",
 		"admin:predev": "npm run db:types"

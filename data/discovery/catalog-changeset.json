@@ -1,0 +1,5674 @@
+{
+  "version": 2,
+  "as_of": "2026-10-20",
+  "policy": {
+    "existing_rows": "only date_published (wiki wins when it differs, compared at the wiki date precision) and format (additive ordered union)",
+    "isbn": "no wiki ISBN is added or merged; only conflict fixes (an ISBN the wiki assigns to a different book is replaced by the holder row’s own wiki ISBN; primary_isbn follows)",
+    "inserts": "NEW rows minus excluded titles; plain insert (never upsert); type from the Canon bucket or OL/GB evidence, else needs_type",
+    "covers": "Open Library / Google Books by ISBN only — never the wiki image (publisher copyright); a cover built from a misfiled ISBN is rebuilt from the corrected ISBN via Open Library (cover_image only), else flagged",
+    "publisher": "inserts: a run-together multi-imprint value keeps the chosen (US/primary) imprint; a spelling/punctuation variant of an existing catalog publisher takes the catalog spelling; distinct imprints are never merged",
+    "exclusions": "explicit title list plus any wiki page carrying {{Canceled}} (never-published works are not inserted)",
+    "synopsis": "inserts get synopsis null — catalog synopses are hand-written one-liners; wiki prose is CC BY-SA and publisher blurbs are not terse"
+  },
+  "summary": {
+    "inserts": 91,
+    "inserts_needs_type": 0,
+    "updates": 51,
+    "updates_flagged_pending": 0,
+    "isbn_fixes": 5,
+    "cover_fixes": 2,
+    "flagged_isbn_conflicts": 0,
+    "excluded": 14,
+    "review": 0
+  },
+  "isbn_fixes": [
+    {
+      "id": "8e4822c0-3380-40a8-9b02-9de3162172b1",
+      "slug": "brotherhood",
+      "title": "Brotherhood",
+      "before": {
+        "isbn": [
+          "9780593358603",
+          "9780593358597",
+          "9780593358580",
+          "9781529150223",
+          "9781529157079",
+          "9781529150209",
+          "9781529150216",
+          "9780593358573"
+        ],
+        "primary_isbn": "9780593358597"
+      },
+      "after": {
+        "isbn": [
+          "9780593358573",
+          "9780593358597",
+          "9780593358580",
+          "9781529150223",
+          "9781529157079",
+          "9781529150209",
+          "9781529150216"
+        ],
+        "primary_isbn": "9780593358597"
+      },
+      "replacements": [
+        {
+          "removed": "9780593358603",
+          "replacement": "9780593358573",
+          "evidence": {
+            "removed_isbn_wiki_title": "Shadow of the Sith",
+            "removed_isbn_owner": "catalog:shadow-of-the-sith",
+            "holder_wiki_title": "Brotherhood",
+            "holder_wiki_isbns": [
+              "9780593358573"
+            ],
+            "openlibrary_title": "Star Wars Shadow of the Sith"
+          }
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "e172131c-7c6f-4708-afb3-83523ff297e1",
+      "slug": "heir-to-the-empire",
+      "title": "Heir to the Empire",
+      "before": {
+        "isbn": [
+          "9780553296129",
+          "9780307796103",
+          "9781529150384",
+          "9781473583580",
+          "9780593358764",
+          "9781787466326",
+          "9780307933553",
+          "9780345528292",
+          "9780606107211",
+          "9780345528295",
+          "9780345530004",
+          "9780785727354",
+          "9780739316627",
+          "9780553452969",
+          "9780613922715",
+          "9780783811000",
+          "9780553745085",
+          "9780553634853",
+          "9780553199789",
+          "9780553073409",
+          "9780553404715",
+          "9780553073270"
+        ],
+        "primary_isbn": "9780553634853"
+      },
+      "after": {
+        "isbn": [
+          "9780553296129",
+          "9780307796103",
+          "9781529150384",
+          "9781473583580",
+          "9780593358764",
+          "9781787466326",
+          "9780307933553",
+          "9780553073270",
+          "9780606107211",
+          "9780345528295",
+          "9780345530004",
+          "9780785727354",
+          "9780739316627",
+          "9780553452969",
+          "9780613922715",
+          "9780783811000",
+          "9780553745085",
+          "9780553634853",
+          "9780553199789",
+          "9780553073409",
+          "9780553404715"
+        ],
+        "primary_isbn": "9780553634853"
+      },
+      "replacements": [
+        {
+          "removed": "9780345528292",
+          "replacement": "9780553073270",
+          "evidence": {
+            "removed_isbn_wiki_title": "Heir to the Empire: The 20th Anniversary Edition",
+            "removed_isbn_owner": "insert:heir-to-the-empire-the-20th-anniversary-edition",
+            "holder_wiki_title": "Heir to the Empire",
+            "holder_wiki_isbns": [
+              "9780553073270"
+            ],
+            "openlibrary_title": "Heir to the Empire Star Wars Del Rey"
+          }
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "86837450-d135-45a0-a473-ed0387fd515f",
+      "slug": "jedi-academy-champions-of-the-force",
+      "title": "Champions of the Force",
+      "before": {
+        "isbn": [
+          "9780553568011",
+          "9780553298024",
+          "9780307796134"
+        ],
+        "primary_isbn": "9780553298024"
+      },
+      "after": {
+        "isbn": [
+          "9780553298024",
+          "9780307796134"
+        ],
+        "primary_isbn": "9780553298024"
+      },
+      "replacements": [
+        {
+          "removed": "9780553568011",
+          "replacement": "9780553298024",
+          "evidence": {
+            "removed_isbn_wiki_title": "X-Wing: Rogue Squadron",
+            "removed_isbn_owner": "catalog:x-wing-rogue-squadron",
+            "holder_wiki_title": "Champions of the Force",
+            "holder_wiki_isbns": [
+              "9780553298024"
+            ],
+            "openlibrary_title": "Star Wars: Rogue Squadron Book 1 in the exciting new series!"
+          }
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "54d0cd42-0f87-47a0-823f-6bf794ec564f",
+      "slug": "red-harvest",
+      "title": "Red Harvest",
+      "before": {
+        "isbn": [
+          "9780345511225",
+          "9781448149445",
+          "9780099542667",
+          "9781448136513",
+          "9780099542650",
+          "9780345518590",
+          "9780345511171"
+        ],
+        "primary_isbn": "9780345511225"
+      },
+      "after": {
+        "isbn": [
+          "9780345511171",
+          "9781448149445",
+          "9780099542667",
+          "9781448136513",
+          "9780099542650",
+          "9780345518590"
+        ],
+        "primary_isbn": "9780345511171"
+      },
+      "replacements": [
+        {
+          "removed": "9780345511225",
+          "replacement": "9780345511171",
+          "evidence": {
+            "removed_isbn_wiki_title": "Scourge",
+            "removed_isbn_owner": "catalog:scourge",
+            "holder_wiki_title": "Red Harvest",
+            "holder_wiki_isbns": [
+              "9780345511171"
+            ],
+            "openlibrary_title": "Star Wars Scourge"
+          }
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "fb9dcf59-2229-4918-8f83-cd71e5da2130",
+      "slug": "x-wing-rogue-squadron",
+      "title": "X-Wing: Rogue Squadron",
+      "before": {
+        "isbn": [
+          "9781845764692",
+          "9781569713303",
+          "9780553568042",
+          "9781101968758",
+          "9780553409260"
+        ],
+        "primary_isbn": "9781845764692"
+      },
+      "after": {
+        "isbn": [
+          "9781845764692",
+          "9781569713303",
+          "9780553568011",
+          "9781101968758",
+          "9780553409260"
+        ],
+        "primary_isbn": "9781845764692"
+      },
+      "replacements": [
+        {
+          "removed": "9780553568042",
+          "replacement": "9780553568011",
+          "evidence": {
+            "removed_isbn_wiki_title": "X-Wing: The Bacta War",
+            "removed_isbn_owner": "catalog:x-wing-bacta-war",
+            "holder_wiki_title": "X-Wing: Rogue Squadron",
+            "holder_wiki_isbns": [
+              "9780553568011"
+            ],
+            "openlibrary_title": "Star Wars: The Bacta War X-Wing Book 4"
+          }
+        }
+      ],
+      "flags": []
+    }
+  ],
+  "cover_fixes": [
+    {
+      "id": "8e4822c0-3380-40a8-9b02-9de3162172b1",
+      "slug": "brotherhood",
+      "title": "Brotherhood",
+      "before": "https://images2.penguinrandomhouse.com/cover/9780593358603",
+      "after": "https://covers.openlibrary.org/b/id/12393484-L.jpg",
+      "source": "openlibrary:isbn:9780593358573",
+      "reason": "current cover is built from misfiled ISBN 9780593358603; rebuilt from corrected ISBN 9780593358573"
+    },
+    {
+      "id": "54d0cd42-0f87-47a0-823f-6bf794ec564f",
+      "slug": "red-harvest",
+      "title": "Red Harvest",
+      "before": "https://images2.penguinrandomhouse.com/cover/9780345511225",
+      "after": "https://covers.openlibrary.org/b/id/10885073-L.jpg",
+      "source": "openlibrary:isbn:9780345511171",
+      "reason": "current cover is built from misfiled ISBN 9780345511225; rebuilt from corrected ISBN 9780345511171"
+    }
+  ],
+  "flagged_isbn_conflicts": [],
+  "updates": [
+    {
+      "id": "6ce32dd6-a727-4feb-b0ac-a28c593698b0",
+      "slug": "corellian-trilogy-ambush",
+      "title": "Ambush at Corellia",
+      "wiki_title": "Ambush at Corellia",
+      "match_method": "title-author",
+      "changes": {
+        "date_published": {
+          "before": "1995-06-01",
+          "after": "1995-02-02"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "01c4e8d2-7c67-4997-a103-ef51246ed55f",
+      "slug": "corellian-trilogy-showdown",
+      "title": "Showdown at Centerpoint",
+      "wiki_title": "Showdown at Centerpoint",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1995-08-01",
+          "after": "1995-09-01"
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "9a089b21-efcc-40d5-b609-68e8091ca8df",
+      "slug": "courtship-of-princess-leia",
+      "title": "The Courtship of Princess Leia",
+      "wiki_title": "The Courtship of Princess Leia",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1994-08-01",
+          "after": "1994-04-01"
+        },
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "5dffe24d-9238-4048-81b0-2ea5f37948f8",
+      "slug": "dark-force-rising",
+      "title": "Dark Force Rising",
+      "wiki_title": "Dark Force Rising",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1992-06-01",
+          "after": "1992-05-01"
+        },
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "75c77000-439f-4b59-9919-ac9d7f6b44c7",
+      "slug": "darth-maul-shadow-hunter",
+      "title": "Darth Maul: Shadow Hunter",
+      "wiki_title": "Darth Maul: Shadow Hunter",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2001-02-01",
+          "after": "2001-01-30"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "2c5de95f-7e36-497b-bb26-da4715f03f33",
+      "slug": "force-collector",
+      "title": "Force Collector",
+      "wiki_title": "Force Collector",
+      "match_method": "title-author",
+      "changes": {
+        "date_published": {
+          "before": "2019-11-19",
+          "after": "2019-10-04"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "6c92951a-52cc-4b90-a64a-d04eb829a762",
+      "slug": "fotj-abyss",
+      "title": "Abyss",
+      "wiki_title": "Fate of the Jedi: Abyss",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2009-08-25",
+          "after": "2009-08-18"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "4742bf4b-4ebb-4f04-ab47-8cbc02da332d",
+      "slug": "fotj-apocalypse",
+      "title": "Apocalypse",
+      "wiki_title": "Fate of the Jedi: Apocalypse",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2011-06-21",
+          "after": "2012-03-13"
+        }
+      },
+      "flags": [
+        "year changes"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "9e43bd81-1da4-4a63-bb24-13facf9b3148",
+      "slug": "fotj-ascension",
+      "title": "Ascension",
+      "wiki_title": "Fate of the Jedi: Ascension",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2011-04-26",
+          "after": "2011-08-09"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "7fb37b02-dc68-4610-989e-52a8e92a437f",
+      "slug": "fotj-backlash",
+      "title": "Backlash",
+      "wiki_title": "Fate of the Jedi: Backlash",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2010-03-30",
+          "after": "2010-03-09"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "fc441992-1bc5-4a81-9d2e-d60deb801164",
+      "slug": "fotj-conviction",
+      "title": "Conviction",
+      "wiki_title": "Fate of the Jedi: Conviction",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2011-01-25",
+          "after": "2011-05-24"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "9a47a88b-80e6-4bca-b5d9-f2e806d260fa",
+      "slug": "fotj-vortex",
+      "title": "Vortex",
+      "wiki_title": "Fate of the Jedi: Vortex",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2010-08-31",
+          "after": "2010-11-30"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "41676d9b-3d7b-4df2-ba1b-bde287da88b8",
+      "slug": "han-solo-at-stars-end",
+      "title": "Han Solo at Stars' End",
+      "wiki_title": "Han Solo at Stars' End",
+      "match_method": "isbn",
+      "changes": {
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "12073988-0e76-44d0-b597-eeacf7cb50fe",
+      "slug": "han-solos-revenge",
+      "title": "Han Solo's Revenge",
+      "wiki_title": "Han Solo's Revenge",
+      "match_method": "title-author",
+      "changes": {
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "cb8e59e4-ddd0-4d1a-891d-c1633d87746e",
+      "slug": "hand-of-thrawn-specter",
+      "title": "Specter of the Past",
+      "wiki_title": "Specter of the Past",
+      "match_method": "isbn",
+      "changes": {
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "9f840bcb-e238-4859-a019-1a01013ebef7",
+      "slug": "hand-of-thrawn-vision",
+      "title": "Vision of the Future",
+      "wiki_title": "Vision of the Future",
+      "match_method": "title-author",
+      "changes": {
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "e172131c-7c6f-4708-afb3-83523ff297e1",
+      "slug": "heir-to-the-empire",
+      "title": "Heir to the Empire",
+      "wiki_title": "Heir to the Empire",
+      "match_method": "isbn",
+      "changes": {
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "5738e910-4213-4121-980f-809d62207aed",
+      "slug": "i-jedi",
+      "title": "I, Jedi",
+      "wiki_title": "I, Jedi",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1998-05-01",
+          "after": "1998-05-04"
+        },
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "86837450-d135-45a0-a473-ed0387fd515f",
+      "slug": "jedi-academy-champions-of-the-force",
+      "title": "Champions of the Force",
+      "wiki_title": "Champions of the Force",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1994-03-01",
+          "after": "1994-10-01"
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "f09bb024-0390-4f5a-afdd-acb75fbc1a78",
+      "slug": "jedi-academy-dark-apprentice",
+      "title": "Dark Apprentice",
+      "wiki_title": "Dark Apprentice",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1994-01-01",
+          "after": "1994-07-01"
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "48ef76b6-d277-4ebf-8884-71b6d71b0467",
+      "slug": "jedi-academy-jedi-search",
+      "title": "Jedi Search",
+      "wiki_title": "Jedi Search",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1994-02-01",
+          "after": "1994-03-01"
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "4b86dcfb-7b15-425c-8dbb-23d730d7c958",
+      "slug": "jedi-trial",
+      "title": "Jedi Trial",
+      "wiki_title": "Jedi Trial",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2004-11-02",
+          "after": "2004-10-26"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "bd1f46e4-e21d-405f-a1e7-3b507639f7e4",
+      "slug": "lando-calrissian-starcave",
+      "title": "Lando Calrissian and the Starcave of ThonBoka",
+      "wiki_title": "Lando Calrissian and the Starcave of ThonBoka",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1983-12-12",
+          "after": "1983-11-12"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "2f3b4ba1-b753-4ca1-bf05-0e381b16e76e",
+      "slug": "lotf-exile",
+      "title": "Exile",
+      "wiki_title": "Legacy of the Force: Exile",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2007-05-29",
+          "after": "2007-02-27"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "d5b1a449-eeaf-4442-8b87-94af94e626a9",
+      "slug": "lotf-fury",
+      "title": "Fury",
+      "wiki_title": "Legacy of the Force: Fury",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2008-08-26",
+          "after": "2007-11-27"
+        }
+      },
+      "flags": [
+        "year changes"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "9a5c7f5f-8b09-4737-9111-0f257bd8fbeb",
+      "slug": "lotf-inferno",
+      "title": "Inferno",
+      "wiki_title": "Legacy of the Force: Inferno",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2008-05-27",
+          "after": "2007-08-28"
+        }
+      },
+      "flags": [
+        "year changes"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "eecd6d09-83bd-4c0b-bd05-3f7d6ee5db14",
+      "slug": "lotf-invincible",
+      "title": "Invincible",
+      "wiki_title": "Legacy of the Force: Invincible",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2009-05-19",
+          "after": "2008-05-13"
+        }
+      },
+      "flags": [
+        "year changes"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "c0709fe2-ec69-498c-9484-fe90c1cec78a",
+      "slug": "lotf-revelation",
+      "title": "Revelation",
+      "wiki_title": "Legacy of the Force: Revelation",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2008-12-23",
+          "after": "2008-02-26"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "f3985e8e-928e-4a98-97ae-cc18b1d6abae",
+      "slug": "lotf-sacrifice",
+      "title": "Sacrifice",
+      "wiki_title": "Legacy of the Force: Sacrifice",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2007-10-23",
+          "after": "2007-05-29"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "a594f8f3-e2a7-4517-9478-7abc0ff9d856",
+      "slug": "medstar-ii-jedi-healer",
+      "title": "MedStar II: Jedi Healer",
+      "wiki_title": "MedStar II: Jedi Healer",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2004-10-26",
+          "after": "2004-09-28"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "d79add65-3293-4f63-bcea-b3c5b073b074",
+      "slug": "njo-balance-point",
+      "title": "Balance Point",
+      "wiki_title": "The New Jedi Order: Balance Point",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2000-11-07",
+          "after": "2000-10-31"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "018b544e-f67c-49ed-ad42-8f7bdc5a5521",
+      "slug": "njo-edge-of-victory-conquest",
+      "title": "Edge of Victory I: Conquest",
+      "wiki_title": "The New Jedi Order: Edge of Victory I: Conquest",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2001-04-01",
+          "after": "2001-04-03"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "08ad551b-f0ed-458a-9440-e7e41322be4d",
+      "slug": "njo-edge-of-victory-rebirth",
+      "title": "Edge of Victory II: Rebirth",
+      "wiki_title": "The New Jedi Order: Edge of Victory II: Rebirth",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2001-08-01",
+          "after": "2001-07-31"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "a64b639b-6cd8-4659-886d-62b03e3ef547",
+      "slug": "njo-final-prophecy",
+      "title": "The Final Prophecy",
+      "wiki_title": "The New Jedi Order: The Final Prophecy",
+      "match_method": "isbn",
+      "changes": {
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "c4edec0b-53a9-4bbc-ae5f-a2edab9e86f9",
+      "slug": "njo-force-heretic-refugee",
+      "title": "Force Heretic II: Refugee",
+      "wiki_title": "The New Jedi Order: Force Heretic II: Refugee",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "2003-04-29",
+          "after": "2003-05-05"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "da19fb08-b277-413a-bf22-429c4a9d6f08",
+      "slug": "njo-traitor",
+      "title": "Traitor",
+      "wiki_title": "The New Jedi Order: Traitor",
+      "match_method": "isbn",
+      "changes": {
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "cf278df5-7e3b-44e4-a4b4-a209161f008a",
+      "slug": "scourge",
+      "title": "Scourge",
+      "wiki_title": "Scourge",
+      "match_method": "title-author",
+      "changes": {
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "d58d66a1-53d1-4e49-9ffb-aae751c9b3e4",
+      "slug": "shadows-of-the-empire",
+      "title": "Shadows of the Empire",
+      "wiki_title": "Star Wars: Shadows of the Empire",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1996-04-01",
+          "after": "1996-05-01"
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "af0e05cb-b42d-430d-b81d-820606fd52fe",
+      "slug": "splinter-of-the-minds-eye",
+      "title": "Splinter of the Mind's Eye",
+      "wiki_title": "Splinter of the Mind's Eye",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1978-03-01",
+          "after": "1978-02-12"
+        },
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "0dc80fc9-bcc9-43e4-8d53-5304609d9698",
+      "slug": "tears-of-the-nameless",
+      "title": "The High Republic: Tears of the Nameless",
+      "wiki_title": "The High Republic: Tears of the Nameless",
+      "match_method": "title-author",
+      "changes": {
+        "date_published": {
+          "before": "2024-09-23",
+          "after": "2024-09-24"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "76ada22f-dffb-4aef-b73f-9a0ad88bde84",
+      "slug": "the-han-solo-trilogy-hutt-gambit",
+      "title": "The Hutt Gambit",
+      "wiki_title": "The Hutt Gambit",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1997-08-01",
+          "after": "1997-08-11"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "2aa05bf6-1e38-419e-8ea3-c19b3ea56232",
+      "slug": "the-han-solo-trilogy-paradise-snare",
+      "title": "The Paradise Snare",
+      "wiki_title": "The Paradise Snare",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1997-06-01",
+          "after": "1997-05-05"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "c0ab6948-6e12-458d-9d83-422e39e0c8a9",
+      "slug": "the-last-command",
+      "title": "The Last Command",
+      "wiki_title": "The Last Command",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1993-05-01",
+          "after": "1993-04-01"
+        },
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "9ec3e3d9-9753-492a-9452-04d50489d10b",
+      "slug": "the-truce-at-bakura",
+      "title": "The Truce at Bakura",
+      "wiki_title": "The Truce at Bakura",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1994-01-01",
+          "after": "1993-11-01"
+        },
+        "format": {
+          "before": [
+            "Paperback",
+            "eBook",
+            "Audiobook"
+          ],
+          "after": [
+            "Paperback",
+            "eBook",
+            "Audiobook",
+            "Hardcover"
+          ]
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only",
+        "year changes"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "c6813f86-459c-4107-b28f-c52aa9d46d42",
+      "slug": "x-wing-bacta-war",
+      "title": "X-Wing: The Bacta War",
+      "wiki_title": "X-Wing: The Bacta War",
+      "match_method": "title-author",
+      "changes": {
+        "date_published": {
+          "before": "1997-01-01",
+          "after": "1997-02-01"
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "40aff0be-bfde-4507-a8d2-3480a536c22a",
+      "slug": "x-wing-iron-fist",
+      "title": "X-Wing: Iron Fist",
+      "wiki_title": "X-Wing: Iron Fist",
+      "match_method": "title-author",
+      "changes": {
+        "date_published": {
+          "before": "1998-06-01",
+          "after": "1998-07-01"
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "1a55a7d0-3bec-49da-8355-dc23efd95e79",
+      "slug": "x-wing-krytos-trap",
+      "title": "X-Wing: The Krytos Trap",
+      "wiki_title": "X-Wing: The Krytos Trap",
+      "match_method": "title-author",
+      "changes": {
+        "date_published": {
+          "before": "1996-12-01",
+          "after": "1996-10-01"
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "fb9dcf59-2229-4918-8f83-cd71e5da2130",
+      "slug": "x-wing-rogue-squadron",
+      "title": "X-Wing: Rogue Squadron",
+      "wiki_title": "X-Wing: Rogue Squadron",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1996-12-01",
+          "after": "1996-01-01"
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "5700cfbf-4d20-465d-8be6-0d19a98fbcb5",
+      "slug": "x-wing-solo-command",
+      "title": "X-Wing: Solo Command",
+      "wiki_title": "X-Wing: Solo Command",
+      "match_method": "title-author",
+      "changes": {
+        "date_published": {
+          "before": "1999-01-01",
+          "after": "1999-02-02"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    },
+    {
+      "id": "ac2bfbdd-250c-4ad6-ab09-d48741f6e743",
+      "slug": "x-wing-wedges-gamble",
+      "title": "X-Wing: Wedge's Gamble",
+      "wiki_title": "X-Wing: Wedge's Gamble",
+      "match_method": "title-author",
+      "changes": {
+        "date_published": {
+          "before": "1996-12-01",
+          "after": "1996-05-01"
+        }
+      },
+      "flags": [
+        "wiki date is month-precision only"
+      ],
+      "review_status": "approved"
+    },
+    {
+      "id": "c0606387-09e6-4a04-92b3-c67ddbc00d0a",
+      "slug": "x-wing-wraith-squadron",
+      "title": "X-Wing: Wraith Squadron",
+      "wiki_title": "X-Wing: Wraith Squadron",
+      "match_method": "isbn",
+      "changes": {
+        "date_published": {
+          "before": "1998-05-01",
+          "after": "1998-02-02"
+        }
+      },
+      "flags": [],
+      "review_status": null
+    }
+  ],
+  "inserts": [
+    {
+      "slug": "a-new-hope-the-princess-the-scoundrel-and-the-farm-boy",
+      "wiki_title": "A New Hope: The Princess, the Scoundrel, and the Farm Boy",
+      "source_pageid": 454302,
+      "row": {
+        "title": "A New Hope: The Princess, the Scoundrel, and the Farm Boy",
+        "slug": "a-new-hope-the-princess-the-scoundrel-and-the-farm-boy",
+        "author": [
+          "Alexandra Bracken"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/7905485-L.jpg",
+        "canon": "Canon",
+        "date_published": "2015-09-22",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9781484709122"
+        ],
+        "primary_isbn": "9781484709122",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 0,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484709122",
+      "flags": []
+    },
+    {
+      "slug": "ahsoka-a-novelization-of-season-one",
+      "wiki_title": "Ahsoka: A Novelization of Season One",
+      "source_pageid": 935354,
+      "row": {
+        "title": "Ahsoka: A Novelization of Season One",
+        "slug": "ahsoka-a-novelization-of-season-one",
+        "author": [
+          "S.T. Bende"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2027-03-23",
+        "format": [
+          "Audiobook",
+          "Paperback"
+        ],
+        "isbn": [
+          "9780736452847"
+        ],
+        "primary_isbn": "9780736452847",
+        "language": "English",
+        "publisher": "Random House",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 9,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "not yet released (2027-03-23)",
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "before-the-awakening",
+      "wiki_title": "Before the Awakening",
+      "source_pageid": 498876,
+      "row": {
+        "title": "Before the Awakening",
+        "slug": "before-the-awakening",
+        "author": [
+          "Greg Rucka"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/10310843-L.jpg",
+        "canon": "Canon",
+        "date_published": "2015-12-18",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback"
+        ],
+        "isbn": [
+          "9781484728222"
+        ],
+        "primary_isbn": "9781484728222",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484728222",
+      "flags": []
+    },
+    {
+      "slug": "before-the-storm",
+      "wiki_title": "Before the Storm",
+      "source_pageid": 3815,
+      "row": {
+        "title": "Before the Storm",
+        "slug": "before-the-storm",
+        "author": [
+          "Michael P. Kube-McDowell"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/372405-L.jpg",
+        "canon": "Legends",
+        "date_published": "1996-03-01",
+        "format": [
+          "Audiobook",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780553572735"
+        ],
+        "primary_isbn": "9780553572735",
+        "language": "English",
+        "publisher": "Bantam Spectra",
+        "series_name": "The Black Fleet Crisis",
+        "series_order": null,
+        "timeline_order": 4,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Before the Storm",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Before the Storm: Star Wars Legends (The Black Fleet Crisis)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Before the Storm: Star Wars Legends (The Black Fleet Crisis)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars Year By Year New Edition",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780553572735",
+      "flags": []
+    },
+    {
+      "slug": "children-of-the-jedi",
+      "wiki_title": "Children of the Jedi",
+      "source_pageid": 13205,
+      "row": {
+        "title": "Children of the Jedi",
+        "slug": "children-of-the-jedi",
+        "author": [
+          "Barbara Hambly"
+        ],
+        "cover_image": null,
+        "canon": "Legends",
+        "date_published": "1995-04-01",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780553840087"
+        ],
+        "primary_isbn": "9780553840087",
+        "language": "English",
+        "publisher": "Bantam Spectra",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 12,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Children of the Jedi",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Children of the Jedi",
+          "label": null,
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: Children of the Jedi",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "open-library",
+          "via": "search",
+          "matched_title": "Star Wars - Children of the Jedi",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": null,
+      "flags": [
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "dark-nest-i-the-joiner-king",
+      "wiki_title": "Dark Nest I: The Joiner King",
+      "source_pageid": 1418,
+      "row": {
+        "title": "Dark Nest I: The Joiner King",
+        "slug": "dark-nest-i-the-joiner-king",
+        "author": [
+          "Troy Denning"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/211091-L.jpg",
+        "canon": "Legends",
+        "date_published": "2005-07-26",
+        "format": [
+          "Audiobook",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780345463043"
+        ],
+        "primary_isbn": "9780345463043",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": "Star Wars: The Dark Nest Trilogy",
+        "series_order": null,
+        "timeline_order": 35,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "The Joiner King (Star Wars: Dark Nest, Book 1)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Joiner King: Star Wars Legends (Dark Nest, Book I)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Joiner King: Star Wars Legends (Dark Nest, Book I)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: Dark Nest I - The Joiner King",
+          "label": "adult",
+          "rejected": null
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345463043",
+      "flags": []
+    },
+    {
+      "slug": "dark-nest-ii-the-unseen-queen",
+      "wiki_title": "Dark Nest II: The Unseen Queen",
+      "source_pageid": 3299,
+      "row": {
+        "title": "Dark Nest II: The Unseen Queen",
+        "slug": "dark-nest-ii-the-unseen-queen",
+        "author": [
+          "Troy Denning"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/211090-L.jpg",
+        "canon": "Legends",
+        "date_published": "2005-09-27",
+        "format": [
+          "Audiobook",
+          "Paperback"
+        ],
+        "isbn": [
+          "9780345463036"
+        ],
+        "primary_isbn": "9780345463036",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": "Star Wars: The Dark Nest Trilogy",
+        "series_order": null,
+        "timeline_order": 36,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "The Unseen Queen (Star Wars: Dark Nest, Book 2)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: Dark Nest II: The Unseen Queen",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Unseen Queen: Star Wars Legends (Dark Nest, Book II)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Unseen Queen",
+          "label": "adult",
+          "rejected": null
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345463036",
+      "flags": []
+    },
+    {
+      "slug": "dark-nest-iii-the-swarm-war",
+      "wiki_title": "Dark Nest III: The Swarm War",
+      "source_pageid": 3303,
+      "row": {
+        "title": "Dark Nest III: The Swarm War",
+        "slug": "dark-nest-iii-the-swarm-war",
+        "author": [
+          "Troy Denning"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/211092-L.jpg",
+        "canon": "Legends",
+        "date_published": "2005-12-27",
+        "format": [
+          "Audiobook",
+          "Paperback"
+        ],
+        "isbn": [
+          "9780345463050"
+        ],
+        "primary_isbn": "9780345463050",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": "Star Wars: The Dark Nest Trilogy",
+        "series_order": null,
+        "timeline_order": 36,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "The Swarm War (Star Wars: Dark Nest, Book 3)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Swarm War: Star Wars Legends (Dark Nest, Book III)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars Dark Nest III the Swarm War",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Swarm War: Star Wars Legends (Dark Nest, Book III)",
+          "label": "adult",
+          "rejected": null
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345463050",
+      "flags": []
+    },
+    {
+      "slug": "darksaber",
+      "wiki_title": "Darksaber",
+      "source_pageid": 13335,
+      "row": {
+        "title": "Darksaber",
+        "slug": "darksaber",
+        "author": [
+          "Kevin J. Anderson"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11158855-L.jpg",
+        "canon": "Legends",
+        "date_published": "1995-10-01",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780553099744"
+        ],
+        "primary_isbn": "9780553099744",
+        "language": "English",
+        "publisher": "Bantam Spectra",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 12,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: Darksaber",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: Darksaber",
+          "label": null,
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Darksaber: Star Wars Legends",
+          "label": "adult",
+          "rejected": null
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780553099744",
+      "flags": []
+    },
+    {
+      "slug": "eyes-like-stars",
+      "wiki_title": "Eyes Like Stars",
+      "source_pageid": 897874,
+      "row": {
+        "title": "Eyes Like Stars",
+        "slug": "eyes-like-stars",
+        "author": [
+          "Ashley Poston"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/15237803-L.jpg",
+        "canon": "Canon",
+        "date_published": "2026-07-21",
+        "format": [
+          "Audiobook",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780736448581",
+          "9780736448598"
+        ],
+        "primary_isbn": "9780736448581",
+        "language": "English",
+        "publisher": "Random House/Star Wars",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 33,
+        "synopsis": null,
+        "type": "YA Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9780736448581",
+      "flags": []
+    },
+    {
+      "slug": "galaxys-edge-a-crash-of-fate",
+      "wiki_title": "Galaxy's Edge: A Crash of Fate",
+      "source_pageid": 616905,
+      "row": {
+        "title": "Galaxy's Edge: A Crash of Fate",
+        "slug": "galaxys-edge-a-crash-of-fate",
+        "author": [
+          "Zoraida Córdova"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/8793978-L.jpg",
+        "canon": "Canon",
+        "date_published": "2019-08-06",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "eBook"
+        ],
+        "isbn": [
+          "9781368048538"
+        ],
+        "primary_isbn": "9781368048538",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Star Wars: Galaxy's Edge media project",
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "YA Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368048538",
+      "flags": []
+    },
+    {
+      "slug": "galaxys-edge-black-spire",
+      "wiki_title": "Galaxy's Edge: Black Spire",
+      "source_pageid": 616726,
+      "row": {
+        "title": "Galaxy's Edge: Black Spire",
+        "slug": "galaxys-edge-black-spire",
+        "author": [
+          "Delilah S. Dawson"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/8771755-L.jpg",
+        "canon": "Canon",
+        "date_published": "2019-08-27",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780593128381"
+        ],
+        "primary_isbn": "9780593128381",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": "Star Wars: Galaxy's Edge media project",
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9780593128381",
+      "flags": []
+    },
+    {
+      "slug": "hard-merchandise",
+      "wiki_title": "Hard Merchandise",
+      "source_pageid": 3087,
+      "row": {
+        "title": "Hard Merchandise",
+        "slug": "hard-merchandise",
+        "author": [
+          "K. W. Jeter"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/isbn/9780553578911-L.jpg?default=false",
+        "canon": "Legends",
+        "date_published": "1999-07-06",
+        "format": [
+          "Audiobook",
+          "Paperback"
+        ],
+        "isbn": [
+          "9780553578911"
+        ],
+        "primary_isbn": "9780553578911",
+        "language": "English",
+        "publisher": "Bantam Spectra",
+        "series_name": "The Bounty Hunter Wars",
+        "series_order": null,
+        "timeline_order": 4,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Hard merchandise",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Tales from the New Republic: Star Wars Legends",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Shadows of the Empire: Star Wars Legends",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: The New Essential Guide to Alien Species",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780553578911",
+      "flags": []
+    },
+    {
+      "slug": "heir-to-the-empire-the-20th-anniversary-edition",
+      "wiki_title": "Heir to the Empire: The 20th Anniversary Edition",
+      "source_pageid": 363081,
+      "row": {
+        "title": "Heir to the Empire: The 20th Anniversary Edition",
+        "slug": "heir-to-the-empire-the-20th-anniversary-edition",
+        "author": [
+          "Timothy Zahn"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/7835960-L.jpg",
+        "canon": "Legends",
+        "date_published": "2011-09-06",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "eBook"
+        ],
+        "isbn": [
+          "9780345528292"
+        ],
+        "primary_isbn": "9780345528292",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": "Star Wars: The Thrawn Trilogy",
+        "series_order": null,
+        "timeline_order": 9,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Heir to the Empire\r\n            \r\n                Star Wars Del Rey",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Heir to the Empire: Star Wars Legends: The 20th Anniversary Edition",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Heir to the Empire",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: Heir to the Empire: (Thrawn Trilogy, Book 1)",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345528292",
+      "flags": []
+    },
+    {
+      "slug": "hiding-from-the-dark",
+      "wiki_title": "Hiding from the Dark",
+      "source_pageid": 910663,
+      "row": {
+        "title": "Hiding from the Dark",
+        "slug": "hiding-from-the-dark",
+        "author": [
+          "Kiersten White"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2026-09-01",
+        "format": [
+          "Audiobook"
+        ],
+        "isbn": [
+          "9780736447027"
+        ],
+        "primary_isbn": "9780736447027",
+        "language": "English",
+        "publisher": "Random House/Star Wars",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 0,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "hunters-battle-for-the-arena",
+      "wiki_title": "Hunters: Battle for the Arena",
+      "source_pageid": 711119,
+      "row": {
+        "title": "Hunters: Battle for the Arena",
+        "slug": "hunters-battle-for-the-arena",
+        "author": [
+          "Mark Oshiro"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/12773892-L.jpg",
+        "canon": "Canon",
+        "date_published": "2023-03-07",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9781368076036"
+        ],
+        "primary_isbn": "9781368076036",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 9,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368076036",
+      "flags": []
+    },
+    {
+      "slug": "join-the-resistance",
+      "wiki_title": "Join the Resistance",
+      "source_pageid": 545452,
+      "row": {
+        "title": "Join the Resistance",
+        "slug": "join-the-resistance",
+        "author": [
+          "Ben Acker",
+          "Ben Blacker"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11196775-L.jpg",
+        "canon": "Canon",
+        "date_published": "2017-03-07",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "eBook"
+        ],
+        "isbn": [
+          "9781484704844"
+        ],
+        "primary_isbn": "9781484704844",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Star Wars: Join the Resistance",
+        "series_order": null,
+        "timeline_order": 33,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484704844",
+      "flags": []
+    },
+    {
+      "slug": "join-the-resistance-attack-on-starkiller-base",
+      "wiki_title": "Join the Resistance: Attack on Starkiller Base",
+      "source_pageid": 589605,
+      "row": {
+        "title": "Join the Resistance: Attack on Starkiller Base",
+        "slug": "join-the-resistance-attack-on-starkiller-base",
+        "author": [
+          "Ben Acker",
+          "Ben Blacker"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11196783-L.jpg",
+        "canon": "Canon",
+        "date_published": "2018-07-31",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "eBook"
+        ],
+        "isbn": [
+          "9781368021418"
+        ],
+        "primary_isbn": "9781368021418",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Star Wars: Join the Resistance",
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368021418",
+      "flags": []
+    },
+    {
+      "slug": "join-the-resistance-escape-from-vodran",
+      "wiki_title": "Join the Resistance: Escape from Vodran",
+      "source_pageid": 545453,
+      "row": {
+        "title": "Join the Resistance: Escape from Vodran",
+        "slug": "join-the-resistance-escape-from-vodran",
+        "author": [
+          "Ben Acker",
+          "Ben Blacker"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/10377683-L.jpg",
+        "canon": "Canon",
+        "date_published": "2017-10-03",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9781484704981"
+        ],
+        "primary_isbn": "9781484704981",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Star Wars: Join the Resistance",
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484704981",
+      "flags": []
+    },
+    {
+      "slug": "landos-luck",
+      "wiki_title": "Lando's Luck",
+      "source_pageid": 597513,
+      "row": {
+        "title": "Lando's Luck",
+        "slug": "landos-luck",
+        "author": [
+          "Justina Ireland"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/10868601-L.jpg",
+        "canon": "Canon",
+        "date_published": "2018-10-02",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "eBook"
+        ],
+        "isbn": [
+          "9781368041508"
+        ],
+        "primary_isbn": "9781368041508",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Flight of the Falcon",
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368041508",
+      "flags": []
+    },
+    {
+      "slug": "last-shot",
+      "wiki_title": "Last Shot",
+      "source_pageid": 591696,
+      "row": {
+        "title": "Last Shot",
+        "slug": "last-shot",
+        "author": [
+          "Daniel José Older"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2018-04-17",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780525622130"
+        ],
+        "primary_isbn": "9780525622130",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 7,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "legacy",
+      "wiki_title": "Legacy",
+      "source_pageid": 897484,
+      "row": {
+        "title": "Legacy",
+        "slug": "legacy",
+        "author": [
+          "Madeleine Roux"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2026-07-28",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "eBook"
+        ],
+        "isbn": [
+          "9780593982662",
+          "9780593982679"
+        ],
+        "primary_isbn": "9780593982662",
+        "language": "English",
+        "publisher": "Random House Worlds",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "master-of-evil",
+      "wiki_title": "Master of Evil",
+      "source_pageid": 864116,
+      "row": {
+        "title": "Master of Evil",
+        "slug": "master-of-evil",
+        "author": [
+          "Adam Christopher"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/15171251-L.jpg",
+        "canon": "Canon",
+        "date_published": "2025-11-11",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9780593874738"
+        ],
+        "primary_isbn": "9780593874738",
+        "language": "English",
+        "publisher": "Random House Worlds",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": -19,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9780593874738",
+      "flags": []
+    },
+    {
+      "slug": "moving-target-a-princess-leia-adventure",
+      "wiki_title": "Moving Target: A Princess Leia Adventure",
+      "source_pageid": 482815,
+      "row": {
+        "title": "Moving Target: A Princess Leia Adventure",
+        "slug": "moving-target-a-princess-leia-adventure",
+        "author": [
+          "Cecil Castellucci",
+          "Jason Fry"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11196890-L.jpg",
+        "canon": "Canon",
+        "date_published": "2015-09-04",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback"
+        ],
+        "isbn": [
+          "9781484724972"
+        ],
+        "primary_isbn": "9781484724972",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Journey to Star Wars: The Force Awakens",
+        "series_order": null,
+        "timeline_order": 4,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484724972",
+      "flags": []
+    },
+    {
+      "slug": "pirates-price",
+      "wiki_title": "Pirate's Price",
+      "source_pageid": 597515,
+      "row": {
+        "title": "Pirate's Price",
+        "slug": "pirates-price",
+        "author": [
+          "Lou Anders"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/8794947-L.jpg",
+        "canon": "Canon",
+        "date_published": "2019-01-08",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "eBook"
+        ],
+        "isbn": [
+          "9781368041515"
+        ],
+        "primary_isbn": "9781368041515",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Flight of the Falcon",
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368041515",
+      "flags": []
+    },
+    {
+      "slug": "planet-of-twilight",
+      "wiki_title": "Planet of Twilight",
+      "source_pageid": 13443,
+      "row": {
+        "title": "Planet of Twilight",
+        "slug": "planet-of-twilight",
+        "author": [
+          "Barbara Hambly"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11152487-L.jpg",
+        "canon": "Legends",
+        "date_published": "1997-04-01",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9780553575170"
+        ],
+        "primary_isbn": "9780553575170",
+        "language": "English",
+        "publisher": "Bantam Spectra",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 13,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Planet of twilight",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Planet of Twilight: Star Wars Legends",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Planet of Twilight",
+          "label": null,
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Planet of Twilight: Star Wars Legends",
+          "label": "adult",
+          "rejected": null
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780553575170",
+      "flags": []
+    },
+    {
+      "slug": "poe-dameron-free-fall",
+      "wiki_title": "Poe Dameron: Free Fall",
+      "source_pageid": 643808,
+      "row": {
+        "title": "Poe Dameron: Free Fall",
+        "slug": "poe-dameron-free-fall",
+        "author": [
+          "Alex Segura"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11196658-L.jpg",
+        "canon": "Canon",
+        "date_published": "2020-08-04",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "eBook"
+        ],
+        "isbn": [
+          "9781368051668"
+        ],
+        "primary_isbn": "9781368051668",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 18,
+        "synopsis": null,
+        "type": "YA Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368051668",
+      "flags": []
+    },
+    {
+      "slug": "princess-of-the-rebellion",
+      "wiki_title": "Princess of the Rebellion",
+      "source_pageid": 935374,
+      "row": {
+        "title": "Princess of the Rebellion",
+        "slug": "princess-of-the-rebellion",
+        "author": [
+          "Claudia Gray"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2027-05-04",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9780736449946"
+        ],
+        "primary_isbn": "9780736449946",
+        "language": "English",
+        "publisher": "Random House/Star Wars",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 0,
+        "synopsis": null,
+        "type": "YA Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "not yet released (2027-05-04)",
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "reign-of-the-empire-edge-of-the-abyss",
+      "wiki_title": "Reign of the Empire: Edge of the Abyss",
+      "source_pageid": 811736,
+      "row": {
+        "title": "Reign of the Empire: Edge of the Abyss",
+        "slug": "reign-of-the-empire-edge-of-the-abyss",
+        "author": [
+          "Rebecca Roanhorse"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2026-09-15",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9780593873625"
+        ],
+        "primary_isbn": "9780593873625",
+        "language": "English",
+        "publisher": "Random House Worlds",
+        "series_name": "Star Wars: Reign of the Empire",
+        "series_order": null,
+        "timeline_order": -6,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "reign-of-the-empire-from-the-ashes",
+      "wiki_title": "Reign of the Empire: From the Ashes",
+      "source_pageid": 811737,
+      "row": {
+        "title": "Reign of the Empire: From the Ashes",
+        "slug": "reign-of-the-empire-from-the-ashes",
+        "author": [
+          "Fran Wilde"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2027-08-10",
+        "format": [
+          "Audiobook"
+        ],
+        "isbn": [
+          "9780593874042",
+          "9780593874059"
+        ],
+        "primary_isbn": "9780593874042",
+        "language": "English",
+        "publisher": "Random House Worlds",
+        "series_name": "Star Wars: Reign of the Empire",
+        "series_order": null,
+        "timeline_order": 0,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "not yet released (2027-08-10)",
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "republic-commando-hard-contact",
+      "wiki_title": "Republic Commando: Hard Contact",
+      "source_pageid": 3036,
+      "row": {
+        "title": "Republic Commando: Hard Contact",
+        "slug": "republic-commando-hard-contact",
+        "author": [
+          "Karen Traviss"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/10940722-L.jpg",
+        "canon": "Legends",
+        "date_published": "2004-10-26",
+        "format": [
+          "Paperback"
+        ],
+        "isbn": [
+          "9780345478276"
+        ],
+        "primary_isbn": "9780345478276",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": "Republic Commando",
+        "series_order": null,
+        "timeline_order": -22,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: Hard Contact",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Hard Contact: Star Wars Legends (Republic Commando)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Cosplay: A History: The Builders, Fans, and Makers Who Bring Your Favorite Stories to Life",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: The Essential Reader's Companion",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345478276",
+      "flags": []
+    },
+    {
+      "slug": "republic-commando-triple-zero",
+      "wiki_title": "Republic Commando: Triple Zero",
+      "source_pageid": 11650,
+      "row": {
+        "title": "Republic Commando: Triple Zero",
+        "slug": "republic-commando-triple-zero",
+        "author": [
+          "Karen Traviss"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/212287-L.jpg",
+        "canon": "Legends",
+        "date_published": "2006-02-28",
+        "format": [
+          "Paperback"
+        ],
+        "isbn": [
+          "9780345490094"
+        ],
+        "primary_isbn": "9780345490094",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": "Republic Commando",
+        "series_order": null,
+        "timeline_order": -22,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: Triple Zero",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Triple Zero: Star Wars Legends (Republic Commando)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Triple Zero",
+          "label": null,
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: Republic Commando: Triple Zero",
+          "label": "adult",
+          "rejected": null
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345490094",
+      "flags": []
+    },
+    {
+      "slug": "return-of-the-jedi-beware-the-power-of-the-dark-side",
+      "wiki_title": "Return of the Jedi: Beware the Power of the Dark Side!",
+      "source_pageid": 454530,
+      "row": {
+        "title": "Return of the Jedi: Beware the Power of the Dark Side!",
+        "slug": "return-of-the-jedi-beware-the-power-of-the-dark-side",
+        "author": [
+          "Tom Angleberger"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/10055186-L.jpg",
+        "canon": "Canon",
+        "date_published": "2015-09-22",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9781484709139"
+        ],
+        "primary_isbn": "9781484709139",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 4,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484709139",
+      "flags": []
+    },
+    {
+      "slug": "sanctuary-a-bad-batch-novel",
+      "wiki_title": "Sanctuary: A Bad Batch Novel",
+      "source_pageid": 828548,
+      "row": {
+        "title": "Sanctuary: A Bad Batch Novel",
+        "slug": "sanctuary-a-bad-batch-novel",
+        "author": [
+          "Lamar Giles"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2025-08-05",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "eBook"
+        ],
+        "isbn": [
+          "9780593874462"
+        ],
+        "primary_isbn": "9780593874462",
+        "language": "English",
+        "publisher": "Random House Worlds",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": -18,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "servants-of-the-empire-edge-of-the-galaxy",
+      "wiki_title": "Servants of the Empire: Edge of the Galaxy",
+      "source_pageid": 447501,
+      "row": {
+        "title": "Servants of the Empire: Edge of the Galaxy",
+        "slug": "servants-of-the-empire-edge-of-the-galaxy",
+        "author": [
+          "Jason Fry"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/9376167-L.jpg",
+        "canon": "Canon",
+        "date_published": "2014-10-21",
+        "format": [
+          "Paperback"
+        ],
+        "isbn": [
+          "9781484704851"
+        ],
+        "primary_isbn": "9781484704851",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Star Wars Rebels: Servants of the Empire",
+        "series_order": null,
+        "timeline_order": -6,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484704851",
+      "flags": []
+    },
+    {
+      "slug": "servants-of-the-empire-imperial-justice",
+      "wiki_title": "Servants of the Empire: Imperial Justice",
+      "source_pageid": 465776,
+      "row": {
+        "title": "Servants of the Empire: Imperial Justice",
+        "slug": "servants-of-the-empire-imperial-justice",
+        "author": [
+          "Jason Fry"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2015-07-07",
+        "format": [],
+        "isbn": [
+          "9781484716601"
+        ],
+        "primary_isbn": "9781484716601",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Star Wars Rebels: Servants of the Empire",
+        "series_order": null,
+        "timeline_order": -4,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "servants-of-the-empire-rebel-in-the-ranks",
+      "wiki_title": "Servants of the Empire: Rebel in the Ranks",
+      "source_pageid": 456510,
+      "row": {
+        "title": "Servants of the Empire: Rebel in the Ranks",
+        "slug": "servants-of-the-empire-rebel-in-the-ranks",
+        "author": [
+          "Jason Fry"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/15246850-L.jpg",
+        "canon": "Canon",
+        "date_published": "2015-03-03",
+        "format": [
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9781484716441"
+        ],
+        "primary_isbn": "9781484716441",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Star Wars Rebels: Servants of the Empire",
+        "series_order": null,
+        "timeline_order": -5,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484716441",
+      "flags": []
+    },
+    {
+      "slug": "servants-of-the-empire-the-secret-academy",
+      "wiki_title": "Servants of the Empire: The Secret Academy",
+      "source_pageid": 476950,
+      "row": {
+        "title": "Servants of the Empire: The Secret Academy",
+        "slug": "servants-of-the-empire-the-secret-academy",
+        "author": [
+          "Jason Fry"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11413515-L.jpg",
+        "canon": "Canon",
+        "date_published": "2015-10-06",
+        "format": [
+          "Paperback"
+        ],
+        "isbn": [
+          "9781484716618"
+        ],
+        "primary_isbn": "9781484716618",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Star Wars Rebels: Servants of the Empire",
+        "series_order": null,
+        "timeline_order": -4,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484716618",
+      "flags": []
+    },
+    {
+      "slug": "shadow-games",
+      "wiki_title": "Shadow Games",
+      "source_pageid": 221858,
+      "row": {
+        "title": "Shadow Games",
+        "slug": "shadow-games",
+        "author": [
+          "Maya Kaathryn Bohnhoff",
+          "Michael Reaves"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/7623816-L.jpg",
+        "canon": "Legends",
+        "date_published": "2011-11-29",
+        "format": [
+          "Paperback"
+        ],
+        "isbn": [
+          "9780345511201"
+        ],
+        "primary_isbn": "9780345511201",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 0,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: Shadow Games",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: The Essential Reader's Companion",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Shadow Hunter: Star Wars Legends (Darth Maul)",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Essential Reader's Companion: Star Wars",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345511201",
+      "flags": []
+    },
+    {
+      "slug": "shield-of-lies",
+      "wiki_title": "Shield of Lies",
+      "source_pageid": 3812,
+      "row": {
+        "title": "Shield of Lies",
+        "slug": "shield-of-lies",
+        "author": [
+          "Michael P. Kube-McDowell"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11153060-L.jpg",
+        "canon": "Legends",
+        "date_published": "1996-09-01",
+        "format": [
+          "Audiobook",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780553572773"
+        ],
+        "primary_isbn": "9780553572773",
+        "language": "English",
+        "publisher": "Bantam Spectra",
+        "series_name": "The Black Fleet Crisis",
+        "series_order": null,
+        "timeline_order": 4,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: Shield of Lies",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Shield of Lies: Star Wars Legends (The Black Fleet Crisis)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Shield of Lies: Star Wars Legends (The Black Fleet Crisis)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Slave Ship: Star Wars Legends (The Bounty Hunter Wars)",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780553572773",
+      "flags": []
+    },
+    {
+      "slug": "slave-ship",
+      "wiki_title": "Slave Ship",
+      "source_pageid": 3086,
+      "row": {
+        "title": "Slave Ship",
+        "slug": "slave-ship",
+        "author": [
+          "K. W. Jeter"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/372807-L.jpg",
+        "canon": "Legends",
+        "date_published": "1998-10-06",
+        "format": [
+          "Audiobook",
+          "Paperback"
+        ],
+        "isbn": [
+          "9780553578881"
+        ],
+        "primary_isbn": "9780553578881",
+        "language": "English",
+        "publisher": "Bantam Spectra",
+        "series_name": "The Bounty Hunter Wars",
+        "series_order": null,
+        "timeline_order": 4,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: Slave Ship",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Slave Ship: Star Wars Legends (The Bounty Hunter Wars)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Slave Ship: Star Wars Legends (The Bounty Hunter Wars)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "I, Jedi: Star Wars Legends",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780553578881",
+      "flags": []
+    },
+    {
+      "slug": "smugglers-run-a-han-solo-and-chewbacca-adventure",
+      "wiki_title": "Smuggler's Run: A Han Solo & Chewbacca Adventure",
+      "source_pageid": 482824,
+      "row": {
+        "title": "Smuggler's Run: A Han Solo & Chewbacca Adventure",
+        "slug": "smugglers-run-a-han-solo-and-chewbacca-adventure",
+        "author": [
+          "Greg Rucka"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/10143609-L.jpg",
+        "canon": "Canon",
+        "date_published": "2015-09-04",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9781484724958"
+        ],
+        "primary_isbn": "9781484724958",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Journey to Star Wars: The Force Awakens",
+        "series_order": null,
+        "timeline_order": 0,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484724958",
+      "flags": []
+    },
+    {
+      "slug": "solo-a-star-wars-story-a-junior-novel",
+      "wiki_title": "Solo: A Star Wars Story: A Junior Novel",
+      "source_pageid": 594441,
+      "row": {
+        "title": "Solo: A Star Wars Story: A Junior Novel",
+        "slug": "solo-a-star-wars-story-a-junior-novel",
+        "author": [
+          "Joe Schreiber"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/8811500-L.jpg",
+        "canon": "Canon",
+        "date_published": "2018-09-04",
+        "format": [
+          "Audiobook",
+          "Paperback"
+        ],
+        "isbn": [
+          "9781368044936"
+        ],
+        "primary_isbn": "9781368044936",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": -13,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368044936",
+      "flags": []
+    },
+    {
+      "slug": "solo-a-star-wars-story-expanded-edition",
+      "wiki_title": "Solo: A Star Wars Story: Expanded Edition",
+      "source_pageid": 599083,
+      "row": {
+        "title": "Solo: A Star Wars Story: Expanded Edition",
+        "slug": "solo-a-star-wars-story-expanded-edition",
+        "author": [
+          "Mur Lafferty"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/15218339-L.jpg",
+        "canon": "Canon",
+        "date_published": "2018-09-04",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780525619390"
+        ],
+        "primary_isbn": "9780525619390",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": -13,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9780525619390",
+      "flags": []
+    },
+    {
+      "slug": "spark-of-the-resistance",
+      "wiki_title": "Spark of the Resistance",
+      "source_pageid": 622477,
+      "row": {
+        "title": "Spark of the Resistance",
+        "slug": "spark-of-the-resistance",
+        "author": [
+          "Justina Ireland"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11203239-L.jpg",
+        "canon": "Canon",
+        "date_published": "2019-10-04",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "eBook"
+        ],
+        "isbn": [
+          "9781368050814"
+        ],
+        "primary_isbn": "9781368050814",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Journey to Star Wars: The Rise of Skywalker",
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368050814",
+      "flags": []
+    },
+    {
+      "slug": "star-wars-a-new-hope-paperback-novel",
+      "wiki_title": "Star Wars: A New Hope (paperback novel)",
+      "source_pageid": 554006,
+      "row": {
+        "title": "Star Wars: A New Hope (paperback novel)",
+        "slug": "star-wars-a-new-hope-paperback-novel",
+        "author": [
+          "Ryder Windham"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/8597980-L.jpg",
+        "canon": "Canon",
+        "date_published": "2017-05-04",
+        "format": [
+          "Audiobook",
+          "Paperback"
+        ],
+        "isbn": [
+          "9781405285421"
+        ],
+        "primary_isbn": "9781405285421",
+        "language": "English",
+        "publisher": "Egmont UK Ltd",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 0,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781405285421",
+      "flags": [
+        "dropped editor credit \"edited by Emil Fortune\" from author"
+      ]
+    },
+    {
+      "slug": "star-wars-episode-i-the-phantom-menace",
+      "wiki_title": "Star Wars: Episode I The Phantom Menace",
+      "source_pageid": 13177,
+      "row": {
+        "title": "Star Wars: Episode I The Phantom Menace",
+        "slug": "star-wars-episode-i-the-phantom-menace",
+        "author": [
+          "Terry Brooks"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/7398539-L.jpg",
+        "canon": "Legends",
+        "date_published": "1999-04-21",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9780345427656"
+        ],
+        "primary_isbn": "9780345427656",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": "Film novelizations",
+        "series_order": null,
+        "timeline_order": -32,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: The Phantom Menace",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: Episode I: the Phantom Menace",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars, Episode I, the Phantom Menace: Episode 1 the Phantom Menace",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Phantom Menace (Star Wars Episode I: The Phantom Menace), by Terry Brooks",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345427656",
+      "flags": []
+    },
+    {
+      "slug": "star-wars-episode-ii-attack-of-the-clones",
+      "wiki_title": "Star Wars: Episode II Attack of the Clones",
+      "source_pageid": 3035,
+      "row": {
+        "title": "Star Wars: Episode II Attack of the Clones",
+        "slug": "star-wars-episode-ii-attack-of-the-clones",
+        "author": [
+          "R. A. Salvatore"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/10932597-L.jpg",
+        "canon": "Legends",
+        "date_published": "2002-04-23",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback"
+        ],
+        "isbn": [
+          "9780345428813"
+        ],
+        "primary_isbn": "9780345428813",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": "Film novelizations",
+        "series_order": null,
+        "timeline_order": -22,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Attack of the Clones",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Attack of the Clones",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: Episode II - Attack of the Clones",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Attack of the Clones: Star Wars: Episode II",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345428813",
+      "flags": []
+    },
+    {
+      "slug": "star-wars-galaxies-the-ruins-of-dantooine",
+      "wiki_title": "Star Wars Galaxies: The Ruins of Dantooine",
+      "source_pageid": 3073,
+      "row": {
+        "title": "Star Wars Galaxies: The Ruins of Dantooine",
+        "slug": "star-wars-galaxies-the-ruins-of-dantooine",
+        "author": [
+          "Voronica Whitney-Robinson",
+          "W. Haden Blackman"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/211465-L.jpg",
+        "canon": "Legends",
+        "date_published": "2003-12-30",
+        "format": [
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780345470669"
+        ],
+        "primary_isbn": "9780345470669",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": "Star Wars Galaxies: An Empire Divided",
+        "series_order": null,
+        "timeline_order": 1,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: The Ruins of Dantooine",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Ruins of Dantooine: Star Wars Galaxies Legends",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Ruins of Dantooine: Star Wars Galaxies Legends",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Science Fiction Video Games",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345470669",
+      "flags": []
+    },
+    {
+      "slug": "star-wars-outlaws-low-red-moon",
+      "wiki_title": "Star Wars Outlaws: Low Red Moon",
+      "source_pageid": 888186,
+      "row": {
+        "title": "Star Wars Outlaws: Low Red Moon",
+        "slug": "star-wars-outlaws-low-red-moon",
+        "author": [
+          "Mike Chen"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2026-02-03",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "eBook"
+        ],
+        "isbn": [
+          "9780593874493",
+          "9780593874509"
+        ],
+        "primary_isbn": "9780593874493",
+        "language": "English",
+        "publisher": "Random House Worlds",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 3,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "star-wars-return-of-the-jedi-paperback-novel",
+      "wiki_title": "Star Wars: Return of the Jedi (paperback novel)",
+      "source_pageid": 554008,
+      "row": {
+        "title": "Star Wars: Return of the Jedi (paperback novel)",
+        "slug": "star-wars-return-of-the-jedi-paperback-novel",
+        "author": [
+          "Emil Fortune",
+          "Ryder Windham"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/8881518-L.jpg",
+        "canon": "Canon",
+        "date_published": "2017-05-04",
+        "format": [
+          "Audiobook",
+          "Paperback"
+        ],
+        "isbn": [
+          "9781405285445"
+        ],
+        "primary_isbn": "9781405285445",
+        "language": "English",
+        "publisher": "Egmont UK Ltd",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 4,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781405285445",
+      "flags": []
+    },
+    {
+      "slug": "star-wars-rogue-one-a-junior-novel",
+      "wiki_title": "Star Wars: Rogue One: A Junior Novel",
+      "source_pageid": 541465,
+      "row": {
+        "title": "Star Wars: Rogue One: A Junior Novel",
+        "slug": "star-wars-rogue-one-a-junior-novel",
+        "author": [
+          "Matt Forbeck"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2016-12-16",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9781484705094"
+        ],
+        "primary_isbn": "9781484705094",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": -13,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "star-wars-starfighter",
+      "wiki_title": "Star Wars: Starfighter",
+      "source_pageid": 935501,
+      "row": {
+        "title": "Star Wars: Starfighter",
+        "slug": "star-wars-starfighter",
+        "author": [
+          "Delilah S. Dawson"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2027-06-22",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9798217482207",
+          "9798217482214"
+        ],
+        "primary_isbn": "9798217482207",
+        "language": "English",
+        "publisher": "Random House Worlds",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 40,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "not yet released (2027-06-22)",
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "star-wars-the-clone-wars",
+      "wiki_title": "Star Wars: The Clone Wars",
+      "source_pageid": 202554,
+      "row": {
+        "title": "Star Wars: The Clone Wars",
+        "slug": "star-wars-the-clone-wars",
+        "author": [
+          "Karen Traviss"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/10404016-L.jpg",
+        "canon": "Legends",
+        "date_published": "2008-07-26",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9780345508980"
+        ],
+        "primary_isbn": "9780345508980",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": -22,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: The Clone Wars",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Clone Wars: Star Wars",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: The Clone Wars",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "No Prisoners: Star Wars Legends (The Clone Wars)",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345508980",
+      "flags": []
+    },
+    {
+      "slug": "star-wars-the-empire-strikes-back-paperback-novel",
+      "wiki_title": "Star Wars: The Empire Strikes Back (paperback novel)",
+      "source_pageid": 554007,
+      "row": {
+        "title": "Star Wars: The Empire Strikes Back (paperback novel)",
+        "slug": "star-wars-the-empire-strikes-back-paperback-novel",
+        "author": [
+          "Ryder Windham"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/8674262-L.jpg",
+        "canon": "Canon",
+        "date_published": "2017-05-04",
+        "format": [
+          "Audiobook",
+          "Paperback"
+        ],
+        "isbn": [
+          "9781405285438"
+        ],
+        "primary_isbn": "9781405285438",
+        "language": "English",
+        "publisher": "Egmont UK Ltd",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 3,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781405285438",
+      "flags": [
+        "dropped editor credit \"edited by Emil Fortune\" from author"
+      ]
+    },
+    {
+      "slug": "star-wars-the-force-awakens",
+      "wiki_title": "Star Wars: The Force Awakens",
+      "source_pageid": 499577,
+      "row": {
+        "title": "Star Wars: The Force Awakens",
+        "slug": "star-wars-the-force-awakens",
+        "author": [
+          "Alan Dean Foster"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/10433094-L.jpg",
+        "canon": "Canon",
+        "date_published": "2015-12-18",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9781101965498"
+        ],
+        "primary_isbn": "9781101965498",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781101965498",
+      "flags": []
+    },
+    {
+      "slug": "star-wars-the-force-awakens-a-junior-novel",
+      "wiki_title": "Star Wars: The Force Awakens: A Junior Novel",
+      "source_pageid": 498911,
+      "row": {
+        "title": "Star Wars: The Force Awakens: A Junior Novel",
+        "slug": "star-wars-the-force-awakens-a-junior-novel",
+        "author": [
+          "Michael Kogge"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/9603840-L.jpg",
+        "canon": "Canon",
+        "date_published": "2015-12-18",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback"
+        ],
+        "isbn": [
+          "9781484704882"
+        ],
+        "primary_isbn": "9781484704882",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484704882",
+      "flags": []
+    },
+    {
+      "slug": "star-wars-the-force-unleashed",
+      "wiki_title": "Star Wars: The Force Unleashed",
+      "source_pageid": 135763,
+      "row": {
+        "title": "Star Wars: The Force Unleashed",
+        "slug": "star-wars-the-force-unleashed",
+        "author": [
+          "Haden Blackman",
+          "Sean Williams"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11046303-L.jpg",
+        "canon": "Legends",
+        "date_published": "2008-08-19",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780345499028"
+        ],
+        "primary_isbn": "9780345499028",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": "Star Wars: The Force Unleashed",
+        "series_order": null,
+        "timeline_order": -3,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: The Force Unleashed",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: The Force Unleashed Volume 2",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: The Force Unleashed",
+          "label": null,
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: The Force Unleashed",
+          "label": null,
+          "rejected": null
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345499028",
+      "flags": []
+    },
+    {
+      "slug": "star-wars-the-force-unleashed-ii",
+      "wiki_title": "Star Wars: The Force Unleashed II",
+      "source_pageid": 289722,
+      "row": {
+        "title": "Star Wars: The Force Unleashed II",
+        "slug": "star-wars-the-force-unleashed-ii",
+        "author": [
+          "Sean Williams",
+          "W. Haden Blackman"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11046325-L.jpg",
+        "canon": "Legends",
+        "date_published": "2010-10-05",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780345511546"
+        ],
+        "primary_isbn": "9780345511546",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": "Star Wars: The Force Unleashed II",
+        "series_order": null,
+        "timeline_order": -3,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "The Force Unleashed II",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Force Unleashed II: Star Wars Legends",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The force unleashed",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Force Unleashed: Star Wars Legends",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345511546",
+      "flags": []
+    },
+    {
+      "slug": "star-wars-the-last-jedi-a-junior-novel",
+      "wiki_title": "Star Wars: The Last Jedi: A Junior Novel",
+      "source_pageid": 574972,
+      "row": {
+        "title": "Star Wars: The Last Jedi: A Junior Novel",
+        "slug": "star-wars-the-last-jedi-a-junior-novel",
+        "author": [
+          "Michael Kogge"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11203341-L.jpg",
+        "canon": "Canon",
+        "date_published": "2018-03-06",
+        "format": [
+          "Audiobook",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9781368012287"
+        ],
+        "primary_isbn": "9781368012287",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368012287",
+      "flags": []
+    },
+    {
+      "slug": "star-wars-the-last-jedi-expanded-edition",
+      "wiki_title": "Star Wars: The Last Jedi: Expanded Edition",
+      "source_pageid": 574939,
+      "row": {
+        "title": "Star Wars: The Last Jedi: Expanded Edition",
+        "slug": "star-wars-the-last-jedi-expanded-edition",
+        "author": [
+          "Jason Fry"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/8289199-L.jpg",
+        "canon": "Canon",
+        "date_published": "2018-03-06",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9781524797119"
+        ],
+        "primary_isbn": "9781524797119",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781524797119",
+      "flags": []
+    },
+    {
+      "slug": "star-wars-the-rise-of-skywalker-a-junior-novel",
+      "wiki_title": "Star Wars: The Rise of Skywalker: A Junior Novel",
+      "source_pageid": 632466,
+      "row": {
+        "title": "Star Wars: The Rise of Skywalker: A Junior Novel",
+        "slug": "star-wars-the-rise-of-skywalker-a-junior-novel",
+        "author": [
+          "Michael Kogge"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11213529-L.jpg",
+        "canon": "Canon",
+        "date_published": "2020-04-21",
+        "format": [
+          "Audiobook",
+          "Paperback"
+        ],
+        "isbn": [
+          "9781368054263"
+        ],
+        "primary_isbn": "9781368054263",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 35,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368054263",
+      "flags": []
+    },
+    {
+      "slug": "star-wars-the-rise-of-skywalker-expanded-edition",
+      "wiki_title": "Star Wars: The Rise of Skywalker: Expanded Edition",
+      "source_pageid": 632628,
+      "row": {
+        "title": "Star Wars: The Rise of Skywalker: Expanded Edition",
+        "slug": "star-wars-the-rise-of-skywalker-expanded-edition",
+        "author": [
+          "Rae Carson"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/9295618-L.jpg",
+        "canon": "Canon",
+        "date_published": "2020-03-17",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780593128404"
+        ],
+        "primary_isbn": "9780593128404",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 35,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9780593128404",
+      "flags": []
+    },
+    {
+      "slug": "stories-of-jedi-and-sith",
+      "wiki_title": "Stories of Jedi and Sith",
+      "source_pageid": 710937,
+      "row": {
+        "title": "Stories of Jedi and Sith",
+        "slug": "stories-of-jedi-and-sith",
+        "author": [
+          "Alex Segura",
+          "Delilah S. Dawson",
+          "Karen Strong",
+          "Michael Kogge",
+          "Michael Moreci",
+          "Roseanne A. Brown",
+          "Sam Maggs",
+          "Sarwat Chadda",
+          "Tessa Gratton",
+          "Vera Strange"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/12876365-L.jpg",
+        "canon": "Canon",
+        "date_published": "2022-06-07",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9781368080545"
+        ],
+        "primary_isbn": "9781368080545",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": null,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368080545",
+      "flags": []
+    },
+    {
+      "slug": "survivors-quest",
+      "wiki_title": "Survivor's Quest",
+      "source_pageid": 8449,
+      "row": {
+        "title": "Survivor's Quest",
+        "slug": "survivors-quest",
+        "author": [
+          "Timothy Zahn"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11153234-L.jpg",
+        "canon": "Legends",
+        "date_published": "2004-02-03",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9780345459169"
+        ],
+        "primary_isbn": "9780345459169",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 22,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: Survivor's Quest",
+          "label": "juvenile",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Survivor's Quest: Star Wars Legends",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: Survivor's quest",
+          "label": "adult",
+          "rejected": null
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345459169",
+      "flags": []
+    },
+    {
+      "slug": "tatooine-ghost",
+      "wiki_title": "Tatooine Ghost",
+      "source_pageid": 10228,
+      "row": {
+        "title": "Tatooine Ghost",
+        "slug": "tatooine-ghost",
+        "author": [
+          "Troy Denning"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/14559986-L.jpg",
+        "canon": "Legends",
+        "date_published": "2003-03-04",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780345456687"
+        ],
+        "primary_isbn": "9780345456687",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 8,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: Tatooine Ghost",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Tatooine Ghost",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: Tatooine Ghost",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Tatooine Ghost: Star Wars Legends",
+          "label": "adult",
+          "rejected": null
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345456687",
+      "flags": []
+    },
+    {
+      "slug": "the-book-of-boba-fett-junior-novel",
+      "wiki_title": "The Book of Boba Fett Junior Novel",
+      "source_pageid": 732348,
+      "row": {
+        "title": "The Book of Boba Fett Junior Novel",
+        "slug": "the-book-of-boba-fett-junior-novel",
+        "author": [
+          "Joe Schreiber"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/13305809-L.jpg",
+        "canon": "Canon",
+        "date_published": "2023-01-03",
+        "format": [
+          "Audiobook",
+          "Paperback"
+        ],
+        "isbn": [
+          "9781368092289"
+        ],
+        "primary_isbn": "9781368092289",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 9,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368092289",
+      "flags": []
+    },
+    {
+      "slug": "the-clone-wars-no-prisoners",
+      "wiki_title": "The Clone Wars: No Prisoners",
+      "source_pageid": 216699,
+      "row": {
+        "title": "The Clone Wars: No Prisoners",
+        "slug": "the-clone-wars-no-prisoners",
+        "author": [
+          "Karen Traviss"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/6301467-L.jpg",
+        "canon": "Legends",
+        "date_published": "2009-05-19",
+        "format": [
+          "Audiobook",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780345508997"
+        ],
+        "primary_isbn": "9780345508997",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": -22,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: No Prisoners",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "No Prisoners: Star Wars Legends (The Clone Wars)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "No Prisoners: Star Wars Legends (The Clone Wars)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: The Clone Wars",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345508997",
+      "flags": []
+    },
+    {
+      "slug": "the-clone-wars-wild-space",
+      "wiki_title": "The Clone Wars: Wild Space",
+      "source_pageid": 214422,
+      "row": {
+        "title": "The Clone Wars: Wild Space",
+        "slug": "the-clone-wars-wild-space",
+        "author": [
+          "Karen Miller"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11286335-L.jpg",
+        "canon": "Legends",
+        "date_published": "2008-12-09",
+        "format": [
+          "Audiobook",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780345509017"
+        ],
+        "primary_isbn": "9780345509017",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": -22,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: Wild Space",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Wild Space: Star Wars Legends (The Clone Wars)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Wild Space",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Clone Wars: Wild Space",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345509017",
+      "flags": []
+    },
+    {
+      "slug": "the-crystal-star",
+      "wiki_title": "The Crystal Star",
+      "source_pageid": 10205,
+      "row": {
+        "title": "The Crystal Star",
+        "slug": "the-crystal-star",
+        "author": [
+          "Vonda N. McIntyre"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/12371967-L.jpg",
+        "canon": "Legends",
+        "date_published": "1994-11-01",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780553089295"
+        ],
+        "primary_isbn": "9780553089295",
+        "language": "English",
+        "publisher": "Bantam Spectra",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 14,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars - The Crystal Star",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Crystal Star: Star Wars Legends",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Crystal Star: Star Wars Legends",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Crystal Star",
+          "label": null,
+          "rejected": null
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780553089295",
+      "flags": []
+    },
+    {
+      "slug": "the-empire-strikes-back-so-you-want-to-be-a-jedi",
+      "wiki_title": "The Empire Strikes Back: So You Want to Be a Jedi?",
+      "source_pageid": 454529,
+      "row": {
+        "title": "The Empire Strikes Back: So You Want to Be a Jedi?",
+        "slug": "the-empire-strikes-back-so-you-want-to-be-a-jedi",
+        "author": [
+          "Adam Gidwitz"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11811024-L.jpg",
+        "canon": "Canon",
+        "date_published": "2015-09-22",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9781484709146"
+        ],
+        "primary_isbn": "9781484709146",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 3,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484709146",
+      "flags": []
+    },
+    {
+      "slug": "the-high-republic-a-valiant-vow",
+      "wiki_title": "The High Republic: A Valiant Vow",
+      "source_pageid": 761543,
+      "row": {
+        "title": "The High Republic: A Valiant Vow",
+        "slug": "the-high-republic-a-valiant-vow",
+        "author": [
+          "Justina Ireland"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2025-05-06",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "eBook"
+        ],
+        "isbn": [
+          "9781368095204"
+        ],
+        "primary_isbn": "9781368095204",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Star Wars: The High Republic",
+        "series_order": null,
+        "timeline_order": -228,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "the-high-republic-beware-the-nameless",
+      "wiki_title": "The High Republic: Beware the Nameless",
+      "source_pageid": 761541,
+      "row": {
+        "title": "The High Republic: Beware the Nameless",
+        "slug": "the-high-republic-beware-the-nameless",
+        "author": [
+          "Zoraida Córdova"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/14616713-L.jpg",
+        "canon": "Canon",
+        "date_published": "2024-08-27",
+        "format": [
+          "Audiobook"
+        ],
+        "isbn": [
+          "9781368095198"
+        ],
+        "primary_isbn": "9781368095198",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Star Wars: The High Republic",
+        "series_order": null,
+        "timeline_order": -228,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368095198",
+      "flags": []
+    },
+    {
+      "slug": "the-high-republic-escape-from-valo",
+      "wiki_title": "The High Republic: Escape from Valo",
+      "source_pageid": 761535,
+      "row": {
+        "title": "The High Republic: Escape from Valo",
+        "slug": "the-high-republic-escape-from-valo",
+        "author": [
+          "Alyssa Wong",
+          "Daniel José Older"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/14616706-L.jpg",
+        "canon": "Canon",
+        "date_published": "2024-01-30",
+        "format": [
+          "Audiobook"
+        ],
+        "isbn": [
+          "9781368093804"
+        ],
+        "primary_isbn": "9781368093804",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Star Wars: The High Republic",
+        "series_order": null,
+        "timeline_order": -229,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368093804",
+      "flags": []
+    },
+    {
+      "slug": "the-high-republic-quest-for-planet-x",
+      "wiki_title": "The High Republic: Quest for Planet X",
+      "source_pageid": 730377,
+      "row": {
+        "title": "The High Republic: Quest for Planet X",
+        "slug": "the-high-republic-quest-for-planet-x",
+        "author": [
+          "Tessa Gratton"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/12945168-L.jpg",
+        "canon": "Canon",
+        "date_published": "2023-04-04",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9781368082877"
+        ],
+        "primary_isbn": "9781368082877",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Star Wars: The High Republic",
+        "series_order": null,
+        "timeline_order": -382,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368082877",
+      "flags": []
+    },
+    {
+      "slug": "the-high-republic-quest-for-the-hidden-city",
+      "wiki_title": "The High Republic: Quest for the Hidden City",
+      "source_pageid": 721345,
+      "row": {
+        "title": "The High Republic: Quest for the Hidden City",
+        "slug": "the-high-republic-quest-for-the-hidden-city",
+        "author": [
+          "George Mann"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/12861690-L.jpg",
+        "canon": "Canon",
+        "date_published": "2022-11-01",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9781368080101"
+        ],
+        "primary_isbn": "9781368080101",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Star Wars: The High Republic",
+        "series_order": null,
+        "timeline_order": -382,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368080101",
+      "flags": []
+    },
+    {
+      "slug": "the-last-jedi-cobalt-squadron",
+      "wiki_title": "The Last Jedi: Cobalt Squadron",
+      "source_pageid": 574956,
+      "row": {
+        "title": "The Last Jedi: Cobalt Squadron",
+        "slug": "the-last-jedi-cobalt-squadron",
+        "author": [
+          "Elizabeth Wein"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/10832520-L.jpg",
+        "canon": "Canon",
+        "date_published": "2017-12-15",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9781368008372"
+        ],
+        "primary_isbn": "9781368008372",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 34,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368008372",
+      "flags": []
+    },
+    {
+      "slug": "the-last-order",
+      "wiki_title": "The Last Order",
+      "source_pageid": 857511,
+      "row": {
+        "title": "The Last Order",
+        "slug": "the-last-order",
+        "author": [
+          "Kwame Mbalia"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2025-10-21",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9781368065610"
+        ],
+        "primary_isbn": "9781368065610",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 27,
+        "synopsis": null,
+        "type": "YA Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "the-legends-of-luke-skywalker",
+      "wiki_title": "The Legends of Luke Skywalker",
+      "source_pageid": 568561,
+      "row": {
+        "title": "The Legends of Luke Skywalker",
+        "slug": "the-legends-of-luke-skywalker",
+        "author": [
+          "Ken Liu"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/13982928-L.jpg",
+        "canon": "Canon",
+        "date_published": "2017-10-31",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9781484780770"
+        ],
+        "primary_isbn": "9781484780770",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Journey to Star Wars: The Last Jedi",
+        "series_order": null,
+        "timeline_order": 30,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484780770",
+      "flags": []
+    },
+    {
+      "slug": "the-mandalorian-armor",
+      "wiki_title": "The Mandalorian Armor",
+      "source_pageid": 3085,
+      "row": {
+        "title": "The Mandalorian Armor",
+        "slug": "the-mandalorian-armor",
+        "author": [
+          "K. W. Jeter"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/6614016-L.jpg",
+        "canon": "Legends",
+        "date_published": "1998-06-01",
+        "format": [
+          "Audiobook",
+          "Paperback"
+        ],
+        "isbn": [
+          "9780553578850"
+        ],
+        "primary_isbn": "9780553578850",
+        "language": "English",
+        "publisher": "Bantam Spectra",
+        "series_name": "The Bounty Hunter Wars",
+        "series_order": null,
+        "timeline_order": 4,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: The Mandalorian Armor",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Mandalorian Armor: Star Wars Legends (The Bounty Hunter Wars)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Mandalorian Armor: Star Wars Legends (The Bounty Hunter Wars)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The Best of Star Wars Insider Volume 10: Rogues, Scoundrels and Bounty Hunters",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780553578850",
+      "flags": []
+    },
+    {
+      "slug": "the-mandalorian-junior-novel",
+      "wiki_title": "The Mandalorian Junior Novel",
+      "source_pageid": 659581,
+      "row": {
+        "title": "The Mandalorian Junior Novel",
+        "slug": "the-mandalorian-junior-novel",
+        "author": [
+          "Joe Schreiber"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11218576-L.jpg",
+        "canon": "Canon",
+        "date_published": "2021-01-05",
+        "format": [
+          "Audiobook",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9781368057134"
+        ],
+        "primary_isbn": "9781368057134",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "The Mandalorian publishing program",
+        "series_order": null,
+        "timeline_order": 9,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368057134",
+      "flags": []
+    },
+    {
+      "slug": "the-mandalorian-season-2-junior-novel",
+      "wiki_title": "The Mandalorian Season 2 Junior Novel",
+      "source_pageid": 694704,
+      "row": {
+        "title": "The Mandalorian Season 2 Junior Novel",
+        "slug": "the-mandalorian-season-2-junior-novel",
+        "author": [
+          "Joe Schreiber"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/12393465-L.jpg",
+        "canon": "Canon",
+        "date_published": "2022-01-04",
+        "format": [
+          "Audiobook",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9781368075961"
+        ],
+        "primary_isbn": "9781368075961",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "The Mandalorian publishing program",
+        "series_order": null,
+        "timeline_order": 9,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368075961",
+      "flags": []
+    },
+    {
+      "slug": "the-mighty-chewbacca-in-the-forest-of-fear",
+      "wiki_title": "The Mighty Chewbacca in the Forest of Fear!",
+      "source_pageid": 591726,
+      "row": {
+        "title": "The Mighty Chewbacca in the Forest of Fear!",
+        "slug": "the-mighty-chewbacca-in-the-forest-of-fear",
+        "author": [
+          "Tom Angleberger"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11191183-L.jpg",
+        "canon": "Canon",
+        "date_published": "2018-05-25",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "eBook"
+        ],
+        "isbn": [
+          "9781368016292"
+        ],
+        "primary_isbn": "9781368016292",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": -1,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781368016292",
+      "flags": []
+    },
+    {
+      "slug": "the-new-rebellion",
+      "wiki_title": "The New Rebellion",
+      "source_pageid": 13518,
+      "row": {
+        "title": "The New Rebellion",
+        "slug": "the-new-rebellion",
+        "author": [
+          "Kristine Kathryn Rusch"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11153132-L.jpg",
+        "canon": "Legends",
+        "date_published": "1996-12-01",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780553100938"
+        ],
+        "primary_isbn": "9780553100938",
+        "language": "English",
+        "publisher": "Bantam Spectra",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 17,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: The New Rebellion",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The New Rebellion: Star Wars Legends",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The New Rebellion: Star Wars Legends",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The History and Politics of Star Wars: Death Stars and Democracy",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780553100938",
+      "flags": []
+    },
+    {
+      "slug": "the-princess-and-the-scoundrel",
+      "wiki_title": "The Princess and the Scoundrel",
+      "source_pageid": 721755,
+      "row": {
+        "title": "The Princess and the Scoundrel",
+        "slug": "the-princess-and-the-scoundrel",
+        "author": [
+          "Beth Revis"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/13136118-L.jpg",
+        "canon": "Canon",
+        "date_published": "2022-08-16",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780593498491"
+        ],
+        "primary_isbn": "9780593498491",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 4,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9780593498491",
+      "flags": []
+    },
+    {
+      "slug": "the-weapon-of-a-jedi-a-luke-skywalker-adventure",
+      "wiki_title": "The Weapon of a Jedi: A Luke Skywalker Adventure",
+      "source_pageid": 482814,
+      "row": {
+        "title": "The Weapon of a Jedi: A Luke Skywalker Adventure",
+        "slug": "the-weapon-of-a-jedi-a-luke-skywalker-adventure",
+        "author": [
+          "Jason Fry"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/11286211-L.jpg",
+        "canon": "Canon",
+        "date_published": "2015-09-04",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9781484724965"
+        ],
+        "primary_isbn": "9781484724965",
+        "language": "English",
+        "publisher": "Disney Lucasfilm Press",
+        "series_name": "Journey to Star Wars: The Force Awakens",
+        "series_order": null,
+        "timeline_order": 0,
+        "synopsis": null,
+        "type": "Middle Grade Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": "openlibrary:isbn:9781484724965",
+      "flags": []
+    },
+    {
+      "slug": "twin-crossroads",
+      "wiki_title": "Twin Crossroads",
+      "source_pageid": 927071,
+      "row": {
+        "title": "Twin Crossroads",
+        "slug": "twin-crossroads",
+        "author": [
+          "Beth Revis"
+        ],
+        "cover_image": null,
+        "canon": "Canon",
+        "date_published": "2027-04-06",
+        "format": [
+          "Audiobook",
+          "Hardcover"
+        ],
+        "isbn": [
+          "9780525478850"
+        ],
+        "primary_isbn": "9780525478850",
+        "language": "English",
+        "publisher": "Random House Worlds",
+        "series_name": null,
+        "series_order": null,
+        "timeline_order": 4,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "wiki-bucket",
+      "type_reason": "Canon tier category on Wookieepedia",
+      "type_evidence": [],
+      "cover_source": null,
+      "flags": [
+        "not yet released (2027-04-06)",
+        "no cover found"
+      ]
+    },
+    {
+      "slug": "tyrants-test",
+      "wiki_title": "Tyrant's Test",
+      "source_pageid": 3814,
+      "row": {
+        "title": "Tyrant's Test",
+        "slug": "tyrants-test",
+        "author": [
+          "Michael P. Kube-McDowell"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/isbn/9780553572759-L.jpg?default=false",
+        "canon": "Legends",
+        "date_published": "1996-12-01",
+        "format": [
+          "Audiobook",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780553572759"
+        ],
+        "primary_isbn": "9780553572759",
+        "language": "English",
+        "publisher": "Bantam Spectra",
+        "series_name": "The Black Fleet Crisis",
+        "series_order": null,
+        "timeline_order": 4,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Tyrant's test",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Tyrant's Test: Star Wars Legends (The Black Fleet Crisis)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Tyrant's Test: Star Wars Legends (The Black Fleet Crisis)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Tyrant's Test",
+          "label": null,
+          "rejected": null
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780553572759",
+      "flags": []
+    },
+    {
+      "slug": "x-wing-isards-revenge",
+      "wiki_title": "X-Wing: Isard's Revenge",
+      "source_pageid": 8105,
+      "row": {
+        "title": "X-Wing: Isard's Revenge",
+        "slug": "x-wing-isards-revenge",
+        "author": [
+          "Michael A. Stackpole"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/12818090-L.jpg",
+        "canon": "Legends",
+        "date_published": "1999-04-13",
+        "format": [
+          "Audiobook",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780553579031"
+        ],
+        "primary_isbn": "9780553579031",
+        "language": "English",
+        "publisher": "Bantam Spectra",
+        "series_name": "Star Wars: X-Wing novel series",
+        "series_order": null,
+        "timeline_order": 9,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: Isard's Revenge",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Isard's Revenge",
+          "label": null,
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "The History and Politics of Star Wars: Death Stars and Democracy",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Isard's Revenge: Star Wars Legends (Rogue Squadron)",
+          "label": "adult",
+          "rejected": null
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780553579031",
+      "flags": []
+    },
+    {
+      "slug": "x-wing-mercy-kill",
+      "wiki_title": "X-Wing: Mercy Kill",
+      "source_pageid": 313283,
+      "row": {
+        "title": "X-Wing: Mercy Kill",
+        "slug": "x-wing-mercy-kill",
+        "author": [
+          "Aaron Allston"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/7646165-L.jpg",
+        "canon": "Legends",
+        "date_published": "2012-08-07",
+        "format": [
+          "Audiobook",
+          "Hardcover",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780345530592"
+        ],
+        "primary_isbn": "9780345530592",
+        "language": "English",
+        "publisher": "Del Rey",
+        "series_name": "Star Wars: X-Wing novel series",
+        "series_order": null,
+        "timeline_order": 13,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Star Wars: X-Wing: Mercy Kill",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Mercy Kill",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Mercy Kill: Star Wars Legends (Wraith Squadron)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Apocalypse",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780345530592",
+      "flags": []
+    },
+    {
+      "slug": "x-wing-starfighters-of-adumar",
+      "wiki_title": "X-Wing: Starfighters of Adumar",
+      "source_pageid": 8107,
+      "row": {
+        "title": "X-Wing: Starfighters of Adumar",
+        "slug": "x-wing-starfighters-of-adumar",
+        "author": [
+          "Aaron Allston"
+        ],
+        "cover_image": "https://covers.openlibrary.org/b/id/372491-L.jpg",
+        "canon": "Legends",
+        "date_published": "1999-08-03",
+        "format": [
+          "Audiobook",
+          "Paperback",
+          "eBook"
+        ],
+        "isbn": [
+          "9780553574180"
+        ],
+        "primary_isbn": "9780553574180",
+        "language": "English",
+        "publisher": "Bantam Spectra",
+        "series_name": "Star Wars: X-Wing novel series",
+        "series_order": null,
+        "timeline_order": 13,
+        "synopsis": null,
+        "type": "Adult Novel",
+        "era": null
+      },
+      "type_source": "lookup",
+      "type_reason": "all usable evidence says adult",
+      "type_evidence": [
+        {
+          "source": "open-library",
+          "via": "isbn",
+          "matched_title": "Starfighters of Adumar (Star Wars: X-Wing, Book 9)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Starfighters of Adumar: Star Wars Legends (Wraith Squadron)",
+          "label": "adult",
+          "rejected": null
+        },
+        {
+          "source": "google-books",
+          "via": "search",
+          "matched_title": "Star Wars: X - Wing : Starfighters Fo Adumar",
+          "label": null,
+          "rejected": "search hit is a different book (title/author mismatch)"
+        }
+      ],
+      "cover_source": "openlibrary:isbn:9780553574180",
+      "flags": []
+    }
+  ],
+  "excluded": [
+    {
+      "wiki_title": "Alien Exodus",
+      "slugs": [],
+      "reason": "canceled — never published (excerpts released as fan fiction) (also {{Canceled}} on the wiki)"
+    },
+    {
+      "wiki_title": "Blood Oath",
+      "slugs": [],
+      "reason": "canceled — never published (also {{Canceled}} on the wiki)"
+    },
+    {
+      "wiki_title": "Escape from Dagu",
+      "slugs": [],
+      "reason": "canceled Clone Wars novel — never published (also {{Canceled}} on the wiki)"
+    },
+    {
+      "wiki_title": "Heart of the Jedi",
+      "slugs": [],
+      "reason": "canceled — never published (also {{Canceled}} on the wiki)"
+    },
+    {
+      "wiki_title": "Mandorla",
+      "slugs": [],
+      "reason": "canceled — never published (also {{Canceled}} on the wiki)"
+    },
+    {
+      "wiki_title": "Star Wars: Dark Empire",
+      "slugs": [],
+      "reason": "canceled novelization of the Dark Horse comic — never published (also {{Canceled}} on the wiki)"
+    },
+    {
+      "wiki_title": "Star Wars: Starfighter (junior novelization)",
+      "slugs": [],
+      "reason": "incomplete data — no ISBN, no author, placeholder release date"
+    },
+    {
+      "wiki_title": "Star Wars: The Mandalorian and Grogu: The Deluxe Junior Novelization",
+      "slugs": [],
+      "reason": "canceled — {{Canceled}} on the Wookieepedia page"
+    },
+    {
+      "wiki_title": "The Mandalorian: An Original Novel",
+      "slugs": [],
+      "reason": "canceled — never published (also {{Canceled}} on the wiki)"
+    },
+    {
+      "wiki_title": "The New Jedi Order: Knightfall I: Jedi Storm",
+      "slugs": [],
+      "reason": "canceled Knightfall trilogy — never published (also {{Canceled}} on the wiki)"
+    },
+    {
+      "wiki_title": "The Odyssey of Star Wars: An Epic Poem",
+      "slugs": [],
+      "reason": "poetry retelling, not a novel"
+    },
+    {
+      "wiki_title": "The Vow of Silver Dawn",
+      "slugs": [],
+      "reason": "incomplete data — no ISBN or release date, pseudonymous author"
+    },
+    {
+      "wiki_title": "Triple Threat",
+      "slugs": [],
+      "reason": "canceled — never published (also {{Canceled}} on the wiki)"
+    },
+    {
+      "wiki_title": "Untitled Boba Fett novel",
+      "slugs": [],
+      "reason": "unpublished placeholder (also {{Canceled}} on the wiki)"
+    }
+  ],
+  "review": [],
+  "publisher_changes": [
+    {
+      "from": "Del Rey (US) Arrow Books (UK)",
+      "to": "Del Rey",
+      "rule": "split",
+      "slugs": [
+        "star-wars-episode-ii-attack-of-the-clones"
+      ]
+    },
+    {
+      "from": "Del Rey Random House Worlds",
+      "to": "Del Rey",
+      "rule": "split",
+      "slugs": [
+        "the-princess-and-the-scoundrel"
+      ]
+    },
+    {
+      "from": "Disney–Lucasfilm Press",
+      "to": "Disney Lucasfilm Press",
+      "rule": "catalog-spelling",
+      "slugs": [
+        "a-new-hope-the-princess-the-scoundrel-and-the-farm-boy",
+        "before-the-awakening",
+        "galaxys-edge-a-crash-of-fate",
+        "hunters-battle-for-the-arena",
+        "join-the-resistance",
+        "join-the-resistance-attack-on-starkiller-base",
+        "join-the-resistance-escape-from-vodran",
+        "landos-luck",
+        "moving-target-a-princess-leia-adventure",
+        "pirates-price",
+        "poe-dameron-free-fall",
+        "return-of-the-jedi-beware-the-power-of-the-dark-side",
+        "servants-of-the-empire-edge-of-the-galaxy",
+        "servants-of-the-empire-imperial-justice",
+        "servants-of-the-empire-rebel-in-the-ranks",
+        "servants-of-the-empire-the-secret-academy",
+        "smugglers-run-a-han-solo-and-chewbacca-adventure",
+        "solo-a-star-wars-story-a-junior-novel",
+        "spark-of-the-resistance",
+        "star-wars-the-force-awakens-a-junior-novel",
+        "star-wars-the-last-jedi-a-junior-novel",
+        "stories-of-jedi-and-sith",
+        "the-book-of-boba-fett-junior-novel",
+        "the-empire-strikes-back-so-you-want-to-be-a-jedi",
+        "the-high-republic-a-valiant-vow",
+        "the-high-republic-beware-the-nameless",
+        "the-high-republic-escape-from-valo",
+        "the-high-republic-quest-for-planet-x",
+        "the-high-republic-quest-for-the-hidden-city",
+        "the-last-jedi-cobalt-squadron",
+        "the-last-order",
+        "the-legends-of-luke-skywalker",
+        "the-mandalorian-junior-novel",
+        "the-mandalorian-season-2-junior-novel",
+        "the-mighty-chewbacca-in-the-forest-of-fear",
+        "the-weapon-of-a-jedi-a-luke-skywalker-adventure"
+      ]
+    },
+    {
+      "from": "Disney–Lucasfilm Press Egmont UK Ltd",
+      "to": "Disney Lucasfilm Press",
+      "rule": "split+catalog-spelling",
+      "slugs": [
+        "star-wars-rogue-one-a-junior-novel"
+      ]
+    },
+    {
+      "from": "Egmont UK Ltd Disney–Lucasfilm Press",
+      "to": "Disney Lucasfilm Press",
+      "rule": "split+catalog-spelling",
+      "slugs": [
+        "star-wars-the-rise-of-skywalker-a-junior-novel"
+      ]
+    }
+  ]
+}

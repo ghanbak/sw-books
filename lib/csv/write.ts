@@ -72,16 +72,24 @@ export function stringifyCsv(
 }
 
 /**
- * Stringify catalog rows for export. Array cells (author/isbn/format) join on
- * `;`; Date cells render as `YYYY-MM-DD`; null/undefined become empty.
+ * Stringify catalog-shaped rows for export. Array cells (author/isbn/format)
+ * join on `;`; Date cells render as `YYYY-MM-DD`; null/undefined/missing columns
+ * become empty. Generic over the row shape so partial catalog rows (e.g. the
+ * Wookieepedia discovery row, which omits DB-managed columns) serialize through
+ * the same casting. Defaults emit no BOM and `\n`; pass options to match the
+ * on-disk data/books.csv (BOM + `\r\n`).
  */
-export function stringifyBooksCsv(rows: BookRow[]): string {
-	const out = stringify(rows, {
+export function stringifyBooksCsv<T extends object>(
+	rows: readonly T[],
+	options: StringifyOptions = {},
+): string {
+	const eol = options.recordDelimiter ?? '\n';
+	const out = stringify(rows as unknown[], {
 		columns: CSV_COLUMNS as unknown as string[],
 		header: true,
-		bom: false,
+		bom: options.bom ?? false,
 		quoted_match: QUOTE_WHEN,
-		record_delimiter: '\n',
+		record_delimiter: eol,
 		cast: {
 			object: (value) => {
 				if (Array.isArray(value)) return value.join(';');
@@ -90,5 +98,5 @@ export function stringifyBooksCsv(rows: BookRow[]): string {
 			date: (value) => value.toISOString().slice(0, 10),
 		},
 	});
-	return ensureTrailingNewline(out, '\n');
+	return ensureTrailingNewline(out, eol);
 }
