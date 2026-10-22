@@ -11,7 +11,11 @@
  *      or reset primary_isbn when it belongs to another book; else flag.
  *   2. null/blank cover_image — Open Library then Google Books by every row ISBN,
  *      then a Google Books title search kept only when the hit lists a row ISBN;
- *      HEAD-checked, never a cover another row uses, never a wiki image.
+ *      HEAD-checked, never a cover another row uses, never a wiki image. When all
+ *      of that finds nothing for a released book: the Open Library WORK cover
+ *      (same work as a row ISBN), else — no row ISBN on OL at all — the single
+ *      work an OL title + author search returns. Both need a visual review entry
+ *      in COVER_FALLBACK_REVIEWS below before they are filled.
  *   3. null/blank synopsis — operator-reviewed original drafts from
  *      data/discovery/synopsis-drafts.json, guarded against shared wiki phrasing.
  *
@@ -28,7 +32,12 @@ import { resolve } from 'node:path';
 import pLimit from 'p-limit';
 import { MIN_COVER_BYTES, headCheckCover } from '../lib/sources/covers';
 import { findGbVolumeByTitleWithIsbn, lookupCandidatesFor } from '../lib/sources/lookup';
-import { fetchByIsbn } from '../lib/sources/open-library';
+import {
+	fetchAuthor,
+	fetchByIsbn,
+	fetchWork,
+	searchByTitleAuthor,
+} from '../lib/sources/open-library';
 import { normalizeIsbnList } from '../lib/wookieepedia/changeset';
 import {
 	type ApprovedIsbnAddition,
@@ -36,11 +45,16 @@ import {
 	type CleanupFlag,
 	type CleanupRow,
 	type CoverCandidate,
+	type CoverReview,
 	type IsbnEvidence,
 	type OlEditionFacts,
+	type OlWorkFacts,
 	type SynopsisDraftFile,
+	type WorkCoverEvidence,
 	buildCleanupChangeset,
 	coverIsbns,
+	findWorkCover,
+	isWikiImage,
 } from '../lib/wookieepedia/cleanup';
 import { fetchPagesByIds } from '../lib/wookieepedia/client';
 import { type CatalogBook, createTitleIndex } from '../lib/wookieepedia/match';
@@ -68,6 +82,28 @@ const APPROVED_ISBN_ADDITIONS: readonly ApprovedIsbnAddition[] = [
 	},
 ];
 
+/**
+ * Visual reviews of work-level fallback covers (lib/wookieepedia/cleanup.ts
+ * `vetFallbackCover`): each image was downloaded and looked at — right book,
+ * English, not a placeholder. A fallback cover with no `accept` here is listed
+ * as pending, never filled. Keyed by slug + coverKey, so a different image for
+ * the same row needs its own review.
+ */
+const COVER_FALLBACK_REVIEWS: readonly CoverReview[] = [
+	{
+		slug: 'children-of-the-jedi',
+		cover: 'ol:372419',
+		verdict: 'accept',
+		note: '2026-10-22 — downloaded 276×475 JPEG of the English Bantam Spectra mass-market cover ("Star Wars / Children of the Jedi / Barbara Hambly"); not a placeholder or a foreign edition',
+	},
+	{
+		slug: 'last-shot',
+		cover: 'ol:8568524',
+		verdict: 'accept',
+		note: '2026-10-22 — downloaded 279×500 JPEG of the English Del Rey cover ("Star Wars / Last Shot / A Han and Lando Novel / Daniel José Older"); likely the later paperback printing (bestseller banner + review quote), not a placeholder or a foreign edition',
+	},
+];
+
 const PROD = process.argv.includes('--production');
 const REFRESH = process.argv.includes('--refresh-lookups');
 
@@ -88,6 +124,20 @@ type Cache = {
 	/** Per slug: the ISBN-verified Google Books title-search hit (null = none). */
 	gbSearch: Record<string, { isbn: string; volumeId: string; cover_image: string | null } | null>;
 	head: Record<string, boolean>;
+	/** OL work records by key (author keys unresolved; null = fetch failed). */
+	olWorks: Record<string, OlWorkRecord | null>;
+	/** OL author display names by key. */
+	olAuthors: Record<string, string | null>;
+	/** Per slug: OL title + author search hits (only for rows with no ISBN on OL). */
+	olSearch: Record<string, OlWorkFacts[] | null>;
+};
+
+type OlWorkRecord = {
+	readonly title: string | null;
+	readonly subtitle: string | null;
+	readonly author_keys: string[];
+	readonly covers: number[];
+	readonly first_publish_year: number | null;
 };
 
 function sortKeys<T>(o: Record<string, T>): Record<string, T> {
@@ -95,7 +145,16 @@ function sortKeys<T>(o: Record<string, T>): Record<string, T> {
 }
 
 function loadCache(): Cache {
-	const empty: Cache = { wiki: {}, ol: {}, covers: {}, gbSearch: {}, head: {} };
+	const empty: Cache = {
+		wiki: {},
+		ol: {},
+		covers: {},
+		gbSearch: {},
+		head: {},
+		olWorks: {},
+		olAuthors: {},
+		olSearch: {},
+	};
 	if (REFRESH || !existsSync(CACHE)) return empty;
 	try {
 		return { ...empty, ...(JSON.parse(readFileSync(CACHE, 'utf-8')) as Partial<Cache>) };
@@ -111,6 +170,9 @@ function saveCache(c: Cache): void {
 		covers: sortKeys(c.covers),
 		gbSearch: sortKeys(c.gbSearch),
 		head: sortKeys(c.head),
+		olWorks: sortKeys(c.olWorks),
+		olAuthors: sortKeys(c.olAuthors),
+		olSearch: sortKeys(c.olSearch),
 	};
 	writeFileSync(CACHE, `${JSON.stringify(out, null, 2)}\n`);
 }
@@ -180,6 +242,59 @@ async function olFacts(isbn: string): Promise<OlEditionFacts | null> {
 	return { title: e.title ?? null, subtitle: e.subtitle ?? null, work: e.works?.[0]?.key ?? null };
 }
 
+type OlWorkJson = {
+	title?: string;
+	subtitle?: string;
+	authors?: Array<{ author?: { key?: string } }>;
+	covers?: number[];
+	first_publish_date?: string;
+};
+
+async function olWork(key: string): Promise<OlWorkRecord | null> {
+	const w = await fetchWork<OlWorkJson>(key);
+	if (!w) return null;
+	const year = w.first_publish_date?.match(/\b(\d{4})\b/)?.[1];
+	return {
+		title: w.title ?? null,
+		subtitle: w.subtitle ?? null,
+		author_keys: (w.authors ?? []).map((a) => a.author?.key).filter((k): k is string => !!k),
+		covers: (w.covers ?? []).filter((c) => Number.isInteger(c)),
+		first_publish_year: year ? Number(year) : null,
+	};
+}
+
+type OlSearchJson = {
+	docs?: Array<{
+		key?: string;
+		title?: string;
+		subtitle?: string;
+		author_name?: string[];
+		cover_i?: number;
+		first_publish_year?: number;
+		language?: string[];
+	}>;
+};
+
+/** OL title + author search → work facts (search docs are works). */
+async function olSearchWorks(title: string, author: string): Promise<OlWorkFacts[] | null> {
+	const res = await searchByTitleAuthor<OlSearchJson>(title, author, {
+		limit: 10,
+		fields: 'key,title,subtitle,author_name,cover_i,first_publish_year,language',
+	});
+	if (!res) return null;
+	return (res.docs ?? [])
+		.filter((d) => typeof d.key === 'string')
+		.map((d) => ({
+			key: d.key as string,
+			title: d.title ?? null,
+			subtitle: d.subtitle ?? null,
+			authors: d.author_name ?? [],
+			covers: d.cover_i ? [d.cover_i] : [],
+			first_publish_year: d.first_publish_year ?? null,
+			languages: [...(d.language ?? [])].sort(),
+		}));
+}
+
 // --- Summary ---------------------------------------------------------------------
 
 function flagLines(L: string[], heading: string, flags: readonly CleanupFlag[], blurb?: string) {
@@ -207,6 +322,9 @@ function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: strin
 	L.push('| Section | Count |', '| --- | --- |');
 	L.push(`| ISBN repairs (primary_isbn ∉ isbn[]) | ${s.isbn_fixes} (flagged: ${s.isbn_flagged}) |`);
 	L.push(`| Cover fills (null cover_image) | ${s.cover_fills} |`);
+	L.push(
+		`| … of which work-level fallback (may be a different printing) | ${s.cover_fills_fallback} |`,
+	);
 	L.push(`| Covers still missing (released) | ${s.covers_missing} |`);
 	L.push(`| No cover available yet (unreleased) | ${s.covers_not_yet_available} |`);
 	L.push(`| Synopsis fills — **drafted, review each** | ${s.synopsis_fills} |`);
@@ -241,7 +359,26 @@ function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: strin
 	flagLines(L, 'Flagged ISBN rows (not changed)', cs.flagged.isbn);
 
 	L.push('', '## Cover fills (cover_image was null)', '');
-	for (const c of cs.cover_fills) L.push(`- \`${c.slug}\`: ${c.after} (${c.source}) — ${c.reason}`);
+	for (const c of cs.cover_fills.filter((f) => !f.fallback)) {
+		L.push(`- \`${c.slug}\`: ${c.after} (${c.source}) — ${c.reason}`);
+	}
+	const fallback = cs.cover_fills.filter((f) => f.fallback);
+	if (fallback.length) {
+		L.push(
+			'',
+			'### Work-level Open Library fallback — review each',
+			'',
+			'No per-ISBN source had a cover, so these come from the Open Library **work** (all printings of the book), not the row’s own ISBN. The image may show a different printing (paperback vs. hardcover, a reissue). Each was downloaded and visually reviewed (note below); `openlibrary-search` fills are a **different edition: title+author match** — no row ISBN is on Open Library.',
+			'',
+		);
+		for (const c of fallback) {
+			const tag =
+				c.fallback?.via === 'title-author'
+					? '**different edition: title+author match**'
+					: 'same OL work as a row ISBN';
+			L.push(`- \`${c.slug}\` — ${tag}: ${c.after} (\`${c.source}\`) — ${c.reason}`);
+		}
+	}
 	flagLines(L, 'Covers still missing', cs.flagged.covers_missing);
 	flagLines(
 		L,
@@ -364,14 +501,103 @@ async function main(): Promise<void> {
 			...Object.values(cache.gbSearch).map((g) => g?.cover_image ?? null),
 		].filter((u): u is string => !!u),
 	);
+	const headCheck = (u: string) =>
+		limit(async () => {
+			if (!(u in cache.head))
+				cache.head[u] = await headCheckCover(u, { minBytes: MIN_COVER_BYTES });
+		});
+	await Promise.all([...urls].map(headCheck));
+
+	// 4. Work-level OL fallback evidence — only for released rows whose per-ISBN
+	//    passes produced no usable image (the pure build still runs it last).
+	const asOf = new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
+	const usable = (u: string | null) => !!u && cache.head[u] === true && !isWikiImage(u);
+	const fallbackRows = coverRows.filter((r) => {
+		if (r.date_published != null && r.date_published > asOf) return false;
+		const isbns = coverIsbns(r);
+		const perIsbn = isbns.flatMap((i) => [
+			cache.covers[i]?.ol ?? null,
+			cache.covers[i]?.gb ?? null,
+		]);
+		return ![...perIsbn, cache.gbSearch[r.slug]?.cover_image ?? null].some(usable);
+	});
+	const fbIsbns = [...new Set(fallbackRows.flatMap(coverIsbns))];
 	await Promise.all(
-		[...urls].map((u) =>
+		fbIsbns.map((i) =>
 			limit(async () => {
-				if (!(u in cache.head))
-					cache.head[u] = await headCheckCover(u, { minBytes: MIN_COVER_BYTES });
+				if (!(i in cache.ol)) cache.ol[i] = await olFacts(i);
 			}),
 		),
 	);
+	const workKeys = [
+		...new Set(fbIsbns.map((i) => cache.ol[i]?.work).filter((k): k is string => !!k)),
+	];
+	await Promise.all(
+		workKeys.map((k) =>
+			limit(async () => {
+				if (!(k in cache.olWorks)) cache.olWorks[k] = await olWork(k);
+			}),
+		),
+	);
+	const authorKeys = [...new Set(workKeys.flatMap((k) => cache.olWorks[k]?.author_keys ?? []))];
+	await Promise.all(
+		authorKeys.map((k) =>
+			limit(async () => {
+				if (!(k in cache.olAuthors)) {
+					cache.olAuthors[k] = (await fetchAuthor<{ name?: string }>(k))?.name ?? null;
+				}
+			}),
+		),
+	);
+	await Promise.all(
+		fallbackRows
+			.filter((r) => coverIsbns(r).every((i) => cache.ol[i] == null) && r.author?.length)
+			.map((r) =>
+				limit(async () => {
+					if (!(r.slug in cache.olSearch)) {
+						cache.olSearch[r.slug] = await olSearchWorks(r.title, r.author?.[0] ?? '');
+					}
+				}),
+			),
+	);
+	const workFacts = (key: string): OlWorkFacts | null => {
+		const w = cache.olWorks[key];
+		if (!w) return null;
+		return {
+			key,
+			title: w.title,
+			subtitle: w.subtitle,
+			authors: w.author_keys.map((a) => cache.olAuthors[a]).filter((n): n is string => !!n),
+			covers: w.covers,
+			first_publish_year: w.first_publish_year,
+			languages: [],
+		};
+	};
+	const workCovers = new Map<string, WorkCoverEvidence>();
+	for (const r of fallbackRows) {
+		const isbns = coverIsbns(r);
+		const editions = Object.fromEntries(isbns.map((i) => [i, cache.ol[i] ?? null] as const));
+		const works = Object.fromEntries(
+			isbns
+				.map((i) => cache.ol[i]?.work)
+				.filter((k): k is string => !!k)
+				.map((k) => [k, workFacts(k)] as const),
+		);
+		const anyOnOl = isbns.some((i) => cache.ol[i] != null);
+		workCovers.set(r.slug, {
+			editions,
+			works,
+			search: anyOnOl ? null : (cache.olSearch[r.slug] ?? null),
+		});
+	}
+	const fallbackUrls = [...workCovers]
+		.map(([slug, ev]) => {
+			const row = coverRows.find((r) => r.slug === slug);
+			const d = row ? findWorkCover(row, ev) : null;
+			return d?.kind === 'candidate' ? d.candidate.url : null;
+		})
+		.filter((u): u is string => !!u);
+	await Promise.all(fallbackUrls.map(headCheck));
 	saveCache(cache);
 
 	// Assemble the pure inputs.
@@ -422,7 +648,6 @@ async function main(): Promise<void> {
 		if (w) wikiText.set(r.slug, w.text);
 	}
 
-	const asOf = new Date().toLocaleDateString('en-CA'); // local YYYY-MM-DD
 	const cs = buildCleanupChangeset({
 		rows: catalog,
 		asOf,
@@ -432,6 +657,9 @@ async function main(): Promise<void> {
 		wikiText,
 		approvedIsbnAdditions: APPROVED_ISBN_ADDITIONS,
 		isbnHolders: holders,
+		workCovers,
+		fallbackHead: new Map(fallbackUrls.map((u) => [u, cache.head[u] === true] as const)),
+		coverReviews: COVER_FALLBACK_REVIEWS,
 	});
 	writeFileSync(OUT_JSON, `${JSON.stringify(cs, null, 2)}\n`);
 	writeFileSync(OUT_MD, summaryMarkdown(cs, catalog.length, label));

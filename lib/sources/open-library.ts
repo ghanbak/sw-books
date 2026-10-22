@@ -26,6 +26,11 @@ export function fetchWork<T = unknown>(workKey: string): Promise<T | null> {
 	return fetchJson<T>(`${BASE}${workKey}.json`);
 }
 
+/** GET {authorKey}.json — author record (`name`, …). */
+export function fetchAuthor<T = unknown>(authorKey: string): Promise<T | null> {
+	return fetchJson<T>(`${BASE}${authorKey}.json`);
+}
+
 /**
  * GET /search.json?title=…&author=…&limit=N — work search. `search.json`
  * returns a trimmed default field set; pass `fields` (e.g.
