@@ -10,6 +10,7 @@ import { createSpikeRenderer, disposeSpikeRenderer, getSpikeDevice } from './gpu
 import {
 	type BloomMode,
 	type HoloScene,
+	type Tuning,
 	bitmapTexture,
 	buildHoloScene,
 	downscaleCover,
@@ -37,6 +38,8 @@ type Props = {
 	pageWidth?: number;
 	scrollX?: SharedValue<number>;
 	bloom: BloomMode;
+	/** Live look parameters, read every frame (sliders mutate `.current`). */
+	tuning?: { current: Tuning };
 	downscale: boolean;
 	flipY: boolean;
 	pixelRatioCap: number;
@@ -158,6 +161,7 @@ export function SpikeStage(props: Props) {
 						card.mesh.visible = Math.abs(offsetPts) < (p.pageWidth ?? 0) * 1.2;
 					});
 				}
+				if (p.tuning) holo.applyTuning(p.tuning.current);
 				holo.pipeline.render();
 				context.present();
 				const dt = performance.now() - f0;

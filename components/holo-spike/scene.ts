@@ -69,13 +69,50 @@ const tokenColor = (value: string) => new Color(value);
  */
 export type BloomMode = 'off' | 'selective' | 'full';
 
+/** Live-tunable look parameters (spike sliders). Defaults = the current selective look. */
+export type Tuning = {
+	strength: number; // bloom strength
+	radius: number; // bloom radius
+	threshold: number; // bloom luminance threshold
+	edge: number; // how much the card's edge light blooms
+	halo: number; // how much the card face blooms (blurs the cover above ~0.15)
+	emitter: number; // how much the beam + emitter bloom
+	edgeLight: number; // brightness of the card's rim light itself (not bloom)
+};
+
+export const DEFAULT_TUNING: Tuning = {
+	strength: 1.1,
+	radius: 0.5,
+	threshold: 0,
+	edge: 0.85,
+	halo: 0.06,
+	emitter: 1,
+	edgeLight: 0.55,
+};
+
+type FloatUniform = ReturnType<typeof makeFloat>;
+const makeFloat = (v: number) => uniform(v);
+type TuningUniforms = { [K in keyof Tuning]: FloatUniform };
+
+function makeTuningUniforms(): TuningUniforms {
+	return {
+		strength: makeFloat(DEFAULT_TUNING.strength),
+		radius: makeFloat(DEFAULT_TUNING.radius),
+		threshold: makeFloat(DEFAULT_TUNING.threshold),
+		edge: makeFloat(DEFAULT_TUNING.edge),
+		halo: makeFloat(DEFAULT_TUNING.halo),
+		emitter: makeFloat(DEFAULT_TUNING.emitter),
+		edgeLight: makeFloat(DEFAULT_TUNING.edgeLight),
+	};
+}
+
 export type HoloCard = {
 	mesh: Mesh;
 	setCover: (cover: Texture | null) => void;
 	setFallbackColor: (hex: string) => void;
 };
 
-function makeCard(selective: boolean): HoloCard {
+function makeCard(selective: boolean, tune: TuningUniforms): HoloCard {
 	const placeholder = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
 	placeholder.needsUpdate = true;
 	const coverNode = texture(placeholder);
@@ -109,14 +146,14 @@ function makeCard(selective: boolean): HoloCard {
 	const material = new MeshBasicNodeMaterial();
 	material.colorNode = base
 		.mul(scan.mul(0.18).add(0.9))
-		.add(cyan.mul(edgeGlow).mul(0.55))
+		.add(cyan.mul(edgeGlow).mul(tune.edgeLight))
 		.mul(flicker);
 	material.opacityNode = mask.mul(0.92);
 	material.transparent = true;
 	material.depthWrite = false;
 	if (selective) {
 		// Edge light blooms; the face only contributes a faint halo so its detail stays sharp.
-		material.mrtNode = mrt({ bloomIntensity: edgeGlow.mul(0.85).add(0.06).mul(mask) });
+		material.mrtNode = mrt({ bloomIntensity: edgeGlow.mul(tune.edge).add(tune.halo).mul(mask) });
 	}
 
 	const mesh = new Mesh(new PlaneGeometry(1, CARD_ASPECT), material);
@@ -132,7 +169,7 @@ function makeCard(selective: boolean): HoloCard {
 	};
 }
 
-function makeProjector(selective: boolean): Group {
+function makeProjector(selective: boolean, tune: TuningUniforms): Group {
 	const cyan = color(tokenColor(tokens.holo.cyan));
 	const pulse = sin(time.mul((2 * Math.PI) / 2.8))
 		.mul(0.2)
@@ -165,8 +202,8 @@ function makeProjector(selective: boolean): Group {
 	emitter.position.set(0, -0.95, 0);
 
 	if (selective) {
-		beamMat.mrtNode = mrt({ bloomIntensity: float(1) });
-		emitterMat.mrtNode = mrt({ bloomIntensity: float(1) });
+		beamMat.mrtNode = mrt({ bloomIntensity: tune.emitter });
+		emitterMat.mrtNode = mrt({ bloomIntensity: tune.emitter });
 	}
 
 	const group = new Group();
@@ -180,6 +217,8 @@ export type HoloScene = {
 	cards: HoloCard[];
 	projector: Group;
 	pipeline: RenderPipeline;
+	/** Copy slider values into the shader uniforms (cheap; call every frame). */
+	applyTuning: (t: Tuning) => void;
 	/** World units per layout point at the card plane (z = 0). */
 	worldPerPoint: number;
 	dispose: () => void;
@@ -197,9 +236,10 @@ export function buildHoloScene(
 	camera.lookAt(0, 0, 0);
 
 	const selective = opts.bloom === 'selective';
-	const projector = makeProjector(selective);
+	const tune = makeTuningUniforms();
+	const projector = makeProjector(selective, tune);
 	scene.add(projector);
-	const cards = Array.from({ length: opts.cardCount }, () => makeCard(selective));
+	const cards = Array.from({ length: opts.cardCount }, () => makeCard(selective, tune));
 	for (const card of cards) scene.add(card.mesh);
 
 	const pipeline = new RenderPipeline(renderer);
@@ -210,7 +250,9 @@ export function buildHoloScene(
 		pipeline.outputNode = sceneColor.add(bloom(sceneColor, 0.85, 0.45, 0.12));
 	} else if (selective) {
 		const glow = scenePass.getTextureNode('bloomIntensity');
-		pipeline.outputNode = sceneColor.add(bloom(sceneColor.mul(glow), 1.1, 0.5, 0));
+		pipeline.outputNode = sceneColor.add(
+			bloom(sceneColor.mul(glow), tune.strength, tune.radius, tune.threshold),
+		);
 	} else {
 		pipeline.outputNode = sceneColor;
 	}
@@ -222,6 +264,9 @@ export function buildHoloScene(
 		cards,
 		projector,
 		pipeline,
+		applyTuning: (t) => {
+			for (const key of Object.keys(t) as (keyof Tuning)[]) tune[key].value = t[key];
+		},
 		worldPerPoint: visibleHeight / opts.layoutHeight,
 		dispose: () => {
 			pipeline.dispose();

@@ -1,6 +1,7 @@
 // Phase 0 spike (throwaway): gate harness for the WebGPU hologram (plan G1–G7).
 // Card = G1 texture path / G2 first frame / G3 frame time. Pager = G7 overlay drift.
 // Cycle = G4 mount/unmount memory. Results also go to the console with a [holo-spike] prefix.
+import { Host, Slider } from '@expo/ui';
 import { Stack } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -11,7 +12,7 @@ import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 
 import { externalMB, getLiveRendererCount } from './gpu';
-import type { BloomMode } from './scene';
+import { type BloomMode, DEFAULT_TUNING, type Tuning } from './scene';
 import { type FrameStats, SpikeStage, type SpikeTimings } from './spike-stage';
 
 const COVERS: (string | null)[] = [
@@ -61,6 +62,42 @@ function StatsText({
 	);
 }
 
+const TUNING_RANGES: { key: keyof Tuning; label: string; min: number; max: number }[] = [
+	{ key: 'strength', label: 'bloom strength', min: 0, max: 3 },
+	{ key: 'radius', label: 'bloom radius', min: 0, max: 1 },
+	{ key: 'threshold', label: 'bloom threshold', min: 0, max: 1 },
+	{ key: 'edge', label: 'edge bloom', min: 0, max: 2 },
+	{ key: 'halo', label: 'face halo', min: 0, max: 0.5 },
+	{ key: 'emitter', label: 'emitter bloom', min: 0, max: 2 },
+	{ key: 'edgeLight', label: 'edge light', min: 0, max: 1.5 },
+];
+
+/** Live sliders: values reach the shader uniforms on the next frame (no remount). */
+function TuningPanel({ tuning, onChange }: { tuning: Tuning; onChange: (t: Tuning) => void }) {
+	return (
+		<ScrollView style={styles.tuning}>
+			{TUNING_RANGES.map(({ key, label, min, max }) => (
+				<View key={key} style={styles.tuneRow}>
+					<Text style={styles.tuneLabel}>{label}</Text>
+					<Host style={styles.tuneSlider}>
+						<Slider
+							value={tuning[key]}
+							min={min}
+							max={max}
+							onValueChange={(v) => onChange({ ...tuning, [key]: v })}
+						/>
+					</Host>
+					<Text style={styles.tuneValue}>{tuning[key].toFixed(2)}</Text>
+				</View>
+			))}
+			<Text style={styles.mono}>{JSON.stringify(roundTuning(tuning))}</Text>
+		</ScrollView>
+	);
+}
+
+const roundTuning = (t: Tuning) =>
+	Object.fromEntries(Object.entries(t).map(([k, v]) => [k, Math.round(v * 100) / 100]));
+
 function CardMode() {
 	const { width } = useWindowDimensions();
 	const [coverIndex, setCoverIndex] = useState(0);
@@ -72,6 +109,14 @@ function CardMode() {
 	const [timings, setTimings] = useState<SpikeTimings>();
 	const [frames, setFrames] = useState<FrameStats>();
 	const [error, setError] = useState<string>();
+	const [showTuning, setShowTuning] = useState(true);
+	const [tuning, setTuning] = useState<Tuning>(DEFAULT_TUNING);
+	// Stage reads this every frame; updated from the slider handler, never during render.
+	const tuningRef = useRef<Tuning>(DEFAULT_TUNING);
+	const updateTuning = (next: Tuning) => {
+		tuningRef.current = next;
+		setTuning(next);
+	};
 	const coverW = Math.min(220, Math.round(width * 0.55));
 	const key = `${coverIndex}-${bloom}-${downscale}-${flipY}-${ratio}-${mount}`;
 
@@ -82,6 +127,7 @@ function CardMode() {
 				mode="card"
 				coverUri={COVERS[coverIndex]}
 				bloom={bloom}
+				tuning={tuningRef}
 				downscale={downscale}
 				flipY={flipY}
 				pixelRatioCap={ratio}
@@ -110,8 +156,14 @@ function CardMode() {
 					onPress={() => setRatio((r) => (r === 2 ? 1.5 : r === 1.5 ? 3 : 2))}
 				/>
 				<Toggle label={`remount #${mount}`} onPress={() => setMount((m) => m + 1)} />
+				<Toggle label="tune" on={showTuning} onPress={() => setShowTuning((v) => !v)} />
+				<Toggle label="reset" onPress={() => updateTuning(DEFAULT_TUNING)} />
 			</View>
-			<StatsText timings={timings} frames={frames} error={error} />
+			{showTuning && bloom === 'selective' ? (
+				<TuningPanel tuning={tuning} onChange={updateTuning} />
+			) : (
+				<StatsText timings={timings} frames={frames} error={error} />
+			)}
 		</View>
 	);
 }
@@ -291,6 +343,17 @@ const styles = StyleSheet.create({
 	},
 	toggleOn: { backgroundColor: tokens.accent.primary },
 	toggleText: { color: tokens.text.primary, fontSize: 12 },
+	tuning: { maxHeight: 290, paddingHorizontal: 12 },
+	tuneRow: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 34 },
+	tuneLabel: { color: tokens.text.secondary, fontSize: 12, width: 104 },
+	tuneSlider: { flex: 1, height: 30 },
+	tuneValue: {
+		color: tokens.text.primary,
+		fontSize: 12,
+		width: 40,
+		textAlign: 'right',
+		fontFamily: 'Menlo',
+	},
 	stats: { paddingHorizontal: 12, paddingBottom: 24, maxHeight: 140 },
 	overlayStats: { position: 'absolute', left: 0, right: 0, bottom: 0 },
 	mono: { color: tokens.text.secondary, fontSize: 11, fontFamily: 'Menlo' },
