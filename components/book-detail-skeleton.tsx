@@ -34,34 +34,13 @@ export function BookDetailSkeleton() {
 					foregroundColor="rgba(255,255,255,0.06)"
 				>
 					{/* Cover: 200x300 centered with 8px top padding */}
-					<Rect
-						x={(innerWidth - 200) / 2}
-						y={8}
-						rx={3}
-						ry={3}
-						width={200}
-						height={300}
-					/>
+					<Rect x={(innerWidth - 200) / 2} y={8} rx={3} ry={3} width={200} height={300} />
 
 					{/* Title bar: ~70% width centered, 24px tall, 24px below cover */}
-					<Rect
-						x={innerWidth * 0.15}
-						y={332}
-						rx={4}
-						ry={4}
-						width={innerWidth * 0.7}
-						height={24}
-					/>
+					<Rect x={innerWidth * 0.15} y={332} rx={4} ry={4} width={innerWidth * 0.7} height={24} />
 
 					{/* Author bar: ~50% width centered, 18px tall, 8px gap */}
-					<Rect
-						x={innerWidth * 0.25}
-						y={364}
-						rx={4}
-						ry={4}
-						width={innerWidth * 0.5}
-						height={18}
-					/>
+					<Rect x={innerWidth * 0.25} y={364} rx={4} ry={4} width={innerWidth * 0.5} height={18} />
 
 					{/* Shelf buttons: 3 across, equal width, 42px tall, 20px below author */}
 					{[0, 1, 2].map((i) => {
@@ -93,14 +72,7 @@ export function BookDetailSkeleton() {
 					))}
 
 					{/* Details card placeholder, 24px below synopsis */}
-					<Rect
-						x={0}
-						y={560}
-						rx={12}
-						ry={12}
-						width={innerWidth}
-						height={140}
-					/>
+					<Rect x={0} y={560} rx={12} ry={12} width={innerWidth} height={140} />
 				</ContentLoader>
 			</View>
 		</ScrollView>

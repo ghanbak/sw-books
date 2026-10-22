@@ -80,9 +80,10 @@ async function fetchJson(url: string): Promise<unknown | null> {
 type Probe = { source: 'ol' | 'gb' | 'none'; title: string | null; authors: string[] };
 
 async function probeOl(isbn: string): Promise<Probe> {
-	const j = (await fetchJson(`https://openlibrary.org/isbn/${isbn}.json`)) as
-		| { title?: string; authors?: Array<{ key?: string; name?: string }> }
-		| null;
+	const j = (await fetchJson(`https://openlibrary.org/isbn/${isbn}.json`)) as {
+		title?: string;
+		authors?: Array<{ key?: string; name?: string }>;
+	} | null;
 	if (!j) return { source: 'none', title: null, authors: [] };
 	return {
 		source: 'ol',
@@ -92,9 +93,9 @@ async function probeOl(isbn: string): Promise<Probe> {
 }
 
 async function probeGb(isbn: string): Promise<Probe> {
-	const j = (await fetchJson(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`)) as
-		| { items?: Array<{ volumeInfo?: { title?: string; authors?: string[] } }> }
-		| null;
+	const j = (await fetchJson(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`)) as {
+		items?: Array<{ volumeInfo?: { title?: string; authors?: string[] } }>;
+	} | null;
 	const v = j?.items?.[0]?.volumeInfo;
 	if (!v) return { source: 'none', title: null, authors: [] };
 	return { source: 'gb', title: v.title ?? null, authors: v.authors ?? [] };
@@ -206,7 +207,7 @@ async function main() {
 	}
 
 	writeFileSync(REPORT_PATH, lines.join('\n'));
-	process.stdout.write(`\n=== Summary ===\n`);
+	process.stdout.write('\n=== Summary ===\n');
 	process.stdout.write(`  match     : ${counts.match}\n`);
 	process.stdout.write(`  weak      : ${counts.weak}\n`);
 	process.stdout.write(`  mismatch  : ${counts.mismatch}\n`);

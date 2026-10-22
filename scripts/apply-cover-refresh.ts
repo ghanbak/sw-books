@@ -13,8 +13,8 @@
  *   npx tsx scripts/apply-cover-refresh.ts
  */
 
-import { readFileSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const CSV_PATH = resolve(__dirname, '..', 'data', 'books.csv');
 const MAP_PATH = resolve(__dirname, 'cover-resource-map.json');
@@ -32,7 +32,7 @@ function main() {
 	// touch an identical URL on a different row).
 	let replaced = 0;
 	let alreadyReplaced = 0;
-	let notFound: string[] = [];
+	const notFound: string[] = [];
 	for (const c of map.changes) {
 		const marker = `,${c.slug},`;
 		let hit = false;
