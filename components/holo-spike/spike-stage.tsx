@@ -8,6 +8,7 @@ import type { RenderTarget, Texture, WebGPURenderer } from 'three/webgpu';
 
 import { createSpikeRenderer, disposeSpikeRenderer, getSpikeDevice } from './gpu';
 import {
+	type BloomMode,
 	type HoloScene,
 	bitmapTexture,
 	buildHoloScene,
@@ -35,7 +36,7 @@ type Props = {
 	pageCount?: number;
 	pageWidth?: number;
 	scrollX?: SharedValue<number>;
-	bloom: boolean;
+	bloom: BloomMode;
 	downscale: boolean;
 	flipY: boolean;
 	pixelRatioCap: number;

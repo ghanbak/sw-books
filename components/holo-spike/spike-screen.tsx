@@ -2,6 +2,7 @@
 // Card = G1 texture path / G2 first frame / G3 frame time. Pager = G7 overlay drift.
 // Cycle = G4 mount/unmount memory. Results also go to the console with a [holo-spike] prefix.
 import { Stack } from 'expo-router';
+import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
@@ -10,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 
 import { externalMB, getLiveRendererCount } from './gpu';
+import type { BloomMode } from './scene';
 import { type FrameStats, SpikeStage, type SpikeTimings } from './spike-stage';
 
 const COVERS: (string | null)[] = [
@@ -18,6 +20,7 @@ const COVERS: (string | null)[] = [
 	'https://books.google.com/books/content?id=kWeCyQEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api',
 	null,
 ];
+const BLOOM_MODES: BloomMode[] = ['selective', 'full', 'off'];
 const PAGES = 6;
 const PAGE_IDS = Array.from({ length: PAGES }, (_, i) => `page-${i + 1}`);
 const CYCLES = 100;
@@ -61,16 +64,16 @@ function StatsText({
 function CardMode() {
 	const { width } = useWindowDimensions();
 	const [coverIndex, setCoverIndex] = useState(0);
-	const [bloomOn, setBloomOn] = useState(true);
+	const [bloom, setBloom] = useState<BloomMode>('selective');
 	const [downscale, setDownscale] = useState(true);
-	const [flipY, setFlipY] = useState(false);
+	const [flipY, setFlipY] = useState(true);
 	const [ratio, setRatio] = useState(2);
 	const [mount, setMount] = useState(0);
 	const [timings, setTimings] = useState<SpikeTimings>();
 	const [frames, setFrames] = useState<FrameStats>();
 	const [error, setError] = useState<string>();
 	const coverW = Math.min(220, Math.round(width * 0.55));
-	const key = `${coverIndex}-${bloomOn}-${downscale}-${flipY}-${ratio}-${mount}`;
+	const key = `${coverIndex}-${bloom}-${downscale}-${flipY}-${ratio}-${mount}`;
 
 	return (
 		<View style={styles.fill}>
@@ -78,7 +81,7 @@ function CardMode() {
 				key={key}
 				mode="card"
 				coverUri={COVERS[coverIndex]}
-				bloom={bloomOn}
+				bloom={bloom}
 				downscale={downscale}
 				flipY={flipY}
 				pixelRatioCap={ratio}
@@ -93,7 +96,13 @@ function CardMode() {
 					label={`cover ${coverIndex + 1}/${COVERS.length}`}
 					onPress={() => setCoverIndex((i) => (i + 1) % COVERS.length)}
 				/>
-				<Toggle label="bloom" on={bloomOn} onPress={() => setBloomOn((v) => !v)} />
+				<Toggle
+					label={`bloom ${bloom}`}
+					on={bloom !== 'off'}
+					onPress={() =>
+						setBloom((b) => BLOOM_MODES[(BLOOM_MODES.indexOf(b) + 1) % BLOOM_MODES.length])
+					}
+				/>
 				<Toggle label="downscale" on={downscale} onPress={() => setDownscale((v) => !v)} />
 				<Toggle label="flipY" on={flipY} onPress={() => setFlipY((v) => !v)} />
 				<Toggle
@@ -128,7 +137,7 @@ function PagerMode() {
 						pageCount={PAGES}
 						pageWidth={width}
 						scrollX={scrollX}
-						bloom
+						bloom="selective"
 						downscale={false}
 						flipY={false}
 						pixelRatioCap={1.5}
@@ -182,30 +191,36 @@ function CycleMode() {
 	const baseline = useRef<number | null>(null);
 	const coverW = Math.min(220, Math.round(width * 0.55));
 
+	// Explicit phases so every reading is taken with NOTHING mounted: mount → (full setup, or
+	// an early unmount every 4th cycle to exercise mid-setup cancellation) → unmount → GC → read.
 	useEffect(() => {
 		if (!running) return;
-		if (cycle >= CYCLES) {
-			setRunning(false);
-			return;
-		}
-		if (!mounted) {
-			const t = setTimeout(() => setMounted(true), 300);
-			return () => clearTimeout(t);
-		}
-		const t = setTimeout(() => {
-			setMounted(false);
-			setTimeout(() => {
+		let cancelled = false;
+		const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+		void (async () => {
+			for (let i = 0; i < CYCLES && !cancelled; i++) {
+				setCycle(i);
+				setMounted(true);
+				await sleep(i % 4 === 3 ? 400 : 1500);
+				if (cancelled) return;
+				setMounted(false);
+				await sleep(700);
+				if (cancelled) return;
 				forceGC();
+				await sleep(100);
 				const mb = externalMB();
 				if (baseline.current === null) baseline.current = mb;
-				const line = `cycle ${cycle + 1}: external ${mb.toFixed(1)} MB (baseline ${baseline.current.toFixed(1)}), live renderers ${getLiveRendererCount()}`;
+				const line = `cycle ${i + 1}: external ${mb.toFixed(1)} MB (baseline ${baseline.current.toFixed(1)}), live renderers ${getLiveRendererCount()}`;
 				console.log(`[holo-spike] ${line}`);
 				setLog((l) => [line, ...l].slice(0, 6));
-				setCycle((c) => c + 1);
-			}, 500);
-		}, 900);
-		return () => clearTimeout(t);
-	}, [running, mounted, cycle]);
+			}
+			setCycle(CYCLES);
+			setRunning(false);
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [running]);
 
 	return (
 		<View style={styles.fill}>
@@ -214,9 +229,9 @@ function CycleMode() {
 					<SpikeStage
 						mode="card"
 						coverUri={COVERS[cycle % 3]}
-						bloom
+						bloom="selective"
 						downscale
-						flipY={false}
+						flipY
 						pixelRatioCap={2}
 						cardPoints={{ w: coverW, h: coverW * 1.5 }}
 						style={styles.fill}
@@ -248,8 +263,9 @@ function CycleMode() {
 
 export default function HoloSpikeScreen() {
 	const [mode, setMode] = useState<Mode>('card');
+	const headerHeight = useHeaderHeight();
 	return (
-		<View style={styles.container}>
+		<View style={[styles.container, { paddingTop: headerHeight + 8 }]}>
 			<Stack.Screen options={{ title: 'Holo spike', headerLargeTitle: false }} />
 			<View style={styles.tabs}>
 				{(['card', 'pager', 'cycle'] as const).map((m) => (
@@ -262,7 +278,7 @@ export default function HoloSpikeScreen() {
 }
 
 const styles = StyleSheet.create({
-	container: { flex: 1, backgroundColor: tokens.surface.background, paddingTop: 100 },
+	container: { flex: 1, backgroundColor: tokens.surface.background },
 	fill: { flex: 1 },
 	tabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingBottom: 8 },
 	controls: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12 },

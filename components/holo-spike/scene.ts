@@ -11,8 +11,10 @@ import {
 	luminance,
 	max,
 	mix,
+	mrt,
 	normalView,
 	oneMinus,
+	output,
 	pass,
 	positionLocal,
 	positionViewDirection,
@@ -59,13 +61,21 @@ const CORNER = 0.04; // ≈ 8pt on a 200pt card
 /** sRGB token → linear THREE.Color (THREE parses rgba() RGB and ignores alpha). */
 const tokenColor = (value: string) => new Color(value);
 
+/**
+ * off = no bloom. full = bloom the whole frame (washes the cover out).
+ * selective = bloom only what each material marks via an MRT `bloomIntensity` channel — the
+ * card's edge light + a faint halo, the beam and the emitter — so the cover stays crisp
+ * (three.js webgpu_postprocessing_bloom_selective pattern).
+ */
+export type BloomMode = 'off' | 'selective' | 'full';
+
 export type HoloCard = {
 	mesh: Mesh;
 	setCover: (cover: Texture | null) => void;
 	setFallbackColor: (hex: string) => void;
 };
 
-function makeCard(): HoloCard {
+function makeCard(selective: boolean): HoloCard {
 	const placeholder = new DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
 	placeholder.needsUpdate = true;
 	const coverNode = texture(placeholder);
@@ -104,6 +114,10 @@ function makeCard(): HoloCard {
 	material.opacityNode = mask.mul(0.92);
 	material.transparent = true;
 	material.depthWrite = false;
+	if (selective) {
+		// Edge light blooms; the face only contributes a faint halo so its detail stays sharp.
+		material.mrtNode = mrt({ bloomIntensity: edgeGlow.mul(0.85).add(0.06).mul(mask) });
+	}
 
 	const mesh = new Mesh(new PlaneGeometry(1, CARD_ASPECT), material);
 	return {
@@ -118,7 +132,7 @@ function makeCard(): HoloCard {
 	};
 }
 
-function makeProjector(): Group {
+function makeProjector(selective: boolean): Group {
 	const cyan = color(tokenColor(tokens.holo.cyan));
 	const pulse = sin(time.mul((2 * Math.PI) / 2.8))
 		.mul(0.2)
@@ -150,6 +164,11 @@ function makeProjector(): Group {
 	emitter.rotation.x = -Math.PI / 2 + 0.35;
 	emitter.position.set(0, -0.95, 0);
 
+	if (selective) {
+		beamMat.mrtNode = mrt({ bloomIntensity: float(1) });
+		emitterMat.mrtNode = mrt({ bloomIntensity: float(1) });
+	}
+
 	const group = new Group();
 	group.add(beam, emitter);
 	return group;
@@ -168,7 +187,7 @@ export type HoloScene = {
 
 export function buildHoloScene(
 	renderer: WebGPURenderer,
-	opts: { cardCount: number; layoutHeight: number; aspect: number; bloom: boolean },
+	opts: { cardCount: number; layoutHeight: number; aspect: number; bloom: BloomMode },
 ): HoloScene {
 	const scene = new Scene();
 	scene.backgroundNode = color(tokenColor(tokens.surface.background));
@@ -177,17 +196,24 @@ export function buildHoloScene(
 	camera.position.set(0, 0, CAMERA_Z);
 	camera.lookAt(0, 0, 0);
 
-	const projector = makeProjector();
+	const selective = opts.bloom === 'selective';
+	const projector = makeProjector(selective);
 	scene.add(projector);
-	const cards = Array.from({ length: opts.cardCount }, () => makeCard());
+	const cards = Array.from({ length: opts.cardCount }, () => makeCard(selective));
 	for (const card of cards) scene.add(card.mesh);
 
 	const pipeline = new RenderPipeline(renderer);
 	const scenePass = pass(scene, camera);
+	if (selective) scenePass.setMRT(mrt({ output, bloomIntensity: float(0) }));
 	const sceneColor = scenePass.getTextureNode('output');
-	pipeline.outputNode = opts.bloom
-		? sceneColor.add(bloom(sceneColor, 0.85, 0.45, 0.12))
-		: sceneColor;
+	if (opts.bloom === 'full') {
+		pipeline.outputNode = sceneColor.add(bloom(sceneColor, 0.85, 0.45, 0.12));
+	} else if (selective) {
+		const glow = scenePass.getTextureNode('bloomIntensity');
+		pipeline.outputNode = sceneColor.add(bloom(sceneColor.mul(glow), 1.1, 0.5, 0));
+	} else {
+		pipeline.outputNode = sceneColor;
+	}
 
 	const visibleHeight = 2 * CAMERA_Z * Math.tan(((CAMERA_FOV / 2) * Math.PI) / 180);
 	return {
