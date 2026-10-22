@@ -138,11 +138,13 @@ export function planIsbnFix(fix: IsbnFix, live: LiveState | null): Step {
 
 /** Cleanup ISBN repair: add primary_isbn to isbn[], or reset primary_isbn. */
 export function planIsbnMembershipFix(fix: IsbnMembershipFix, live: LiveState | null): Step {
-	const reason =
-		fix.action === 'add_primary_to_isbn'
-			? `isbn[] += ${fix.after.primary_isbn}`
-			: `primary_isbn ${fix.before.primary_isbn} → ${fix.after.primary_isbn}`;
-	return planIsbnChange(fix, live, reason);
+	const added = fix.after.isbn.filter((i) => !fix.before.isbn.includes(i));
+	const parts: string[] = [];
+	if (added.length) parts.push(`isbn[] += ${added.join(', ')}`);
+	if (fix.before.primary_isbn !== fix.after.primary_isbn) {
+		parts.push(`primary_isbn ${fix.before.primary_isbn} → ${fix.after.primary_isbn}`);
+	}
+	return planIsbnChange(fix, live, parts.join('; '));
 }
 
 export function planCoverFix(fix: CoverFix, live: LiveState | null): Step {

@@ -31,6 +31,7 @@ import { findGbVolumeByTitleWithIsbn, lookupCandidatesFor } from '../lib/sources
 import { fetchByIsbn } from '../lib/sources/open-library';
 import { normalizeIsbnList } from '../lib/wookieepedia/changeset';
 import {
+	type ApprovedIsbnAddition,
 	type CleanupChangeset,
 	type CleanupFlag,
 	type CleanupRow,
@@ -53,6 +54,19 @@ const OUT_JSON = resolve(DIR, 'catalog-cleanup.json');
 const OUT_MD = resolve(DIR, 'catalog-cleanup.md');
 const DRAFTS = resolve(DIR, 'synopsis-drafts.json');
 const CACHE = resolve(DIR, 'cleanup-cache.json');
+
+/**
+ * isbn[] additions the operator reviewed and approved (additive only — never
+ * moves primary_isbn). Each is re-verified on every build: it must be in the
+ * row's wiki infobox and on no other row, else it is flagged, not applied.
+ */
+const APPROVED_ISBN_ADDITIONS: readonly ApprovedIsbnAddition[] = [
+	{
+		slug: 'shadow-of-the-sith',
+		isbn: '9780593358603',
+		note: 'approved 2026-10-21 — the Wookieepedia infobox ISBN for "Shadow of the Sith" (Del Rey US hardcover; Open Library: same work); removed from brotherhood by the 2026-10-20 changeset and on no row since',
+	},
+];
 
 const PROD = process.argv.includes('--production');
 const REFRESH = process.argv.includes('--refresh-lookups');
@@ -175,6 +189,12 @@ function flagLines(L: string[], heading: string, flags: readonly CleanupFlag[], 
 	for (const f of flags) L.push(`- \`${f.slug}\`${f.title ? ` (*${f.title}*)` : ''}: ${f.reason}`);
 }
 
+const ACTION_LABEL: Record<CleanupChangeset['isbn_fixes'][number]['action'], string> = {
+	add_primary_to_isbn: 'add primary_isbn to isbn[]',
+	reset_primary: 'reset primary_isbn',
+	add_approved_isbn: 'operator-approved isbn[] addition',
+};
+
 function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: string): string {
 	const L: string[] = [];
 	const s = cs.summary;
@@ -196,7 +216,7 @@ function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: strin
 	for (const f of cs.isbn_fixes) {
 		const e = f.evidence;
 		L.push(
-			`### \`${f.slug}\` — ${f.action === 'add_primary_to_isbn' ? 'add primary_isbn to isbn[]' : 'reset primary_isbn'}`,
+			`### \`${f.slug}\` — ${ACTION_LABEL[f.action]}${f.approved_additions.length && f.action !== 'add_approved_isbn' ? ' + approved addition' : ''}`,
 			'',
 		);
 		L.push(
@@ -213,6 +233,8 @@ function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: strin
 		L.push(
 			`- other rows holding ${f.before.primary_isbn}: ${e.other_rows_with_primary.length ? e.other_rows_with_primary.join(', ') : 'none'}`,
 		);
+		for (const a of f.approved_additions)
+			L.push(`- operator-approved addition ${a.isbn}: ${a.note}`);
 		for (const n of f.notes) L.push(`- note: ${n}`);
 		L.push('');
 	}
@@ -269,6 +291,8 @@ async function main(): Promise<void> {
 	const isbnRows = catalog.filter(
 		(r) => r.primary_isbn != null && !(r.isbn ?? []).includes(r.primary_isbn),
 	);
+	const approvedSlugs = new Set(APPROVED_ISBN_ADDITIONS.map((a) => a.slug));
+	const evidenceRows = catalog.filter((r) => isbnRows.includes(r) || approvedSlugs.has(r.slug));
 	const coverRows = catalog.filter((r) => blank(r.cover_image));
 	const synopsisRows = catalog.filter((r) => blank(r.synopsis));
 	console.log(
@@ -278,13 +302,20 @@ async function main(): Promise<void> {
 	// 1. Wiki pages (ISBN evidence + the synopsis copy check).
 	const ids = wikiPageIds(catalog);
 	await fetchWiki(
-		[...new Set([...isbnRows, ...synopsisRows].map((r) => r.slug))].sort(),
+		[...new Set([...evidenceRows, ...synopsisRows].map((r) => r.slug))].sort(),
 		ids,
 		cache,
 	);
 
-	// 2. Open Library facts for each problem primary_isbn and the row's own ISBNs.
-	const olIsbns = new Set(isbnRows.flatMap((r) => [r.primary_isbn as string, ...(r.isbn ?? [])]));
+	// 2. Open Library facts for each problem primary_isbn, approved addition, and row ISBN.
+	const olIsbnsOf = (r: CleanupRow) => [
+		...new Set([
+			...(r.primary_isbn ? [r.primary_isbn] : []),
+			...(r.isbn ?? []),
+			...APPROVED_ISBN_ADDITIONS.filter((a) => a.slug === r.slug).map((a) => a.isbn),
+		]),
+	];
+	const olIsbns = new Set(evidenceRows.flatMap(olIsbnsOf));
 	await Promise.all(
 		[...olIsbns].map((i) =>
 			limit(async () => {
@@ -351,17 +382,15 @@ async function main(): Promise<void> {
 		}
 	}
 	const isbnEvidence = new Map<string, IsbnEvidence>();
-	for (const r of isbnRows) {
-		const p = r.primary_isbn as string;
+	for (const r of evidenceRows) {
+		const p = r.primary_isbn;
 		const wiki = cache.wiki[r.slug] ?? null;
 		isbnEvidence.set(r.slug, {
 			wiki_title: wiki?.title ?? null,
 			wiki_infobox_isbns: wiki?.infobox_isbns ?? [],
 			wiki_page_isbns: wiki?.page_isbns ?? [],
-			openlibrary: Object.fromEntries(
-				[p, ...(r.isbn ?? [])].map((i) => [i, cache.ol[i] ?? null] as const),
-			),
-			other_rows_with_primary: (holders.get(p) ?? []).filter((s) => s !== r.slug),
+			openlibrary: Object.fromEntries(olIsbnsOf(r).map((i) => [i, cache.ol[i] ?? null] as const)),
+			other_rows_with_primary: p ? (holders.get(p) ?? []).filter((s) => s !== r.slug) : [],
 		});
 	}
 	const coverCandidates = new Map<string, CoverCandidate[]>();
@@ -401,6 +430,8 @@ async function main(): Promise<void> {
 		coverCandidates,
 		drafts,
 		wikiText,
+		approvedIsbnAdditions: APPROVED_ISBN_ADDITIONS,
+		isbnHolders: holders,
 	});
 	writeFileSync(OUT_JSON, `${JSON.stringify(cs, null, 2)}\n`);
 	writeFileSync(OUT_MD, summaryMarkdown(cs, catalog.length, label));

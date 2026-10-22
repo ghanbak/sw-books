@@ -62,13 +62,28 @@ export type IsbnMembershipFix = {
 	readonly id: string;
 	readonly slug: string;
 	readonly title: string;
-	readonly action: 'add_primary_to_isbn' | 'reset_primary';
+	/** `add_approved_isbn`: only operator-approved additions (primary_isbn already fine). */
+	readonly action: 'add_primary_to_isbn' | 'reset_primary' | 'add_approved_isbn';
 	readonly before: IsbnState;
 	readonly after: IsbnState;
 	readonly reason: string;
 	readonly evidence: IsbnEvidence;
+	/** Operator-approved ISBNs appended to isbn[] in this same write. */
+	readonly approved_additions: ApprovedIsbnAddition[];
 	/** Related observations that are NOT changed by this fix. */
 	readonly notes: string[];
+};
+
+/**
+ * An ISBN the operator approved adding to a row's isbn[] (additive only). Each
+ * must appear in the row's wiki infobox and be held by no other row, or it is
+ * flagged instead of applied.
+ */
+export type ApprovedIsbnAddition = {
+	readonly slug: string;
+	readonly isbn: string;
+	/** Why it was approved (who/when, and the evidence it rests on). */
+	readonly note: string;
 };
 
 export type SynopsisFill = {
@@ -141,7 +156,7 @@ export type CleanupChangeset = {
 };
 
 export const CLEANUP_POLICY: Record<string, string> = {
-	isbn: 'primary_isbn ∉ isbn[]: add primary_isbn to isbn[] when Open Library titles it as this book AND (the wiki lists it OR it is the same OL work as a row ISBN); reset primary_isbn to a row ISBN when the evidence assigns it to another book; flag anything else. Never removes an ISBN.',
+	isbn: "primary_isbn ∉ isbn[]: add primary_isbn to isbn[] when Open Library titles it as this book AND (the wiki lists it OR it is the same OL work as a row ISBN); reset primary_isbn to a row ISBN when the evidence assigns it to another book; flag anything else. Operator-approved additions (listed in the builder, each in the row's wiki infobox and on no other row) are appended in the same write. Never removes an ISBN.",
 	covers:
 		'null/blank cover_image only: Open Library (every row ISBN), then Google Books (every row ISBN), then a Google Books title search accepted only when the hit lists a row ISBN; HEAD-checked against MIN_COVER_BYTES, never a cover another row uses, never a Wookieepedia image. Unreleased books without one are listed, not forced.',
 	synopsis:
@@ -271,6 +286,7 @@ export function decideIsbnMembership(row: CleanupRow, ev: IsbnEvidence): IsbnDec
 				after: { isbn: [...own, p], primary_isbn: p },
 				reason: `primary_isbn belongs to this book: ${forThis.join('; ')}`,
 				evidence: ev,
+				approved_additions: [],
 				notes,
 			},
 		};
@@ -293,6 +309,7 @@ export function decideIsbnMembership(row: CleanupRow, ev: IsbnEvidence): IsbnDec
 				after: { isbn: own, primary_isbn: next },
 				reason: `primary_isbn ${p} belongs to another book (${against.join('; ')}); reset to the row's own ${next}`,
 				evidence: ev,
+				approved_additions: [],
 				notes,
 			},
 		};
@@ -401,7 +418,71 @@ export type CleanupInput = {
 	readonly drafts: SynopsisDraftFile;
 	/** Plain wiki page text per slug, for the shared-phrase guard. */
 	readonly wikiText: ReadonlyMap<string, string>;
+	/** Operator-approved isbn[] additions (evidence for their rows is in `isbnEvidence`). */
+	readonly approvedIsbnAdditions: readonly ApprovedIsbnAddition[];
+	/** Every catalog row holding each ISBN (isbn[] or primary_isbn). */
+	readonly isbnHolders: ReadonlyMap<string, readonly string[]>;
 };
+
+/**
+ * Fold operator-approved additions into the row's ISBN write (one write per
+ * row): onto the decided fix when there is one, else a new `add_approved_isbn`
+ * fix. An addition is refused (flagged) unless it is a valid ISBN-13 listed in
+ * the row's wiki infobox and held by no other row; one already on the row is a
+ * no-op.
+ */
+export function applyApprovedAdditions(
+	row: CleanupRow,
+	fix: IsbnMembershipFix | null,
+	additions: readonly ApprovedIsbnAddition[],
+	ev: IsbnEvidence,
+	holders: ReadonlyMap<string, readonly string[]>,
+): { fix: IsbnMembershipFix | null; flags: CleanupFlag[] } {
+	const flags: CleanupFlag[] = [];
+	const base: IsbnState = fix
+		? fix.after
+		: { isbn: [...(row.isbn ?? [])], primary_isbn: row.primary_isbn };
+	const isbn = [...base.isbn];
+	const accepted: ApprovedIsbnAddition[] = [];
+	for (const a of additions) {
+		const refuse = (why: string) =>
+			flags.push({
+				slug: row.slug,
+				title: row.title,
+				reason: `approved addition ${a.isbn} not applied — ${why}`,
+			});
+		if (normalizeIsbnList([a.isbn])[0] !== a.isbn) refuse('not a valid ISBN-13');
+		else if (!ev.wiki_infobox_isbns.includes(a.isbn)) {
+			refuse(`not in the wiki infobox for "${ev.wiki_title ?? '(no wiki page)'}"`);
+		} else if ((holders.get(a.isbn) ?? []).some((s) => s !== row.slug)) {
+			refuse(`held by ${(holders.get(a.isbn) ?? []).filter((s) => s !== row.slug).join(', ')}`);
+		} else if (!isbn.includes(a.isbn)) {
+			isbn.push(a.isbn);
+			accepted.push(a);
+		}
+	}
+	if (accepted.length === 0) return { fix, flags };
+	const added = accepted.map((a) => a.isbn);
+	const why = `operator-approved: isbn[] += ${added.join(', ')} (${accepted.map((a) => a.note).join('; ')})`;
+	const notes = (fix?.notes ?? []).filter(
+		(n) => !added.some((i) => n.includes(`ISBN ${i} is not on this row`)),
+	);
+	return {
+		fix: {
+			id: row.id,
+			slug: row.slug,
+			title: row.title,
+			action: fix?.action ?? 'add_approved_isbn',
+			before: fix?.before ?? base,
+			after: { isbn, primary_isbn: base.primary_isbn },
+			reason: fix ? `${fix.reason}; ${why}` : why,
+			evidence: fix?.evidence ?? ev,
+			approved_additions: [...(fix?.approved_additions ?? []), ...accepted],
+			notes,
+		},
+		flags,
+	};
+}
 
 function unreleased(row: CleanupRow, asOf: string): boolean {
 	return row.date_published != null && row.date_published > asOf;
@@ -413,16 +494,36 @@ export function buildCleanupChangeset(input: CleanupInput): CleanupChangeset {
 	// 1. ISBN membership.
 	const isbnFixes: IsbnMembershipFix[] = [];
 	const isbnFlags: CleanupFlag[] = [];
+	const known = new Set(rows.map((r) => r.slug));
+	for (const a of input.approvedIsbnAdditions) {
+		if (!known.has(a.slug)) {
+			isbnFlags.push({
+				slug: a.slug,
+				title: '',
+				reason: `approved addition ${a.isbn}: no such row`,
+			});
+		}
+	}
 	for (const row of rows) {
-		if (row.primary_isbn == null || (row.isbn ?? []).includes(row.primary_isbn)) continue;
+		const additions = input.approvedIsbnAdditions.filter((a) => a.slug === row.slug);
+		const misfiled = row.primary_isbn != null && !(row.isbn ?? []).includes(row.primary_isbn);
+		if (!misfiled && additions.length === 0) continue;
 		const ev = input.isbnEvidence.get(row.slug);
 		if (!ev) {
 			isbnFlags.push({ slug: row.slug, title: row.title, reason: 'no evidence gathered' });
 			continue;
 		}
-		const d = decideIsbnMembership(row, ev);
-		if (d?.kind === 'fix') isbnFixes.push(d.fix);
+		let fix: IsbnMembershipFix | null = null;
+		const d = misfiled ? decideIsbnMembership(row, ev) : null;
+		if (d?.kind === 'fix') fix = d.fix;
 		else if (d?.kind === 'flag') isbnFlags.push(d.flag);
+		// A flagged row keeps its ISBN state untouched — approvals wait for the flag.
+		if (additions.length && d?.kind !== 'flag') {
+			const r = applyApprovedAdditions(row, fix, additions, ev, input.isbnHolders);
+			fix = r.fix;
+			isbnFlags.push(...r.flags);
+		}
+		if (fix) isbnFixes.push(fix);
 	}
 
 	// 2. Cover fills (null/blank only). Rows are visited in slug order, and each

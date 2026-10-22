@@ -33,16 +33,17 @@ Apply (dry-run first): `npx tsx scripts/apply-catalog-changeset.ts --production 
 - Open Library 9781368075930: "Queen's Hope / Star Wars" (/works/OL25452734W)
 - other rows holding 9781368093767: none
 
-### `shadow-of-the-sith` — add primary_isbn to isbn[]
+### `shadow-of-the-sith` — add primary_isbn to isbn[] + approved addition
 
 - before: isbn [9780593358610] · primary 9781529150063
-- after: isbn [9780593358610, 9781529150063] · primary 9781529150063
-- why: primary_isbn belongs to this book: Open Library titles 9781529150063 "Shadow of the Sith / Star Wars"; 9781529150063 is the same Open Library work (/works/OL26514933W) as the row's own ISBN
+- after: isbn [9780593358610, 9781529150063, 9780593358603] · primary 9781529150063
+- why: primary_isbn belongs to this book: Open Library titles 9781529150063 "Shadow of the Sith / Star Wars"; 9781529150063 is the same Open Library work (/works/OL26514933W) as the row's own ISBN; operator-approved: isbn[] += 9780593358603 (approved 2026-10-21 — the Wookieepedia infobox ISBN for "Shadow of the Sith" (Del Rey US hardcover; Open Library: same work); removed from brotherhood by the 2026-10-20 changeset and on no row since)
 - wiki: *Shadow of the Sith* — infobox [9780593358603]; page lists [9780593358603, 9780593358610, 9780593358627]
 - Open Library 9781529150063: "Shadow of the Sith / Star Wars" (/works/OL26514933W)
 - Open Library 9780593358610: "Star Wars / Shadow of the Sith" (/works/OL26514933W)
+- Open Library 9780593358603: "Star Wars / Shadow of the Sith" (/works/OL26514933W)
 - other rows holding 9781529150063: none
-- note: wiki infobox ISBN 9780593358603 is not on this row — not added (outside this fix)
+- operator-approved addition 9780593358603: approved 2026-10-21 — the Wookieepedia infobox ISBN for "Shadow of the Sith" (Del Rey US hardcover; Open Library: same work); removed from brotherhood by the 2026-10-20 changeset and on no row since
 - note: 9781529150063 does not appear on the wiki page "Shadow of the Sith"
 
 

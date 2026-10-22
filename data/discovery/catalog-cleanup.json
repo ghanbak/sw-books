@@ -3,7 +3,7 @@
   "version": 1,
   "as_of": "2026-10-21",
   "policy": {
-    "isbn": "primary_isbn ∉ isbn[]: add primary_isbn to isbn[] when Open Library titles it as this book AND (the wiki lists it OR it is the same OL work as a row ISBN); reset primary_isbn to a row ISBN when the evidence assigns it to another book; flag anything else. Never removes an ISBN.",
+    "isbn": "primary_isbn ∉ isbn[]: add primary_isbn to isbn[] when Open Library titles it as this book AND (the wiki lists it OR it is the same OL work as a row ISBN); reset primary_isbn to a row ISBN when the evidence assigns it to another book; flag anything else. Operator-approved additions (listed in the builder, each in the row's wiki infobox and on no other row) are appended in the same write. Never removes an ISBN.",
     "covers": "null/blank cover_image only: Open Library (every row ISBN), then Google Books (every row ISBN), then a Google Books title search accepted only when the hit lists a row ISBN; HEAD-checked against MIN_COVER_BYTES, never a cover another row uses, never a Wookieepedia image. Unreleased books without one are listed, not forced.",
     "synopsis": "null/blank synopsis only: original one-line drafts (never wiki CC BY-SA prose or publisher blurbs), each marked drafted for review; rows without a confident draft are skipped and listed."
   },
@@ -53,6 +53,7 @@
         },
         "other_rows_with_primary": []
       },
+      "approved_additions": [],
       "notes": []
     },
     {
@@ -99,6 +100,7 @@
         },
         "other_rows_with_primary": []
       },
+      "approved_additions": [],
       "notes": []
     },
     {
@@ -115,11 +117,12 @@
       "after": {
         "isbn": [
           "9780593358610",
-          "9781529150063"
+          "9781529150063",
+          "9780593358603"
         ],
         "primary_isbn": "9781529150063"
       },
-      "reason": "primary_isbn belongs to this book: Open Library titles 9781529150063 \"Shadow of the Sith / Star Wars\"; 9781529150063 is the same Open Library work (/works/OL26514933W) as the row's own ISBN",
+      "reason": "primary_isbn belongs to this book: Open Library titles 9781529150063 \"Shadow of the Sith / Star Wars\"; 9781529150063 is the same Open Library work (/works/OL26514933W) as the row's own ISBN; operator-approved: isbn[] += 9780593358603 (approved 2026-10-21 — the Wookieepedia infobox ISBN for \"Shadow of the Sith\" (Del Rey US hardcover; Open Library: same work); removed from brotherhood by the 2026-10-20 changeset and on no row since)",
       "evidence": {
         "wiki_title": "Shadow of the Sith",
         "wiki_infobox_isbns": [
@@ -140,12 +143,23 @@
             "title": "Star Wars",
             "subtitle": "Shadow of the Sith",
             "work": "/works/OL26514933W"
+          },
+          "9780593358603": {
+            "title": "Star Wars",
+            "subtitle": "Shadow of the Sith",
+            "work": "/works/OL26514933W"
           }
         },
         "other_rows_with_primary": []
       },
+      "approved_additions": [
+        {
+          "slug": "shadow-of-the-sith",
+          "isbn": "9780593358603",
+          "note": "approved 2026-10-21 — the Wookieepedia infobox ISBN for \"Shadow of the Sith\" (Del Rey US hardcover; Open Library: same work); removed from brotherhood by the 2026-10-20 changeset and on no row since"
+        }
+      ],
       "notes": [
-        "wiki infobox ISBN 9780593358603 is not on this row — not added (outside this fix)",
         "9781529150063 does not appear on the wiki page \"Shadow of the Sith\""
       ]
     }

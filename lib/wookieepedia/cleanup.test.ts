@@ -12,6 +12,7 @@ import {
 	type CoverCandidate,
 	type IsbnEvidence,
 	type SynopsisFill,
+	applyApprovedAdditions,
 	buildCleanupChangeset,
 	coverIsbns,
 	coverKey,
@@ -179,6 +180,70 @@ describe('isbn membership', () => {
 	});
 });
 
+describe('approved isbn[] additions', () => {
+	const SITH_WIKI = '9780593358603';
+	const sith = row({
+		id: 'id-sots',
+		slug: 'shadow-of-the-sith',
+		title: 'Shadow of the Sith',
+		isbn: [SITH_US],
+		primary_isbn: SITH_UK,
+	});
+	const ev = evidence({
+		wiki_title: 'Shadow of the Sith',
+		wiki_infobox_isbns: [SITH_WIKI],
+		wiki_page_isbns: [SITH_WIKI, SITH_US],
+		openlibrary: {
+			[SITH_UK]: { title: 'Shadow of the Sith', subtitle: 'Star Wars', work: '/works/W2' },
+			[SITH_US]: { title: 'Star Wars', subtitle: 'Shadow of the Sith', work: '/works/W2' },
+		},
+	});
+	const approval = { slug: 'shadow-of-the-sith', isbn: SITH_WIKI, note: 'wiki infobox' };
+	const build = (holders: Map<string, string[]>, additions = [approval]) =>
+		buildCleanupChangeset({
+			rows: [sith],
+			asOf: '2026-10-21',
+			isbnEvidence: new Map([['shadow-of-the-sith', ev]]),
+			coverCandidates: new Map(),
+			drafts: { drafts: {}, skipped: {} },
+			wikiText: new Map(),
+			approvedIsbnAdditions: additions,
+			isbnHolders: holders,
+		});
+
+	it('folds into the decided fix as ONE write, primary unchanged, nothing removed', () => {
+		const cs = build(new Map());
+		expect(cs.isbn_fixes).toHaveLength(1);
+		const f = cs.isbn_fixes[0];
+		expect(f?.action).toBe('add_primary_to_isbn');
+		expect(f?.before).toEqual({ isbn: [SITH_US], primary_isbn: SITH_UK });
+		expect(f?.after).toEqual({ isbn: [SITH_US, SITH_UK, SITH_WIKI], primary_isbn: SITH_UK });
+		expect(f?.approved_additions).toEqual([approval]);
+		expect(f?.notes.join(' ')).not.toMatch(/9780593358603 is not on this row/);
+		expect(cs.flagged.isbn).toEqual([]);
+	});
+
+	it('refuses an addition another row holds, or one missing from the wiki infobox', () => {
+		const held = build(new Map([[SITH_WIKI, ['brotherhood']]]));
+		expect(held.isbn_fixes[0]?.after.isbn).toEqual([SITH_US, SITH_UK]);
+		expect(held.flagged.isbn[0]?.reason).toMatch(/held by brotherhood/);
+		const offWiki = build(new Map(), [{ ...approval, isbn: '9780593358627' }]);
+		expect(offWiki.flagged.isbn[0]?.reason).toMatch(/not in the wiki infobox/);
+		expect(build(new Map(), [{ ...approval, slug: 'nope' }]).flagged.isbn[0]?.reason).toMatch(
+			/no such row/,
+		);
+	});
+
+	it('creates an add_approved_isbn fix when primary_isbn is already fine; no-op if present', () => {
+		const fine = row({ id: 'id-b', slug: 'b', isbn: [SITH_US], primary_isbn: SITH_US });
+		const r = applyApprovedAdditions(fine, null, [{ ...approval, slug: 'b' }], ev, new Map());
+		expect(r.fix?.action).toBe('add_approved_isbn');
+		expect(r.fix?.after).toEqual({ isbn: [SITH_US, SITH_WIKI], primary_isbn: SITH_US });
+		const present = row({ isbn: [SITH_US, SITH_WIKI], primary_isbn: SITH_US });
+		expect(applyApprovedAdditions(present, null, [approval], ev, new Map()).fix).toBeNull();
+	});
+});
+
 describe('covers', () => {
 	const cand = (over: Partial<CoverCandidate>): CoverCandidate => ({
 		isbn: '9780000000002',
@@ -290,6 +355,8 @@ describe('buildCleanupChangeset', () => {
 			['b', [{ isbn: HOPE_HC, source: 'openlibrary', url: shared, head_ok: true }]],
 		]),
 		drafts,
+		approvedIsbnAdditions: [],
+		isbnHolders: new Map(),
 		wikiText: new Map([
 			['a', 'Unrelated page text.'],
 			['b', 'Hunter and Omega gamble on a mission to help rebuild Pabu after the wave.'],
@@ -343,6 +410,7 @@ describe('cleanup apply plan', () => {
 		after: { isbn: [HOPE_HC, HOPE_PB], primary_isbn: HOPE_PB },
 		reason: '',
 		evidence: evidence(),
+		approved_additions: [],
 		notes: [],
 	};
 	const synopsis: SynopsisFill = {
@@ -392,6 +460,14 @@ describe('cleanup apply plan', () => {
 			...over,
 		};
 	}
+
+	it('isbn repair reason lists every added ISBN', () => {
+		const both = {
+			...isbnFix,
+			after: { isbn: [HOPE_HC, HOPE_PB, '9780000000002'], primary_isbn: HOPE_PB },
+		};
+		expect(planIsbnMembershipFix(both, live()).reason).toBe(`isbn[] += ${HOPE_PB}, 9780000000002`);
+	});
 
 	it('isbn repair: apply from before, skip at after, conflict otherwise', () => {
 		expect(planIsbnMembershipFix(isbnFix, live()).patch).toEqual({
