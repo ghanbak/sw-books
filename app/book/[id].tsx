@@ -9,16 +9,23 @@ import { BookDetailToolbar } from '@/components/book-detail-toolbar';
 import { BuyOnAmazonButton } from '@/components/buy-on-amazon-button';
 import { EnrichmentSection } from '@/components/enrichment/enrichment-section';
 import { ErrorState } from '@/components/error-state';
-import { HoloCover } from '@/components/holo-cover';
+import { HoloFace } from '@/components/holo-cover';
+import { HoloStage, type StageBook } from '@/components/holo-stage';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { buildAmazonSearchUrl } from '@/lib/amazon';
+import { getCoverColor } from '@/lib/cover';
+import { RIG_HEIGHT, RIG_LIFT } from '@/lib/holo3d/pager';
+import { useHoloStatus } from '@/lib/holo3d/status';
 import type { Book } from '@/lib/hooks';
 import { useBookEnrichment, useBooks, useUserBooks } from '@/lib/hooks';
 import { supabase } from '@/lib/supabase';
 import { eraLabel } from '@/lib/timeline';
 import { parseTimeline } from '@/lib/wookieepedia/enrichment-display';
+
+/** Detail hero card width (points); the 3D rig and the fallback face are sized from it. */
+const HERO_CARD_W = 200;
 
 export default function BookDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
@@ -114,18 +121,8 @@ export default function BookDetailScreen() {
 				<Text style={styles.title}>{book.title}</Text>
 				<Text style={styles.author}>{book.author.join(', ')}</Text>
 
-				{/* Hologram cover */}
-				<View style={styles.coverWrapper}>
-					<HoloCover
-						variant="hero"
-						tilt={false}
-						coverUri={book.cover_image}
-						title={book.title}
-						author={book.author}
-						width={200}
-						height={300}
-					/>
-				</View>
+				{/* Hologram cover (3D WebGPU stage; static HoloFace until its first frame / fallback) */}
+				<DetailHero book={book} />
 
 				{/* Synopsis */}
 				{book.synopsis && <Text style={styles.synopsis}>{book.synopsis}</Text>}
@@ -311,10 +308,18 @@ const styles = StyleSheet.create({
 		marginTop: 2,
 		color: tokens.text.secondary,
 	},
-	coverWrapper: {
-		alignItems: 'center',
-		marginTop: 20,
-		marginBottom: 28,
+	hero: {
+		height: Math.round(HERO_CARD_W * RIG_HEIGHT),
+		marginTop: 4,
+		marginBottom: 16,
+	},
+	heroFace: {
+		position: 'absolute',
+		left: '50%',
+		marginLeft: -HERO_CARD_W / 2,
+		// Card centre sits RIG_LIFT card widths above the canvas centre (the rig is lifted so card
+		// + beam + emitter are centred) — keep the static face on the same spot as the 3D card.
+		top: Math.round((HERO_CARD_W * RIG_HEIGHT - HERO_CARD_W * 1.5) / 2 - HERO_CARD_W * RIG_LIFT),
 	},
 	synopsis: {
 		fontSize: 14,
@@ -371,3 +376,40 @@ const styles = StyleSheet.create({
 		color: tokens.text.secondary,
 	},
 });
+
+/**
+ * The detail hero: a single-card 3D hologram stage sized to the whole rig (card + beam +
+ * emitter + glow), with the static HoloFace on top until the stage's first frame — or for good
+ * when 3D is unavailable (non-iOS, no WebGPU, kill-switch, failure).
+ */
+function DetailHero({ book }: { book: Book }) {
+	const status = useHoloStatus();
+	const [stageReady, setStageReady] = useState(false);
+	const stageBooks = useMemo<StageBook[]>(
+		() => [{ key: book.id, coverUri: book.cover_image, fallbackColor: getCoverColor(book.title) }],
+		[book.id, book.cover_image, book.title],
+	);
+	const show3D = status.kind === 'available' && stageReady;
+	return (
+		<View style={styles.hero}>
+			<HoloStage
+				mode="single"
+				books={stageBooks}
+				cardWidth={HERO_CARD_W}
+				pixelRatioCap={2}
+				onReadyChange={setStageReady}
+			/>
+			{show3D ? null : (
+				<View style={styles.heroFace}>
+					<HoloFace
+						coverUri={book.cover_image}
+						title={book.title}
+						author={book.author}
+						width={HERO_CARD_W}
+						height={HERO_CARD_W * 1.5}
+					/>
+				</View>
+			)}
+		</View>
+	);
+}

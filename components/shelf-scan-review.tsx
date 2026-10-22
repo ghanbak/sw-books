@@ -342,7 +342,6 @@ function ReviewRow({
 					importantForAccessibility="no-hide-descendants"
 				>
 					<HoloCover
-						variant="thumb"
 						coverUri={book.cover_image}
 						title={book.title}
 						author={book.author}
@@ -405,7 +404,6 @@ function ReviewTile({
 					importantForAccessibility="no-hide-descendants"
 				>
 					<HoloCover
-						variant="thumb"
 						coverUri={book.cover_image}
 						title={book.title}
 						author={book.author}
@@ -523,7 +521,6 @@ function SwapSheet({
 									importantForAccessibility="no-hide-descendants"
 								>
 									<HoloCover
-										variant="thumb"
 										coverUri={item.cover_image}
 										title={item.title}
 										author={item.author}

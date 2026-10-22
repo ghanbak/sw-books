@@ -62,7 +62,6 @@ export function AddedBooksSheet({
 				{books.map((b) => (
 					<HoloCover
 						key={b.id}
-						variant="thumb"
 						coverUri={b.cover_image}
 						title={b.title}
 						author={b.author}

@@ -1,23 +1,11 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { type ReactNode, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-	Easing,
-	Extrapolation,
-	interpolate,
-	SensorType,
-	useAnimatedSensor,
-	useAnimatedStyle,
-	useSharedValue,
-	withRepeat,
-	withTiming,
-} from 'react-native-reanimated';
 
 import { CanonBadge } from '@/components/ui/canon-badge';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
-import { useReduceMotion } from '@/hooks/useAccessibility';
 import { getCoverColor } from '@/lib/cover';
 
 type HoloCoverProps = {
@@ -26,42 +14,26 @@ type HoloCoverProps = {
 	author: string[];
 	width: number;
 	height: number;
-	/** `hero` = animated projection (detail/timeline); `thumb` = static (lists/scan). */
-	variant?: 'hero' | 'thumb';
-	/** Canon/Legends status — when set on a `hero`, overlays a corner badge on the cover. */
-	canon?: string;
-	/** Gyroscope tilt on the hero (default true). Pass false to skip the sensor. */
-	tilt?: boolean;
 	onPress?: () => void;
 	accessibilityLabel?: string;
 };
 
 /**
- * The hologram book cover that replaces the old 3D cover. `thumb` is a plain static
- * cover (no animation/sensors — safe to render per-row in FlashList). `hero` adds a
- * cyan projector beam + glowing base emitter with a slow looping pulse, gated on
- * reduce-motion. The hero also tilts ±15° with the gyroscope, relative to how the
- * device is held (gated on reduce-motion; the sensor is a no-op in the simulator).
+ * The static hologram cover used in lists (Archives/Library rows, added-books sheet, scan
+ * review): tint + luminosity blend + scanlines + edge glow, no bloom, no animation — safe to
+ * render per row in FlashList. The animated hero on the Timeline and book detail is the 3D
+ * WebGPU stage (components/holo-stage.tsx); `HoloFace` is its loading/fallback face.
  */
-const MAX_TILT = 15 * (Math.PI / 180);
-
 export function HoloCover({
 	coverUri,
 	title,
 	author,
 	width,
 	height,
-	variant = 'thumb',
-	canon,
-	tilt,
 	onPress,
 	accessibilityLabel,
 }: HoloCoverProps) {
-	const reduceMotion = useReduceMotion();
-
-	// Thumbs in lists get the holo cover styles (tint + scanlines + luminosity + edge glow)
-	// but no projector beam and no outer bloom — those are hero-only.
-	let content = (
+	const content = (
 		<HoloFace
 			coverUri={coverUri}
 			title={title}
@@ -71,90 +43,11 @@ export function HoloCover({
 			glow={false}
 		/>
 	);
-	if (variant === 'hero') {
-		const baseSpace = Math.max(14, Math.round(height * 0.12));
-		const animated = !reduceMotion;
-		// Hero adds the projector beam + outer bloom around the same holo face, plus the
-		// canon/legends corner badge (thumbs get their badge from the list row instead).
-		const holoFace = (
-			<HoloFace
-				coverUri={coverUri}
-				title={title}
-				author={author}
-				width={width}
-				height={height}
-				canon={canon}
-			/>
-		);
-		// Mount the sensor-bearing hero only when tilt is on, so thumbs and reduce-motion
-		// heroes never subscribe to the device-motion sensor.
-		const props = { width, height, baseSpace, animated };
-		content =
-			tilt !== false && !reduceMotion ? (
-				<TiltedHero {...props}>{holoFace}</TiltedHero>
-			) : (
-				<StaticHero {...props}>{holoFace}</StaticHero>
-			);
-	}
-
 	if (!onPress) return content;
 	return (
 		<Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel}>
 			{content}
 		</Pressable>
-	);
-}
-
-type HeroProps = {
-	width: number;
-	height: number;
-	baseSpace: number;
-	animated: boolean;
-	children: ReactNode;
-};
-
-function StaticHero({ width, height, baseSpace, animated, children }: HeroProps) {
-	return (
-		<View style={[styles.heroWrap, { width, height: height + baseSpace }]}>
-			<Projector width={width} height={height} baseSpace={baseSpace} animated={animated} />
-			{children}
-		</View>
-	);
-}
-
-/** Hero whose cover tilts ±15° with the device gyroscope (no-op in the iOS simulator). */
-function TiltedHero({ width, height, baseSpace, animated, children }: HeroProps) {
-	const sensor = useAnimatedSensor(SensorType.ROTATION, { interval: 'auto' });
-	// Baseline = device orientation captured from the first real reading. Tilt tracks
-	// movement RELATIVE to it, so the cover sits neutral at whatever angle the device is
-	// held — absolute pitch/roll would pin it at the ±15° clamp at any reading angle.
-	const baseline = useSharedValue<{ pitch: number; roll: number } | null>(null);
-	const tiltStyle = useAnimatedStyle(() => {
-		const { pitch, roll } = sensor.sensor.value;
-		const base = baseline.value;
-		if (base === null) {
-			// Skip the initial (0,0) pre-warmup frame; latch the first real reading.
-			if (pitch !== 0 || roll !== 0) baseline.value = { pitch, roll };
-			return { transform: [{ perspective: 800 }] };
-		}
-		const clampTilt = (v: number) =>
-			interpolate(v, [-MAX_TILT, MAX_TILT], [-MAX_TILT, MAX_TILT], Extrapolation.CLAMP);
-		// Plain radians — the sensor already updates per frame. NOTE: do NOT wrap these in
-		// withTiming here; its return is an animation object, and `${obj}rad` stringifies to
-		// "[object Object]rad", which the transform parser throws on inside the worklet (a UI-
-		// thread throw = SIGABRT). This branch only runs once a real gyroscope latches the
-		// baseline, so the simulator never hit it.
-		const rx = clampTilt(pitch - base.pitch);
-		const ry = clampTilt(roll - base.roll);
-		return {
-			transform: [{ perspective: 800 }, { rotateX: `${rx}rad` }, { rotateY: `${ry}rad` }],
-		};
-	});
-	return (
-		<View style={[styles.heroWrap, { width, height: height + baseSpace }]}>
-			<Projector width={width} height={height} baseSpace={baseSpace} animated={animated} />
-			<Animated.View style={tiltStyle}>{children}</Animated.View>
-		</View>
 	);
 }
 
@@ -208,10 +101,10 @@ function CoverFace({
  * underneath, then the cover `luminosity`-blended on top so it keeps its brightness but
  * takes the gradient's blue hue/saturation (reads as a blue hologram), then scanlines and an
  * inner edge glow. `isolation: 'isolate'` scopes the blend to the card (not the dark screen
- * behind it); the outer cyan bloom (hero only) lives on an unclipped wrapper since the clip
- * would hide an outset shadow.
+ * behind it); the outer cyan bloom lives on an unclipped wrapper since the clip would hide an
+ * outset shadow. Exported as the 3D stage's loading/fallback face (with the canon badge).
  */
-function HoloFace({
+export function HoloFace({
 	coverUri,
 	title,
 	author,
@@ -225,9 +118,9 @@ function HoloFace({
 	author: string[];
 	width: number;
 	height: number;
-	/** Outer cyan bloom (hero). Thumbs in lists pass false — tint/scanlines/edge only. */
+	/** Outer cyan bloom. Thumbs in lists pass false — tint/scanlines/edge only. */
 	glow?: boolean;
-	/** When set, overlays a Canon/Legends badge in the cover's top corner (hero only). */
+	/** When set, overlays a Canon/Legends badge in the cover's top corner. */
 	canon?: string;
 }) {
 	return (
@@ -272,78 +165,7 @@ function Scanlines({ height }: { height: number }) {
 	);
 }
 
-/** Cyan beam cone behind the cover + a glowing base emitter, slow looping pulse. */
-function Projector({
-	width,
-	height,
-	baseSpace,
-	animated,
-}: {
-	width: number;
-	height: number;
-	baseSpace: number;
-	animated: boolean;
-}) {
-	const t = useSharedValue(animated ? 0 : 0.5);
-	useEffect(() => {
-		if (!animated) {
-			t.value = 0.5;
-			return;
-		}
-		t.value = withRepeat(
-			withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.quad) }),
-			-1,
-			true,
-		);
-	}, [animated, t]);
-
-	const beamStyle = useAnimatedStyle(() => ({
-		opacity: interpolate(t.value, [0, 1], [0.25, 0.5]),
-	}));
-	const emitterStyle = useAnimatedStyle(() => ({
-		opacity: interpolate(t.value, [0, 1], [0.45, 0.7]),
-		transform: [{ scaleX: interpolate(t.value, [0, 1], [0.9, 1.05]) }],
-	}));
-
-	const emitterW = Math.round(width * 0.7);
-	const transparent = `${tokens.holo.cyan}00`;
-
-	return (
-		<View pointerEvents="none" style={StyleSheet.absoluteFill}>
-			<Animated.View style={[styles.beam, { width, height }, beamStyle]}>
-				<LinearGradient
-					colors={[transparent, tokens.holo.beam, transparent]}
-					start={{ x: 0.5, y: 1 }}
-					end={{ x: 0.5, y: 0 }}
-					style={StyleSheet.absoluteFill}
-				/>
-			</Animated.View>
-			<Animated.View
-				style={[
-					styles.emitter,
-					{
-						width: emitterW,
-						marginLeft: -emitterW / 2,
-						height: Math.max(10, baseSpace),
-					},
-					emitterStyle,
-				]}
-			>
-				<LinearGradient
-					colors={[tokens.holo.emitter, transparent]}
-					start={{ x: 0.5, y: 0 }}
-					end={{ x: 0.5, y: 1 }}
-					style={StyleSheet.absoluteFill}
-				/>
-			</Animated.View>
-		</View>
-	);
-}
-
 const styles = StyleSheet.create({
-	heroWrap: {
-		alignItems: 'center',
-	},
 	face: {
 		borderRadius: 8,
 		overflow: 'hidden',
@@ -420,16 +242,6 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 		fontSize: 10,
 		marginTop: 4,
-	},
-	beam: {
-		position: 'absolute',
-		top: 0,
-	},
-	emitter: {
-		position: 'absolute',
-		bottom: 2,
-		left: '50%',
-		borderRadius: 999,
 	},
 	heroBadge: {
 		position: 'absolute',

@@ -37,7 +37,6 @@ export const BookCard = memo(function BookCard({ book }: { book: Book }) {
 			<Card>
 				<View style={styles.row}>
 					<HoloCover
-						variant="thumb"
 						coverUri={book.cover_image}
 						title={book.title}
 						author={book.author}
