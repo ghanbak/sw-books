@@ -26,7 +26,7 @@ List thumbnails don't change.
 | Fallback | Error boundaries miss async init, frame-loop and `device.lost` failures. Replaced `HoloFallback.tsx` with a **status store** (`useHolo3DStatus()`) that stages report into. Cells and the detail screen branch on it. The fallback is static `HoloFace`, not the old projector hero. | arch, TS, simplicity |
 | Dead code | Delete `Projector` / `StaticHero` / `TiltedHero` and the `variant`/`tilt` props **when each hero site migrates**, not a release later. | simplicity, arch |
 | Scope cuts | No device-loss retry (loss → unavailable for the session). No gyro tilt in v1 (moved to Stretch). No animated crossfade (swap after the first frame is on screen). Chromatic fringe moved after the look is approved. | simplicity |
-| Kill-switch | It's a build-time env switch (`EXPO_PUBLIC_HOLO_3D=0`), not a remote one. It's used to test the fallback path. | arch, TS |
+| Kill-switch | A build-time env switch (`EXPO_PUBLIC_HOLO_3D=0`), used to test the fallback path. *Update 2026-10-22:* `EXPO_PUBLIC_*` values are inlined into the JS bundle, and `expo-updates` has now landed, so an EAS Update built with `EXPO_PUBLIC_HOLO_3D=0` **does** act as a field kill-switch for binaries that already have the 3D build. | arch, TS |
 | Modules | 11 files → 6. One stage component for both surfaces. Imperative controller, so the React Compiler can't hand the frame loop stale values. Runtime modules in `lib/`, kebab-case names. Lazy-loaded so three isn't evaluated at app start. | simplicity, arch, TS |
 | Textures | Cache **encoded bytes**, not decoded bitmaps. Each stage owns its GPU textures for its window only, so nothing is shared to evict. **Mandatory downscale** to ≤640×960. Upload ahead of time with `renderer.initTexture()` while idle, never mid-swipe. | perf, arch, TS |
 | Pausing | `setAnimationLoop(null)` leaves three's internal tick running. Pause means no render/present, driven imperatively by `useFocusEffect` + `AppState`. **Dispose after 30 s blurred**, re-init on focus. | perf, arch |
@@ -63,26 +63,40 @@ List thumbnails don't change.
 
 ## Current State (grounded)
 
+> **Re-grounded 2026-10-22** after merging `origin/main` (v1.3.0). The timeline-improvements plan (#28), Wookieepedia enrichment (#33/#37), EAS Update, patch-package and the SF Symbols migration have all landed. The deltas are folded in below.
+
 - **`components/holo-cover.tsx`** has two variants:
   - `thumb` = `HoloFace`: a `LinearGradient` tint + cover with `mixBlendMode: 'luminosity'`, scanline Views, `boxShadow` glow.
   - `hero` = `HoloFace` + `Projector` (beam/emitter `LinearGradient`s pulsing via `withRepeat`), plus `TiltedHero`, which is dead because both call sites pass `tilt={false}`.
+  - **New (#28):** a `canon` prop. On a `hero`, `HoloFace` overlays a `CanonBadge` (`components/ui/canon-badge.tsx`) at the cover's top-left corner, at full opacity above the tinted clip.
   - `HoloFace` and `CoverFace` aren't exported.
-- **Timeline:**
+- **Timeline (after #28):**
   - a horizontal `FlashList` pager (`snapToInterval={width}`, `disableIntervalMomentum`)
+  - **the canon filter was removed**: the whole chronology shows, with a per-hero `canon` badge
   - one hero per page: `coverW = min(220, width*0.55)`, `coverH = coverW*1.5`
   - `renderItem` has **no press handler**
   - `onViewableItemsChanged` → `activePage` React state → `TimelineRail`
+  - the rail supports **scrubbing**, which jumps the pager with `scrollToOffset` (not `scrollToIndex`; every page is exactly one screen wide)
+  - film/TV anchor pills float over the hologram glow (`tokens.rail.*`)
   - `data.books.length === 0` → empty state replaces `listWrap`
-- **Book detail:** `app/book/[id].tsx`, with a hero at 200×300 inside a `ScrollView` with `headerLargeTitle`. Reached from `components/book-card.tsx` and `components/barcode-scan-panel.tsx`.
+- **Book detail (after #33):** `app/book/[id].tsx` has a hero at 200×300 inside a `ScrollView`.
+  - **No native large title** (`headerLargeTitle: false`). The header is transparent (`headerLargeStyle: { backgroundColor: 'transparent' }`, `headerBlurEffect: 'none'`) specifically so it doesn't cut off the hologram glow. The 3D canvas's bloom margin depends on this staying transparent.
+  - `EnrichmentSection` (Wookieepedia timeline and characters) sits below the synopsis.
+  - Reached from `components/book-card.tsx` and `components/barcode-scan-panel.tsx`.
   - `book/[id]` is a root Stack screen pushed over `(tabs)`, which is `NativeTabs` (`expo-router/unstable-native-tabs`).
+- **Icons:** lucide was removed. New UI uses `expo-symbols` `SymbolView` (memory `feedback_sf_symbols_icons`).
 - **Covers:** `book.cover_image` is a remote URL from mixed hosts (penguinrandomhouse.com, books.google.com, …). There's no reliable sized-variant API across hosts.
 - **Tokens:** `tokens.holo.*` in `constants/tokens.ts` (no imports, so it's test-safe).
 - **Config:**
-  - Expo SDK 56, RN 0.85.3, New Arch, `reactCompiler: true`
-  - Reanimated 4.3.1, worklets 0.8.3, Biome 1.9.4
+  - Expo SDK 56 (`~56.0.23`), RN 0.85.3, New Arch, `reactCompiler: true`
+  - Reanimated 4.3.1, worklets 0.8.3, Biome 1.9.4, `react-native-screens` 4.26.2
   - **No `metro.config.js`**
   - `tsconfig` extends `expo/tsconfig.base` (`lib: ["DOM","ESNext"]`, `moduleResolution: "bundler"`, `skipLibCheck`)
-  - No `expo-updates`, so no remote config
+  - **`expo-updates` is now installed:** `runtimeVersion: { policy: "fingerprint" }`, EAS Update URL in `app.json`
+    - Adding `react-native-webgpu` changes the native fingerprint, so **the 3D feature needs a new store/TestFlight build**. It can't ship OTA to existing 1.3.0 binaries, which keep the 2D hero.
+    - Later JS-only tuning (shaders, bloom, timings) *can* ship OTA.
+  - **`patch-package` postinstall:** `react-native-screens` and `expo-router` are patched and pinned (memory `project_native_patches_patch_package`). Our new deps don't touch them, but run `npm ci` (which runs postinstall), not a bare install.
+  - `app.json` plugins now include `./plugins/withPodsMinDeploymentTarget.js`
 - **Tests:** Vitest, `environment: 'node'`, `**/*.test.ts`. Only pure TS; nothing that imports `three` or native modules.
 
 ## Research Findings (from the library's own docs and examples)
@@ -242,7 +256,7 @@ All geometry is procedural; there are no asset files. Verify TSL node names agai
 
 - **Cells:**
   - A cell is a `Pressable` with `onPress={() => router.push(`/book/${book.id}`)}` (the `book-card.tsx` idiom), `accessibilityRole="button"` and `accessibilityLabel="{title} by {author}"`.
-  - When `ready`, the cell is transparent and holds any overlays (no-cover title; canon badges if the timeline-improvements plan ships).
+  - When `ready`, the cell is transparent and holds the RN overlays: the **`CanonBadge`** at the card's top-left (now shipped, #28), positioned with `cardRect()` plus the same 8 pt inset as `HoloFace`'s `heroBadge` style, and the no-cover title. The badge must stay in step with the 3D card while paging (G7).
   - When not `ready`, it renders `HoloFace` inside the same `Pressable`.
   - The canvas is `accessible={false}`.
 - **Tap target:** limit the pressable area to the card rectangle (`coverW × coverH`, centred, using the same projection as the cards), not the whole page, so taps on empty space don't navigate.
@@ -253,7 +267,8 @@ All geometry is procedural; there are no asset files. Verify TSL node names agai
   - Each frame, the loop reads `scrollX.get()` and positions cards with `pager.ts`.
   - `pager.ts` exposes one px→world projection, so the overlays and cards share the same mapping.
   - Card transforms come from the live offset.
-  - The **texture window** keys off the settled `activePage`, so `scrollToIndex` jumps from the rail don't thrash loads.
+  - The **texture window** keys off the settled `activePage`, so rail-scrub jumps (`scrollToOffset`, which streams intermediate offsets while scrubbing) don't thrash loads.
+  - Cards for pages skipped mid-scrub show the no-cover tint; they're never uploaded.
   - A residual lag of up to one frame between native overlays and GPU cards is expected; G7 measures it.
 - **Card pool:** 3 meshes (previous, active, next) are re-bound as the window moves. One emitter and beam stay fixed at screen centre, and covers slide through the beam.
 - **Pausing:** done imperatively, never through re-rendering state:
@@ -295,7 +310,8 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
 ```
 
 - `@types/three` tracks major.minor, so 0.186.0 is correct for three 0.186.1.
-- **Lockfile:** review the `package-lock.json` diff for expo or expo-asset drift (memory `project_npm_ci_not_install`), commit it, then `npm ci`.
+- **Lockfile:** review the `package-lock.json` diff for expo or expo-asset drift (memory `project_npm_ci_not_install`), commit it, then `npm ci`. That re-runs the `patch-package` postinstall; confirm the screens and expo-router patches still apply.
+- **Release:** this is a native change (the fingerprint changes), so it ships in a new binary (the next version after 1.3.0), not as an EAS Update.
 - **`app.json`:** add the `"react-native-webgpu"` plugin.
 - **`metro.config.js`** (new): `getDefaultConfig` + the documented `three` alias.
 - **`biome.json`:** add `style/noRestrictedImports`, restricting `three` (use `three/webgpu`).
@@ -341,16 +357,16 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
 - **Remove the hero `HoloCover` from the Timeline.**
 - **Exit:**
   - G3 and G7 re-checked on the real screen
-  - fling and rail-scrub (if shipped) behave
+  - fling and rail-scrub behave, and the film/TV anchor pills stay legible over the 3D glow
   - tapping a card opens the right book; flings and drags never push; taps outside the card don't navigate
-  - filter change rebinds textures
+  - the canon badge tracks its card while dragging and flinging
   - status ≠ ready shows `HoloFace` (test with `EXPO_PUBLIC_HOLO_3D=0`)
   - VoiceOver reads the cells
 
 ### Phase 3 — Book detail and cleanup
 
 - `<HoloStage books={[book]} />` in `app/book/[id].tsx`, with the `onFirstFrame` swap and pausing.
-- **Delete** `Projector`, `StaticHero`, `TiltedHero` and the `variant`/`tilt` props from `holo-cover.tsx`. Remove `NSMotionUsageDescription` from `app.json` if nothing else uses motion (`expo-sensors` stays only if it's still used elsewhere).
+- **Delete** `Projector`, `StaticHero`, `TiltedHero` and the `variant`/`tilt` props from `holo-cover.tsx`. **Keep** `HoloFace`'s `canon` prop and its `CanonBadge`: the fallback/pending face on both surfaces still shows the badge. Remove `NSMotionUsageDescription` from `app.json` if nothing else uses motion (`expo-sensors` stays only if it's still used elsewhere).
 - **Exit:**
   - **Timeline → tap → detail → back:** one drawing renderer at a time; resuming within 30 s needs no re-init; #445 clear runs only at count 0
   - Archives → detail with the Timeline mounted-but-blurred behaves the same way
