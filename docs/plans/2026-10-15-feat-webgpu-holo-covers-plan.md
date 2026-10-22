@@ -6,7 +6,7 @@ branch: claude/cover-art-hologram-3d-676408
 research: docs/brainstorms/2026-10-14-holo-cover-gpu-upgrade-research.md
 supersedes: docs/plans/2026-05-01-feat-3d-book-covers-real-mesh-renderer-plan.md (deferred mesh plan; its gap list is folded in below)
 reviewed: 2026-10-15 (architecture-strategist, performance-oracle, code-simplicity, kieran-typescript) — feedback folded in
-status: draft — revised after review; tap-to-open added 2026-10-15; release strategy = dark carrier build + OTA (2026-10-22)
+status: Phases 0–3 built (2026-10-22) on the simulator; device gates (G2, G3, G7, IPA size) pending before the carrier build
 ---
 
 # ✨ WebGPU + three.js Hologram Covers
