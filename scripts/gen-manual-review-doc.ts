@@ -50,8 +50,8 @@ function parseReport(): { weak: Map<string, Entry>; nodata: Map<string, Entry> }
 		if (!mode) continue;
 		// Weak section: "  <slug>" alone on a line, then OL: / GB: continuation lines.
 		// No-data section: "  <slug>  <isbn>  (<title>)" on a single line.
-		const slugAloneMatch = line.match(/^  ([a-z0-9-]+)$/);
-		const slugWithIsbnMatch = line.match(/^  ([a-z0-9-]+)\s+\d{13}/);
+		const slugAloneMatch = line.match(/^ {2}([a-z0-9-]+)$/);
+		const slugWithIsbnMatch = line.match(/^ {2}([a-z0-9-]+)\s+\d{13}/);
 		if (slugAloneMatch) {
 			lastSlug = slugAloneMatch[1];
 			(mode === 'weak' ? weak : nodata).set(lastSlug, { ol: null, gb: null });
@@ -62,8 +62,8 @@ function parseReport(): { weak: Map<string, Entry>; nodata: Map<string, Entry> }
 			nodata.set(lastSlug, { ol: null, gb: null });
 			continue;
 		}
-		const olMatch = line.match(/^    OL: (.+)$/);
-		const gbMatch = line.match(/^    GB: (.+)$/);
+		const olMatch = line.match(/^ {4}OL: (.+)$/);
+		const gbMatch = line.match(/^ {4}GB: (.+)$/);
 		if ((olMatch || gbMatch) && lastSlug) {
 			const target = mode === 'weak' ? weak : nodata;
 			const entry = target.get(lastSlug);
@@ -134,9 +134,7 @@ async function main() {
 		const e = weak.get(slug);
 		const ol = e?.ol ?? '—';
 		const gb = e?.gb ?? '—';
-		lines.push(
-			`| ${slug} | ${b.title} | ${author} | \`${b.primary_isbn}\` | ${ol} | ${gb} |`,
-		);
+		lines.push(`| ${slug} | ${b.title} | ${author} | \`${b.primary_isbn}\` | ${ol} | ${gb} |`);
 	}
 	lines.push('');
 	lines.push('## No-data (neither API has the ISBN)');

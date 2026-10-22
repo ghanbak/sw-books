@@ -32,7 +32,11 @@ const PHYSICAL_PRIORITY: readonly BookFormat[] = [
 	'hardcover',
 ] as const;
 
-const NON_PHYSICAL_PRIORITY: readonly BookFormat[] = ['ebook', 'audiobook', 'library binding'] as const;
+const NON_PHYSICAL_PRIORITY: readonly BookFormat[] = [
+	'ebook',
+	'audiobook',
+	'library binding',
+] as const;
 
 const FORMAT_PRIORITY: readonly BookFormat[] = [...PHYSICAL_PRIORITY, ...NON_PHYSICAL_PRIORITY];
 
