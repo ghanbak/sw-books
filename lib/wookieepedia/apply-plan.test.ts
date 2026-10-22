@@ -92,6 +92,7 @@ function row(over: Partial<LiveState>): LiveState {
 		date_published: '1994-03-01',
 		format: ['Paperback'],
 		cover_image: null,
+		synopsis: null,
 		...over,
 	};
 }

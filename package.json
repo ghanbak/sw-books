@@ -23,6 +23,7 @@
 		"catalog:restore": "npx tsx scripts/restore-from-backup.ts",
 		"catalog:changeset": "npx tsx scripts/build-catalog-changeset.ts --production",
 		"catalog:apply": "npx tsx scripts/apply-catalog-changeset.ts --production",
+		"catalog:cleanup": "npx tsx scripts/build-catalog-cleanup.ts --production",
 		"catalog:enrich": "npx tsx scripts/enrich-wookieepedia.ts",
 		"admin": "npm --prefix admin run dev",
 		"admin:install": "npm --prefix admin install",

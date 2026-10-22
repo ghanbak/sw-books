@@ -23,7 +23,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import pLimit from 'p-limit';
-import { headCheckCover } from '../lib/sources/covers';
+import { MIN_COVER_BYTES, headCheckCover } from '../lib/sources/covers';
 import {
 	type AudienceSignal,
 	buildOlCandidate,
@@ -127,8 +127,6 @@ const APPROVED_DATE_UPDATES: ReadonlySet<string> = new Set([
 	'x-wing-rogue-squadron:1996-12-01>1996-01-01',
 	'x-wing-wedges-gamble:1996-12-01>1996-05-01',
 ]);
-
-const MIN_COVER_BYTES = 2048; // smaller is almost certainly a placeholder (refresh-covers.ts)
 
 // --- Cache -----------------------------------------------------------------------
 

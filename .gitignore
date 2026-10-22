@@ -55,6 +55,8 @@ scripts/primary-isbn-verification.txt
 data/discovery/discovery-meta.json
 # OL / Google Books / wiki lookup cache for scripts/build-catalog-changeset.ts
 data/discovery/lookup-cache.json
+# OL / Google Books / wiki lookup cache for scripts/build-catalog-cleanup.ts
+data/discovery/cleanup-cache.json
 
 # testing
 coverage/

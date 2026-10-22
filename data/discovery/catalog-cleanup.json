@@ -1,0 +1,1198 @@
+{
+  "kind": "catalog-cleanup",
+  "version": 1,
+  "as_of": "2026-10-21",
+  "policy": {
+    "isbn": "primary_isbn ∉ isbn[]: add primary_isbn to isbn[] when Open Library titles it as this book AND (the wiki lists it OR it is the same OL work as a row ISBN); reset primary_isbn to a row ISBN when the evidence assigns it to another book; flag anything else. Operator-approved additions (listed in the builder, each in the row's wiki infobox and on no other row) are appended in the same write. Never removes an ISBN.",
+    "covers": "null/blank cover_image only: Open Library (every row ISBN), then Google Books (every row ISBN), then a Google Books title search accepted only when the hit lists a row ISBN; HEAD-checked against MIN_COVER_BYTES, never a cover another row uses, never a Wookieepedia image. Unreleased books without one are listed, not forced.",
+    "synopsis": "null/blank synopsis only: original one-line drafts (never wiki CC BY-SA prose or publisher blurbs), each marked drafted for review; rows without a confident draft are skipped and listed."
+  },
+  "summary": {
+    "isbn_fixes": 3,
+    "isbn_flagged": 0,
+    "cover_fills": 6,
+    "covers_missing": 5,
+    "covers_not_yet_available": 5,
+    "synopsis_fills": 90,
+    "synopses_skipped": 1
+  },
+  "isbn_fixes": [
+    {
+      "id": "e1b12f08-79d0-45f0-aa34-67445d8394ba",
+      "slug": "path-of-deceit",
+      "title": "The High Republic: Path of Deceit",
+      "action": "add_primary_to_isbn",
+      "before": {
+        "isbn": [],
+        "primary_isbn": "9781368076128"
+      },
+      "after": {
+        "isbn": [
+          "9781368076128"
+        ],
+        "primary_isbn": "9781368076128"
+      },
+      "reason": "primary_isbn belongs to this book: Open Library titles 9781368076128 \"Path of Deceit / Star Wars: The High Republic\"; the wiki infobox for \"The High Republic: Path of Deceit\" lists 9781368076128",
+      "evidence": {
+        "wiki_title": "The High Republic: Path of Deceit",
+        "wiki_infobox_isbns": [
+          "9781368076128"
+        ],
+        "wiki_page_isbns": [
+          "9781368076128",
+          "9781761212079",
+          "9784052062230",
+          "9784052062247"
+        ],
+        "openlibrary": {
+          "9781368076128": {
+            "title": "Path of Deceit",
+            "subtitle": "Star Wars: The High Republic",
+            "work": "/works/OL28632293W"
+          }
+        },
+        "other_rows_with_primary": []
+      },
+      "approved_additions": [],
+      "notes": []
+    },
+    {
+      "id": "c037b3a9-4531-4d9b-834f-c5edb21a1307",
+      "slug": "queens-hope",
+      "title": "Queen's Hope",
+      "action": "add_primary_to_isbn",
+      "before": {
+        "isbn": [
+          "9781368075930"
+        ],
+        "primary_isbn": "9781368093767"
+      },
+      "after": {
+        "isbn": [
+          "9781368075930",
+          "9781368093767"
+        ],
+        "primary_isbn": "9781368093767"
+      },
+      "reason": "primary_isbn belongs to this book: Open Library titles 9781368093767 \"Queen's Hope\"; the wiki page \"Queen's Hope\" lists 9781368093767 (not the infobox); 9781368093767 is the same Open Library work (/works/OL25452734W) as the row's own ISBN",
+      "evidence": {
+        "wiki_title": "Queen's Hope",
+        "wiki_infobox_isbns": [
+          "9781368075930"
+        ],
+        "wiki_page_isbns": [
+          "9781368075930",
+          "9781368077439",
+          "9781368093767",
+          "9783833240829"
+        ],
+        "openlibrary": {
+          "9781368093767": {
+            "title": "Queen's Hope",
+            "subtitle": null,
+            "work": "/works/OL25452734W"
+          },
+          "9781368075930": {
+            "title": "Queen's Hope",
+            "subtitle": "Star Wars",
+            "work": "/works/OL25452734W"
+          }
+        },
+        "other_rows_with_primary": []
+      },
+      "approved_additions": [],
+      "notes": []
+    },
+    {
+      "id": "6d17eaef-4d78-441f-b6a4-3ba766ff1baf",
+      "slug": "shadow-of-the-sith",
+      "title": "Shadow of the Sith",
+      "action": "add_primary_to_isbn",
+      "before": {
+        "isbn": [
+          "9780593358610"
+        ],
+        "primary_isbn": "9781529150063"
+      },
+      "after": {
+        "isbn": [
+          "9780593358610",
+          "9781529150063",
+          "9780593358603"
+        ],
+        "primary_isbn": "9781529150063"
+      },
+      "reason": "primary_isbn belongs to this book: Open Library titles 9781529150063 \"Shadow of the Sith / Star Wars\"; 9781529150063 is the same Open Library work (/works/OL26514933W) as the row's own ISBN; operator-approved: isbn[] += 9780593358603 (approved 2026-10-21 — the Wookieepedia infobox ISBN for \"Shadow of the Sith\" (Del Rey US hardcover; Open Library: same work); removed from brotherhood by the 2026-10-20 changeset and on no row since)",
+      "evidence": {
+        "wiki_title": "Shadow of the Sith",
+        "wiki_infobox_isbns": [
+          "9780593358603"
+        ],
+        "wiki_page_isbns": [
+          "9780593358603",
+          "9780593358610",
+          "9780593358627"
+        ],
+        "openlibrary": {
+          "9781529150063": {
+            "title": "Shadow of the Sith",
+            "subtitle": "Star Wars",
+            "work": "/works/OL26514933W"
+          },
+          "9780593358610": {
+            "title": "Star Wars",
+            "subtitle": "Shadow of the Sith",
+            "work": "/works/OL26514933W"
+          },
+          "9780593358603": {
+            "title": "Star Wars",
+            "subtitle": "Shadow of the Sith",
+            "work": "/works/OL26514933W"
+          }
+        },
+        "other_rows_with_primary": []
+      },
+      "approved_additions": [
+        {
+          "slug": "shadow-of-the-sith",
+          "isbn": "9780593358603",
+          "note": "approved 2026-10-21 — the Wookieepedia infobox ISBN for \"Shadow of the Sith\" (Del Rey US hardcover; Open Library: same work); removed from brotherhood by the 2026-10-20 changeset and on no row since"
+        }
+      ],
+      "notes": [
+        "9781529150063 does not appear on the wiki page \"Shadow of the Sith\""
+      ]
+    }
+  ],
+  "cover_fills": [
+    {
+      "id": "2e216bea-ba8b-410c-a2d0-0a44c9b81395",
+      "slug": "hiding-from-the-dark",
+      "title": "Hiding from the Dark",
+      "before": null,
+      "after": "https://books.google.com/books/content?id=T-jREQAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books-search:isbn:9780736447027",
+      "reason": "no cover; found via google-books-search"
+    },
+    {
+      "id": "fedd0d80-787e-4f97-a8c5-bcd08e1562dc",
+      "slug": "legacy",
+      "title": "Legacy",
+      "before": null,
+      "after": "https://books.google.com/books/content?id=rueNEQAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books-search:isbn:9780593982679",
+      "reason": "no cover; found via google-books-search"
+    },
+    {
+      "id": "70623985-1a71-4bb0-9460-e8c633bdf5f5",
+      "slug": "reign-of-the-empire-edge-of-the-abyss",
+      "title": "Reign of the Empire: Edge of the Abyss",
+      "before": null,
+      "after": "https://books.google.com/books/content?id=shLIEQAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books-search:isbn:9780593873625",
+      "reason": "no cover; found via google-books-search"
+    },
+    {
+      "id": "e8955000-52cd-430f-98da-20a5e1fae864",
+      "slug": "star-wars-outlaws-low-red-moon",
+      "title": "Star Wars Outlaws: Low Red Moon",
+      "before": null,
+      "after": "https://books.google.com/books/content?id=WeJzEQAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books-search:isbn:9780593874509",
+      "reason": "no cover; found via google-books-search"
+    },
+    {
+      "id": "008739b0-c5b4-4c8e-97cb-a8cb86f4aa29",
+      "slug": "star-wars-rogue-one-a-junior-novel",
+      "title": "Star Wars: Rogue One: A Junior Novel",
+      "before": null,
+      "after": "https://books.google.com/books/content?id=HEupDAEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books-search:isbn:9781484705094",
+      "reason": "no cover; found via google-books-search"
+    },
+    {
+      "id": "1f7932f5-6260-454c-a90d-52a464ce0962",
+      "slug": "the-last-order",
+      "title": "The Last Order",
+      "before": null,
+      "after": "https://books.google.com/books/content?id=Ai5sEQAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+      "source": "google-books-search:isbn:9781368065610",
+      "reason": "no cover; found via google-books-search"
+    }
+  ],
+  "synopsis_fills": [
+    {
+      "id": "592b9159-2ce7-401d-adb6-f966adc02d50",
+      "slug": "a-new-hope-the-princess-the-scoundrel-and-the-farm-boy",
+      "title": "A New Hope: The Princess, the Scoundrel, and the Farm Boy",
+      "before": null,
+      "after": "A middle-grade retelling of A New Hope told in three parts, one each from Leia, Han, and Luke.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "c2f15948-be2d-4f7b-acdb-fa812572ac21",
+      "slug": "ahsoka-a-novelization-of-season-one",
+      "title": "Ahsoka: A Novelization of Season One",
+      "before": null,
+      "after": "A junior novelization of Ahsoka's first season, as Ahsoka and Sabine Wren race to find Thrawn and Ezra Bridger.",
+      "status": "drafted",
+      "basis": "announced publisher premise (unreleased) — facts only",
+      "flags": [
+        "not yet released (2027-03-23) — written from the announced premise"
+      ]
+    },
+    {
+      "id": "14f88218-2fa4-4886-aaf0-b35d07643fb1",
+      "slug": "before-the-awakening",
+      "title": "Before the Awakening",
+      "before": null,
+      "after": "Three stories follow Finn, Rey, and Poe Dameron in the days before The Force Awakens.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "a398f434-ca71-4e8c-b4f3-b88850af2922",
+      "slug": "before-the-storm",
+      "title": "Before the Storm",
+      "before": null,
+      "after": "Leia faces the Yevetha's warlike Nil Spaar while Luke searches for clues about his mother and Lando chases a derelict alien ship.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "7dc39a15-7fa7-4ca1-9805-3d8780e4be17",
+      "slug": "children-of-the-jedi",
+      "title": "Children of the Jedi",
+      "before": null,
+      "after": "Luke meets the spirit of Jedi Callista aboard the reawakened dreadnaught Eye of Palpatine as Leia searches Belsavis for lost Jedi children.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "9a9905d8-46cf-47f8-be2a-9dbb9e5ebe65",
+      "slug": "dark-nest-i-the-joiner-king",
+      "title": "Dark Nest I: The Joiner King",
+      "before": null,
+      "after": "Young Jedi answer a mysterious summons to the Unknown Regions and are drawn into the Killik hive's border war with the Chiss.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "3edfb28d-6ea6-4e87-8b4c-987537b34053",
+      "slug": "dark-nest-ii-the-unseen-queen",
+      "title": "Dark Nest II: The Unseen Queen",
+      "before": null,
+      "after": "The Skywalkers and Solos discover the Dark Nest still lives as Killik-fueled piracy pushes the Colony toward war.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "90e8ea24-6fd9-4a8b-bf1d-e3ac36944e6d",
+      "slug": "dark-nest-iii-the-swarm-war",
+      "title": "Dark Nest III: The Swarm War",
+      "before": null,
+      "after": "Luke reshapes the Jedi Order as the Chiss-Killik conflict explodes into open war and the Dark Nest makes its final move.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "1e9064e1-30cf-498d-98d3-ba3eff8a9171",
+      "slug": "darksaber",
+      "title": "Darksaber",
+      "before": null,
+      "after": "Durga the Hutt builds a Death Star-based superweapon as Admiral Daala rallies the Empire and Luke seeks to restore Callista's Force powers.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "0db62787-df8f-4b7a-b258-52d6c70729d5",
+      "slug": "eyes-like-stars",
+      "title": "Eyes Like Stars",
+      "before": null,
+      "after": "Teen Ardent Quay falls for a mysterious stowaway on her family's tour ship as they try to return an artifact home ahead of the First Order.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "e806b557-a0d4-45fa-9578-33d3538e7d6d",
+      "slug": "galaxys-edge-a-crash-of-fate",
+      "title": "Galaxy's Edge: A Crash of Fate",
+      "before": null,
+      "after": "A smuggler returns to Batuu after thirteen years and reconnects with her childhood friend Jules just as a delivery job turns dangerous.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "ed3b9ce9-6d58-478e-a095-b8332295e9e8",
+      "slug": "galaxys-edge-black-spire",
+      "title": "Galaxy's Edge: Black Spire",
+      "before": null,
+      "after": "Resistance spy Vi Moradi and ex-stormtrooper Archex try to build a rebel cell at Black Spire Outpost on Batuu.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "86acfabb-7033-4edd-9a4e-a9217852a3e2",
+      "slug": "hard-merchandise",
+      "title": "Hard Merchandise",
+      "before": null,
+      "after": "Boba Fett and the amnesiac Neelah follow evidence tying Prince Xizor to a galaxy-shaking conspiracy as the Bounty Hunter Wars conclude.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "070b2077-e4e5-456e-b6c8-1369e45f755c",
+      "slug": "heir-to-the-empire-the-20th-anniversary-edition",
+      "title": "Heir to the Empire: The 20th Anniversary Edition",
+      "before": null,
+      "after": "An annotated anniversary reissue of Heir to the Empire, with commentary by Zahn and a new Thrawn novella, Crisis of Faith.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "2e216bea-ba8b-410c-a2d0-0a44c9b81395",
+      "slug": "hiding-from-the-dark",
+      "title": "Hiding from the Dark",
+      "before": null,
+      "after": "In a middle-grade horror tale, a girl named Bia escapes Coruscant to find her mother while a shadowy hunter closes in.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "f038257d-f764-4db1-95fd-b8b0eb00431b",
+      "slug": "hunters-battle-for-the-arena",
+      "title": "Hunters: Battle for the Arena",
+      "before": null,
+      "after": "A Force-sensitive orphan joins the combat teams of Vespaara's Grand Arena and must learn to trust her teammates as a stranger shadows the competition.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "74edd0bd-cd23-4185-adc8-d38f664043ab",
+      "slug": "join-the-resistance",
+      "title": "Join the Resistance",
+      "before": null,
+      "after": "Would-be hero Mattis Banz joins a squad of misfit Resistance recruits who must learn to work together.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "63851cc3-cb7b-4db0-a21b-3d814843e0c1",
+      "slug": "join-the-resistance-attack-on-starkiller-base",
+      "title": "Join the Resistance: Attack on Starkiller Base",
+      "before": null,
+      "after": "J-Squadron's young recruits race to rejoin the Resistance in time for the attack on Starkiller Base.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "e6f3776c-35fb-451f-bbc7-c6df17c3fc62",
+      "slug": "join-the-resistance-escape-from-vodran",
+      "title": "Join the Resistance: Escape from Vodran",
+      "before": null,
+      "after": "Captured by the First Order on Vodran, J-Squadron splits up as some recruits plot an escape and others bargain with a Hutt.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "aac44f05-3b67-49c3-b9da-d267fe6a17fa",
+      "slug": "landos-luck",
+      "title": "Lando's Luck",
+      "before": null,
+      "after": "After a smuggling job goes wrong, Lando and L3-37 must choose between profit and helping a planet that needs a stolen artifact returned.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "ff79611f-0376-4c76-bdab-4969ddbbd317",
+      "slug": "last-shot",
+      "title": "Last Shot",
+      "before": null,
+      "after": "Han and Lando team up years after Endor to stop a vengeful inventor's device, in a story that jumps between three eras.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "fedd0d80-787e-4f97-a8c5-bcd08e1562dc",
+      "slug": "legacy",
+      "title": "Legacy",
+      "before": null,
+      "after": "Between The Last Jedi and The Rise of Skywalker, Leia and Rey travel to a Jedi temple on Tython to repair Rey's broken lightsaber.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "2cd703ca-b7b0-4096-bca3-cacad760affd",
+      "slug": "master-of-evil",
+      "title": "Master of Evil",
+      "before": null,
+      "after": "Newly armored Darth Vader obsessively hunts for a way to cheat death, chasing rumors of a shaman who can raise the dead.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "7f4ea4f0-bfcb-4f73-9be1-ca598caaf903",
+      "slug": "moving-target-a-princess-leia-adventure",
+      "title": "Moving Target: A Princess Leia Adventure",
+      "before": null,
+      "after": "Between Empire and Jedi, Leia leads a small team on a decoy mission to draw Imperial attention away from the rebel fleet.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "3d5bfb45-d1cf-4cf5-9e65-9f5bed46eeb1",
+      "slug": "pirates-price",
+      "title": "Pirate's Price",
+      "before": null,
+      "after": "Pirate Hondo Ohnaka recounts his colorful encounters with Han, Chewie, and the Millennium Falcon.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "b21765c0-d38a-4aa0-88ea-0096c738170c",
+      "slug": "planet-of-twilight",
+      "title": "Planet of Twilight",
+      "before": null,
+      "after": "Leia is taken captive on the former prison world Nam Chorios while Luke searches for Callista and an ancient parasite awakens.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "9f58a485-674a-46df-8b4c-415e65d7e875",
+      "slug": "poe-dameron-free-fall",
+      "title": "Poe Dameron: Free Fall",
+      "before": null,
+      "after": "Sixteen-year-old Poe Dameron leaves Yavin 4 for a piloting job and ends up flying for the Kijimi spice runners.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "6b38d0d9-537b-41ba-b1a2-7598a84daf50",
+      "slug": "princess-of-the-rebellion",
+      "title": "Princess of the Rebellion",
+      "before": null,
+      "after": "After Yavin, Leia, Luke, and Han search for a hidden weapons cache left by Bail Organa to secure a new rebel base.",
+      "status": "drafted",
+      "basis": "announced publisher premise (unreleased) — facts only",
+      "flags": [
+        "not yet released (2027-05-04) — written from the announced premise"
+      ]
+    },
+    {
+      "id": "70623985-1a71-4bb0-9460-e8c633bdf5f5",
+      "slug": "reign-of-the-empire-edge-of-the-abyss",
+      "title": "Reign of the Empire: Edge of the Abyss",
+      "before": null,
+      "after": "A year before Andor, Mon Mothma and Bail Organa confront the Empire's grip on truth while fractured rebel cells fight to survive.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "58f24e7c-e399-42bf-aee7-fe516cb48af2",
+      "slug": "reign-of-the-empire-from-the-ashes",
+      "title": "Reign of the Empire: From the Ashes",
+      "before": null,
+      "after": "The newly united Rebel Alliance struggles to hold together as Mon Mothma and Bail Organa build its base on Yavin 4.",
+      "status": "drafted",
+      "basis": "announced publisher premise (unreleased) — facts only",
+      "flags": [
+        "not yet released (2027-08-10) — written from the announced premise"
+      ]
+    },
+    {
+      "id": "88ebfeff-45c0-4414-82b8-9850b0a40a02",
+      "slug": "republic-commando-hard-contact",
+      "title": "Republic Commando: Hard Contact",
+      "before": null,
+      "after": "Clone commando squad Omega is dropped behind Separatist lines on Qiilura to wipe out a nanovirus designed to kill clones.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "235f4736-29aa-4ab7-bbe9-c072d9344876",
+      "slug": "republic-commando-triple-zero",
+      "title": "Republic Commando: Triple Zero",
+      "before": null,
+      "after": "Omega Squad hunts a Separatist terror network and a mole inside Republic command on Coruscant.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "511f8851-1c9c-4e97-8115-f771eccdbe95",
+      "slug": "return-of-the-jedi-beware-the-power-of-the-dark-side",
+      "title": "Return of the Jedi: Beware the Power of the Dark Side!",
+      "before": null,
+      "after": "A playful middle-grade retelling of Return of the Jedi by Origami Yoda author Tom Angleberger.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "cc36a640-681b-43de-afc7-b05951d011ec",
+      "slug": "sanctuary-a-bad-batch-novel",
+      "title": "Sanctuary: A Bad Batch Novel",
+      "before": null,
+      "after": "Hunter, Tech, Wrecker, and Omega take risky jobs to fund Pabu's recovery, then find themselves shielding two fugitives hunted by the ISB.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "1d7bc74e-9152-47e3-9e1a-78fbf3bf6df0",
+      "slug": "servants-of-the-empire-edge-of-the-galaxy",
+      "title": "Servants of the Empire: Edge of the Galaxy",
+      "before": null,
+      "after": "Lothal teen Zare Leonis begins to doubt the Empire when his sister vanishes from the Imperial Academy.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "017e4510-c1ae-49b9-86c8-184be39e1a2a",
+      "slug": "servants-of-the-empire-imperial-justice",
+      "title": "Servants of the Empire: Imperial Justice",
+      "before": null,
+      "after": "Undercover cadet Zare Leonis falls under suspicion at Lothal's academy while Merei digs deeper into Imperial secrets.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "b0f67727-809d-49a7-8929-c1be75745039",
+      "slug": "servants-of-the-empire-rebel-in-the-ranks",
+      "title": "Servants of the Empire: Rebel in the Ranks",
+      "before": null,
+      "after": "Zare Leonis enrolls at Lothal's Imperial Academy to secretly investigate his sister's disappearance.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "19a95d26-a64b-41db-842b-0ae651ca2695",
+      "slug": "servants-of-the-empire-the-secret-academy",
+      "title": "Servants of the Empire: The Secret Academy",
+      "before": null,
+      "after": "Zare Leonis's search for his missing sister leads him to Commandant Hux's academy on Arkanis, where exposure could mean death.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "e4b5df31-c29a-46bf-8aa8-a7a865e3f66a",
+      "slug": "shadow-games",
+      "title": "Shadow Games",
+      "before": null,
+      "after": "Dash Rendar signs on as bodyguard to a galactic pop star whose tour is plagued by murders and ties to Black Sun.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "3bb6285e-fa92-44d7-93dd-7eac199284d7",
+      "slug": "shield-of-lies",
+      "title": "Shield of Lies",
+      "before": null,
+      "after": "Han spies on the Yevethan fleet, Lando is trapped aboard a runaway alien ship, and Luke studies with the Fallanassi.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "9ae40c79-1726-4bd8-9212-cdacf4e0b979",
+      "slug": "slave-ship",
+      "title": "Slave Ship",
+      "before": null,
+      "after": "Boba Fett fakes his death and chases a huge bounty that pulls him into Prince Xizor's plot to break the Bounty Hunters Guild.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "9e49d471-173d-4f53-bcd2-750d3e899df8",
+      "slug": "smugglers-run-a-han-solo-and-chewbacca-adventure",
+      "title": "Smuggler's Run: A Han Solo & Chewbacca Adventure",
+      "before": null,
+      "after": "After Yavin, Han and Chewbacca reluctantly extract a rebel officer from Cyrkon with an ISB agent on their tail.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "3f21c885-0de1-41ac-96f8-458ea732aec2",
+      "slug": "solo-a-star-wars-story-a-junior-novel",
+      "title": "Solo: A Star Wars Story: A Junior Novel",
+      "before": null,
+      "after": "A junior novelization of Solo: A Star Wars Story, with extra and deleted scenes.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "86101a66-e533-4740-a1b6-154c0a305e51",
+      "slug": "solo-a-star-wars-story-expanded-edition",
+      "title": "Solo: A Star Wars Story: Expanded Edition",
+      "before": null,
+      "after": "The film novelization of Solo, with added scenes including Han's Imperial Navy service and Qi'ra's past.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "52bf4139-dbd6-480f-a878-e4df8040779a",
+      "slug": "spark-of-the-resistance",
+      "title": "Spark of the Resistance",
+      "before": null,
+      "after": "Rey, Rose, Poe, and BB-8 answer a distress call and defend Minfar's Zixon people from the First Order.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "47b4b5f4-efc6-4755-ad7a-1d1ec170be43",
+      "slug": "star-wars-a-new-hope-paperback-novel",
+      "title": "Star Wars: A New Hope (paperback novel)",
+      "before": null,
+      "after": "A junior novel adaptation of A New Hope, revised for current canon for Star Wars' 40th anniversary in 2017.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "726e0565-8c33-411f-8a92-3fd50c794d86",
+      "slug": "star-wars-episode-i-the-phantom-menace",
+      "title": "Star Wars: Episode I The Phantom Menace",
+      "before": null,
+      "after": "The novelization of The Phantom Menace, opening with young Anakin's life on Tatooine before the Jedi arrive.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "5ff68e4e-8aa5-4fb6-b0f3-3d9b16c6d80a",
+      "slug": "star-wars-episode-ii-attack-of-the-clones",
+      "title": "Star Wars: Episode II Attack of the Clones",
+      "before": null,
+      "after": "The novelization of Attack of the Clones, expanding on Anakin and Padmé and adding scenes that never made the final film.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "99ec6c1b-f620-443a-a4cf-6660b5a29b43",
+      "slug": "star-wars-galaxies-the-ruins-of-dantooine",
+      "title": "Star Wars Galaxies: The Ruins of Dantooine",
+      "before": null,
+      "after": "An Imperial bioengineer secretly aiding the Rebellion helps a rebel spy recover a holocron listing rebel sympathizers.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "e8955000-52cd-430f-98da-20a5e1fae864",
+      "slug": "star-wars-outlaws-low-red-moon",
+      "title": "Star Wars Outlaws: Low Red Moon",
+      "before": null,
+      "after": "Disinherited heir Jaylen Vrax and reprogrammed battle droid ND-5 build an underworld partnership in this Outlaws prequel.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "0e92085c-8fb3-4e39-8565-07c23dfc5b0d",
+      "slug": "star-wars-return-of-the-jedi-paperback-novel",
+      "title": "Star Wars: Return of the Jedi (paperback novel)",
+      "before": null,
+      "after": "A junior novel adaptation of Return of the Jedi, revised for current canon for Star Wars' 40th anniversary in 2017.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "008739b0-c5b4-4c8e-97cb-a8cb86f4aa29",
+      "slug": "star-wars-rogue-one-a-junior-novel",
+      "title": "Star Wars: Rogue One: A Junior Novel",
+      "before": null,
+      "after": "A junior novelization of Rogue One, following Jyn Erso's mission to steal the Death Star plans.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "76db3a53-b2a1-4d8c-8292-cb66a8787808",
+      "slug": "star-wars-the-clone-wars",
+      "title": "Star Wars: The Clone Wars",
+      "before": null,
+      "after": "The novelization of the 2008 Clone Wars film, in which Anakin and new Padawan Ahsoka rescue Jabba's kidnapped son.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "36352b14-2857-4c3d-85d0-4728aabe3a8e",
+      "slug": "star-wars-the-empire-strikes-back-paperback-novel",
+      "title": "Star Wars: The Empire Strikes Back (paperback novel)",
+      "before": null,
+      "after": "A junior novel adaptation of The Empire Strikes Back, revised for current canon for Star Wars' 40th anniversary in 2017.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "c2fe34b4-6df6-4f93-81a2-5b8bd4fb1c09",
+      "slug": "star-wars-the-force-awakens",
+      "title": "Star Wars: The Force Awakens",
+      "before": null,
+      "after": "The novelization of The Force Awakens, as Rey, Finn, and Poe are drawn into the fight against the First Order.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "50c9f709-0b54-4c58-9ec5-0197203a4a06",
+      "slug": "star-wars-the-force-awakens-a-junior-novel",
+      "title": "Star Wars: The Force Awakens: A Junior Novel",
+      "before": null,
+      "after": "A junior novelization of The Force Awakens, following Rey and Finn from Jakku to Starkiller Base.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "d76a30e3-e969-4c2a-821e-cc463a5588d1",
+      "slug": "star-wars-the-force-unleashed",
+      "title": "Star Wars: The Force Unleashed",
+      "before": null,
+      "after": "Darth Vader's secret apprentice hunts the last Jedi while being groomed to help overthrow the Emperor.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "5fe71ebd-13a1-4ffa-af8f-d4e05e720a42",
+      "slug": "star-wars-the-force-unleashed-ii",
+      "title": "Star Wars: The Force Unleashed II",
+      "before": null,
+      "after": "A clone of Vader's former apprentice escapes Kamino and searches for Juno Eclipse and the truth of his identity.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "dcd57851-d94a-4fde-a8c0-31d399a2703d",
+      "slug": "star-wars-the-last-jedi-a-junior-novel",
+      "title": "Star Wars: The Last Jedi: A Junior Novel",
+      "before": null,
+      "after": "A junior novelization of The Last Jedi with extended and exclusive scenes.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "29a9afdf-d321-45fe-89d4-7b96310493d8",
+      "slug": "star-wars-the-last-jedi-expanded-edition",
+      "title": "Star Wars: The Last Jedi: Expanded Edition",
+      "before": null,
+      "after": "The novelization of The Last Jedi, developed with Rian Johnson's input and including scenes from alternate drafts.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "0fd250dd-12df-436e-96e5-cc16fa4f1a17",
+      "slug": "star-wars-the-rise-of-skywalker-a-junior-novel",
+      "title": "Star Wars: The Rise of Skywalker: A Junior Novel",
+      "before": null,
+      "after": "A junior novelization of The Rise of Skywalker with deleted and extended scenes.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "aecd5b40-dcb7-4de0-8de1-c8149195796f",
+      "slug": "star-wars-the-rise-of-skywalker-expanded-edition",
+      "title": "Star Wars: The Rise of Skywalker: Expanded Edition",
+      "before": null,
+      "after": "The novelization of The Rise of Skywalker with expanded scenes and material not seen in the film.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "8925607c-a78d-4ee5-b985-c89648da185e",
+      "slug": "stories-of-jedi-and-sith",
+      "title": "Stories of Jedi and Sith",
+      "before": null,
+      "after": "Ten short stories by different authors pit iconic Jedi against Sith, from Obi-Wan and Luke to Vader and Maul.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "18c7c48f-8b0b-4ebe-bb75-c1be953c70b9",
+      "slug": "survivors-quest",
+      "title": "Survivor's Quest",
+      "before": null,
+      "after": "Luke and Mara Jade travel to the Unknown Regions to recover the wreck of the Outbound Flight Jedi expedition.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "10463d8a-bea9-4576-8778-74891ffb84ac",
+      "slug": "tatooine-ghost",
+      "title": "Tatooine Ghost",
+      "before": null,
+      "after": "Han and Leia go to Tatooine to recover a lost Alderaanian painting hiding a vital code, and Leia learns about her father's past.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "c54c8517-8175-45aa-84fe-9bd706f07c4d",
+      "slug": "the-book-of-boba-fett-junior-novel",
+      "title": "The Book of Boba Fett Junior Novel",
+      "before": null,
+      "after": "A junior novelization of The Book of Boba Fett, as Boba and Fennec Shand take over Jabba's former territory on Tatooine.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "cc1718cf-2f39-4193-a67e-372cfc0189f2",
+      "slug": "the-clone-wars-no-prisoners",
+      "title": "The Clone Wars: No Prisoners",
+      "before": null,
+      "after": "Ahsoka and Captain Rex join Gilad Pellaeon's rescue of a Republic spy, and Ahsoka meets a Jedi who rejects Order tradition.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "5bb8f78d-75d2-499a-a81a-4109de3c67ce",
+      "slug": "the-clone-wars-wild-space",
+      "title": "The Clone Wars: Wild Space",
+      "before": null,
+      "after": "Obi-Wan and Bail Organa chase intelligence to a remote world that proves far more dangerous than they expect.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "750ec7df-9d28-4d57-b41c-dfc6ec71ff5d",
+      "slug": "the-crystal-star",
+      "title": "The Crystal Star",
+      "before": null,
+      "after": "Leia searches for her kidnapped children while Luke and Han investigate a strange cult near a crystallizing star.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "00ca17b4-6e40-4c4b-8421-2f33a4358fe7",
+      "slug": "the-empire-strikes-back-so-you-want-to-be-a-jedi",
+      "title": "The Empire Strikes Back: So You Want to Be a Jedi?",
+      "before": null,
+      "after": "A middle-grade retelling of The Empire Strikes Back that puts the reader in Luke's place as he trains to be a Jedi.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "19e2349e-59a9-4438-a588-c6d7eb075e0e",
+      "slug": "the-high-republic-a-valiant-vow",
+      "title": "The High Republic: A Valiant Vow",
+      "before": null,
+      "after": "Padawans and younglings join forces against the spreading blight and swarms of destructive scav droids.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "b86bb375-fea1-4927-b332-851615420610",
+      "slug": "the-high-republic-beware-the-nameless",
+      "title": "The High Republic: Beware the Nameless",
+      "before": null,
+      "after": "Ram Jomaram and a group of stowaway younglings answer a distress call in the Occlusion Zone and face the Nameless.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "32bc405b-18e6-4120-81a5-557d52642625",
+      "slug": "the-high-republic-escape-from-valo",
+      "title": "The High Republic: Escape from Valo",
+      "before": null,
+      "after": "Trapped on Nihil-occupied Valo, Padawan Ram Jomaram leads three young Jedi in protecting his home.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "73c3a35a-d8f9-4bee-86b2-064f9ba806af",
+      "slug": "the-high-republic-quest-for-planet-x",
+      "title": "The High Republic: Quest for Planet X",
+      "before": null,
+      "after": "Prospectors Dass and Sky enlist Padawan Rooper Nitani in a hunt for the legendary Planet X.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "fe8f5e4e-111f-487e-978d-053abf70c17a",
+      "slug": "the-high-republic-quest-for-the-hidden-city",
+      "title": "The High Republic: Quest for the Hidden City",
+      "before": null,
+      "after": "Jedi Silandra Sho and Padawan Rooper Nitani search the monster-haunted planet Gloam for a missing Pathfinder team.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "9aa7cee3-e400-437e-9902-884486f06767",
+      "slug": "the-last-jedi-cobalt-squadron",
+      "title": "The Last Jedi: Cobalt Squadron",
+      "before": null,
+      "after": "Bomber crew sisters Rose and Paige Tico risk a covert mission to deliver aid to a system the First Order is starving.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "1f7932f5-6260-454c-a90d-52a464ce0962",
+      "slug": "the-last-order",
+      "title": "The Last Order",
+      "before": null,
+      "after": "After The Rise of Skywalker, Finn and Jannah track the First Order officer behind the kidnapping of a shipful of children.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "1cba2a90-6147-4af2-92d8-642389b34a3b",
+      "slug": "the-legends-of-luke-skywalker",
+      "title": "The Legends of Luke Skywalker",
+      "before": null,
+      "after": "Deckhands on a ship to Canto Bight swap tall tales about Luke Skywalker, unsure which are true.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "941874a6-2bdd-43d6-afb3-3fada715f516",
+      "slug": "the-mandalorian-armor",
+      "title": "The Mandalorian Armor",
+      "before": null,
+      "after": "Boba Fett escapes the Sarlacc as flashbacks reveal Prince Xizor's scheme to turn the Bounty Hunters Guild against itself.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "71f56a3a-295b-423b-a7d3-49eff7f68b57",
+      "slug": "the-mandalorian-junior-novel",
+      "title": "The Mandalorian Junior Novel",
+      "before": null,
+      "after": "A junior novelization of The Mandalorian's first season, as Din Djarin chooses to protect the Child.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "0db6b392-8564-42c4-9ba7-1b0e0f7c2f9b",
+      "slug": "the-mandalorian-season-2-junior-novel",
+      "title": "The Mandalorian Season 2 Junior Novel",
+      "before": null,
+      "after": "A junior novelization of The Mandalorian's second season, as Din Djarin seeks a Jedi to take in Grogu.",
+      "status": "drafted",
+      "basis": "film/series plot + Wookieepedia article (facts only)",
+      "flags": []
+    },
+    {
+      "id": "02a82b1d-ce4a-46b0-85ba-90e810c53acc",
+      "slug": "the-mighty-chewbacca-in-the-forest-of-fear",
+      "title": "The Mighty Chewbacca in the Forest of Fear!",
+      "before": null,
+      "after": "Chewbacca takes a job in a fear-inducing forest to recover a dark artifact and save Han Solo.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "541634d3-df6e-4a91-a5e2-4741cf330a54",
+      "slug": "the-new-rebellion",
+      "title": "The New Rebellion",
+      "before": null,
+      "after": "A Dark Jedi named Kueller threatens the New Republic with mass murder while Han is framed for a Senate bombing.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "a8ae4a84-0c94-48a3-a450-1a7e5c8d2235",
+      "slug": "the-princess-and-the-scoundrel",
+      "title": "The Princess and the Scoundrel",
+      "before": null,
+      "after": "Han and Leia marry on Endor and honeymoon aboard the luxury starliner Halcyon as Imperial remnants threaten the peace.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "71d03707-8b70-43ce-b29c-b2c8fde5d3a6",
+      "slug": "the-weapon-of-a-jedi-a-luke-skywalker-adventure",
+      "title": "The Weapon of a Jedi: A Luke Skywalker Adventure",
+      "before": null,
+      "after": "Luke is drawn to a Jedi temple on Devaron, where he must protect a local girl and duel the scavenger Sarco Plank.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "7e4fb792-5d68-48c8-9db3-c983bcd260d3",
+      "slug": "twin-crossroads",
+      "title": "Twin Crossroads",
+      "before": null,
+      "after": "Training together after Endor, Luke and Leia go undercover on Coruscant and confront their parents' legacy.",
+      "status": "drafted",
+      "basis": "announced publisher premise (unreleased) — facts only",
+      "flags": [
+        "not yet released (2027-04-06) — written from the announced premise"
+      ]
+    },
+    {
+      "id": "501c481a-2a16-4c91-b3b4-826710a9da9f",
+      "slug": "tyrants-test",
+      "title": "Tyrant's Test",
+      "before": null,
+      "after": "Chewbacca leads a rescue for the captured Han as Leia commits the New Republic to war with the Yevetha.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "787c6387-0ca4-49cb-abf2-24bef463cf53",
+      "slug": "x-wing-isards-revenge",
+      "title": "X-Wing: Isard's Revenge",
+      "before": null,
+      "after": "Rogue Squadron reluctantly allies with Ysanne Isard to free prisoners held by Warlord Krennel.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "51776e4b-430a-4bad-9249-fa5f2a6ad88d",
+      "slug": "x-wing-mercy-kill",
+      "title": "X-Wing: Mercy Kill",
+      "before": null,
+      "after": "Decades later, Wraith Squadron reunites to expose a Galactic Alliance general tied to the Lecersen Conspiracy.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    },
+    {
+      "id": "819fd4d7-29d9-4c85-8c41-4b074cf0cb89",
+      "slug": "x-wing-starfighters-of-adumar",
+      "title": "X-Wing: Starfighters of Adumar",
+      "before": null,
+      "after": "Wedge and three veteran pilots lead a diplomatic mission to Adumar, a world that prizes fighter pilots above all.",
+      "status": "drafted",
+      "basis": "Wookieepedia article + publisher summary (facts only)",
+      "flags": []
+    }
+  ],
+  "flagged": {
+    "isbn": [],
+    "covers_missing": [
+      {
+        "slug": "children-of-the-jedi",
+        "title": "Children of the Jedi",
+        "reason": "tried 9780553840087 on Open Library and Google Books (+ ISBN-verified title search)"
+      },
+      {
+        "slug": "last-shot",
+        "title": "Last Shot",
+        "reason": "tried 9780525622130 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check"
+      },
+      {
+        "slug": "sanctuary-a-bad-batch-novel",
+        "title": "Sanctuary: A Bad Batch Novel",
+        "reason": "tried 9780593874462 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check"
+      },
+      {
+        "slug": "servants-of-the-empire-imperial-justice",
+        "title": "Servants of the Empire: Imperial Justice",
+        "reason": "tried 9781484716601 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check"
+      },
+      {
+        "slug": "the-high-republic-a-valiant-vow",
+        "title": "The High Republic: A Valiant Vow",
+        "reason": "tried 9781368095204 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check"
+      }
+    ],
+    "covers_not_yet_available": [
+      {
+        "slug": "ahsoka-a-novelization-of-season-one",
+        "title": "Ahsoka: A Novelization of Season One",
+        "reason": "no cover available yet (releases 2027-03-23); tried 9780736452847 on Open Library and Google Books (+ ISBN-verified title search)"
+      },
+      {
+        "slug": "princess-of-the-rebellion",
+        "title": "Princess of the Rebellion",
+        "reason": "no cover available yet (releases 2027-05-04); tried 9780736449946 on Open Library and Google Books (+ ISBN-verified title search)"
+      },
+      {
+        "slug": "reign-of-the-empire-from-the-ashes",
+        "title": "Reign of the Empire: From the Ashes",
+        "reason": "no cover available yet (releases 2027-08-10); tried 9780593874042, 9780593874059 on Open Library and Google Books (+ ISBN-verified title search)"
+      },
+      {
+        "slug": "star-wars-starfighter",
+        "title": "Star Wars: Starfighter",
+        "reason": "no cover available yet (releases 2027-06-22); tried 9798217482207, 9798217482214 on Open Library and Google Books (+ ISBN-verified title search)"
+      },
+      {
+        "slug": "twin-crossroads",
+        "title": "Twin Crossroads",
+        "reason": "no cover available yet (releases 2027-04-06); tried 9780525478850 on Open Library and Google Books (+ ISBN-verified title search)"
+      }
+    ],
+    "synopses_skipped": [
+      {
+        "slug": "star-wars-starfighter",
+        "title": "Star Wars: Starfighter",
+        "reason": "unreleased film novelization (2027-06-22); only a one-line announcement exists — the plot is not public, so no accurate synopsis can be written yet"
+      }
+    ],
+    "synopsis_drafts_unused": []
+  }
+}
