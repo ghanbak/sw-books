@@ -10,19 +10,25 @@ import {
 	type CleanupChangeset,
 	type CleanupRow,
 	type CoverCandidate,
+	type CoverReview,
 	type IsbnEvidence,
+	type OlWorkFacts,
 	type SynopsisFill,
+	type WorkCoverEvidence,
 	applyApprovedAdditions,
 	buildCleanupChangeset,
 	coverIsbns,
 	coverKey,
 	decideIsbnMembership,
+	findWorkCover,
 	isWikiImage,
 	olNamesBook,
+	olTitleForm,
 	pickCover,
 	pickResetPrimary,
 	sharedPhrases,
 	synopsisProblems,
+	vetFallbackCover,
 } from './cleanup';
 
 // Real-shaped ISBNs (valid check digits) from the 2026-10-21 prod investigation.
@@ -385,6 +391,299 @@ describe('buildCleanupChangeset', () => {
 	});
 });
 
+// Real-shaped Open Library records from the 2026-10-22 prod investigation.
+describe('work-level cover fallback', () => {
+	const LAST_SHOT = '9780525622130';
+	const CHILDREN = '9780553840087';
+	const IMPERIAL = '9781484716601';
+	const LAST_SHOT_WORK = '/works/OL19653601W';
+	const LAST_SHOT_URL = 'https://covers.openlibrary.org/b/id/8568524-L.jpg';
+	const CHILDREN_URL = 'https://covers.openlibrary.org/b/id/372419-L.jpg';
+
+	const work = (over: Partial<OlWorkFacts> = {}): OlWorkFacts => ({
+		key: LAST_SHOT_WORK,
+		title: 'Star Wars - Last Shot - A Han and Lando Novel',
+		subtitle: null,
+		authors: ['Daniel José Older'],
+		covers: [8568524],
+		first_publish_year: 2018,
+		languages: [],
+		...over,
+	});
+	const lastShot = row({
+		id: 'id-ls',
+		slug: 'last-shot',
+		title: 'Last Shot',
+		author: ['Daniel José Older'],
+		canon: 'Canon',
+		isbn: [LAST_SHOT],
+		primary_isbn: LAST_SHOT,
+		cover_image: null,
+		date_published: '2018-04-17',
+	});
+	const lastShotEv = (w: OlWorkFacts | null = work()): WorkCoverEvidence => ({
+		editions: { [LAST_SHOT]: { title: 'Star wars', subtitle: 'Last shot', work: LAST_SHOT_WORK } },
+		works: { [LAST_SHOT_WORK]: w },
+		search: null,
+	});
+	const children = row({
+		id: 'id-cj',
+		slug: 'children-of-the-jedi',
+		title: 'Children of the Jedi',
+		author: ['Barbara Hambly'],
+		canon: 'Legends',
+		isbn: [CHILDREN],
+		primary_isbn: CHILDREN,
+		cover_image: null,
+		date_published: '1995-04-01',
+	});
+	const childrenWork = work({
+		key: '/works/OL497873W',
+		title: 'Star Wars - Children of the Jedi',
+		authors: ['Barbara Hambly'],
+		covers: [372419],
+		first_publish_year: 1995,
+		languages: ['eng', 'fre', 'ger'],
+	});
+	const childrenEv = (search: OlWorkFacts[] = [childrenWork]): WorkCoverEvidence => ({
+		editions: { [CHILDREN]: null },
+		works: {},
+		search,
+	});
+	const accept = (slug: string, cover: string): CoverReview => ({
+		slug,
+		cover,
+		verdict: 'accept',
+		note: 'looked at it',
+	});
+	const vet = (r: CleanupRow, d: ReturnType<typeof findWorkCover>, over = {}) => {
+		if (d.kind !== 'candidate') throw new Error(d.reason);
+		return vetFallbackCover(r, d.candidate, {
+			headOk: true,
+			inUse: new Map(),
+			reviews: [accept(r.slug, coverKey(d.candidate.url))],
+			...over,
+		});
+	};
+
+	it('olTitleForm turns OL " - " / " : " separators into ": "', () => {
+		expect(olTitleForm('Star Wars - Last Shot - A Han and Lando Novel')).toBe(
+			'Star Wars: Last Shot: A Han and Lando Novel',
+		);
+		expect(olTitleForm('Star Wars : the High Republic')).toBe('Star Wars: the High Republic');
+	});
+
+	it('accepts a same-work match: title + full author set, first work cover', () => {
+		const d = findWorkCover(lastShot, lastShotEv());
+		expect(d).toMatchObject({
+			kind: 'candidate',
+			candidate: { via: 'same-work', work: LAST_SHOT_WORK, url: LAST_SHOT_URL, isbn: LAST_SHOT },
+		});
+		expect(vet(lastShot, d)).toMatchObject({ ok: true });
+		// Skips OL's non-positive "deleted cover" markers.
+		const skip = findWorkCover(lastShot, lastShotEv(work({ covers: [-1, 8568524] })));
+		expect(skip.kind === 'candidate' && skip.candidate.cover_id).toBe(8568524);
+	});
+
+	it('rejects on author mismatch, including a partial author set', () => {
+		const other = findWorkCover(lastShot, lastShotEv(work({ authors: ['Chuck Wendig'] })));
+		expect(other).toMatchObject({ kind: 'none' });
+		expect(other.kind === 'none' && other.reason).toMatch(/authors \[Chuck Wendig\]/);
+		const pair = row({ ...lastShot, author: ['Daniel José Older', 'Chuck Wendig'] });
+		expect(findWorkCover(pair, lastShotEv()).kind).toBe('none');
+		expect(findWorkCover(row({ ...lastShot, author: [] }), lastShotEv()).kind).toBe('none');
+	});
+
+	it('rejects on title mismatch (a series-level work), and a work with no cover', () => {
+		const imperial = row({
+			slug: 'servants-of-the-empire-imperial-justice',
+			title: 'Servants of the Empire: Imperial Justice',
+			author: ['Jason Fry'],
+			isbn: [IMPERIAL],
+			primary_isbn: IMPERIAL,
+			cover_image: null,
+			date_published: '2015-07-07',
+		});
+		const series = work({
+			key: '/works/OL27832612W',
+			title: 'Star Wars Rebels Servants of the Empire',
+			authors: ['Jason Fry'],
+			covers: [],
+		});
+		const d = findWorkCover(imperial, {
+			editions: { [IMPERIAL]: { title: 'x', subtitle: 'Imperial Justice', work: series.key } },
+			works: { [series.key]: series },
+			search: null,
+		});
+		expect(d.kind === 'none' && d.reason).toMatch(/title does not match/);
+		const bare = findWorkCover(lastShot, lastShotEv(work({ covers: [] })));
+		expect(bare.kind === 'none' && bare.reason).toMatch(/has no cover/);
+		expect(findWorkCover(lastShot, lastShotEv(null)).kind).toBe('none');
+	});
+
+	it('rejects ambiguous multiple works (search hits, or row ISBNs on two works)', () => {
+		const dup = { ...childrenWork, key: '/works/OL999W', covers: [111] };
+		const d = findWorkCover(children, childrenEv([childrenWork, dup]));
+		expect(d.kind === 'none' && d.reason).toMatch(/ambiguous — 2 works match/);
+		// A non-matching extra hit does not make it ambiguous.
+		const noise = work({
+			key: '/works/OL1W',
+			title: 'Sw Children Exp',
+			authors: ['Barbara Hambly'],
+		});
+		expect(findWorkCover(children, childrenEv([childrenWork, noise])).kind).toBe('candidate');
+		const two = row({ ...lastShot, isbn: [LAST_SHOT, CHILDREN] });
+		const twoWorks = findWorkCover(two, {
+			editions: {
+				[LAST_SHOT]: { title: null, subtitle: null, work: LAST_SHOT_WORK },
+				[CHILDREN]: { title: null, subtitle: null, work: '/works/OL2W' },
+			},
+			works: { [LAST_SHOT_WORK]: work(), '/works/OL2W': work({ key: '/works/OL2W' }) },
+			search: null,
+		});
+		expect(twoWorks.kind === 'none' && twoWorks.reason).toMatch(/ambiguous/);
+	});
+
+	it('title+author search: only when no row ISBN is on OL, and only a plausible work', () => {
+		const d = findWorkCover(children, childrenEv());
+		expect(d).toMatchObject({
+			kind: 'candidate',
+			candidate: { via: 'title-author', work: '/works/OL497873W', url: CHILDREN_URL, isbn: null },
+		});
+		const later = findWorkCover(
+			children,
+			childrenEv([{ ...childrenWork, first_publish_year: 2004 }]),
+		);
+		expect(later.kind === 'none' && later.reason).toMatch(/after the row/);
+		const canonRow = row({ ...children, canon: 'Canon' });
+		expect(findWorkCover(canonRow, childrenEv()).kind).toBe('none'); // 1995 < Canon
+		const foreign = { ...childrenWork, languages: ['fre', 'ger'] };
+		expect(findWorkCover(children, childrenEv([foreign])).kind).toBe('none');
+		const noYear = { ...childrenWork, first_publish_year: null };
+		expect(findWorkCover(children, childrenEv([noYear])).kind).toBe('none');
+		// An ISBN on OL means same-work only: the search is never consulted.
+		const onOl = { ...lastShotEv(work({ covers: [] })), search: [work()] };
+		expect(findWorkCover(lastShot, onOl).kind).toBe('none');
+	});
+
+	it('rejects a shared cover, a failed HEAD check, an existing cover, and unreviewed images', () => {
+		const d = findWorkCover(lastShot, lastShotEv());
+		const shared = vet(lastShot, d, { inUse: new Map([['ol:8568524', 'lando']]) });
+		expect(shared).toEqual({ ok: false, reason: 'ol:8568524 is already used by lando' });
+		// Its own reservation is not "shared".
+		expect(vet(lastShot, d, { inUse: new Map([['ol:8568524', 'last-shot']]) }).ok).toBe(true);
+		expect(vet(lastShot, d, { headOk: false })).toMatchObject({ ok: false });
+		const covered = row({ ...lastShot, cover_image: 'https://example.com/x.jpg' });
+		expect(vet(covered, d)).toMatchObject({
+			ok: false,
+			reason: expect.stringMatching(/never overwritten/),
+		});
+		const pending = vet(lastShot, d, { reviews: [] });
+		expect(pending.ok === false && pending.reason).toMatch(/pending visual review/);
+		const rejected = vet(lastShot, d, {
+			reviews: [
+				{ ...accept('last-shot', 'ol:8568524'), verdict: 'reject', note: 'German edition' },
+			],
+		});
+		expect(rejected.ok === false && rejected.reason).toMatch(/rejected on review: German edition/);
+		// A review for a different image does not carry over.
+		expect(vet(lastShot, d, { reviews: [accept('last-shot', 'ol:1')] }).ok).toBe(false);
+	});
+
+	it('build: fallback only after per-ISBN passes, released rows only, provenance recorded', () => {
+		const future = row({ ...lastShot, id: 'id-f', slug: 'm-future', date_published: '2027-01-01' });
+		const holder = row({ id: 'id-h', slug: 'holder', cover_image: CHILDREN_URL });
+		const kids = row({ ...children, slug: 'kids-copy', id: 'id-k' });
+		const cs = buildCleanupChangeset({
+			rows: [lastShot, children, future, holder, kids],
+			asOf: '2026-10-22',
+			isbnEvidence: new Map(),
+			coverCandidates: new Map(),
+			drafts: { drafts: {}, skipped: {} },
+			wikiText: new Map(),
+			approvedIsbnAdditions: [],
+			isbnHolders: new Map(),
+			workCovers: new Map([
+				['last-shot', lastShotEv()],
+				['children-of-the-jedi', childrenEv()],
+				['m-future', lastShotEv()],
+				['kids-copy', childrenEv([{ ...childrenWork, covers: [555] }])],
+			]),
+			fallbackHead: new Map([
+				[LAST_SHOT_URL, true],
+				[CHILDREN_URL, true],
+				['https://covers.openlibrary.org/b/id/555-L.jpg', true],
+			]),
+			coverReviews: [
+				accept('last-shot', 'ol:8568524'),
+				accept('children-of-the-jedi', 'ol:372419'),
+			],
+		});
+		const fills = Object.fromEntries(cs.cover_fills.map((c) => [c.slug, c]));
+		expect(fills['last-shot']).toMatchObject({
+			after: LAST_SHOT_URL,
+			source: 'openlibrary-work:OL19653601W',
+			fallback: { via: 'same-work', work: LAST_SHOT_WORK, review: 'looked at it' },
+		});
+		expect(fills['last-shot']?.reason).toMatch(/may be a different printing/);
+		// Children's only matching image is already on "holder" — never shared.
+		expect(fills['children-of-the-jedi']).toBeUndefined();
+		const missing = Object.fromEntries(cs.flagged.covers_missing.map((f) => [f.slug, f.reason]));
+		expect(missing['children-of-the-jedi']).toMatch(
+			/work-level fallback: ol:372419 is already used by holder/,
+		);
+		expect(missing['kids-copy']).toMatch(/pending visual review/);
+		// Unreleased rows never take a fallback cover.
+		expect(cs.flagged.covers_not_yet_available.map((f) => f.slug)).toEqual(['m-future']);
+		expect(cs.summary.cover_fills_fallback).toBe(1);
+
+		// Without the holder, the title+author fill is marked as a different edition.
+		const solo = buildCleanupChangeset({
+			rows: [children],
+			asOf: '2026-10-22',
+			isbnEvidence: new Map(),
+			coverCandidates: new Map([
+				// A per-ISBN miss (no URL) falls through to the fallback.
+				[
+					'children-of-the-jedi',
+					[{ isbn: CHILDREN, source: 'openlibrary', url: null, head_ok: false }],
+				],
+			]),
+			drafts: { drafts: {}, skipped: {} },
+			wikiText: new Map(),
+			approvedIsbnAdditions: [],
+			isbnHolders: new Map(),
+			workCovers: new Map([['children-of-the-jedi', childrenEv()]]),
+			fallbackHead: new Map([[CHILDREN_URL, true]]),
+			coverReviews: [accept('children-of-the-jedi', 'ol:372419')],
+		});
+		expect(solo.cover_fills[0]).toMatchObject({
+			source: 'openlibrary-search:title+author:OL497873W',
+			fallback: { via: 'title-author' },
+		});
+		expect(solo.cover_fills[0]?.reason).toMatch(/different edition: title\+author match/);
+
+		// A usable per-ISBN cover wins outright — the fallback is never consulted.
+		const perIsbn = 'https://covers.openlibrary.org/b/id/77-L.jpg';
+		const won = buildCleanupChangeset({
+			rows: [lastShot],
+			asOf: '2026-10-22',
+			isbnEvidence: new Map(),
+			coverCandidates: new Map([
+				['last-shot', [{ isbn: LAST_SHOT, source: 'google-books', url: perIsbn, head_ok: true }]],
+			]),
+			drafts: { drafts: {}, skipped: {} },
+			wikiText: new Map(),
+			approvedIsbnAdditions: [],
+			isbnHolders: new Map(),
+			workCovers: new Map([['last-shot', lastShotEv()]]),
+			fallbackHead: new Map([[LAST_SHOT_URL, true]]),
+			coverReviews: [accept('last-shot', 'ol:8568524')],
+		});
+		expect(won.cover_fills.map((c) => [c.after, c.fallback])).toEqual([[perIsbn, undefined]]);
+	});
+});
+
 describe('cleanup apply plan', () => {
 	function live(over: Partial<LiveState> = {}): LiveState {
 		return {
@@ -442,6 +741,7 @@ describe('cleanup apply plan', () => {
 				isbn_fixes: 0,
 				isbn_flagged: 0,
 				cover_fills: 0,
+				cover_fills_fallback: 0,
 				covers_missing: 0,
 				covers_not_yet_available: 0,
 				synopsis_fills: 0,
