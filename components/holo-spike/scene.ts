@@ -69,7 +69,7 @@ const tokenColor = (value: string) => new Color(value);
  */
 export type BloomMode = 'off' | 'selective' | 'full';
 
-/** Live-tunable look parameters (spike sliders). Defaults = the current selective look. */
+/** Live-tunable look parameters (spike sliders). Defaults = user-tuned look (2026-10-22). */
 export type Tuning = {
 	strength: number; // bloom strength
 	radius: number; // bloom radius
@@ -81,13 +81,13 @@ export type Tuning = {
 };
 
 export const DEFAULT_TUNING: Tuning = {
-	strength: 1.1,
+	strength: 0.7,
 	radius: 0.5,
 	threshold: 0,
 	edge: 0.85,
-	halo: 0.06,
+	halo: 0.01,
 	emitter: 1,
-	edgeLight: 0.55,
+	edgeLight: 0.27,
 };
 
 type FloatUniform = ReturnType<typeof makeFloat>;
