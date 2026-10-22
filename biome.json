@@ -9,6 +9,16 @@
 			"recommended": true,
 			"style": {
 				"noNonNullAssertion": "off"
+			},
+			"nursery": {
+				"noRestrictedImports": {
+					"level": "error",
+					"options": {
+						"paths": {
+							"three": "Import from 'three/webgpu' (or 'three/tsl'): bare 'three' type-checks against the WebGL-only core."
+						}
+					}
+				}
 			}
 		}
 	},

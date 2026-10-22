@@ -74,7 +74,8 @@
 			"./plugins/withGoogleModularHeaders.js",
 			"./plugins/withPodsMinDeploymentTarget.js",
 			"expo-image",
-			"expo-status-bar"
+			"expo-status-bar",
+			"react-native-webgpu"
 		],
 		"experiments": {
 			"typedRoutes": true,
