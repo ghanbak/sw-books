@@ -17,6 +17,7 @@ import {
 	positionLocal,
 	positionViewDirection,
 	pow,
+	screenUV,
 	sin,
 	smoothstep,
 	step,
@@ -218,9 +219,19 @@ export function buildHoloScene(
 	scenePass.setMRT(mrt({ output, bloomIntensity: float(0) }));
 	const sceneColor = scenePass.getTextureNode('output');
 	const glow = scenePass.getTextureNode('bloomIntensity');
-	pipeline.outputNode = sceneColor.add(
-		bloom(sceneColor.mul(glow), LOOK.bloomStrength, LOOK.bloomRadius, LOOK.bloomThreshold),
+	// Fade the bloom to zero at the canvas edges, or its wide glow stops in a hard rectangle
+	// where the canvas meets the (identically coloured) screen around it.
+	const edgeFade = smoothstep(0, 0.18, screenUV.x)
+		.mul(smoothstep(0, 0.18, oneMinus(screenUV.x)))
+		.mul(smoothstep(0, 0.14, screenUV.y))
+		.mul(smoothstep(0, 0.14, oneMinus(screenUV.y)));
+	const glowPass = bloom(
+		sceneColor.mul(glow),
+		LOOK.bloomStrength,
+		LOOK.bloomRadius,
+		LOOK.bloomThreshold,
 	);
+	pipeline.outputNode = sceneColor.add(glowPass.mul(edgeFade));
 
 	return {
 		scene,

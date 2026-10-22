@@ -309,6 +309,8 @@ const styles = StyleSheet.create({
 		color: tokens.text.secondary,
 	},
 	hero: {
+		// Full-bleed past the content padding so the glow isn't boxed in.
+		marginHorizontal: -20,
 		height: Math.round(HERO_CARD_W * RIG_HEIGHT),
 		marginTop: 4,
 		marginBottom: 16,
