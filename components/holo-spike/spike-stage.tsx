@@ -50,6 +50,9 @@ type Props = {
 	style?: StyleProp<ViewStyle>;
 };
 
+/** Card-mode vertical lift, in card widths (centres the rig's ≈ 1.95-card-width span). */
+const RIG_LIFT = 0.22;
+
 const FALLBACK_COLORS = ['#1a3a5c', '#5c3a1a', '#2d4a22', '#4a2545', '#1a4a4a'];
 
 function percentile(sorted: number[], q: number): number {
@@ -111,9 +114,14 @@ export function SpikeStage(props: Props) {
 			});
 			const scale = p.cardPoints.w * holo.worldPerPoint;
 			holo.projector.scale.setScalar(scale);
+			if (p.mode === 'card') holo.projector.position.y = RIG_LIFT * scale;
 			holo.cards.forEach((card, i) => {
 				card.mesh.scale.setScalar(scale);
 				card.setFallbackColor(FALLBACK_COLORS[i % FALLBACK_COLORS.length]);
+				// Card mode: lift the whole rig so card + beam + emitter are centred in the canvas
+				// (the rig spans ≈ +0.75 → −1.2 card widths). Pager keeps the card centred so it
+				// lines up with the RN overlays.
+				if (p.mode === 'card') card.mesh.position.y = RIG_LIFT * scale;
 			});
 			await renderer.compileAsync(holo.scene, holo.camera);
 			if (!alive) return;

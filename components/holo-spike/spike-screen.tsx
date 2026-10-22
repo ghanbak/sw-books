@@ -90,7 +90,9 @@ function TuningPanel({ tuning, onChange }: { tuning: Tuning; onChange: (t: Tunin
 					<Text style={styles.tuneValue}>{tuning[key].toFixed(2)}</Text>
 				</View>
 			))}
-			<Text style={styles.mono}>{JSON.stringify(roundTuning(tuning))}</Text>
+			<Text selectable style={styles.mono}>
+				{JSON.stringify(roundTuning(tuning))}
+			</Text>
 		</ScrollView>
 	);
 }
@@ -117,26 +119,32 @@ function CardMode() {
 		tuningRef.current = next;
 		setTuning(next);
 	};
-	const coverW = Math.min(220, Math.round(width * 0.55));
-	const key = `${coverIndex}-${bloom}-${downscale}-${flipY}-${ratio}-${mount}`;
+	const [stageHeight, setStageHeight] = useState(0);
+	// Fit the card so the full rig (card + beam + emitter ≈ 2.15 card widths tall) shows.
+	const coverW = Math.round(Math.min(220, width * 0.55, stageHeight / 2.15));
+	const key = `${coverIndex}-${bloom}-${downscale}-${flipY}-${ratio}-${mount}-${coverW}`;
 
 	return (
 		<View style={styles.fill}>
-			<SpikeStage
-				key={key}
-				mode="card"
-				coverUri={COVERS[coverIndex]}
-				bloom={bloom}
-				tuning={tuningRef}
-				downscale={downscale}
-				flipY={flipY}
-				pixelRatioCap={ratio}
-				cardPoints={{ w: coverW, h: coverW * 1.5 }}
-				onTimings={setTimings}
-				onFrameStats={setFrames}
-				onError={setError}
-				style={styles.fill}
-			/>
+			<View style={styles.fill} onLayout={(e) => setStageHeight(e.nativeEvent.layout.height)}>
+				{stageHeight > 0 ? (
+					<SpikeStage
+						key={key}
+						mode="card"
+						coverUri={COVERS[coverIndex]}
+						bloom={bloom}
+						tuning={tuningRef}
+						downscale={downscale}
+						flipY={flipY}
+						pixelRatioCap={ratio}
+						cardPoints={{ w: coverW, h: coverW * 1.5 }}
+						onTimings={setTimings}
+						onFrameStats={setFrames}
+						onError={setError}
+						style={styles.fill}
+					/>
+				) : null}
+			</View>
 			<View style={styles.controls}>
 				<Toggle
 					label={`cover ${coverIndex + 1}/${COVERS.length}`}
@@ -333,20 +341,26 @@ const styles = StyleSheet.create({
 	container: { flex: 1, backgroundColor: tokens.surface.background },
 	fill: { flex: 1 },
 	tabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingBottom: 8 },
-	controls: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12 },
+	controls: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: 6,
+		paddingHorizontal: 12,
+		paddingVertical: 8,
+	},
 	toggle: {
-		paddingHorizontal: 10,
-		paddingVertical: 6,
+		paddingHorizontal: 8,
+		paddingVertical: 4,
 		borderRadius: 8,
 		borderWidth: 1,
 		borderColor: tokens.border.subtle,
 	},
 	toggleOn: { backgroundColor: tokens.accent.primary },
-	toggleText: { color: tokens.text.primary, fontSize: 12 },
-	tuning: { maxHeight: 290, paddingHorizontal: 12 },
-	tuneRow: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 34 },
-	tuneLabel: { color: tokens.text.secondary, fontSize: 12, width: 104 },
-	tuneSlider: { flex: 1, height: 30 },
+	toggleText: { color: tokens.text.primary, fontSize: 11 },
+	tuning: { maxHeight: 200, paddingHorizontal: 12, paddingBottom: 8 },
+	tuneRow: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 26 },
+	tuneLabel: { color: tokens.text.secondary, fontSize: 11, width: 96 },
+	tuneSlider: { flex: 1, height: 24 },
 	tuneValue: {
 		color: tokens.text.primary,
 		fontSize: 12,
