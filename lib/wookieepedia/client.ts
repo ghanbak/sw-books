@@ -43,6 +43,9 @@ type QueryEnvelope = {
 	continue?: { cmcontinue?: string; rvcontinue?: string; continue?: string };
 	query?: {
 		categorymembers?: Array<{ pageid: number; ns: number; title: string }>;
+		search?: Array<{ pageid: number; ns: number; title: string }>;
+		/** Title normalization applied to `titles=` input (e.g. `_` → space). */
+		normalized?: Array<{ from: string; to: string }>;
 		pages?: Array<{
 			pageid?: number;
 			ns?: number;
@@ -51,6 +54,8 @@ type QueryEnvelope = {
 			invalid?: boolean;
 			/** `prop=info`: the page is a redirect. */
 			redirect?: boolean;
+			/** `prop=info`: current revision id. */
+			lastrevid?: number;
 			revisions?: Array<{
 				revid?: number;
 				slots?: { main?: { content?: string } };
@@ -264,4 +269,79 @@ export async function fetchPagesByIds(pageids: readonly number[]): Promise<PageF
 		}
 	}
 	return pageids.map((id) => byId.get(id) ?? { status: 'missing', pageid: id });
+}
+
+/**
+ * Full-text search of article titles/content (`list=search`, namespace 0).
+ * Returns pageid + title only, in relevance order. Used by the admin pin editor.
+ */
+export async function searchPages(query: string, limit = 8): Promise<CategoryMember[]> {
+	const q = query.trim();
+	if (!q) return [];
+	const body = await request({
+		action: 'query',
+		list: 'search',
+		srsearch: q,
+		srnamespace: '0',
+		srlimit: String(Math.min(Math.max(limit, 1), 20)),
+		srprop: '',
+	});
+	return (body.query?.search ?? []).map((r) => ({ pageid: r.pageid, title: r.title }));
+}
+
+/** Lightweight page state from `prop=info` (no wikitext). */
+export type PageInfo =
+	| {
+			readonly status: 'ok' | 'redirect';
+			readonly pageid: number;
+			readonly title: string;
+			readonly lastrevid: number | null;
+	  }
+	| { readonly status: 'missing'; readonly pageid: number | null; readonly title: string | null };
+
+/**
+ * `prop=info` for pageids or exact titles, ≤50 per request, redirects NOT
+ * followed (a redirect title reports `redirect`). Cheap enough to check every
+ * mapped page's health: no content is transferred. Results are keyed by the
+ * requested pageid / title.
+ */
+export async function fetchPageInfo(
+	ref: { readonly pageids: readonly number[] } | { readonly titles: readonly string[] },
+): Promise<Map<number | string, PageInfo>> {
+	const out = new Map<number | string, PageInfo>();
+	const byIds = 'pageids' in ref;
+	const keys: Array<number | string> = byIds ? [...new Set(ref.pageids)] : [...new Set(ref.titles)];
+	for (const batch of chunk(keys, MAX_TITLES_PER_BATCH)) {
+		if (batch.length === 0) continue;
+		const body = await request({
+			action: 'query',
+			prop: 'info',
+			...(byIds ? { pageids: batch.join('|') } : { titles: batch.join('|') }),
+		});
+		const normalized = new Map<string, string>();
+		for (const n of body.query?.normalized ?? []) normalized.set(n.to, n.from);
+		for (const p of body.query?.pages ?? []) {
+			const key = byIds ? p.pageid : p.title ? (normalized.get(p.title) ?? p.title) : undefined;
+			if (key == null) continue;
+			if (p.missing || p.invalid || p.pageid == null || p.title == null) {
+				out.set(key, { status: 'missing', pageid: p.pageid ?? null, title: p.title ?? null });
+				continue;
+			}
+			out.set(key, {
+				status: p.redirect ? 'redirect' : 'ok',
+				pageid: p.pageid,
+				title: p.title,
+				lastrevid: p.lastrevid ?? null,
+			});
+		}
+	}
+	for (const k of keys) {
+		if (!out.has(k))
+			out.set(k, {
+				status: 'missing',
+				pageid: typeof k === 'number' ? k : null,
+				title: typeof k === 'string' ? k : null,
+			});
+	}
+	return out;
 }
