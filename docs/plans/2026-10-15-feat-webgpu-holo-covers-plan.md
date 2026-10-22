@@ -23,6 +23,7 @@ List thumbnails don't change.
 
 | Area | Change | From |
 |---|---|---|
+| **Device per stage (Phase 0, 2026-10-22)** | **The shared-device design leaked.** three's `WebGPUBackend.init` registers `device.lost.then(…)` capturing its renderer, so a long-lived shared device keeps every renderer ever created alive (G4: +5 MB per mount, 28.9 → 531.7 MB over 100 cycles). The fix, which the spike verified: **each stage requests its own device and `device.destroy()`s it on dispose** (flat at baseline over 100 cycles). Cost ≈30–40 ms device creation per stage. Supersedes "Shared GPU device" everywhere below. | Phase 0 G4 |
 | Fallback | Error boundaries miss async init, frame-loop and `device.lost` failures. Replaced `HoloFallback.tsx` with a **status store** (`useHolo3DStatus()`) that stages report into. Cells and the detail screen branch on it. The fallback is static `HoloFace`, not the old projector hero. | arch, TS, simplicity |
 | Dead code | Delete `Projector` / `StaticHero` / `TiltedHero` and the `variant`/`tilt` props **when each hero site migrates**, not a release later. | simplicity, arch |
 | Scope cuts | No device-loss retry (loss → unavailable for the session). No gyro tilt in v1 (moved to Stretch). No animated crossfade (swap after the first frame is on screen). Chromatic fringe moved after the look is approved. | simplicity |
@@ -57,7 +58,7 @@ List thumbnails don't change.
   | Archive/Library rows, added-books sheet, scan review | `variant="thumb"` | **Unchanged** |
 
 - **Timeline:** one shared canvas behind the pager, not one per page.
-- **Shared GPU device.** A blurred Timeline pauses.
+- **One GPU device per stage, destroyed on dispose** (was "shared device"; changed after Phase 0 G4, see Review changes). A blurred Timeline pauses.
 - **Shared-element transitions:** RN view → GPU canvas isn't possible. Any future transition targets `HoloFace`.
 - **Platform:** 3D is **iOS-only**. Android and web report `unavailable` and render `HoloFace`.
 - **Tap-to-open (2026-10-15):** tapping a Timeline page opens that book's detail. It uses `router.push(`/book/${book.id}`)`, as `book-card.tsx` does, and it's built in Phase 2.
@@ -113,7 +114,7 @@ Sources:
 | Addon types | `@types/three` maps `./addons/*` → `./examples/jsm/*` with no extension probing. | Use `three/addons/tsl/display/BloomNode.js`, `three/addons/geometries/RoundedBoxGeometry.js`. |
 | Global types | react-native-webgpu augments global `GPUDevice`/`Navigator`. TS 6's lib.dom already has WebGPU types (`lib: ["DOM"]` via the Expo base). `skipLibCheck` hides a `readonly gpu` redeclaration clash. | No tsconfig change. **Don't** add `@webgpu/types`. `navigator.gpu` is typed non-optional, so detect with `'gpu' in navigator`. |
 | Hermes | No `TextDecoder`. Import `fast-text-encoding` before any three code. | Import it at the top of the lazy runtime entry (its only consumer). |
-| Renderer | `new WebGPURenderer({ canvas: context.canvas, context, device, antialias })`. Pass **our own device**. Don't call `context.configure()`. `PostProcessing.tsx` uses `antialias: false`. | Shared device; `antialias: false` (bloom softens edges anyway). |
+| Renderer | `new WebGPURenderer({ canvas: context.canvas, context, device, antialias })`. Pass **our own device**. Don't call `context.configure()`. `PostProcessing.tsx` uses `antialias: false`. | A device per stage, destroyed on dispose (see Device per stage); `antialias: false` (bloom softens edges anyway). |
 | Frame loop | `setAnimationLoop(cb)`. `context.present()` after every render. If you drive `render()` yourself, `await renderer.init()` first. | Loop: update uniforms → `pipeline.render()` → `present()`. |
 | Pixel density | `canvas.width = clientWidth * PixelRatio.get()`. `getContext` is sync; retry on the next frame at zero size. | Cap the ratio (see Resolution policy). |
 | Transparency | Needs `opaque={false}` + premultiplied alpha + an alpha-0 clear. | Render **opaque**, clear colour = `tokens.surface.background`. |
@@ -121,7 +122,7 @@ Sources:
 | Teardown | `setAnimationLoop(null)` **doesn't stop three's internal rAF**; `dispose()` does. Known r184+ leak [#445](https://github.com/wcandillon/react-native-webgpu/issues/445): clear `QuadMesh` geometry listeners after dispose, "safe while the app has at most one live renderer". | Pausing still has a leftover tick (measure it, see Pausing). Clear listeners only when the live-renderer count reaches 0. `QuadMesh` is exported from `three/webgpu`, so no `any`. |
 | Images | RN `createImageBitmap(blob \| ArrayBuffer)`. Three's DOM `TextureLoader` doesn't work. Whether three accepts RN's `ImageBitmap` as a texture source is **undocumented**. | Gate **G1** (includes resize support). |
 | Threads | Default: the JS thread. Off-thread three needs **experimental** worklets Bundle Mode. `device.lost` and `uncapturederror` only fire on the main JS runtime. | v1 renders on the JS thread. Bundle Mode is a stretch goal. |
-| Shared device | `GPUDeviceProvider` renders `null` until the device is ready. | Lazy module singleton instead. |
+| Shared device | `GPUDeviceProvider` renders `null` until the device is ready. | Not used. One device per stage instead; a shared device leaks renderers (Phase 0 G4). |
 
 ## Architecture
 
@@ -164,24 +165,27 @@ export function useHolo3DStatus(): HoloStatus; // useSyncExternalStore over a mo
 
 ### Device and renderer lifecycle (`gpu.ts`)
 
-- **`getHoloDevice(): Promise<GPUDevice | null>`**
-  - requests the adapter and device once, memoized
-  - checks the status first
-  - subscribes to `device.lost` on the JS runtime
+- **`requestStageDevice(): Promise<GPUDevice | null>`**: a fresh adapter and device **per stage**, not memoized.
+  - The stage owns it and calls `device.destroy()` on dispose, after `disposeHoloRenderer`. That settles `device.lost` (reason `'destroyed'`, which three ignores) and releases three's renderer-capturing callback. A shared long-lived device leaks every renderer; Phase 0 G4 measured this.
+  - It checks the status first, and subscribes to `device.lost` on the JS runtime (ignore `'destroyed'`).
+  - If an `alive` check fails after the device resolves, destroy it immediately.
 - **`createHoloRenderer(context, device)`** increments `liveRenderers`.
   - **Every** path decrements it, including when init fails after creation.
   - Use the repo's `alive` cancellation idiom (`useReduceMotion`), so a device or `init()` that resolves after unmount disposes immediately instead of rendering to a dead canvas.
 - **`disposeHoloRenderer(renderer)`:** `setAnimationLoop(null)` → `dispose()` → decrement. When the count reaches 0, also call `clearQuadMeshListeners()`:
 
 ```ts
-import { QuadMesh } from 'three/webgpu';
+import { MeshBasicNodeMaterial, QuadMesh } from 'three/webgpu';
 type WithListeners = { _listeners?: Record<string, unknown> };
 /** three r184+ leak workaround (react-native-webgpu#445). Delete when fixed upstream. */
 function clearQuadMeshListeners(): void {
-  const { geometry } = new QuadMesh();
+  // Every QuadMesh shares one module-level geometry; the constructor requires a material.
+  const material = new MeshBasicNodeMaterial();
+  const { geometry } = new QuadMesh(material);
   for (const t of [geometry, geometry.index, ...Object.values(geometry.attributes)]) {
     if (t) (t as WithListeners)._listeners = {};
   }
+  material.dispose();
 }
 ```
 
@@ -291,7 +295,7 @@ All geometry is procedural; there are no asset files. Verify TSL node names agai
 - **Pausing:** the same `useFocusEffect`/`AppState` rule (detail can be covered by another detail or a modal).
 - **Two live renderers: the main flow is now Timeline → tap → detail.**
   - The Timeline blurs and pauses straight away (no render or present). Its renderer stays alive for 30 s, so coming back within that time resumes at once.
-  - Detail creates its own renderer on the shared device, so only one renderer draws at a time.
+  - Detail creates its own device and renderer, so only one renderer draws at a time.
   - The detail cover's encoded bytes are already in the shared cache (the Timeline just loaded them), so detail only pays decode + upload, not the network fetch.
   - Popping back disposes the detail renderer. The count is still 1, so the #445 listener clear doesn't run. The Timeline resumes.
   - A visit longer than 30 s disposes the Timeline. Back then shows `HoloFace` until the Timeline re-inits (warm init, G2).

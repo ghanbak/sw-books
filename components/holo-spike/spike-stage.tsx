@@ -6,7 +6,12 @@ import type { SharedValue } from 'react-native-reanimated';
 import { Canvas, type CanvasRef } from 'react-native-webgpu';
 import type { RenderTarget, Texture, WebGPURenderer } from 'three/webgpu';
 
-import { createSpikeRenderer, disposeSpikeRenderer, getSpikeDevice } from './gpu';
+import {
+	createSpikeRenderer,
+	disposeSpikeRenderer,
+	getSpikeDevice,
+	requestFreshDevice,
+} from './gpu';
 import {
 	type BloomMode,
 	type HoloScene,
@@ -38,6 +43,8 @@ type Props = {
 	pageWidth?: number;
 	scrollX?: SharedValue<number>;
 	bloom: BloomMode;
+	/** Own device per stage, destroyed on unmount (G4 leak fix) vs the shared singleton. */
+	freshDevice?: boolean;
 	/** Live look parameters, read every frame (sliders mutate `.current`). */
 	tuning?: { current: Tuning };
 	downscale: boolean;
@@ -70,6 +77,7 @@ export function SpikeStage(props: Props) {
 		let alive = true;
 		let raf = 0;
 		let renderer: WebGPURenderer | null = null;
+		let ownedDevice: GPUDevice | null = null;
 		let holo: HoloScene | null = null;
 		let cover: Texture | null = null;
 		let coverTarget: RenderTarget | null = null;
@@ -96,8 +104,12 @@ export function SpikeStage(props: Props) {
 			context.canvas.height = Math.round(surface.clientHeight * ratio);
 
 			const t0 = performance.now();
-			const device = await getSpikeDevice();
-			if (!alive) return;
+			const device = p.freshDevice ? await requestFreshDevice() : await getSpikeDevice();
+			if (p.freshDevice) ownedDevice = device;
+			if (!alive) {
+				ownedDevice?.destroy();
+				return;
+			}
 			if (!device) throw new Error('WebGPU unavailable');
 			const tDevice = performance.now();
 
@@ -225,6 +237,8 @@ export function SpikeStage(props: Props) {
 			cover?.dispose();
 			coverTarget?.dispose();
 			if (renderer) disposeSpikeRenderer(renderer);
+			// Destroying settles device.lost, releasing three's renderer-capturing callback.
+			ownedDevice?.destroy();
 		};
 	}, []);
 

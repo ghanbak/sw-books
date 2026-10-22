@@ -45,6 +45,29 @@ Its stack note needs updating: the package is now `react-native-webgpu`, and R3F
 
 Skills research comes next, scoped to this stack.
 
+## Phase 0 results (2026-10-22, iPhone 17 Pro simulator, Release build)
+
+Spike: `app/dev/holo-spike.tsx` + `components/holo-spike/`, built with `EXPO_PUBLIC_HOLO_SPIKE=1`. **Simulator timings are indicative only**; G2, G3 and G7 still need a physical-device Release build.
+
+| Gate | Result |
+|---|---|
+| **G1 texture path** | ✅ fetch → `createImageBitmap(ArrayBuffer)` → `THREE.Texture` works.<br>• It needs `flipY = true`, or the cover renders upside down.<br>• react-native-webgpu 0.15.1 **ignores `createImageBitmap` resize options** ("not yet implemented natively"), so the ≤640×960 downscale is done on the GPU: one render-target pass + mips, then the full-size texture is dropped. |
+| **G2 first frame** | Cold ≈3.8 s, warm ≈0.9 s, mostly shader/pipeline compile (0.8–2.2 s).<br>• Cover fetch, decode and upload are ≈10–30 ms.<br>• Selective bloom (MRT) adds a one-off ≈0.8 s compile on first use.<br>• Warm-up (`compileAsync`) matters more than texture work. |
+| **G3 frame time** | p50 ≈4 ms / p95 ≈5–6 ms at 60 Hz with bloom; ≈2.3 / 3.1 ms without. |
+| **G4 memory (100 mount/unmount cycles)** | ❌ **Shared device: leak.** External memory 28.9 → 531.7 MB, linear (≈+3.4 MB per full cycle, ≈+10 MB per mid-setup cancel).<br>Cause: three's `WebGPUBackend.init` does `device.lost.then(() => renderer.onDeviceLost(…))`, so a long-lived device roots every renderer.<br>✅ **Device per stage + `device.destroy()` on dispose:** flat at 28.9 MB; footprint 334.5 → 331.8 MB.<br>**The plan now uses a device per stage.** |
+| **G5 size** | JS: **+2.0 MB Hermes bytecode (+38%), +0.93 MB gzipped** (`three.webgpu.js` includes the whole node/TSL system; far above the ~150 KB May estimate). This also grows every OTA download.<br>Native: Dawn is a 20 MB static `.a` (iOS arm64) before dead-stripping; the real IPA delta needs an archive comparison. |
+| **G6 simulator** | ✅ The config plugin disables Metal API validation (`enableGPUValidationMode = "1"`). |
+| **G7 overlay drift** | ✅ Exact at rest; ≈1 frame behind during the page snap. Confirm with a 120 Hz device recording. |
+
+**Look (user-tuned):**
+- **Full-frame bloom** washes the cover out.
+- **Selective MRT bloom** (three's `webgpu_postprocessing_bloom_selective` pattern) blooms only the edge light, beam and emitter, so the cover stays crisp. The spike's sliders tuned it to `strength 0.41, radius 0.5, threshold 0, edge 0.7, halo 0, emitter 2, edgeLight 0.16`.
+
+**Other findings:**
+- **Env changes need a Metro cache clear:** `EXPO_PUBLIC_*` values are inlined at transform time, and the Metro cache key doesn't include them. Clear the cache after env changes, or a Release build ships stale values (this caused the `supabaseUrl is required` crash).
+- **Release builds drop `console.log`.** On-screen readouts are the reliable channel for spike measurements.
+- **CocoaPods needs a UTF-8 locale** (`LANG`/`LC_ALL`) in non-interactive shells.
+
 ## Current state
 
 [components/holo-cover.tsx](../../components/holo-cover.tsx) is made of plain RN Views:

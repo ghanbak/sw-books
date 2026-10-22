@@ -249,6 +249,7 @@ function CycleMode() {
 	const [running, setRunning] = useState(false);
 	const [log, setLog] = useState<string[]>([]);
 	const baseline = useRef<number | null>(null);
+	const [freshDevice, setFreshDevice] = useState(true);
 	const coverW = Math.min(220, Math.round(width * 0.55));
 
 	// Explicit phases so every reading is taken with NOTHING mounted: mount → (full setup, or
@@ -270,7 +271,7 @@ function CycleMode() {
 				await sleep(100);
 				const mb = externalMB();
 				if (baseline.current === null) baseline.current = mb;
-				const line = `cycle ${i + 1}: external ${mb.toFixed(1)} MB (baseline ${baseline.current.toFixed(1)}), live renderers ${getLiveRendererCount()}`;
+				const line = `${freshDevice ? 'fresh' : 'shared'} cycle ${i + 1}: external ${mb.toFixed(1)} MB (baseline ${baseline.current.toFixed(1)}), live renderers ${getLiveRendererCount()}`;
 				console.log(`[holo-spike] ${line}`);
 				setLog((l) => [line, ...l].slice(0, 6));
 			}
@@ -280,7 +281,7 @@ function CycleMode() {
 		return () => {
 			cancelled = true;
 		};
-	}, [running]);
+	}, [running, freshDevice]);
 
 	return (
 		<View style={styles.fill}>
@@ -288,6 +289,7 @@ function CycleMode() {
 				{mounted ? (
 					<SpikeStage
 						mode="card"
+						freshDevice={freshDevice}
 						coverUri={COVERS[cycle % 3]}
 						bloom="selective"
 						downscale
@@ -307,6 +309,13 @@ function CycleMode() {
 						setLog([]);
 						setCycle(0);
 						setRunning((r) => !r);
+					}}
+				/>
+				<Toggle
+					label={`device: ${freshDevice ? 'fresh per mount' : 'shared'}`}
+					on={freshDevice}
+					onPress={() => {
+						if (!running) setFreshDevice((v) => !v);
 					}}
 				/>
 			</View>

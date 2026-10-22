@@ -26,6 +26,17 @@ export function getSpikeDevice(): Promise<GPUDevice | null> {
 	return devicePromise;
 }
 
+/**
+ * A device owned by one stage. three's WebGPUBackend registers `device.lost.then(...)` capturing
+ * its renderer, so a long-lived SHARED device roots every renderer ever created on it (the
+ * linear G4 leak). A per-stage device, destroyed on dispose, settles that promise and frees it.
+ */
+export async function requestFreshDevice(): Promise<GPUDevice | null> {
+	if (!('gpu' in navigator)) return null;
+	const adapter = await navigator.gpu.requestAdapter();
+	return adapter ? adapter.requestDevice() : null;
+}
+
 let liveRenderers = 0;
 
 export function getLiveRendererCount(): number {
