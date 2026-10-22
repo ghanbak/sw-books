@@ -6,14 +6,17 @@
  *   npm run catalog:enrich -- --production                   # dry-run vs PROD (read-only)
  *   npm run catalog:enrich -- --production --apply           # write PROD (typed project-ref prompt)
  *   …  --allow-shrink   accept rows whose appearances shrink by more than half
+ *   …  --repin          let a pin re-point a book that already has a row
  *   …  --verbose        list every insert/update/unchanged row
  *
  * Writes ONLY `book_enrichment` (never `books`), upserting on `book_id`, and only
  * rows whose `content_hash` changed — a re-run with no wiki changes writes nothing.
  *
  * Mapping (lib/wookieepedia/enrich-sync.ts): existing `book_enrichment.source_pageid`
- * rows are the persisted mapping; books without one are mapped from the
- * discovery CSV + `classify` (MATCHED / DIFFERS only; AMBIGUOUS and NEW skipped).
+ * rows are the persisted mapping; then manual pins from `data/enrichment-pins.json`
+ * (edited in the admin; a pin that differs from a stored row is a conflict
+ * unless --repin); the rest are mapped from the discovery CSV + `classify`
+ * (MATCHED / DIFFERS only; AMBIGUOUS and NEW skipped).
  * Pages are fetched by pageid (serial, ≤50 per request, compliant UA, 429
  * backoff — lib/wookieepedia/client.ts). Missing / redirected / emptied pages
  * are flagged and their last good row kept.
@@ -22,6 +25,8 @@
  * Partial failure: each batch is its own upsert; rows already written stay
  * written, and a re-run skips them (hash gate) and resumes.
  */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { parsePageEnrichment } from '../lib/wookieepedia/appearances';
 import { type PageFetch, fetchPagesByIds } from '../lib/wookieepedia/client';
@@ -36,6 +41,7 @@ import {
 	planStep,
 } from '../lib/wookieepedia/enrich-sync';
 import { type CatalogBook, classify } from '../lib/wookieepedia/match';
+import { PINS_FILE, type PinMap, parsePins } from '../lib/wookieepedia/pins';
 import { isLocal, makeClient, resolveCredentials } from './_supabase';
 import { discoveryPageIds, loadDiscovered } from './lib/load-discovered';
 
@@ -43,6 +49,7 @@ const args = process.argv.slice(2);
 const PROD = args.includes('--production');
 const APPLY = args.includes('--apply');
 const ALLOW_SHRINK = args.includes('--allow-shrink');
+const REPIN = args.includes('--repin');
 const VERBOSE = args.includes('--verbose');
 const PAGE_SIZE = 100;
 
@@ -98,6 +105,30 @@ async function readExisting(): Promise<ExistingRow[]> {
 	}
 }
 
+/** `data/enrichment-pins.json`. Absent = no pins; malformed = stop (never act on half a file). */
+function loadPins(): PinMap {
+	const file = resolve(__dirname, '..', 'data', PINS_FILE);
+	let text: string;
+	try {
+		text = readFileSync(file, 'utf-8');
+	} catch {
+		return new Map();
+	}
+	let json: unknown;
+	try {
+		json = JSON.parse(text);
+	} catch (err) {
+		throw new Error(`data/${PINS_FILE} is not valid JSON: ${(err as Error).message}`);
+	}
+	const { pins, errors } = parsePins(json);
+	if (errors.length) {
+		throw new Error(
+			`data/${PINS_FILE} has ${errors.length} invalid pin(s) — fix before syncing:\n  ${errors.join('\n  ')}`,
+		);
+	}
+	return pins;
+}
+
 /** Typed project-ref guard for any non-local write (same as apply-catalog-changeset.ts). */
 async function confirmTarget(url: string): Promise<void> {
 	if (isLocal(url)) return;
@@ -120,7 +151,11 @@ function describe(s: SyncStep): string {
 	}
 	const mark = s.kind === 'insert' ? '+' : s.kind === 'update' ? '~' : '·';
 	const renamed = s.kind !== 'unchanged' && s.renamed ? ' [page renamed]' : '';
-	return `  ${mark} ${s.book.slug}: ${s.kind} · ${s.entryCount} entries · ${kb(s.bytes)}${renamed}`;
+	const repointed =
+		s.kind !== 'unchanged' && s.repointedFrom !== null
+			? ` [re-pointed from ${s.repointedFrom} → ${s.row.source_pageid}]`
+			: '';
+	return `  ${mark} ${s.book.slug}: ${s.kind} · ${s.entryCount} entries · ${kb(s.bytes)}${renamed}${repointed}`;
 }
 
 async function main(): Promise<void> {
@@ -132,6 +167,7 @@ async function main(): Promise<void> {
 	const existing = await readExisting();
 	const discovered = loadDiscovered();
 	const classifications = classify(discovered, catalog);
+	const pins = loadPins();
 	const books: MapBook[] = catalog.map((b) => ({
 		id: b.id as string,
 		slug: b.slug,
@@ -143,6 +179,8 @@ async function main(): Promise<void> {
 		existing,
 		classifications,
 		validPageIds: discoveryPageIds(),
+		pins,
+		repin: REPIN,
 	});
 
 	w(`\n═══ Wookieepedia enrichment ${APPLY ? 'APPLY' : 'DRY-RUN'} ═══`);
@@ -154,6 +192,18 @@ async function main(): Promise<void> {
 		`Mapping: ${mapping.targets.length} mapped (${persisted} persisted, ${mapping.targets.length - persisted} from discovery) · ${mapping.noPage.length} no page · ${mapping.ambiguous.length} AMBIGUOUS skipped · ${mapping.issues.length} issue(s)`,
 	);
 	for (const i of mapping.issues) w(`  ! ${i.slug}: ${i.kind} — ${i.detail}`);
+	if (pins.size) {
+		const fromPin = mapping.targets.filter((t) => t.origin === 'pin');
+		const agreeing = mapping.targets.filter((t) => t.origin === 'persisted' && t.pinned).length;
+		w(
+			`Pins: ${pins.size} in data/${PINS_FILE} · ${fromPin.length} applied (${fromPin.filter((t) => t.repointedFrom !== undefined).length} re-point) · ${agreeing} already persisted · ${pins.size - fromPin.length - agreeing} not applied${REPIN ? ' · --repin ON' : ''}`,
+		);
+		for (const t of fromPin) {
+			w(
+				`  ⌖ ${t.book.slug} → ${t.pageid}${t.repointedFrom !== undefined ? ` (re-point from ${t.repointedFrom})` : ''}`,
+			);
+		}
+	}
 
 	w(`\nFetching ${mapping.targets.length} page(s) by pageid …`);
 	const fetches = await fetchPagesByIds(mapping.targets.map((t) => t.pageid));
@@ -177,6 +227,13 @@ async function main(): Promise<void> {
 		skippedLines += p.diagnostics.skippedLines;
 		return p;
 	};
+	for (const t of mapping.targets) {
+		const pin = t.origin === 'pin' ? pins.get(t.book.slug) : undefined;
+		const f = byPage.get(t.pageid);
+		if (pin && f?.status === 'ok' && f.page.title !== pin.title) {
+			w(`  note: ${t.book.slug} pin title "${pin.title}" — page is now "${f.page.title}"`);
+		}
+	}
 	const steps = mapping.targets.map((t) =>
 		planStep(
 			t,

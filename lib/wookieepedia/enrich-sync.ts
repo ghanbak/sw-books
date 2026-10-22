@@ -5,8 +5,11 @@
  *
  * Mapping precedence:
  *   1. Persisted `book_enrichment.source_pageid` rows ARE the mapping. Never
- *      re-pointed by discovery.
- *   2. First run (no row yet): MATCHED / DIFFERS discovery classifications give
+ *      re-pointed by discovery; re-pointed by a pin only with `repin`
+ *      (`--repin`) — otherwise a differing pin is reported as `pin_conflict`.
+ *   2. Manual pins (`data/enrichment-pins.json`, ./pins.ts) map unmapped books.
+ *      A pageid persisted for another book, or named by two pins, is refused.
+ *   3. First run (no row yet): MATCHED / DIFFERS discovery classifications give
  *      book ↔ pageid. AMBIGUOUS and NEW are skipped. A pageid must be a real one
  *      from the discovery sidecar (not the synthetic fallback id), and must not
  *      be claimed by another book (`source_pageid` is UNIQUE).
@@ -20,6 +23,7 @@ import { createHash } from 'node:crypto';
 import type { PageEnrichmentContent, StoredAppearances } from './appearances';
 import type { PageFetch, RawPage } from './client';
 import type { Classification } from './match';
+import type { EnrichmentPin, PinMap } from './pins';
 import { wikiUrl } from './url';
 
 // Moved to `./url` (app-safe, no `node:crypto`); re-exported for existing callers.
@@ -140,7 +144,11 @@ export type ExistingRow = {
 export type MapTarget = {
 	readonly book: MapBook;
 	readonly pageid: number;
-	readonly origin: 'persisted' | 'discovery';
+	readonly origin: 'persisted' | 'discovery' | 'pin';
+	/** A pin in `data/enrichment-pins.json` names this pageid. */
+	readonly pinned?: boolean;
+	/** `--repin` moved a persisted row off this pageid onto the pin. */
+	readonly repointedFrom?: number;
 };
 
 export type MappingIssue = {
@@ -148,10 +156,20 @@ export type MappingIssue = {
 		| 'synthetic_pageid' // discovery row has no real pageid (sidecar missing)
 		| 'pageid_conflict' // same pageid claimed by several books
 		| 'multiple_pages' // several discovered pages match one book
-		| 'persisted_differs'; // discovery now names another page than the stored row (kept stored)
+		| 'persisted_differs' // discovery now names another page than the stored row (kept stored)
+		| 'pin_conflict' // pin names another page than the stored row (kept stored; --repin to move)
+		| 'pin_overrides_discovery' // pin and discovery disagree on an unmapped book (pin wins)
+		| 'pin_unknown_slug'; // pin for a slug that is not in the catalog
 	readonly slug: string;
 	readonly detail: string;
 };
+
+/** Issue kinds that leave a book unmapped (vs. informational ones). */
+export const BLOCKING_ISSUES: ReadonlySet<MappingIssue['kind']> = new Set([
+	'synthetic_pageid',
+	'pageid_conflict',
+	'multiple_pages',
+]);
 
 export type Mapping = {
 	readonly targets: readonly MapTarget[];
@@ -170,10 +188,15 @@ function byCodeUnit(a: string, b: string): number {
 
 export function buildMapping(input: {
 	readonly catalog: readonly MapBook[];
-	readonly existing: readonly ExistingRow[];
+	/** Only the mapping columns are read here (content_hash/entryCount are planStep's). */
+	readonly existing: readonly Pick<ExistingRow, 'book_id' | 'source_pageid'>[];
 	readonly classifications: readonly Classification[];
 	/** Real pageids (discovery sidecar). */
 	readonly validPageIds: ReadonlySet<number>;
+	/** Manual pins (`data/enrichment-pins.json`). */
+	readonly pins?: PinMap;
+	/** Let a pin re-point a book that already has a persisted row (`--repin`). */
+	readonly repin?: boolean;
 }): Mapping {
 	const bySlug = new Map(input.catalog.map((b) => [b.slug, b]));
 	const byId = new Map(input.catalog.map((b) => [b.id, b]));
@@ -181,6 +204,8 @@ export function buildMapping(input: {
 	const targets: MapTarget[] = [];
 	const mapped = new Set<string>(); // book ids
 	const claimed = new Map<number, string>(); // pageid → book id
+	const pins = input.pins ?? new Map<string, EnrichmentPin>();
+	const slugOf = (bookId: string) => byId.get(bookId)?.slug ?? bookId;
 
 	// 1. Persisted rows are the mapping.
 	for (const row of input.existing) {
@@ -191,7 +216,67 @@ export function buildMapping(input: {
 		claimed.set(row.source_pageid, book.id);
 	}
 
-	// 2. Discovery candidates for the rest (MATCHED / DIFFERS only).
+	// 2. Pins — explicit operator intent; beat discovery, never silently beat a
+	// persisted row. Pageids claimed by more than one pin are refused outright.
+	const pinClaimants = new Map<number, string[]>(); // pageid → book ids
+	const pinned: Array<{ book: MapBook; pin: EnrichmentPin }> = [];
+	for (const [slug, pin] of pins) {
+		const book = bySlug.get(slug);
+		if (!book) {
+			issues.push({
+				kind: 'pin_unknown_slug',
+				slug,
+				detail: `pin → ${pin.pageid} ("${pin.title}") names no catalog book — ignored`,
+			});
+			continue;
+		}
+		pinned.push({ book, pin });
+		pinClaimants.set(pin.pageid, [...(pinClaimants.get(pin.pageid) ?? []), book.id]);
+	}
+	for (const { book, pin } of pinned) {
+		const idx = targets.findIndex((t) => t.book.id === book.id);
+		const stored = idx >= 0 ? targets[idx] : undefined;
+		if (stored && stored.pageid === pin.pageid) {
+			targets[idx] = { ...stored, pinned: true };
+			continue;
+		}
+		if (stored && !input.repin) {
+			issues.push({
+				kind: 'pin_conflict',
+				slug: book.slug,
+				detail: `stored pageid ${stored.pageid}, pin ${pin.pageid} ("${pin.title}") — kept stored; --repin to re-point`,
+			});
+			continue;
+		}
+		const owner = claimed.get(pin.pageid);
+		const rivals = (pinClaimants.get(pin.pageid) ?? []).filter((id) => id !== book.id);
+		if ((owner !== undefined && owner !== book.id) || rivals.length) {
+			const others = [...(owner !== undefined && owner !== book.id ? [owner] : []), ...rivals]
+				.map(slugOf)
+				.sort(byCodeUnit);
+			issues.push({
+				kind: 'pageid_conflict',
+				slug: book.slug,
+				detail: `pinned pageid ${pin.pageid} also claimed by ${others.join(', ')} — skipped`,
+			});
+			continue;
+		}
+		const target: MapTarget = {
+			book,
+			pageid: pin.pageid,
+			origin: 'pin',
+			pinned: true,
+			...(stored ? { repointedFrom: stored.pageid } : {}),
+		};
+		// The old pageid stays in `claimed` for this run: freeing it could let a
+		// discovery insert race the re-point's update on the UNIQUE source_pageid.
+		if (stored) targets[idx] = target;
+		else targets.push(target);
+		mapped.add(book.id);
+		claimed.set(pin.pageid, book.id);
+	}
+
+	// 3. Discovery candidates for the rest (MATCHED / DIFFERS only).
 	const candidates = new Map<string, Set<number>>(); // book id → pageids
 	for (const c of input.classifications) {
 		if ((c.class !== 'MATCHED' && c.class !== 'DIFFERS') || !c.matchSlug) continue;
@@ -207,12 +292,15 @@ export function buildMapping(input: {
 			continue;
 		}
 		if (mapped.has(book.id)) {
-			const stored = targets.find((t) => t.book.id === book.id)?.pageid;
-			if (stored !== pageid) {
+			const current = targets.find((t) => t.book.id === book.id);
+			if (current && current.pageid !== pageid) {
+				const viaPin = current.origin === 'pin';
 				issues.push({
-					kind: 'persisted_differs',
+					kind: viaPin ? 'pin_overrides_discovery' : 'persisted_differs',
 					slug: book.slug,
-					detail: `stored pageid ${stored}, discovery matched ${pageid} ("${c.discovered.title}") — kept stored`,
+					detail: viaPin
+						? `pinned pageid ${current.pageid}, discovery matched ${pageid} ("${c.discovered.title}") — pin wins`
+						: `stored pageid ${current.pageid}, discovery matched ${pageid} ("${c.discovered.title}") — kept stored`,
 				});
 			}
 			continue;
@@ -258,9 +346,7 @@ export function buildMapping(input: {
 
 	const ambiguous = input.classifications.filter((c) => c.class === 'AMBIGUOUS');
 	const ambiguousSlugs = new Set(ambiguous.flatMap((c) => c.candidates));
-	const conflicted = new Set(
-		issues.filter((i) => i.kind !== 'persisted_differs').map((i) => i.slug),
-	);
+	const conflicted = new Set(issues.filter((i) => BLOCKING_ISSUES.has(i.kind)).map((i) => i.slug));
 	const noPage = input.catalog
 		.filter((b) => !mapped.has(b.id))
 		.sort((a, b) => byCodeUnit(a.slug, b.slug));
@@ -288,6 +374,8 @@ export type SyncStep =
 			readonly bytes: number;
 			/** Title differs from the stored row (page moved). */
 			readonly renamed: boolean;
+			/** The stored row pointed at another pageid (`--repin`); value = old pageid. */
+			readonly repointedFrom: number | null;
 	  }
 	| {
 			readonly kind: 'unchanged';
@@ -346,11 +434,15 @@ export function planStep(
 	if (!parsed.hasBookInfobox && parsed.diagnostics.appTemplates === 0) {
 		return flag('not_book', `"${fetch.page.title}" has no {{Book}} infobox and no {{App}}`);
 	}
-	if (existing && existing.entryCount > 0 && parsed.entryCount === 0) {
+	// The emptied/shrunk guards compare ONE page over time; a re-pointed row
+	// (`--repin`) is a different page, so they don't apply.
+	const samePage = existing !== undefined && existing.source_pageid === target.pageid;
+	if (existing && samePage && existing.entryCount > 0 && parsed.entryCount === 0) {
 		return flag('emptied', `appearances went ${existing.entryCount} → 0`);
 	}
 	if (
 		existing &&
+		samePage &&
 		!opts.allowShrink &&
 		existing.entryCount >= SHRINK_MIN_ENTRIES &&
 		parsed.entryCount < existing.entryCount * SHRINK_RATIO
@@ -371,7 +463,8 @@ export function planStep(
 		row,
 		entryCount: parsed.entryCount,
 		bytes,
-		renamed: existing !== undefined && existing.source_title !== fetch.page.title,
+		renamed: samePage && existing.source_title !== fetch.page.title,
+		repointedFrom: existing && !samePage ? existing.source_pageid : null,
 	};
 }
 
