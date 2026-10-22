@@ -33,6 +33,7 @@ import { type PageFetch, fetchPagesByIds } from '../lib/wookieepedia/client';
 import {
 	type ExistingRow,
 	type MapBook,
+	type MapTarget,
 	type SyncStep,
 	batchRows,
 	buildMapping,
@@ -187,9 +188,9 @@ async function main(): Promise<void> {
 	w(
 		`Target: ${target} · ${catalog.length} books · ${existing.length} existing enrichment rows · ${discovered.length} discovered pages`,
 	);
-	const persisted = mapping.targets.filter((t) => t.origin === 'persisted').length;
+	const byOrigin = (o: MapTarget['origin']) => mapping.targets.filter((t) => t.origin === o).length;
 	w(
-		`Mapping: ${mapping.targets.length} mapped (${persisted} persisted, ${mapping.targets.length - persisted} from discovery) · ${mapping.noPage.length} no page · ${mapping.ambiguous.length} AMBIGUOUS skipped · ${mapping.issues.length} issue(s)`,
+		`Mapping: ${mapping.targets.length} mapped (${byOrigin('persisted')} persisted, ${byOrigin('pin')} from pins, ${byOrigin('discovery')} from discovery) · ${mapping.noPage.length} no page · ${mapping.ambiguous.length} AMBIGUOUS skipped · ${mapping.issues.length} issue(s)`,
 	);
 	for (const i of mapping.issues) w(`  ! ${i.slug}: ${i.kind} — ${i.detail}`);
 	if (pins.size) {

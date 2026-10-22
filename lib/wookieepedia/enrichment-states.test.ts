@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PageInfo } from './client';
 import type { MapBook } from './enrich-sync';
-import { deriveEnrichmentStates } from './enrichment-status';
+import { deriveEnrichmentStates } from './enrichment-states';
 import type { EnrichmentPin } from './pins';
 
 const book = (slug: string): MapBook => ({ id: `id-${slug}`, slug, title: slug, canon: 'Canon' });
