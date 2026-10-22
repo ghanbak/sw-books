@@ -152,9 +152,37 @@ Built from the design brief [2026-10-20-book-enrichment-design-brief.md](../brai
 - **Shared pieces:** `components/ui/subtle-button.tsx`; `CardTitle` (count/link variants; all card titles now `text.secondary`); `lib/external-link.ts` `openInAppBrowser` (also used by the Amazon button); `lib/wookieepedia/url.ts` (`wikiUrl`, app-safe); pure display helpers in `lib/wookieepedia/enrichment-display.ts` (35 tests).
 - **Verified 2026-10-21** in the iPhone 17 Pro simulator (iOS 26.4) against the local DB: detail card, sheet, tap-to-wiki, and an unenriched book. 898 tests pass, `tsc` and Biome clean.
 
-### Phase 4 — Admin surfacing (optional, not started)
-- Show `fetched_at`/`source_url`/match status + a manual `source_pageid` pin in the local admin.
-- The pin would cover the 7 books with no wiki page match (see Phase 2 verification).
+### Phase 4 — Admin surfacing + manual page pins
+Goal: see each book's enrichment state in the admin, and map the 7 no-page books (Phase 2 verification) by hand without the admin ever writing `book_enrichment`.
+
+**Safety model.** The admin never writes `book_enrichment`, local or prod. Prod writes stay behind `catalog:enrich -- --production --apply` and its typed project-ref prompt. A pin is a git-tracked request, not a write: the admin edits `data/enrichment-pins.json`, the sync reads it, and the operator reviews the dry-run before `--apply`.
+
+**Pin file** — `data/enrichment-pins.json`, `slug → { pageid, title, note?, pinned_at }`, keys sorted, one file for both targets. Pure helpers in `lib/wookieepedia/pins.ts` (`parsePins` validates and returns errors; `serializePins` is stable). A malformed file stops the sync (exit 1); it is never half-read.
+
+**Pin rules** (`buildMapping`, precedence persisted > pin > discovery):
+- A pin maps an unmapped book (origin `pin`). It beats a discovery match; the disagreement is reported (`pin_overrides_discovery`).
+- A pin equal to the persisted pageid is a no-op (the target is marked pinned).
+- A pin that differs from a persisted row is a `pin_conflict`: the stored mapping is kept. Only `--repin` re-points it, and the step reports `re-pointed from <old>`. The shrink/emptied guards compare the same page over time, so they are skipped on a re-point. The old pageid stays claimed for the rest of that run (no same-run unique-key race).
+- Refused (`pageid_conflict`, book stays unmapped): a pin whose pageid is persisted for another book (even with `--repin`), or two pins on one pageid. A discovery candidate on a pinned pageid is refused the same way.
+- A pin for a slug not in the catalog is reported (`pin_unknown_slug`), never applied.
+- Fetch-time refusals apply unchanged: `missing`, `redirect`, `not_book` (no `{{Book}}` and no `{{App}}`) are flagged and nothing is written.
+
+**Admin — status.** Each book gets one status from the same `buildMapping` the sync uses (persisted rows of the selected DB target + the pin file; no discovery), plus a cheap live `prop=info` check of every mapped/pinned pageid (no wikitext; cached 6 h, tag `wiki-info`, "Recheck wiki" busts it):
+- `enriched` — has a row; the page still exists and is not a redirect.
+- `pinned` — no row yet; a valid pin waits for the next sync.
+- `flagged` — a pin conflict/refusal, or the stored/pinned page is now missing or a redirect.
+- `no page` — no row, no pin.
+`not_book`/`emptied`/`shrunk` need the wikitext and stay sync-only (the dry-run reports them).
+- **List** (`/admin/books`): a "Wiki" status column and an Enrichment filter group in the left rail with counts.
+- **Book page** (`/admin/books/[slug]`): a Wookieepedia card — status, mapped title + link (`source_url`), `source_pageid`, `source_revision_id`, `fetched_at`, per-category counts (main cast, characters, total entries), timeline notes present, the pin, and any mapping issue. Reads `book_enrichment` through `getSupabaseAdmin()` (same cookie-selected local/prod target as `books`, read-only).
+
+**Admin — pin editor** (book page). Search Wookieepedia by title (`list=search`), or paste a pageid or wiki URL. Each candidate shows title, pageid, redirect (and target), `{{Book}}` infobox yes/no, `{{App}}` yes/no + entry count, timeline. Facts only; no prose or images are fetched. Save re-fetches the page server-side and refuses missing, redirect, not-a-book, and a pageid owned by another book (row on the selected target, or another pin). Saving a pin that differs from the book's persisted row is allowed with a warning that the sync will report a conflict until `--repin`. Remove deletes the slug from the file. Writes go through `safeWrite` (atomic, confined to `data/`).
+
+**Hosted deploy (Vercel).** `data/` is not available there, so pins are read-only: the editor is disabled with a note, and statuses fall back to DB + live check (no pin info) when the file can't be read. Pin edits happen in the local admin and ship via git.
+
+**Flow.** Pin in the local admin → commit `data/enrichment-pins.json` → `npm run catalog:enrich -- --production` (dry-run) → `--apply`. `--repin` only when a persisted mapping must change.
+
+**The 7 no-page books** — see "Phase 4 verification" below.
 
 ## Acceptance Criteria
 - [x] `book_enrichment` migration + dual-read RLS + service-role writes; reseed-safe; delete cascades.
