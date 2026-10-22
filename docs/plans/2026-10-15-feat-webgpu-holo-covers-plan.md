@@ -6,7 +6,7 @@ branch: claude/cover-art-hologram-3d-676408
 research: docs/brainstorms/2026-10-14-holo-cover-gpu-upgrade-research.md
 supersedes: docs/plans/2026-05-01-feat-3d-book-covers-real-mesh-renderer-plan.md (deferred mesh plan; its gap list is folded in below)
 reviewed: 2026-10-15 (architecture-strategist, performance-oracle, code-simplicity, kieran-typescript) — feedback folded in
-status: draft — revised after review; open question resolved 2026-10-15 (tap-to-open added)
+status: draft — revised after review; tap-to-open added 2026-10-15; release strategy = dark carrier build + OTA (2026-10-22)
 ---
 
 # ✨ WebGPU + three.js Hologram Covers
@@ -36,6 +36,7 @@ List thumbnails don't change.
 | Measurement | Gates run on a **Release** device build (spike screen behind an env flag, not `__DEV__`), with Instruments. G3 budget is 8.3 ms at 120 Hz, including `present()`. | perf |
 | Deps | `react-native-webgpu@0.15.1` (now latest). Exact pins via `-- --save-exact`. Correct `--save-dev` syntax. `three/webgpu`-only imports enforced by Biome. `.js` addon paths. No `@webgpu/types`. | TS |
 | Phases | 6 → 4. Hardening folded into each phase's exit criteria. | simplicity |
+| Release (2026-10-22) | The feature ships **OTA**. Only the native module rides one dark carrier build (1.4.0), proven by the full spike before submission. Phases 1–3 are EAS Updates gated by `eas fingerprint:compare`. See Release Strategy. | user |
 | Navigation fact | **Timeline pages weren't tappable.** Detail was only reachable from `book-card.tsx` (Archives/Library/Search) and the barcode scanner. **Resolved:** tap-to-open added in Phase 2, so Timeline → detail becomes the main two-renderer flow. | arch, user |
 
 **Considered and not adopted:**
@@ -93,8 +94,7 @@ List thumbnails don't change.
   - **No `metro.config.js`**
   - `tsconfig` extends `expo/tsconfig.base` (`lib: ["DOM","ESNext"]`, `moduleResolution: "bundler"`, `skipLibCheck`)
   - **`expo-updates` is now installed:** `runtimeVersion: { policy: "fingerprint" }`, EAS Update URL in `app.json`
-    - Adding `react-native-webgpu` changes the native fingerprint, so **the 3D feature needs a new store/TestFlight build**. It can't ship OTA to existing 1.3.0 binaries, which keep the 2D hero.
-    - Later JS-only tuning (shaders, bloom, timings) *can* ship OTA.
+    - Adding `react-native-webgpu` changes the native fingerprint. That one piece can't ship OTA; everything else can. See **Release Strategy** below.
   - **`patch-package` postinstall:** `react-native-screens` and `expo-router` are patched and pinned (memory `project_native_patches_patch_package`). Our new deps don't touch them, but run `npm ci` (which runs postinstall), not a bare install.
   - `app.json` plugins now include `./plugins/withPodsMinDeploymentTarget.js`
 - **Tests:** Vitest, `environment: 'node'`, `**/*.test.ts`. Only pure TS; nothing that imports `three` or native modules.
@@ -298,9 +298,47 @@ All geometry is procedural; there are no asset files. Verify TSL node names agai
   - Archives/Library → detail (Timeline mounted but blurred, or never mounted) follows the same rules.
 - **Timeline and detail stages are separate instances:** both canvases are on screen during the push transition, so a single stage can't move between screens.
 
+## Release Strategy: one dark carrier build, then OTA (decided 2026-10-22)
+
+**Goal:** ship the hologram covers as EAS Updates, not as a feature App Store release.
+
+**Hard constraint.** `react-native-webgpu` is a native module: a Dawn `.xcframework`, a Metal-backed `Canvas` view and JSI bindings. EAS Update can only replace the JS bundle and assets. The README says adding a native module "needs a new build". The `fingerprint` runtime policy also means an update that depends on it is **never delivered** to binaries without it. **So 100% OTA isn't possible.** The nearest workable version:
+
+1. **One carrier build, the only store submission.** The next binary (1.4.0) includes every native-affecting change, with **no user-visible change**. 3D isn't wired into any screen, the spike route is off, and the app still renders today's 2D heroes. It carries:
+   - the `react-native-webgpu@0.15.1` native module (autolinked even though no shipped JS imports it)
+   - the `"react-native-webgpu"` config plugin in `app.json`
+   - `CADisableMinimumFrameDurationOnPhone` in `ios.infoPlist`, **only if** the prebuilt `Info.plist` lacks it (check in Phase 0)
+   - every JS dependency too (`three`, `fast-text-encoding`, `@types/three`), plus `metro.config.js` and the Biome rule. These are already in place, so no later OTA changes `package.json` dependencies or bundler config. That removes any doubt about what the fingerprint hashes.
+2. **Everything else ships as EAS Updates** on that runtime, with no review and no new binary. Each phase from 1 onward follows the same ladder:
+   1. `npm ci`
+   2. `eas fingerprint:compare --build-id <carrier build>` must report **no change** (the gate)
+   3. `eas update --channel preview` → verify on the preview build (same native layer)
+   4. `eas update --channel production`
+   - The ladder covers the runtime code, the look, the Timeline, detail, tap-to-open, tuning, and the cleanup.
+3. **Users on 1.3.0 or older binaries keep the 2D hero** until they install 1.4.0 from the store. The fingerprint stops the 3D updates reaching them, and they can't crash on a missing module.
+
+**Rules this adds for Phases 1–3 (OTA-safe):**
+- **No native-affecting edits.** That means no `app.json` native fields or plugins, no new or upgraded native deps, and no `patches/` changes.
+  - **Keep `NSMotionUsageDescription`** (originally a Phase 3 removal). Removing it changes the native layer, so it waits for a future binary.
+  - Leave `expo-sensors` installed.
+- **Version freeze:** `react-native-webgpu` is frozen at 0.15.1 until the next binary.
+  - three (pure JS) *can* move forward OTA, but only to versions verified on 0.15.1's Dawn (`154.3.0`).
+  - The #445 workaround and the `RenderPipeline`/`bloom` checks apply to any three bump.
+- **Defensive import:** the lazy runtime entry wraps `import('react-native-webgpu')` / `navigator.gpu` detection in try/catch → status `unavailable: 'no-webgpu'`. The fingerprint should make a mismatch impossible, but this is cheap insurance against a bad channel or runtime configuration.
+- **Rollback and kill-switch:**
+  - `eas update:republish` the previous update, or
+  - publish an update built with `EXPO_PUBLIC_HOLO_3D=0`, which takes every surface back to `HoloFace` in the field
+  - Optionally stage production rollouts as a percentage (EAS Update rollouts; check the current CLI flag at publish time).
+
+**Consequence: the native layer must be proven *before* the carrier is submitted.**
+- If 0.15.1 turns out to be missing something we need (G1's texture path, a crash fix), the only remedy is **a second store build**.
+- So Phase 0's full spike (G1–G7) runs on a **local Release build** of the exact carrier native configuration *before* `eas build --profile production`.
+- G1's fallback (raw `GPUTexture` via `copyExternalImageToTexture`) uses the same native module, so it stays OTA-able.
+- G5 (IPA size) is decided before submission, because it's the carrier that adds Dawn.
+
 ## Implementation Phases
 
-### Phase 0 — Install, spike and go/no-go
+### Phase 0 — Native foundation, spike, carrier build (the only store build)
 
 **Install** (exact pins: three breaks APIs between minors):
 
@@ -311,9 +349,8 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
 
 - `@types/three` tracks major.minor, so 0.186.0 is correct for three 0.186.1.
 - **Lockfile:** review the `package-lock.json` diff for expo or expo-asset drift (memory `project_npm_ci_not_install`), commit it, then `npm ci`. That re-runs the `patch-package` postinstall; confirm the screens and expo-router patches still apply.
-- **Release:** this is a native change (the fingerprint changes), so it ships in a new binary (the next version after 1.3.0), not as an EAS Update.
-- **`app.json`:** add the `"react-native-webgpu"` plugin.
-- **`metro.config.js`** (new): `getDefaultConfig` + the documented `three` alias.
+- **`app.json`:** add the `"react-native-webgpu"` plugin. After `npx expo prebuild --clean`, check `ios/<App>/Info.plist` for `CADisableMinimumFrameDurationOnPhone`. If it's missing, add it under `ios.infoPlist` **now** (it's native, so it can't be added later OTA).
+- **`metro.config.js`** (new): `getDefaultConfig` + the documented `three` alias + `assetExts` for `glb`/`hdr`. That pre-empts the projector-model stretch item, so bundler config never changes after the carrier.
 - **`biome.json`:** add `style/noRestrictedImports`, restricting `three` (use `three/webgpu`).
 - **Rebuild:**
   - simulator: prebuild + dev client on the iPhone 17 Pro / iOS 26.4 simulator by UDID (memory `project_simulator_target_device`), with Metro launched via the worktree's own expo binary (memory `project_nested_worktree_metro_root`)
@@ -338,7 +375,13 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
 
 **Output:** measurements are appended to the research doc. Go/no-go with the user.
 
-### Phase 1 — Runtime and the look
+**Carrier build** (after a go, with the user's approval to submit):
+1. The spike route stays env-gated off. No shipped screen imports the 3D runtime; the app is visually identical to 1.3.0.
+2. `npm ci` → `eas build --profile production` (plus `--profile preview` for the OTA test bed: same native layer, `preview` channel) → TestFlight smoke test (app launches, 2D heroes unchanged) → submit 1.4.0 for review.
+3. **Record the carrier fingerprint and build id** in the research doc. Every later update is compared against it.
+4. The carrier can go out with other 1.4.0 work. It doesn't need its own release, as long as that other work also adds no native changes after the carrier is cut.
+
+### Phase 1 — Runtime and the look (ships OTA)
 
 - `lib/holo3d/pager.ts` + `pager.test.ts`:
   - `cardTransform(index, scrollX, pageWidth) → { offset, rotationY, opacity, visible }`
@@ -349,8 +392,9 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
 - `lib/holo3d/runtime/{gpu,textures,scene,stage}.ts` per the Architecture section. Export `HoloFace`.
 - **Tune on the spike screen** using `__DEV__`-time constants (no preset UI). Compare with Figma node `134:2077` and today's 2D hero. Particles come last and are time-boxed.
 - **Exit:** the user approves the look from simulator screenshots or a recording.
+- **Ships as:** nothing user-visible yet. The runtime can ride the Phase 2 update; no update is needed for Phase 1 alone.
 
-### Phase 2 — Timeline
+### Phase 2 — Timeline (ships OTA)
 
 - `components/holo-stage.tsx` (lazy), an `AnimatedFlashList` scroll handler, transparent/`HoloFace` cells by status, pausing + 30 s dispose.
 - **Tap-to-open:** `Pressable` cells limited to the card rectangle, `router.push(`/book/${book.id}`)`, the press-in brighten uniform, and the haptic under reduce motion.
@@ -362,11 +406,12 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
   - the canon badge tracks its card while dragging and flinging
   - status ≠ ready shows `HoloFace` (test with `EXPO_PUBLIC_HOLO_3D=0`)
   - VoiceOver reads the cells
+- **Ships as:** EAS Update, following the release ladder (fingerprint compare → `preview` → `production`). This is the first user-visible 3D release. Users on 1.4.0+ get it on their next cold launch.
 
-### Phase 3 — Book detail and cleanup
+### Phase 3 — Book detail and cleanup (ships OTA)
 
 - `<HoloStage books={[book]} />` in `app/book/[id].tsx`, with the `onFirstFrame` swap and pausing.
-- **Delete** `Projector`, `StaticHero`, `TiltedHero` and the `variant`/`tilt` props from `holo-cover.tsx`. **Keep** `HoloFace`'s `canon` prop and its `CanonBadge`: the fallback/pending face on both surfaces still shows the badge. Remove `NSMotionUsageDescription` from `app.json` if nothing else uses motion (`expo-sensors` stays only if it's still used elsewhere).
+- **Delete** `Projector`, `StaticHero`, `TiltedHero` and the `variant`/`tilt` props from `holo-cover.tsx`. **Keep** `HoloFace`'s `canon` prop and its `CanonBadge`: the fallback/pending face on both surfaces still shows the badge. **Don't** remove `NSMotionUsageDescription` or `expo-sensors` here. Both are native-affecting, so they're left for the next binary (and the gyro-tilt stretch item would reuse them).
 - **Exit:**
   - **Timeline → tap → detail → back:** one drawing renderer at a time; resuming within 30 s needs no re-init; #445 clear runs only at count 0
   - Archives → detail with the Timeline mounted-but-blurred behaves the same way
@@ -376,14 +421,16 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
   - a **10-minute device soak** (Power Profiler, thermal state), including Low Power Mode at 60 Hz
 - **Degrade order if hot:** bloom off → idle throttle → `unavailable`.
 - Update the research doc status, and add a `CLAUDE.md` Design Context line for the 3D hero.
+- **Ships as:** EAS Update, following the same ladder.
 
 ### Stretch (separate plans)
 
-- **Gyro tilt** on the detail hero: read `sensor.sensor.get()` in the JS loop; watch the device-only crash class in memory `project_reanimated_sensor_worklet_crash`.
-- **Off-JS-thread rendering** via worklets Bundle Mode, if G3 shows contention.
-- **A modelled projector base**: a self-contained `.glb`, Metro `assetExts`, `GLTFLoader`.
-- **Skia v3 composition** (shared Dawn device).
-- **A shared-element transition** into `HoloFace`.
+Each item is marked OTA or new build:
+- **Gyro tilt** on the detail hero (**OTA**: `expo-sensors` and the motion string are already in the binary). Read `sensor.sensor.get()` in the JS loop; watch the device-only crash class in memory `project_reanimated_sensor_worklet_crash`.
+- **Off-JS-thread rendering** via worklets Bundle Mode, if G3 shows contention (**likely a new build**: Bundle Mode changes the worklets/Babel/native setup; verify).
+- **A modelled projector base** (**OTA** if Metro `assetExts` for `glb` is added in the carrier's `metro.config.js`, so add it there pre-emptively; assets themselves ship OTA): a self-contained `.glb`, `GLTFLoader`.
+- **Skia v3 composition** (**new build**: a native module).
+- **A shared-element transition** into `HoloFace` (**OTA**).
 
 ## Acceptance Criteria
 
@@ -403,7 +450,13 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
 - [ ] G4: no memory growth over 100 cycles. Live cover textures ≤4 at ≤640×960.
 - [ ] Paused stages don't render. Leftover tick measured, and acted on if over threshold. A blurred Timeline is disposed after 30 s.
 - [ ] 10-minute soak: no thermal throttling to `.serious`.
-- [ ] G5: JS and IPA deltas accepted.
+- [ ] G5: JS and IPA deltas accepted (before the carrier is submitted).
+
+**Release (OTA)**
+- [ ] The carrier build (1.4.0) is visually identical to 1.3.0, and its fingerprint and build id are recorded.
+- [ ] Every Phase 1–3 update passes `eas fingerprint:compare --build-id <carrier>` with no change, and is verified on the `preview` channel before `production`.
+- [ ] Binaries older than the carrier keep the 2D hero and never receive the 3D updates.
+- [ ] Rollback is rehearsed once on `preview`: republish the previous update, and an `EXPO_PUBLIC_HOLO_3D=0` update shows `HoloFace`.
 
 **Quality gates**
 - [ ] `npm run lint` (including the `three` import restriction), `npm test`, and `npx tsc --noEmit` pass. No `any`.
@@ -428,7 +481,10 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
 | three API churn (r183 rename, r184 leak) | High over time | Exact pins. The upgrade checklist re-checks #445, `RenderPipeline`, `bloom`, pass resolution scale. |
 | JS-thread contention (FlashList + React + loop on Hermes, no JIT) | Medium | Capped resolution, reduced-scale bloom, CPU uniforms, pausing; then Bundle Mode. |
 | Fill cost (full-ratio buffer, beam overdraw, bloom chain) | Medium | Resolution policy, band-sized canvas, cheap beam noise. |
-| IPA growth (Dawn) | Unknown | G5; user decides. |
+| IPA growth (Dawn) | Unknown | G5; user decides before the carrier is submitted. |
+| The carrier's native layer turns out insufficient after shipping (a missing API, or a crash fixed only in a newer `react-native-webgpu`) | Low–Medium | The full spike (G1–G7) runs on a local Release build of the exact carrier configuration before submission. G1's fallback is in the same native module. The worst case is a second store build. |
+| An OTA accidentally changes the fingerprint (a stray dep bump, an `app.json` edit, a patch), stranding the update | Medium | A mandatory `eas fingerprint:compare` step in the release ladder; `npm ci` before publishing; the OTA-safe rules in Release Strategy. |
+| `react-native-webgpu` frozen at 0.15.1 until the next binary | Certain | Accepted. three bumps OTA only after they're verified on Dawn `154.3.0`. |
 | Battery and thermal | Medium | Pausing, 30 s dispose, soak test, degrade order. |
 | Simulator not representative (perf) | Certain | Release device builds for G2–G4 and G7. A physical iPhone can't reach the dev server (memory `feedback_expo_go_device`), so a Release device build is required anyway. |
 
