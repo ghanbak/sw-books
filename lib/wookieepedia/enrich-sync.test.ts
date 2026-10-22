@@ -17,6 +17,7 @@ import {
 	planStep,
 } from './enrich-sync';
 import type { Classification, MatchClass } from './match';
+import type { EnrichmentPin, PinMap } from './pins';
 import { wikiUrl } from './url';
 
 const book = (slug: string, id = `id-${slug}`): MapBook => ({
@@ -173,6 +174,138 @@ describe('buildMapping', () => {
 	});
 });
 
+describe('buildMapping — pins', () => {
+	const valid = new Set([1, 2, 3, 4, 5, 6]);
+	const pin = (pageid: number, title = `page ${pageid}`): EnrichmentPin => ({
+		pageid,
+		title,
+		pinned_at: '2026-10-22T00:00:00Z',
+	});
+	const pins = (entries: Record<string, EnrichmentPin>): PinMap => new Map(Object.entries(entries));
+
+	it('maps an unmapped book from its pin (no discovery needed)', () => {
+		const m = buildMapping({
+			catalog: [book('a'), book('b')],
+			existing: [],
+			classifications: [],
+			validPageIds: new Set(),
+			pins: pins({ a: pin(900) }),
+		});
+		expect(m.targets).toEqual([{ book: book('a'), pageid: 900, origin: 'pin', pinned: true }]);
+		expect(m.noPage.map((b) => b.slug)).toEqual(['b']);
+		expect(m.issues).toEqual([]);
+	});
+
+	it('a pin beats a discovery match on an unmapped book, and says so', () => {
+		const m = buildMapping({
+			catalog: [book('a')],
+			existing: [],
+			classifications: [cls('MATCHED', 1, 'a')],
+			validPageIds: valid,
+			pins: pins({ a: pin(900) }),
+		});
+		expect(m.targets.map((t) => [t.pageid, t.origin])).toEqual([[900, 'pin']]);
+		expect(m.issues.map((i) => i.kind)).toEqual(['pin_overrides_discovery']);
+	});
+
+	it('a pin equal to the persisted pageid is a no-op that marks the target pinned', () => {
+		const m = buildMapping({
+			catalog: [book('a')],
+			existing: [existingRow('id-a', 5)],
+			classifications: [],
+			validPageIds: valid,
+			pins: pins({ a: pin(5) }),
+		});
+		expect(m.targets).toEqual([{ book: book('a'), pageid: 5, origin: 'persisted', pinned: true }]);
+		expect(m.issues).toEqual([]);
+	});
+
+	it('a pin that differs from a persisted row is a conflict and never re-points', () => {
+		const m = buildMapping({
+			catalog: [book('a')],
+			existing: [existingRow('id-a', 5)],
+			classifications: [],
+			validPageIds: valid,
+			pins: pins({ a: pin(900) }),
+		});
+		expect(m.targets).toEqual([{ book: book('a'), pageid: 5, origin: 'persisted' }]);
+		expect(m.issues).toEqual([
+			{
+				kind: 'pin_conflict',
+				slug: 'a',
+				detail: 'stored pageid 5, pin 900 ("page 900") — kept stored; --repin to re-point',
+			},
+		]);
+	});
+
+	it('--repin re-points a persisted row onto the pin and keeps the old pageid claimed', () => {
+		const m = buildMapping({
+			catalog: [book('a'), book('b')],
+			existing: [existingRow('id-a', 5)],
+			// b's discovery match is a's OLD page: still refused this run (no unique-key race).
+			classifications: [cls('MATCHED', 5, 'b')],
+			validPageIds: valid,
+			pins: pins({ a: pin(900) }),
+			repin: true,
+		});
+		expect(m.targets).toEqual([
+			{ book: book('a'), pageid: 900, origin: 'pin', pinned: true, repointedFrom: 5 },
+		]);
+		expect(m.issues.map((i) => [i.slug, i.kind])).toEqual([['b', 'pageid_conflict']]);
+	});
+
+	it('refuses a pin on a pageid persisted for another book, even with --repin', () => {
+		for (const repin of [false, true]) {
+			const m = buildMapping({
+				catalog: [book('a'), book('b')],
+				existing: [existingRow('id-a', 5)],
+				classifications: [],
+				validPageIds: valid,
+				pins: pins({ b: pin(5) }),
+				repin,
+			});
+			expect(m.targets.map((t) => t.book.slug)).toEqual(['a']);
+			expect(m.issues).toEqual([
+				{
+					kind: 'pageid_conflict',
+					slug: 'b',
+					detail: 'pinned pageid 5 also claimed by a — skipped',
+				},
+			]);
+			expect(m.noPage.map((b) => b.slug)).toEqual(['b']);
+			expect([...m.noPageAmbiguousCandidates]).toEqual(['b']);
+		}
+	});
+
+	it('refuses two pins on one pageid, and a discovery match on a pinned pageid', () => {
+		const m = buildMapping({
+			catalog: [book('a'), book('b'), book('c'), book('d')],
+			existing: [],
+			classifications: [cls('MATCHED', 6, 'd')],
+			validPageIds: valid,
+			pins: pins({ a: pin(900), b: pin(900), c: pin(6) }),
+		});
+		expect(m.targets.map((t) => [t.book.slug, t.pageid])).toEqual([['c', 6]]);
+		expect(m.issues.map((i) => [i.slug, i.kind])).toEqual([
+			['a', 'pageid_conflict'],
+			['b', 'pageid_conflict'],
+			['d', 'pageid_conflict'],
+		]);
+	});
+
+	it('reports a pin for a slug that is not in the catalog', () => {
+		const m = buildMapping({
+			catalog: [book('a')],
+			existing: [],
+			classifications: [],
+			validPageIds: valid,
+			pins: pins({ gone: pin(900) }),
+		});
+		expect(m.targets).toEqual([]);
+		expect(m.issues.map((i) => [i.slug, i.kind])).toEqual([['gone', 'pin_unknown_slug']]);
+	});
+});
+
 describe('planStep', () => {
 	const target: MapTarget = { book: book('heir'), pageid: 759, origin: 'persisted' };
 	const ok: PageFetch = {
@@ -279,6 +412,17 @@ describe('planStep', () => {
 
 	it('writes an empty-appearances row for a book page on first sync', () => {
 		expect(planStep(target, ok, undefined, parsed(0), opts).kind).toBe('insert');
+	});
+
+	it('a --repin re-point updates without the same-page shrink/emptied guards', () => {
+		const repinned: MapTarget = { ...target, origin: 'pin', pinned: true, repointedFrom: 111 };
+		const old = existingRow('id-heir', 111, { entryCount: 500 });
+		const s = planStep(repinned, ok, old, parsed(3), opts);
+		expect(s).toMatchObject({ kind: 'update', repointedFrom: 111, renamed: false });
+		// Fetch-time refusals still apply to a pinned page.
+		expect(
+			planStep(repinned, { status: 'missing', pageid: 759 }, old, parsed(3), opts),
+		).toMatchObject({ kind: 'flag', reason: 'missing', keptExisting: true });
 	});
 });
 

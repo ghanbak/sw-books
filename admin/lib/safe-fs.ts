@@ -15,6 +15,36 @@ async function dataRoot(): Promise<string> {
 }
 
 /**
+ * Read a file under data/, or null when it doesn't exist. Throws
+ * `DataDirUnavailableError` when data/ itself is absent (hosted deploys).
+ */
+export async function safeRead(rel: string): Promise<string | null> {
+	if (path.isAbsolute(rel)) throw new Error('absolute path rejected');
+	let root: string;
+	try {
+		root = await dataRoot();
+	} catch {
+		throw new DataDirUnavailableError();
+	}
+	const target = path.resolve(root, rel);
+	if (!target.startsWith(root + path.sep)) throw new Error('path escape rejected');
+	try {
+		return await fs.readFile(target, 'utf-8');
+	} catch (err) {
+		if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+		throw err;
+	}
+}
+
+/** data/ is not on this filesystem (e.g. the Vercel deploy). */
+export class DataDirUnavailableError extends Error {
+	constructor() {
+		super('data/ is not available on this deploy');
+		this.name = 'DataDirUnavailableError';
+	}
+}
+
+/**
  * Write `contents` to a path relative to data/, atomically (temp file +
  * rename). Rejects absolute paths and any target that escapes data/ via a
  * symlink. Used by the export action to write books.csv + override JSONs.
