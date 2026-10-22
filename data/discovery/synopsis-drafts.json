@@ -1,0 +1,368 @@
+{
+	"_comment": "Original one-line synopsis DRAFTS for scripts/build-catalog-cleanup.ts. Written from facts only; never wiki (CC BY-SA) or publisher prose. Every fill is marked drafted for operator review.",
+	"drafts": {
+		"a-new-hope-the-princess-the-scoundrel-and-the-farm-boy": {
+			"synopsis": "A middle-grade retelling of A New Hope told in three parts, one each from Leia, Han, and Luke.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"ahsoka-a-novelization-of-season-one": {
+			"synopsis": "A junior novelization of Ahsoka's first season, as Ahsoka and Sabine Wren race to find Thrawn and Ezra Bridger.",
+			"basis": "announced publisher premise (unreleased) — facts only"
+		},
+		"before-the-awakening": {
+			"synopsis": "Three stories follow Finn, Rey, and Poe Dameron in the days before The Force Awakens.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"before-the-storm": {
+			"synopsis": "Leia faces the Yevetha's warlike Nil Spaar while Luke searches for clues about his mother and Lando chases a derelict alien ship.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"children-of-the-jedi": {
+			"synopsis": "Luke meets the spirit of Jedi Callista aboard the reawakened dreadnaught Eye of Palpatine as Leia searches Belsavis for lost Jedi children.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"dark-nest-i-the-joiner-king": {
+			"synopsis": "Young Jedi answer a mysterious summons to the Unknown Regions and are drawn into the Killik hive's border war with the Chiss.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"dark-nest-ii-the-unseen-queen": {
+			"synopsis": "The Skywalkers and Solos discover the Dark Nest still lives as Killik-fueled piracy pushes the Colony toward war.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"dark-nest-iii-the-swarm-war": {
+			"synopsis": "Luke reshapes the Jedi Order as the Chiss-Killik conflict explodes into open war and the Dark Nest makes its final move.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"darksaber": {
+			"synopsis": "Durga the Hutt builds a Death Star-based superweapon as Admiral Daala rallies the Empire and Luke seeks to restore Callista's Force powers.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"eyes-like-stars": {
+			"synopsis": "Teen Ardent Quay falls for a mysterious stowaway on her family's tour ship as they try to return an artifact home ahead of the First Order.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"galaxys-edge-a-crash-of-fate": {
+			"synopsis": "A smuggler returns to Batuu after thirteen years and reconnects with her childhood friend Jules just as a delivery job turns dangerous.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"galaxys-edge-black-spire": {
+			"synopsis": "Resistance spy Vi Moradi and ex-stormtrooper Archex try to build a rebel cell at Black Spire Outpost on Batuu.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"hard-merchandise": {
+			"synopsis": "Boba Fett and the amnesiac Neelah follow evidence tying Prince Xizor to a galaxy-shaking conspiracy as the Bounty Hunter Wars conclude.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"heir-to-the-empire-the-20th-anniversary-edition": {
+			"synopsis": "An annotated anniversary reissue of Heir to the Empire, with commentary by Zahn and a new Thrawn novella, Crisis of Faith.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"hiding-from-the-dark": {
+			"synopsis": "In a middle-grade horror tale, a girl named Bia escapes Coruscant to find her mother while a shadowy hunter closes in.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"hunters-battle-for-the-arena": {
+			"synopsis": "A Force-sensitive orphan joins the combat teams of Vespaara's Grand Arena and must learn to trust her teammates as a stranger shadows the competition.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"join-the-resistance": {
+			"synopsis": "Would-be hero Mattis Banz joins a squad of misfit Resistance recruits who must learn to work together.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"join-the-resistance-attack-on-starkiller-base": {
+			"synopsis": "J-Squadron's young recruits race to rejoin the Resistance in time for the attack on Starkiller Base.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"join-the-resistance-escape-from-vodran": {
+			"synopsis": "Captured by the First Order on Vodran, J-Squadron splits up as some recruits plot an escape and others bargain with a Hutt.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"landos-luck": {
+			"synopsis": "After a smuggling job goes wrong, Lando and L3-37 must choose between profit and helping a planet that needs a stolen artifact returned.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"last-shot": {
+			"synopsis": "Han and Lando team up years after Endor to stop a vengeful inventor's device, in a story that jumps between three eras.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"legacy": {
+			"synopsis": "Between The Last Jedi and The Rise of Skywalker, Leia and Rey travel to a Jedi temple on Tython to repair Rey's broken lightsaber.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"master-of-evil": {
+			"synopsis": "Newly armored Darth Vader obsessively hunts for a way to cheat death, chasing rumors of a shaman who can raise the dead.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"moving-target-a-princess-leia-adventure": {
+			"synopsis": "Between Empire and Jedi, Leia leads a small team on a decoy mission to draw Imperial attention away from the rebel fleet.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"pirates-price": {
+			"synopsis": "Pirate Hondo Ohnaka recounts his colorful encounters with Han, Chewie, and the Millennium Falcon.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"planet-of-twilight": {
+			"synopsis": "Leia is taken captive on the former prison world Nam Chorios while Luke searches for Callista and an ancient parasite awakens.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"poe-dameron-free-fall": {
+			"synopsis": "Sixteen-year-old Poe Dameron leaves Yavin 4 for a piloting job and ends up flying for the Kijimi spice runners.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"princess-of-the-rebellion": {
+			"synopsis": "After Yavin, Leia, Luke, and Han search for a hidden weapons cache left by Bail Organa to secure a new rebel base.",
+			"basis": "announced publisher premise (unreleased) — facts only"
+		},
+		"reign-of-the-empire-edge-of-the-abyss": {
+			"synopsis": "A year before Andor, Mon Mothma and Bail Organa confront the Empire's grip on truth while fractured rebel cells fight to survive.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"reign-of-the-empire-from-the-ashes": {
+			"synopsis": "The newly united Rebel Alliance struggles to hold together as Mon Mothma and Bail Organa build its base on Yavin 4.",
+			"basis": "announced publisher premise (unreleased) — facts only"
+		},
+		"republic-commando-hard-contact": {
+			"synopsis": "Clone commando squad Omega is dropped behind Separatist lines on Qiilura to wipe out a nanovirus designed to kill clones.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"republic-commando-triple-zero": {
+			"synopsis": "Omega Squad hunts a Separatist terror network and a mole inside Republic command on Coruscant.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"return-of-the-jedi-beware-the-power-of-the-dark-side": {
+			"synopsis": "A playful middle-grade retelling of Return of the Jedi by Origami Yoda author Tom Angleberger.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"sanctuary-a-bad-batch-novel": {
+			"synopsis": "Hunter, Tech, Wrecker, and Omega take risky jobs to fund Pabu's recovery, then find themselves shielding two fugitives hunted by the ISB.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"servants-of-the-empire-edge-of-the-galaxy": {
+			"synopsis": "Lothal teen Zare Leonis begins to doubt the Empire when his sister vanishes from the Imperial Academy.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"servants-of-the-empire-imperial-justice": {
+			"synopsis": "Undercover cadet Zare Leonis falls under suspicion at Lothal's academy while Merei digs deeper into Imperial secrets.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"servants-of-the-empire-rebel-in-the-ranks": {
+			"synopsis": "Zare Leonis enrolls at Lothal's Imperial Academy to secretly investigate his sister's disappearance.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"servants-of-the-empire-the-secret-academy": {
+			"synopsis": "Zare Leonis's search for his missing sister leads him to Commandant Hux's academy on Arkanis, where exposure could mean death.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"shadow-games": {
+			"synopsis": "Dash Rendar signs on as bodyguard to a galactic pop star whose tour is plagued by murders and ties to Black Sun.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"shield-of-lies": {
+			"synopsis": "Han spies on the Yevethan fleet, Lando is trapped aboard a runaway alien ship, and Luke studies with the Fallanassi.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"slave-ship": {
+			"synopsis": "Boba Fett fakes his death and chases a huge bounty that pulls him into Prince Xizor's plot to break the Bounty Hunters Guild.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"smugglers-run-a-han-solo-and-chewbacca-adventure": {
+			"synopsis": "After Yavin, Han and Chewbacca reluctantly extract a rebel officer from Cyrkon with an ISB agent on their tail.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"solo-a-star-wars-story-a-junior-novel": {
+			"synopsis": "A junior novelization of Solo: A Star Wars Story, with extra and deleted scenes.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"solo-a-star-wars-story-expanded-edition": {
+			"synopsis": "The film novelization of Solo, with added scenes including Han's Imperial Navy service and Qi'ra's past.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"spark-of-the-resistance": {
+			"synopsis": "Rey, Rose, Poe, and BB-8 answer a distress call and defend Minfar's Zixon people from the First Order.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"star-wars-a-new-hope-paperback-novel": {
+			"synopsis": "A junior novel adaptation of A New Hope, revised for current canon for Star Wars' 40th anniversary in 2017.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-episode-i-the-phantom-menace": {
+			"synopsis": "The novelization of The Phantom Menace, opening with young Anakin's life on Tatooine before the Jedi arrive.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-episode-ii-attack-of-the-clones": {
+			"synopsis": "The novelization of Attack of the Clones, expanding on Anakin and Padmé and adding scenes that never made the final film.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-galaxies-the-ruins-of-dantooine": {
+			"synopsis": "An Imperial bioengineer secretly aiding the Rebellion helps a rebel spy recover a holocron listing rebel sympathizers.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"star-wars-outlaws-low-red-moon": {
+			"synopsis": "Disinherited heir Jaylen Vrax and reprogrammed battle droid ND-5 build an underworld partnership in this Outlaws prequel.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"star-wars-return-of-the-jedi-paperback-novel": {
+			"synopsis": "A junior novel adaptation of Return of the Jedi, revised for current canon for Star Wars' 40th anniversary in 2017.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-rogue-one-a-junior-novel": {
+			"synopsis": "A junior novelization of Rogue One, following Jyn Erso's mission to steal the Death Star plans.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-the-clone-wars": {
+			"synopsis": "The novelization of the 2008 Clone Wars film, in which Anakin and new Padawan Ahsoka rescue Jabba's kidnapped son.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-the-empire-strikes-back-paperback-novel": {
+			"synopsis": "A junior novel adaptation of The Empire Strikes Back, revised for current canon for Star Wars' 40th anniversary in 2017.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-the-force-awakens": {
+			"synopsis": "The novelization of The Force Awakens, as Rey, Finn, and Poe are drawn into the fight against the First Order.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-the-force-awakens-a-junior-novel": {
+			"synopsis": "A junior novelization of The Force Awakens, following Rey and Finn from Jakku to Starkiller Base.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-the-force-unleashed": {
+			"synopsis": "Darth Vader's secret apprentice hunts the last Jedi while being groomed to help overthrow the Emperor.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-the-force-unleashed-ii": {
+			"synopsis": "A clone of Vader's former apprentice escapes Kamino and searches for Juno Eclipse and the truth of his identity.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-the-last-jedi-a-junior-novel": {
+			"synopsis": "A junior novelization of The Last Jedi with extended and exclusive scenes.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-the-last-jedi-expanded-edition": {
+			"synopsis": "The novelization of The Last Jedi, developed with Rian Johnson's input and including scenes from alternate drafts.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-the-rise-of-skywalker-a-junior-novel": {
+			"synopsis": "A junior novelization of The Rise of Skywalker with deleted and extended scenes.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"star-wars-the-rise-of-skywalker-expanded-edition": {
+			"synopsis": "The novelization of The Rise of Skywalker with expanded scenes and material not seen in the film.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"stories-of-jedi-and-sith": {
+			"synopsis": "Ten short stories by different authors pit iconic Jedi against Sith, from Obi-Wan and Luke to Vader and Maul.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"survivors-quest": {
+			"synopsis": "Luke and Mara Jade travel to the Unknown Regions to recover the wreck of the Outbound Flight Jedi expedition.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"tatooine-ghost": {
+			"synopsis": "Han and Leia go to Tatooine to recover a lost Alderaanian painting hiding a vital code, and Leia learns about her father's past.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-book-of-boba-fett-junior-novel": {
+			"synopsis": "A junior novelization of The Book of Boba Fett, as Boba and Fennec Shand take over Jabba's former territory on Tatooine.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"the-clone-wars-no-prisoners": {
+			"synopsis": "Ahsoka and Captain Rex join Gilad Pellaeon's rescue of a Republic spy, and Ahsoka meets a Jedi who rejects Order tradition.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-clone-wars-wild-space": {
+			"synopsis": "Obi-Wan and Bail Organa chase intelligence to a remote world that proves far more dangerous than they expect.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-crystal-star": {
+			"synopsis": "Leia searches for her kidnapped children while Luke and Han investigate a strange cult near a crystallizing star.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-empire-strikes-back-so-you-want-to-be-a-jedi": {
+			"synopsis": "A middle-grade retelling of The Empire Strikes Back that puts the reader in Luke's place as he trains to be a Jedi.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"the-high-republic-a-valiant-vow": {
+			"synopsis": "Padawans and younglings join forces against the spreading blight and swarms of destructive scav droids.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-high-republic-beware-the-nameless": {
+			"synopsis": "Ram Jomaram and a group of stowaway younglings answer a distress call in the Occlusion Zone and face the Nameless.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-high-republic-escape-from-valo": {
+			"synopsis": "Trapped on Nihil-occupied Valo, Padawan Ram Jomaram leads three young Jedi in protecting his home.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-high-republic-quest-for-planet-x": {
+			"synopsis": "Prospectors Dass and Sky enlist Padawan Rooper Nitani in a hunt for the legendary Planet X.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-high-republic-quest-for-the-hidden-city": {
+			"synopsis": "Jedi Silandra Sho and Padawan Rooper Nitani search the monster-haunted planet Gloam for a missing Pathfinder team.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-last-jedi-cobalt-squadron": {
+			"synopsis": "Bomber crew sisters Rose and Paige Tico risk a covert mission to deliver aid to a system the First Order is starving.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-last-order": {
+			"synopsis": "After The Rise of Skywalker, Finn and Jannah track the First Order officer behind the kidnapping of a shipful of children.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-legends-of-luke-skywalker": {
+			"synopsis": "Deckhands on a ship to Canto Bight swap tall tales about Luke Skywalker, unsure which are true.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-mandalorian-armor": {
+			"synopsis": "Boba Fett escapes the Sarlacc as flashbacks reveal Prince Xizor's scheme to turn the Bounty Hunters Guild against itself.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-mandalorian-junior-novel": {
+			"synopsis": "A junior novelization of The Mandalorian's first season, as Din Djarin chooses to protect the Child.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"the-mandalorian-season-2-junior-novel": {
+			"synopsis": "A junior novelization of The Mandalorian's second season, as Din Djarin seeks a Jedi to take in Grogu.",
+			"basis": "film/series plot + Wookieepedia article (facts only)"
+		},
+		"the-mighty-chewbacca-in-the-forest-of-fear": {
+			"synopsis": "Chewbacca takes a job in a fear-inducing forest to recover a dark artifact and save Han Solo.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-new-rebellion": {
+			"synopsis": "A Dark Jedi named Kueller threatens the New Republic with mass murder while Han is framed for a Senate bombing.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-princess-and-the-scoundrel": {
+			"synopsis": "Han and Leia marry on Endor and honeymoon aboard the luxury starliner Halcyon as Imperial remnants threaten the peace.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"the-weapon-of-a-jedi-a-luke-skywalker-adventure": {
+			"synopsis": "Luke is drawn to a Jedi temple on Devaron, where he must protect a local girl and duel the scavenger Sarco Plank.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"twin-crossroads": {
+			"synopsis": "Training together after Endor, Luke and Leia go undercover on Coruscant and confront their parents' legacy.",
+			"basis": "announced publisher premise (unreleased) — facts only"
+		},
+		"tyrants-test": {
+			"synopsis": "Chewbacca leads a rescue for the captured Han as Leia commits the New Republic to war with the Yevetha.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"x-wing-isards-revenge": {
+			"synopsis": "Rogue Squadron reluctantly allies with Ysanne Isard to free prisoners held by Warlord Krennel.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"x-wing-mercy-kill": {
+			"synopsis": "Decades later, Wraith Squadron reunites to expose a Galactic Alliance general tied to the Lecersen Conspiracy.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		},
+		"x-wing-starfighters-of-adumar": {
+			"synopsis": "Wedge and three veteran pilots lead a diplomatic mission to Adumar, a world that prizes fighter pilots above all.",
+			"basis": "Wookieepedia article + publisher summary (facts only)"
+		}
+	},
+	"skipped": {
+		"star-wars-starfighter": "unreleased film novelization (2027-06-22); only a one-line announcement exists — the plot is not public, so no accurate synopsis can be written yet"
+	}
+}

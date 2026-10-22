@@ -1,0 +1,32 @@
+{
+  "a-new-hope-novelization": {
+    "pageid": 18924,
+    "title": "Star Wars: A New Hope (novelization)",
+    "note": "ISBN 9780345260611 and 1976-11-12 match the infobox",
+    "pinned_at": "2026-10-22T15:45:00.000Z"
+  },
+  "dooku-jedi-lost": {
+    "pageid": 627307,
+    "title": "Dooku: Jedi Lost (script)",
+    "note": "ISBN 9780593157664 and 2019-10-01 match the script edition; no {{App}} (the audio drama page 620148 has one but no timeline)",
+    "pinned_at": "2026-10-22T15:45:00.000Z"
+  },
+  "empire-strikes-back-novelization": {
+    "pageid": 35228,
+    "title": "Star Wars: The Empire Strikes Back (novelization)",
+    "note": "ISBN 9780345283924 matches the infobox",
+    "pinned_at": "2026-10-22T15:45:00.000Z"
+  },
+  "lost-tribe-of-the-sith-collected": {
+    "pageid": 361011,
+    "title": "Star Wars: Lost Tribe of the Sith: The Collected Stories",
+    "note": "ISBN 9780345541321 matches; page has no {{App}}, so timeline + backlink only",
+    "pinned_at": "2026-10-22T15:45:00.000Z"
+  },
+  "return-of-the-jedi-novelization": {
+    "pageid": 35229,
+    "title": "Star Wars: Return of the Jedi (novelization)",
+    "note": "ISBN 9780345307675 matches the infobox",
+    "pinned_at": "2026-10-22T15:45:00.000Z"
+  }
+}

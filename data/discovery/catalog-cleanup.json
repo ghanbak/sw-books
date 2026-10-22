@@ -1,0 +1,558 @@
+{
+  "kind": "catalog-cleanup",
+  "version": 1,
+  "as_of": "2026-10-22",
+  "policy": {
+    "isbn": "primary_isbn ∉ isbn[]: add primary_isbn to isbn[] when Open Library titles it as this book AND (the wiki lists it OR it is the same OL work as a row ISBN); reset primary_isbn to a row ISBN when the evidence assigns it to another book; flag anything else. Operator-approved additions (listed in the builder, each in the row's wiki infobox and on no other row) are appended in the same write. Never removes an ISBN.",
+    "covers": "null/blank cover_image only: Open Library (every row ISBN), then Google Books (every row ISBN), then a Google Books title search accepted only when the hit lists a row ISBN; HEAD-checked against MIN_COVER_BYTES, never a cover another row uses, never a Wookieepedia image. Only when all of those find nothing for a released book: the cover of the Open Library work a row ISBN belongs to (openlibrary-work), else — only when no row ISBN is on Open Library — the single work an OL title + author search returns (openlibrary-search, \"different edition: title+author match\"; first published no later than the row, in English, Canon works 2014+). Both need the full normalized title + author-set match, the same HEAD/shared/wiki guards, and an operator visual review of that exact image; they may show a different printing. Unreleased books without one are listed, not forced.",
+    "synopsis": "null/blank synopsis only: original one-line drafts (never wiki CC BY-SA prose or publisher blurbs), each marked drafted for review; rows without a confident draft are skipped and listed."
+  },
+  "summary": {
+    "isbn_fixes": 0,
+    "isbn_flagged": 0,
+    "cover_fills": 2,
+    "cover_fills_fallback": 2,
+    "covers_missing": 3,
+    "covers_not_yet_available": 5,
+    "synopsis_fills": 0,
+    "synopses_skipped": 1
+  },
+  "isbn_fixes": [],
+  "cover_fills": [
+    {
+      "id": "7dc39a15-7fa7-4ca1-9805-3d8780e4be17",
+      "slug": "children-of-the-jedi",
+      "title": "Children of the Jedi",
+      "before": null,
+      "after": "https://covers.openlibrary.org/b/id/372419-L.jpg",
+      "source": "openlibrary-search:title+author:OL497873W",
+      "reason": "no cover by ISBN; different edition: title+author match — no row ISBN is on Open Library; the search returned only OL497873W \"Star Wars - Children of the Jedi\" (Barbara Hambly, first published 1995); may be a different printing; visual review: 2026-10-22 — downloaded 276×475 JPEG of the English Bantam Spectra mass-market cover (\"Star Wars / Children of the Jedi / Barbara Hambly\"); not a placeholder or a foreign edition",
+      "fallback": {
+        "via": "title-author",
+        "work": "/works/OL497873W",
+        "review": "2026-10-22 — downloaded 276×475 JPEG of the English Bantam Spectra mass-market cover (\"Star Wars / Children of the Jedi / Barbara Hambly\"); not a placeholder or a foreign edition"
+      }
+    },
+    {
+      "id": "ff79611f-0376-4c76-bdab-4969ddbbd317",
+      "slug": "last-shot",
+      "title": "Last Shot",
+      "before": null,
+      "after": "https://covers.openlibrary.org/b/id/8568524-L.jpg",
+      "source": "openlibrary-work:OL19653601W",
+      "reason": "no cover by ISBN; Open Library work cover — 9780525622130's edition belongs to OL19653601W \"Star Wars - Last Shot - A Han and Lando Novel\" (Daniel José Older); may be a different printing; visual review: 2026-10-22 — downloaded 279×500 JPEG of the English Del Rey cover (\"Star Wars / Last Shot / A Han and Lando Novel / Daniel José Older\"); likely the later paperback printing (bestseller banner + review quote), not a placeholder or a foreign edition",
+      "fallback": {
+        "via": "same-work",
+        "work": "/works/OL19653601W",
+        "review": "2026-10-22 — downloaded 279×500 JPEG of the English Del Rey cover (\"Star Wars / Last Shot / A Han and Lando Novel / Daniel José Older\"); likely the later paperback printing (bestseller banner + review quote), not a placeholder or a foreign edition"
+      }
+    }
+  ],
+  "synopsis_fills": [],
+  "flagged": {
+    "isbn": [],
+    "covers_missing": [
+      {
+        "slug": "sanctuary-a-bad-batch-novel",
+        "title": "Sanctuary: A Bad Batch Novel",
+        "reason": "tried 9780593874462 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check; work-level fallback: same-work: OL44264240W \"Star Wars / Sanctuary: A Bad Batch Novel\" (via 9780593874462): authors [—] ≠ row [Lamar Giles]"
+      },
+      {
+        "slug": "servants-of-the-empire-imperial-justice",
+        "title": "Servants of the Empire: Imperial Justice",
+        "reason": "tried 9781484716601 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check; work-level fallback: same-work: OL27832612W \"Star Wars Rebels Servants of the Empire\" (via 9781484716601): title does not match \"Servants of the Empire: Imperial Justice\""
+      },
+      {
+        "slug": "the-high-republic-a-valiant-vow",
+        "title": "The High Republic: A Valiant Vow",
+        "reason": "tried 9781368095204 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check; work-level fallback: same-work: OL42425956W \"Star Wars : the High Republic\" (via 9781368095204): title does not match \"The High Republic: A Valiant Vow\""
+      }
+    ],
+    "covers_not_yet_available": [
+      {
+        "slug": "ahsoka-a-novelization-of-season-one",
+        "title": "Ahsoka: A Novelization of Season One",
+        "reason": "no cover available yet (releases 2027-03-23); tried 9780736452847 on Open Library and Google Books (+ ISBN-verified title search)"
+      },
+      {
+        "slug": "princess-of-the-rebellion",
+        "title": "Princess of the Rebellion",
+        "reason": "no cover available yet (releases 2027-05-04); tried 9780736449946 on Open Library and Google Books (+ ISBN-verified title search)"
+      },
+      {
+        "slug": "reign-of-the-empire-from-the-ashes",
+        "title": "Reign of the Empire: From the Ashes",
+        "reason": "no cover available yet (releases 2027-08-10); tried 9780593874042, 9780593874059 on Open Library and Google Books (+ ISBN-verified title search)"
+      },
+      {
+        "slug": "star-wars-starfighter",
+        "title": "Star Wars: Starfighter",
+        "reason": "no cover available yet (releases 2027-06-22); tried 9798217482207, 9798217482214 on Open Library and Google Books (+ ISBN-verified title search)"
+      },
+      {
+        "slug": "twin-crossroads",
+        "title": "Twin Crossroads",
+        "reason": "no cover available yet (releases 2027-04-06); tried 9780525478850 on Open Library and Google Books (+ ISBN-verified title search)"
+      }
+    ],
+    "synopses_skipped": [
+      {
+        "slug": "star-wars-starfighter",
+        "title": "Star Wars: Starfighter",
+        "reason": "unreleased film novelization (2027-06-22); only a one-line announcement exists — the plot is not public, so no accurate synopsis can be written yet"
+      }
+    ],
+    "synopsis_drafts_unused": [
+      {
+        "slug": "a-new-hope-the-princess-the-scoundrel-and-the-farm-boy",
+        "title": "A New Hope: The Princess, the Scoundrel, and the Farm Boy",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "ahsoka-a-novelization-of-season-one",
+        "title": "Ahsoka: A Novelization of Season One",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "before-the-awakening",
+        "title": "Before the Awakening",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "before-the-storm",
+        "title": "Before the Storm",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "children-of-the-jedi",
+        "title": "Children of the Jedi",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "dark-nest-i-the-joiner-king",
+        "title": "Dark Nest I: The Joiner King",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "dark-nest-ii-the-unseen-queen",
+        "title": "Dark Nest II: The Unseen Queen",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "dark-nest-iii-the-swarm-war",
+        "title": "Dark Nest III: The Swarm War",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "darksaber",
+        "title": "Darksaber",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "eyes-like-stars",
+        "title": "Eyes Like Stars",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "galaxys-edge-a-crash-of-fate",
+        "title": "Galaxy's Edge: A Crash of Fate",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "galaxys-edge-black-spire",
+        "title": "Galaxy's Edge: Black Spire",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "hard-merchandise",
+        "title": "Hard Merchandise",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "heir-to-the-empire-the-20th-anniversary-edition",
+        "title": "Heir to the Empire: The 20th Anniversary Edition",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "hiding-from-the-dark",
+        "title": "Hiding from the Dark",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "hunters-battle-for-the-arena",
+        "title": "Hunters: Battle for the Arena",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "join-the-resistance",
+        "title": "Join the Resistance",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "join-the-resistance-attack-on-starkiller-base",
+        "title": "Join the Resistance: Attack on Starkiller Base",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "join-the-resistance-escape-from-vodran",
+        "title": "Join the Resistance: Escape from Vodran",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "landos-luck",
+        "title": "Lando's Luck",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "last-shot",
+        "title": "Last Shot",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "legacy",
+        "title": "Legacy",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "master-of-evil",
+        "title": "Master of Evil",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "moving-target-a-princess-leia-adventure",
+        "title": "Moving Target: A Princess Leia Adventure",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "pirates-price",
+        "title": "Pirate's Price",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "planet-of-twilight",
+        "title": "Planet of Twilight",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "poe-dameron-free-fall",
+        "title": "Poe Dameron: Free Fall",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "princess-of-the-rebellion",
+        "title": "Princess of the Rebellion",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "reign-of-the-empire-edge-of-the-abyss",
+        "title": "Reign of the Empire: Edge of the Abyss",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "reign-of-the-empire-from-the-ashes",
+        "title": "Reign of the Empire: From the Ashes",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "republic-commando-hard-contact",
+        "title": "Republic Commando: Hard Contact",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "republic-commando-triple-zero",
+        "title": "Republic Commando: Triple Zero",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "return-of-the-jedi-beware-the-power-of-the-dark-side",
+        "title": "Return of the Jedi: Beware the Power of the Dark Side!",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "sanctuary-a-bad-batch-novel",
+        "title": "Sanctuary: A Bad Batch Novel",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "servants-of-the-empire-edge-of-the-galaxy",
+        "title": "Servants of the Empire: Edge of the Galaxy",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "servants-of-the-empire-imperial-justice",
+        "title": "Servants of the Empire: Imperial Justice",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "servants-of-the-empire-rebel-in-the-ranks",
+        "title": "Servants of the Empire: Rebel in the Ranks",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "servants-of-the-empire-the-secret-academy",
+        "title": "Servants of the Empire: The Secret Academy",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "shadow-games",
+        "title": "Shadow Games",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "shield-of-lies",
+        "title": "Shield of Lies",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "slave-ship",
+        "title": "Slave Ship",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "smugglers-run-a-han-solo-and-chewbacca-adventure",
+        "title": "Smuggler's Run: A Han Solo & Chewbacca Adventure",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "solo-a-star-wars-story-a-junior-novel",
+        "title": "Solo: A Star Wars Story: A Junior Novel",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "solo-a-star-wars-story-expanded-edition",
+        "title": "Solo: A Star Wars Story: Expanded Edition",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "spark-of-the-resistance",
+        "title": "Spark of the Resistance",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-a-new-hope-paperback-novel",
+        "title": "Star Wars: A New Hope (paperback novel)",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-episode-i-the-phantom-menace",
+        "title": "Star Wars: Episode I The Phantom Menace",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-episode-ii-attack-of-the-clones",
+        "title": "Star Wars: Episode II Attack of the Clones",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-galaxies-the-ruins-of-dantooine",
+        "title": "Star Wars Galaxies: The Ruins of Dantooine",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-outlaws-low-red-moon",
+        "title": "Star Wars Outlaws: Low Red Moon",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-return-of-the-jedi-paperback-novel",
+        "title": "Star Wars: Return of the Jedi (paperback novel)",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-rogue-one-a-junior-novel",
+        "title": "Star Wars: Rogue One: A Junior Novel",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-the-clone-wars",
+        "title": "Star Wars: The Clone Wars",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-the-empire-strikes-back-paperback-novel",
+        "title": "Star Wars: The Empire Strikes Back (paperback novel)",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-the-force-awakens",
+        "title": "Star Wars: The Force Awakens",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-the-force-awakens-a-junior-novel",
+        "title": "Star Wars: The Force Awakens: A Junior Novel",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-the-force-unleashed",
+        "title": "Star Wars: The Force Unleashed",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-the-force-unleashed-ii",
+        "title": "Star Wars: The Force Unleashed II",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-the-last-jedi-a-junior-novel",
+        "title": "Star Wars: The Last Jedi: A Junior Novel",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-the-last-jedi-expanded-edition",
+        "title": "Star Wars: The Last Jedi: Expanded Edition",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-the-rise-of-skywalker-a-junior-novel",
+        "title": "Star Wars: The Rise of Skywalker: A Junior Novel",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "star-wars-the-rise-of-skywalker-expanded-edition",
+        "title": "Star Wars: The Rise of Skywalker: Expanded Edition",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "stories-of-jedi-and-sith",
+        "title": "Stories of Jedi and Sith",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "survivors-quest",
+        "title": "Survivor's Quest",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "tatooine-ghost",
+        "title": "Tatooine Ghost",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-book-of-boba-fett-junior-novel",
+        "title": "The Book of Boba Fett Junior Novel",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-clone-wars-no-prisoners",
+        "title": "The Clone Wars: No Prisoners",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-clone-wars-wild-space",
+        "title": "The Clone Wars: Wild Space",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-crystal-star",
+        "title": "The Crystal Star",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-empire-strikes-back-so-you-want-to-be-a-jedi",
+        "title": "The Empire Strikes Back: So You Want to Be a Jedi?",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-high-republic-a-valiant-vow",
+        "title": "The High Republic: A Valiant Vow",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-high-republic-beware-the-nameless",
+        "title": "The High Republic: Beware the Nameless",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-high-republic-escape-from-valo",
+        "title": "The High Republic: Escape from Valo",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-high-republic-quest-for-planet-x",
+        "title": "The High Republic: Quest for Planet X",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-high-republic-quest-for-the-hidden-city",
+        "title": "The High Republic: Quest for the Hidden City",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-last-jedi-cobalt-squadron",
+        "title": "The Last Jedi: Cobalt Squadron",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-last-order",
+        "title": "The Last Order",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-legends-of-luke-skywalker",
+        "title": "The Legends of Luke Skywalker",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-mandalorian-armor",
+        "title": "The Mandalorian Armor",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-mandalorian-junior-novel",
+        "title": "The Mandalorian Junior Novel",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-mandalorian-season-2-junior-novel",
+        "title": "The Mandalorian Season 2 Junior Novel",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-mighty-chewbacca-in-the-forest-of-fear",
+        "title": "The Mighty Chewbacca in the Forest of Fear!",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-new-rebellion",
+        "title": "The New Rebellion",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-princess-and-the-scoundrel",
+        "title": "The Princess and the Scoundrel",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "the-weapon-of-a-jedi-a-luke-skywalker-adventure",
+        "title": "The Weapon of a Jedi: A Luke Skywalker Adventure",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "twin-crossroads",
+        "title": "Twin Crossroads",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "tyrants-test",
+        "title": "Tyrant's Test",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "x-wing-isards-revenge",
+        "title": "X-Wing: Isard's Revenge",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "x-wing-mercy-kill",
+        "title": "X-Wing: Mercy Kill",
+        "reason": "row already has a synopsis — never overwritten"
+      },
+      {
+        "slug": "x-wing-starfighters-of-adumar",
+        "title": "X-Wing: Starfighters of Adumar",
+        "reason": "row already has a synopsis — never overwritten"
+      }
+    ]
+  }
+}

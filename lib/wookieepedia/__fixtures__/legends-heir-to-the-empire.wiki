@@ -1,0 +1,695 @@
+{{Top|rwm|new|italics=1}}
+{{Otheruses|Heir to the Empire}}
+{{Tone|plot summary}}
+{{Book
+|image=[[File:HeirtotheEmpire.jpg]]
+|title=''Heir to the Empire''
+|author=[[Timothy Zahn]]
+|cover artist=*[[Tom Jung]]<br/>{{C|Original cover}}
+*[[Rich Kelly]] {{C|English Legends reissue (2016)}}
+*[[Tracie Ching]]<ref name="Essential Twitter">{{Twitter|DelReyStarWars|status/1377981111263973379|[[Del Rey]]|quote=We love looking at cover art. So, here's a closer look at the cover for Timothy Zahn's Heir to the Empire, by Tracie Ching.}}</ref> {{C|''[[The Essential Legends Collection]]'' cover}}
+|illustrator=
+|editor=
+|publisher=[[Bantam Spectra]]
+|early release=
+|release date=[[May]] [[1991]]<ref name="Year By Year">''[[Star Wars Year By Year: A Visual History, Updated and Expanded Edition]]''</ref>
+|intl release=
+|rereleased=[[June 15]], [[2021]] {{C|[[Star Wars Legends|''Star Wars'' Legends]] paperback}}<ref name="Penguin-Paperback" />
+|media type=*Hardcover
+*Paperback<ref name="Penguin-Paperback">{{PenguinRandomHouse|url=books/195416/heir-to-the-empire-star-wars-legends-the-thrawn-trilogy-by-timothy-zahn/9780553296129|text=Heir to the Empire: Star Wars Legends (The Thrawn Trilogy)}} {{C|Paperback}}</ref>
+*eBook<ref name="Penguin-eBook">{{PenguinRandomHouse|url=books/195416/heir-to-the-empire-star-wars-legends-the-thrawn-trilogy-by-timothy-zahn/9780307796103|text=Heir to the Empire: Star Wars Legends (The Thrawn Trilogy)}} {{C|eBook}}</ref>
+|pages=368
+|isbn=9780553073270
+|isbn2=
+|isbn3=
+|audiobook=*[[Heir to the Empire (abridged audiobook)|Abridged]]
+*[[Heir to the Empire (unabridged audiobook)|Unabridged]]
+|timeline=[[9 ABY/Legends|9 ABY]]<ref name="TERC">''[[The Essential Reader's Companion]]''</ref>
+|series=''[[Star Wars: The Thrawn Trilogy]]''
+|preceded by=
+|followed by=''[[Dark Force Rising]]''
+}}
+{{Quote|You couldn't have grown up a ''Star Wars'' fan without encountering Thrawn in ''Heir to the Empire''. It was a dark time when there weren't any more movies, and it blew our minds that there could be more.|[[Dave Filoni]]|<ref name="Who">{{SW|url=news/who-is-thrawn|text=Who Is Thrawn?|nolive=1}}</ref>}}
+'''''Heir to the Empire''''' is a [[Star Wars Legends|''Star Wars'' Legends]] novel written by [[Timothy Zahn]]. It is the first installment of ''[[Star Wars: The Thrawn Trilogy]]'', and it was first published in [[May]] [[1991]] by [[Bantam Spectra]]. The novel is set in [[9 ABY/Legends|9 ABY]], five years after [[Star Wars: Episode VI Return of the Jedi|''Star Wars'': Episode VI ''Return of the Jedi'']], and it introduces the trilogy's eponymous villain, [[Grand Admiral/Legends|Grand Admiral]] [[Mitth'raw'nuruodo/Legends|Thrawn]].
+
+''Heir to the Empire'' received several audiobook versions, and the novel was also adapted into a [[1995]] comic book [[Star Wars: Heir to the Empire (comic series)|''Star Wars: Heir to the Empire'' comic adaptation]]. In [[2011]], a special [[Heir to the Empire: The 20th Anniversary Edition|''20th Anniversary Edition'']] of the novel was published by [[Del Rey]]. The novel topped the New York Times Best Seller List in Fiction June 30, 1991. As of 2017, the trilogy had sold more than 15 million copies.
+
+==Publisher's summary==
+''Here is the science fiction publishing event of the year: the exciting continuation of the legendary ''Star Wars'' saga. Picking up where the movie trilogy left off, ''Heir to the Empire'' reveals the tumultuous events that take place ''after'' the most popular series in motion-picture history&mdash;masterfully told by Hugo Award&ndash;winning author Timothy Zahn''.
+
+''In spring 1977 a film called ''Star Wars'' was released&mdash;and a cultural phenomenon was born. Its epic story, about a young man named Luke Skywalker, whose destiny was to save the galaxy from conquest, caught the imaginations of millions and broke all box-office records. Today ''Star Wars'' and its sequels, ''The Empire Strikes Back'' and ''Return of the Jedi'', are acknowledged as the most popular series in movie history, and rank among the top ten films of all time.''
+
+''The three ''Star Wars'' films form a spectacular saga of bold imagination and high adventure. But the stories of its characters did not end there. Now for the first time, Lucasfilm, producer of the ''Star Wars'' movies, has authorized the continuation of this beloved story. In an astounding three-book cycle, Timothy Zahn continues the tale of Luke Skywalker, Princess Leia, Han Solo, and the other characters made world famous by ''Star Wars'', as he brilliantly expands upon George Lucas's stunning vision, "a long time ago in a galaxy far, far away."''
+
+Heir to the Empire'' begins five years after the end of ''Return of the Jedi'': the Rebel Alliance has destroyed the ''Death Star'', defeated Darth Vader and the Emperor, and driven the remnants of the old Imperial Starfleet back into barely a quarter of the territory that they once controlled. Leia and Han are married and have shouldered heavy burdens in the government of the new Republic. And Luke Skywalker is the first in a hoped-for new line of Jedi Knights''.
+
+''But thousands of light-years away, where a few skirmishes are still taking place, the last of the Emperor's warlords has taken command of the remains of the Imperial fleet. He has made two vital discoveries that could destroy the fragile new Republic&mdash;built with such cost to the Rebel Alliance. The tale that emerges is a towering epic of action, invention, mystery, and spectacle on a galactic scale&mdash;in short, a story that is worthy of the name ''Star Wars''.''
+
+===''Star Wars'' Legends paperback===
+'''''Now for the first time in trade paperback: A''''' '''Star Wars''' '''''Legends classic featuring the ever-popular Thrawn, repackaged to celebrate the 50th anniversary of [[Lucasfilm]].'''''
+
+''Here is the #1'' New York Times ''bestselling novel that reignited the entire'' Star Wars ''publishing phenomenon. The biggest event in the history of'' Star Wars ''books,'' Heir to the Empire ''follows the adventures of Luke Skywalker, Han Solo, and Princess Leia after they led the Rebel Alliance to victory in'' Star Wars'': Episode VI ''Return of the Jedi''.''
+
+''Five years after the Death Star was destroyed and Darth Vader and the Emperor were defeated, the galaxy is struggling to heal the wounds of war, Princess Leia and Han Solo are married and expecting twins, and Luke Skywalker has become the first in a long-awaited line of new Jedi Knights.''
+
+''But thousands of light-years away, the last of the Emperor's warlords—the brilliant and deadly Grand Admiral Thrawn—has taken command of the shattered Imperial fleet, readied it for war, and pointed it at the fragile heart of the New Republic. For this dark warrior has made two vital discoveries that could destroy everything the courageous men and women of the Rebel Alliance fought so hard to create.''
+
+==Plot summary==
+Five years after the [[Battle of Endor/Legends|Battle of Endor]], as the New Republic holds a fragile control of the galaxy, a new threat emerges. Having been posted so far away from action, [[Grand Admiral/Legends|Grand Admiral]] [[Mitth'raw'nuruodo/Legends|Thrawn]], a cunning and intelligent [[Chiss/Legends|Chiss]] commander, begins to gather his [[Galactic Empire/Legends|Imperial]] forces for a strategic attack on the New Republic. With the aid of [[Captain/Legends|Captain]] [[Gilad Pellaeon/Legends|Gilad Pellaeon]] and Thrawn's personal bodyguard [[Rukh/Legends|Rukh]], they begin to set in motion an almost unbeatable plan. They enlist the aid of a mad [[Joruus C'baoth|clone]] of [[Jorus C'baoth]], a dead [[Jedi Master/Legends|Jedi Master]], and use the [[Palpatine/Legends|Emperor's]] hidden weapons vault on the planet [[Wayland/Legends|Wayland]], which the clone guards. The chain of events caused major unrest in the New Republic.
+
+Meanwhile, Luke Skywalker encounters [[Talon Karrde]] and his gang of smugglers. The smugglers capture him but do not turn him over to the Imperials. The smugglers take him in just as Han Solo and [[Lando Calrissian/Legends|Lando Calrissian]] come to see Karrde on the New Republic's interest to hire smugglers as traders. Then, as if things could not be worse, Grand Admiral Thrawn comes to visit Karrde just as Luke escapes. One of Karrde's employees, [[Mara Jade Skywalker|Mara Jade]], chases Luke deep into the forest, where both ships crashed. Mara attempts to kill Luke because she believes that he killed the Emperor [[4 ABY/Legends|five years earlier]] during the Battle of Endor, and Mara was the [[Emperor's Hand/Legends|Emperor's Hand]] at the time. However, she finds out that she needs Luke if she is to survive. Then Thrawn himself decides to interfere with Karrde's rescue attempts and tries to catch Luke and Mara first. The result is a firefight between Imperial troops and Karrde's men. In the end, Karrde wins, but has to evacuate his base. Han and Lando head to the shipyards at [[Sluis Van/Legends|Sluis Van]] after they discover, thanks to Karrde, that Thrawn has plans there.
+
+The insane Jedi clone from Wayland, Joruus C'baoth, comes out of isolation thanks to Thrawn and learns about Princess Leia's unborn Jedi twin children. Thus, C'baoth decides he will train them in the ways of [[The Force/Legends|the Force]], unintentionally the [[Dark side of the Force/Legends|dark side]] due to his insanity. Basically, Leia's unborn Jedi twins and Luke Skywalker will either join him or die. Luke and Leia are both pursued across the galaxy. Princess Leia is repeatedly hunted down by a species of aliens known as the [[Noghri/Legends|Noghri]]. In order to keep her safe from more kidnap attempts and to give her a break from all the work in the New Republic, Han sends Leia and [[Chewbacca/Legends|Chewbacca]] to the planet [[Kashyyyk/Legends|Kashyyyk]], where the [[Wookiee/Legends|Wookiees]] can protect her. But Thrawn deduces the fact. Leia is again hunted down by the Noghri on Kashyyyk, but she has a plan. With Chewbacca's help, she manages to escape, and one of the Noghri is captured. The Noghri, Khabarakh, recognizes her scent as that of a child of the Dark Lord Darth Vader, as the Noghri had apparently been secret bodyguards of the Sith Lord. Determined to discover more about the Noghri's situation, Leia persuades him to bring her to his homeworld.
+
+Meanwhile, the New Republic believes there is a spy among them that is leaking information on the New Republic's actions and plans to the Imperials. It is only known as Delta Source.
+
+Just as Han and Lando reach the shipyards of Sluis Van, Thrawn launches his planned assault on the location. With a cloaking device, Thrawn is able to give an element of surprise as his [[Plasma-Jet Mole Miner|mole miners]] (stolen from Lando) attempt to bore into the hulls of ships at Sluis Van, and steal them. But it just so happens that [[Rogue Squadron/Legends|Rogue Squadron]] is at the scene. They fight off the [[TIE/ln space superiority starfighter/Legends|TIE fighters]] while Han and Lando hatch a brilliant plan to stop the theft of ships. Thrawn is defeated in his first major [[Battle of Sluis Van|offensive]].
+
+The Imperials retreat and order is restored&hellip;for now.
+
+==Development==
+After the [[1983]] release of [[Star Wars: Episode VI Return of the Jedi|''Star Wars'': Episode VI ''Return of the Jedi'']], the ''[[Star Wars]]'' franchise started to fade out of popularity, with creator [[George Lucas]] letting it rest as he focused on other projects. However, as the [[1980s]] came to a close, the franchise began to stir again, culminating with [[Lucas Licensing]] president [[Howard Roffman]] beginning to explore the possibility of restarting ''Star Wars'' adult fiction with the assistance of publishing director [[Lucy Autrey Wilson]]. Despite his skepticism about the demand for new ''Star Wars'' novels, Lucas agreed and set up a few ground rules: the books should be set after the events of the [[original trilogy]] in case he ever decided to do the [[prequel trilogy]] so he could tell the backstories of [[Anakin Skywalker/Legends|Anakin Skywalker]] and [[Obi-Wan Kenobi/Legends|Obi-Wan Kenobi]] without any contradictions and that no major characters could be killed off. Most publishers passed due to feeling the franchise had ran its course, but [[Bantam Spectra|Bantam Books]] was intrigued and, coincidentally, [[Lou Aronica]] had recently approached [[Lucasfilm]] to propose a three book trilogy set after ''Return of the Jedi'', with author [[Timothy Zahn]] in mind, who began working on the novel in November.<ref name="insider150">{{InsiderCite|150|Insider Looks Back|''Insider'' Looks Back}}</ref> 
+
+Timothy Zahn's working title for the book was ''Wild Card''. Bantam vetoed this because it was too similar to [[Wikipedia:Wild Cards|''Wild Cards'']], another series published at the time by Bantam. Zahn's next favorite title was ''The Emperor's Hand'', which Bantam also rejected.<ref name="TOTSE">{{WebCite|url=http://www.zoklet.net/totse/en/ego/science_fiction/tzi.html|text=An interview with Timothy Zahn, author of Heir to the Empire|work=[http://www.zoklet.net zoklet.net]|archivedate=20100521142100}}</ref> ''Warlord's Gambit'' was also a potential title, but ultimately ''Heir to the Empire'' was chosen, which was suggested by science-fiction author [[Wikipedia:Lou Aronica|Lou Aronica]].<ref name="20th Anniversary">''[[Heir to the Empire: The 20th Anniversary Edition]]''</ref>
+
+After Zahn had already begun work on the novel, [[Lucas Licensing]] requested that he incorporate some of the material from [[West End Games]]' ''[[Star Wars: The Roleplaying Game]]'' into his work, as well as keep continuity with it.<ref name="Thrawn Trilogy Sourcebook">''[[The Thrawn Trilogy Sourcebook]]''</ref> Many important elements such as the [[Interdictor-class Star Destroyer/Legends|''Interdictor''-class Star Destroyer]] originated in those sourcebooks.<ref name="TOTSE" />
+
+==Continuity==
+Shortly after the release of the novel, ''Lucasfilm Fan Club Magazine'' clarified, although the book was licensed and approved by Lucasfilm, ''Heir to the Empire'' is not George Lucas' story, nor the official continuation of the saga, but, rather, a story of Timothy Zahn's own imagination.<ref name="The Lucasfilm Fan Club Magazine 14">[[The Lucasfilm Fan Club Magazine 14|''The Lucasfilm Fan Club Magazine'' 14]]</ref> The accompanying [[West End Games]] sourcebooks released for each of the novels possessed a disclaimer that outlined all products taking place after ''[[Star Wars: Episode VI Return of the Jedi|Star Wars VI: Return of the Jedi]]'', are the author's vision of what may have happened, and not the true fate of the characters.<ref name="Heir to the Empire Sourcebook">''[[Heir to the Empire Sourcebook]]'' (Disclaimer)</ref><ref name="Dark Force Rising Sourcebook">''[[Dark Force Rising Sourcebook]]'' (Disclaimer)</ref><ref name="The Last Command Sourcebook">''[[The Last Command Sourcebook]]'' (Disclaimer)</ref> In 1994, [[Howard Roffman]], President of [[Lucas Licensing]] stated that, the books following the events of Star Wars: Episode VI were never intended to be the story of the planned [[Sequel trilogy|Episode VII-IX]].<ref name="The Lucasfilm Fan Club Magazine 22">[[The Lucasfilm Fan Club Magazine 22|''The Lucasfilm Fan Club Magazine'' 22]]</ref>
+
+''Heir to the Empire'' was the first ''Star Wars'' book to refer to the galactic capital as [[Coruscant/Legends|Coruscant]]. [[George Lucas]] later adopted this name for the galactic capital throughout the [[prequel trilogy]]. However, a few more elements of the novel are referenced in the prequels as well. An [[Action VI bulk transport/Legends|Action VI transport]], the same model as the ''[[Wild Karrde]]'', designed by [[Rob Caswell]] also arrive at the [[Theed Spaceport]] in ''[[Star Wars: Episode II Attack of the Clones|Star Wars Episode II Attack of the Clones]]''.<ref name="HB">{{HBCite|61}}</ref>  
+
+The novel introduced several recurring characters and elements to the [[Star Wars Legends|Expanded Universe]], notably including Thrawn, the Chiss species, Talon Karrde and Mara Jade.
+
+On [[October 30]], [[2012]], [[The Walt Disney Company]] finalized its purchase of [[Lucasfilm]] and announced the production of the sequel trilogy.<ref name="New Movies Announced">{{SW|url=news/new-star-wars-movies-announced-as-disney-enters-agreement-to-acquire-lucasfilm-ltd|text=New Star Wars Movies Announced as Disney Enters Agreement to Acquire Lucasfilm Ltd.}}</ref> On [[April 25]], [[2014]], Disney announced that existing Expanded Universe content published prior to that date would be rebranded as "Legends" and regarded in a separate continuity, while some influences from Legends would still be used to allow for greater creative freedom in the direction of the new trilogy. The announcement post on [[StarWars.com]] confirmed that past novels would continue to be published with a golden banner featuring the Legends label, accompanied by an illustrative example of the cover of ''Heir to the Empire''.<ref name="Legends">{{SW|url=news/the-legendary-star-wars-expanded-universe-turns-a-new-page|text=The Legendary Star Wars Expanded Universe Turns a New Page}}</ref>
+
+In the new canonical continuity, the phrase "heir to the Empire" was uttered by the character [[Ahsoka Tano]] to describe [[Grand Admiral]] [[Mitth'raw'nuruodo|Thrawn]] in the trailer for the [[Disney+]] series [[Star Wars: Ahsoka|''Ahsoka'']], which was first revealed publicly at [[Celebration Europe (2023)|Celebration Europe]] on [[April 7]], [[2023]].<ref name="Ahsoka">{{SW|url=news/swce-2023-ahsoka-trailer|text=SWCE 2023: The ''Ahsoka'' Teaser Trailer Is Here}}</ref>
+
+==Media==
+{{Mediacat|from=1|soundcat=Audio files from Heir to the Empire|imagecat=Images from Heir to the Empire}}
+===Editions===
+====American====
+*{{ISBN|9780553073270}}; [[May]] [[1991]]; [[Bantam Spectra]]; US hardcover<ref name="Year By Year" /><ref name="Bantam hardcover edition">''[[Heir to the Empire]]'', [[Bantam Spectra|Bantam]] hardcover edition</ref>
+*{{ISBN|9780553296129}}; [[May]] [[1992]]; Bantam Spectra; US paperback<ref name="Penguin-Paperback" />
+*{{ISBN|9780307796103}}; [[June 28]], [[2011]]; [[Del Rey]]; US eBook<ref name="Penguin-eBook" />
+*{{ISBN|9780593358764}}; [[June 15]], [[2021]]; Del Rey; US paperback; ''[[The Essential Legends Collection]]'' edition<ref name="Penguin-Paperback" />
+
+====International====
+*{{ISBN|9783442413348}}; 1992; Goldmann; [[Wikipedia:German language|German-language]] paperback
+*{{ISBN|9788070332856}}; [[1993]]; Olympia; [[Wikipedia:Czech language|Czech-language]] hardcover
+*{{ISBN|9788571233645}}; 1993; Editora Best Seller; [[Wikipedia:Portuguese language|Portuguese-language]] paperback
+*{{ISBN|9789721036468}}; 1993; Publicações Europa-América; Portuguese-language paperback
+*{{ISBN|9789510216361}}; [[1997]]; WSOY; [[Wikipedia:Finnish language|Finnish-language]] hardcover
+*{{ISBN|9788072143207}}; [[2000]]; Baronet; Czech-language hardcover
+*{{ISBN|9789545282157}}; [[2001]]; Trud; [[Wikipedia:Bulgarian language|Bulgarian-language]] paperback
+*{{ISBN|9789634971085}}; [[2005]]; Szukits; [[Wikipedia:Hungarian language|Hungarian-language]] paperback
+*{{ISBN|9788025213407}}; [[January 26]], [[2010]]; [[Egmont|EGMONT ČR]]; Czech-language hardcover
+*{{ISBN|9788863552935}}; [[2012]]; Multiplater.it Edizioni; [[Wikipedia:Italian language|Italian-language]] paperback
+*{{ISBN|9788576571988}}; [[2014]]; Editora Aleph; Portuguese-language paperback
+
+===Cover gallery===
+====American====
+{{ScrollBox|content=
+<gallery>
+File:HeirtotheEmpire.jpg|Bantam hardcover edition
+File:HeirEmpire_HC.jpg|Bantam hardcover edition, jacket
+File:HttEcoverart-SWIHS.png|Wraparound cover art by Tom Jung
+File:HeirEmpire_PB.jpg|Bantam paperback edition, 1992 printing
+File:Heirtotheempire.jpg|Bantam paperback edition
+File:HTTE-Legends.png|Bantam paperback edition, 2014 printing
+File:Heir_to_the_Empire_Legends_Paperback.jpg|English Legends editions
+File:Heir_to_the_Empire_Essential_Legends_Collection_cover.jpg|''[[The Essential Legends Collection]]'' edition
+</gallery>
+}}
+
+====International====
+{{ScrollBox|content=
+<gallery>
+File:Heir_to_the_empire_Bulgarian.jpg|Bulgarian-language edition
+File:Zvjezdani_Ratovi_Nasljednik_Imperija.jpg|Croatian-language edition
+File:HeirEmpire_Cs.jpg|Czech-language 1993 hardcover
+File:Heir_to_the_Empire_2010_Czech.jpg|Czech-language hardcover, 2010 edition
+File:HeirtotheEmpire-Czech.png|Czech legends edition
+File:HeirEmpire_Dutch.jpg|Dutch-language edition
+File:HeirtotheEmpire-Finnish.png|Finnish-language edition
+File:Heir_to_the_Empire_Hungarian_Cover.jpg|Hungarian-language edition
+File:HeirEmpire_Irish.jpg|Irish edition
+File:Heir_to_the_Empire_Legends_Japanese_Vol_1_cover.jpg|Japanese-language edition Vol. 1
+File:Heir_to_the_Empire_Legends_Japanese_Vol_1_back_cover.jpg|Japanese-language edition, back cover Vol. 1
+File:Htte_Japan_Cover_2.jpg|Japanese-language edition Vol. 2
+File:Heir_to_the_Empire_Korean_cover.jpg|Korean-language edition
+File:DziedzicImperium94.jpg|Polish-language hardcover
+File:HeirEmpire_Pl.jpg|Polish-language paperback
+File:HeirEmpire_BR.jpg|Portuguese-language paperback, 1993 edition
+File:HeirEmpire_PT.jpg|Portuguese-language paperback, 1993 Publicações Europa-América edition
+File:HeirEmpire_BR_Aleph.png|Portuguese-language paperback, 2014 edition
+File:HeirEmpire_BR_Aleph_textless.jpg|Portuguese-language paperback, 2014 edition (cover art by Marc Simonetti)
+File:HeirEmpire_Ro.jpg|Romanian - ''Moștenitorul Imperiului''
+File:HeirToTheEmpire-Russian1996.jpg|Russian-language 1996 edition
+File:HeirEmpire_Ru.jpg|Russian-language 2004 edition
+File:Heir_to_the_Empire_Rus_2016.jpg|Russian-language 2016 hardcover
+File:HeirEmpire_Es.jpg|Spanish-language edition
+File:Heir_to_the_empire_Swedish_01.jpg|Swedish-language edition
+File:HeirEmpire_De.gif|German-language edition
+</gallery>
+}}
+
+==Appearances==
+<onlyinclude>{{IncompleteApp}}
+{{App
+|characters=
+*[[Gial Ackbar/Legends|Gial Ackbar]]
+*[[Afyon]] {{1st}}
+*[[Wedge Antilles/Legends|Wedge Antilles]]
+*[[Aves]] {{1st}}
+*[[Brandei]] {{C|First appearance before retcon}}
+*[[Brasck]] {{1stm}}
+*[[C-3PO/Legends|C-3PO]] "Threepio"
+*[[Lando Calrissian/Legends|Lando Calrissian]]
+*[[Jorus C'baoth]] {{1stm}}
+*[[Joruus C'baoth]] {{1st}}
+*[[Chewbacca/Legends|Chewbacca]]
+*[[Chin]] {{1st}}
+*[[Cloak Leader]] {{1st}}
+*[[Colclazure]] {{1st}}
+*[[Cyru]] {{1st}}
+*[[Dankin]] {{1st}}
+*[[Drang]] {{1st}}
+*[[Dravis]] {{1st}}
+*[[Borsk Fey'lya]] {{1st}}
+*[[Boba Fett/Legends|Boba Fett]] {{Mo}}
+*[[Ecclessis Figg/Legends|Ecclessis Figg]] {{Mo}}
+*[[Zakarisz Ghent]] {{1st}}
+*[[Guardian of Mount Tantiss|Guardian of Wayland]] {{1stm}}
+*[[Harbid]] {{1stm}}
+*[[Mara Jade Skywalker|Mara Jade]] / [[Mara Jade Skywalker|Senni Kiffu]] {{1st}}
+*[[Jabba's rancor/Legends|Jabba's rancor]] {{Mo}}
+*[[Kampl]] {{1st}}
+*[[Talon Karrde]] {{1st}}
+*[[Obi-Wan Kenobi/Legends|Obi-Wan Kenobi]] "Ben" {{Vision|Luke Skywalker}}
+*[[Khabarakh]] {{1st}}
+*[[Lachton]] {{1st}}
+{{!}}
+*[[Beru Whitesun Lars/Legends|Beru Whitesun Lars]] {{Mo}}
+*[[Owen Lars/Legends|Owen Lars]] {{Mo}}
+*[[Crix Madine/Legends|Crix Madine]] {{Mo}}
+*[[Mitth'raw'nuruodo/Legends|Mitth'raw'nuruodo]] "Thrawn" {{1st}}
+*[[Bail Prestor Organa/Legends|Bail Prestor Organa]] {{Imo}}
+*[[Judder Page/Legends|Judder Page]] {{C|First appearance before retcon}}
+*[[Palpatine/Legends|Palpatine]] {{Vision|Mara Jade}}
+*[[Par'tah]] {{1stm}}
+*[[Gilad Pellaeon/Legends|Gilad Pellaeon]] {{1st}}
+*[[Cris Pieterson]] {{1st}}
+*[[R2-D2/Legends|R2-D2]] "Artoo"
+*[[Ralrracheen]] "Ralrra" {{1st}}
+*[[The Reverend]] {{1st}}
+*[[Rukh/Legends|Rukh]] {{1st}}
+*[[Salporin/Legends|Salporin]] {{1st}}
+*[[Luke Skywalker/Legends|Luke Skywalker]] / [[Luke Skywalker/Legends|Jade]]
+*[[Han Solo/Legends|Han Solo]]
+*[[Darth Caedus|Jacen Solo]] {{C|unborn}} {{1st}}
+*[[Jaina Solo Fel|Jaina Solo]] {{C|unborn}} {{1st}}
+*[[Leia Organa Solo/Legends|Leia Organa Solo]]
+*[[Mon Mothma/Legends|Mon Mothma]]
+*[[Sturm]] {{1st}}
+*[[Jabba Desilijic Tiure/Legends|Jabba Desilijic Tiure]] {{Mo}}
+*[[Fynn Torve]] {{1st}}
+*[[Tschel]] {{1st}}
+*[[Unidentified Car'das pilot]] {{1st}}
+*[[Unidentified Elomin task force commander]] {{1stm}}
+*[[Unidentified engineer (Chimaera)]] {{1st}}
+*[[Unidentified sabacc dealer]] {{1st}}
+*[[Anakin Skywalker/Legends|Darth Vader]] {{Mo}}
+*[[Wadewarn]] {{1st}}
+*[[Winter Celchu|Winter]] {{1st}}
+*[[Yoda/Legends|Yoda]] {{Mo}}
+|organisms=
+*[[Bruallki]] {{C|piece of meat only}}
+*[[Cattle/Legends|Cattle]] {{1stm}}
+*[[Gundark/Legends|Gundark]] {{Mo}}
+*[[Katarn/Legends|Katarn]] {{1st}}
+*[[Krayt dragon/Legends|Krayt dragon]] {{C|imitating sound only}}
+*[[Kroyie]] {{1st}}
+*[[Proom]] {{1st}}
+*[[Rancor/Legends|Rancor]] {{Mo}}
+*[[Vornskr]] {{1st}}
+*[[Ysalamiri/Legends|Ysalamiri]] {{1st}}
+|droids=
+*[[3PO-series protocol droid/Legends|3PO-series protocol droid]]
+*[[G-2RD series guard droid]] {{1st}}
+*[[Interrogation droid/Legends|Interrogation droid]] {{Mo}}
+*[[R2-series astromech droid/Legends|R2-series astromech droid]]
+*[[Probe droid/Legends|Probe droid]] {{Mo}}
+*[[Remote/Legends|Remote]]
+|events=
+*[[Clone Wars/Legends|Clone Wars]] {{Mo}}
+**[[Battle of Honoghr/Legends|Battle of Honoghr]] {{Mo}}
+*[[Cloud City Sabacc Tournament]] {{Imo}}
+*[[Galactic Civil War/Legends|Galactic Civil War]]
+**[[Battle of Endor/Legends|Battle of Endor]] {{Mo}}
+**[[Battle of Hoth/Legends|Battle of Hoth]] {{Imo}}
+**[[Battle of Yavin/Legends|Battle of Yavin]] {{Mo}}
+**[[Duel on Cloud City/Legends|Duel on Cloud City]] {{Mo}}
+**[[Siege of Jabba's Palace|Mission to Jabba's Palace]] {{Mo}}
+**[[Occupation of Bespin]] {{Imo}}
+**[[Rescue of Princess Leia/Legends|Rescue of Princess Leia]] {{Mo}}
+**[[Battle of the Great Pit of Carkoon]] {{Vision|Luke Skywalker}}
+**[[Thrawn campaign]] {{1st}}
+***[[Attack on Bpfassh]] {{1st}}
+***[[Mission to Bpfassh]] {{1st}}
+***[[Battle of Sluis Van]] {{1st}}
+***[[Raid on Nomad City]] {{1st}}
+***[[Mission to Bimmisaari]] {{1st}}
+***[[Obroa-skai information raid]] {{1st}}
+***[[Raid on the Draukyze system]] {{1stm}}
+***[[Rescue on Myrkr]] {{1st}}
+*[[Great Jedi Purge/Legends|Great Jedi Purge]] {{Mo}}
+*[[Kaleesh–Imperial conflict]] {{1stm}} {{Ret}}
+**[[Bombardment of Oben]] {{1stm}} {{Ret}}
+*[[Middle era of the Old Republic]] {{1stm}}
+*[[Outbound Flight Project]] {{1stm}}
+**[[Battle for Outbound Flight|Battle of Outbound Flight]] {{1stm}}
+|locations=
+*[[Abregado system/Legends|Abregado system]] {{1st}}
+**[[Abregado-rae/Legends|Abregado-rae]] {{1st}}
+***[[Abregado-rae Spaceport]] {{1st}}
+****[[LoBue Cantina]]
+*[[Alderaan/Legends|Alderaan]] {{Mo}}
+*[[Athega system]]
+**[[Nkllon/Legends|Nkllon]] {{1st}}
+***[[Nomad City]] {{1st}}
+*[[Bespin/Legends|Bespin]] {{Mo}}
+**[[Cloud City/Legends|Cloud City]] {{Mo}}
+*[[Bimmisaari/Legends|Bimmisaari]] {{1st}}
+**[[Tower of Law]]
+*[[Boordii]] {{1stm}}
+*[[Coruscant/Legends|Coruscant]] {{1stID|Coruscant}}
+**[[Galactic City/Legends|Imperial City]] {{1stID|Imperial City}}
+***[[Imperial Palace/Legends|Imperial Palace]]
+***[[Manarai Mountains]]
+*[[Draukyze system/Legends|Draukyze system]] {{1stm}}
+*[[Endor/Legends|Endor]] {{Mo}}
+**[[Bright Tree Village/Legends|Bright Tree Village]] {{Imo}}
+*[[Honoghr/Legends|Honoghr]] {{1stm}} {{Imo}}
+*[[Hoth/Legends|Hoth]] {{Mo}}
+*[[Janodral Mizar]] {{1st}}
+*[[Jomark/Legends|Jomark]] {{1stm}}
+*[[Kashyyyk/Legends|Kashyyyk]]
+**[[Rwookrrorro/Legends|Rwookrrorro]] {{1stID|Rwookrrorro}}
+**[[Wookiee nursery ring]] {{Mo}}
+*[[Miser/Legends|Miser]] {{Mo}}
+*[[Myrkr/Legends|Myrkr]] {{1st}}
+**[[Hyllyard City]] {{1st}}
+***[[Hyllyard Hotel]] {{1st}}
+**[[Myrkr Base]] {{1st}}
+*[[Nellac Kram]] {{Mo}}
+*[[Obroa-skai system/Legends|Obroa-skai system]] {{1st}}
+**[[Obroa-skai/Legends|Obroa-skai]] {{1st}}
+*[[Shaum Hii/Legends|Shaum Hii]] {{Mo}}
+*[[Sluis sector/Legends|Sluis sector]] {{1st}}
+**[[Bpfassh system/Legends|Bpfassh system]] {{1st}}
+***[[Bpfassh]] {{1st}}
+***[[Bpfassh 3]] {{1st}}
+**[[Dagobah/Legends|Dagobah]]
+***[[Cave of Evil/Legends|Cave of Evil]]
+***[[Yoda's Hut/Legends|Yoda's Hut]]
+**[[Praesitlyn/Legends|Praesitlyn]] {{1stm}}
+**[[Sluis Van/Legends|Sluis Van]] {{1st}}
+***[[Sluis Van Shipyards]]
+*[[Tatooine/Legends|Tatooine]]
+**[[Great Pit of Carkoon/Legends|Great Pit of Carkoon]] {{Vision|Luke Skywalker}}
+**[[Jabba's Palace/Legends|Jabba's Palace]] {{Mo}}
+**[[Lars homestead/Legends|Lars homestead]] {{Imo}}
+**[[Mos Eisley/Legends|Mos Eisley]]
+***[[Chalmun's Spaceport Cantina/Legends|Chalmun's Spaceport Cantina]]
+*[[Unknown Regions/Legends|Unknown Regions]] {{1stm}}
+*[[Wayland/Legends|Wayland]] {{1st}}
+**[[Mount Tantiss/Legends|Mount Tantiss]] {{1st}}
+*[[Yavin 4/Legends|Yavin]] {{Mo}}
+|organizations=
+*[[Big game hunter/Legends|Big game hunter]] {{Mo}}
+*[[Bounty hunter/Legends|Bounty hunter]] {{Mo}}
+*[[Galactic Empire/Legends|Galactic Empire]]
+**[[Dark Jedi/Legends|Dark Jedi]]
+**[[Galactic Emperor/Legends|Galactic Emperor]] {{Mo}}
+***[[Emperor's Hand/Legends|Emperor's Hand]] {{1str}}
+**[[Imperial Navy/Legends|Imperial Fleet]]
+***[[Cloak Force]]
+*****[[Cloak Leader]]
+***[[TIE Squadron Four]]
+**[[Imperial Senate/Legends|Imperial Senate]] {{Mo}}
+**[[Noghri Death Commando]]
+***[[Team Eight]]
+***[[Team Four (Noghri)|Team Four]]
+**[[Stormtrooper/Legends|Stormtrooper]]
+***[[Scout trooper/Legends|Scout trooper]]
+***[[Stormtrooper Commander/Legends|Stormtrooper commander]]
+***[[Zero-G assault stormtrooper]]
+**[[Warlord/Legends|Warlord]]
+*[[Galactic Republic/Legends|Galactic Republic]] {{Mo}}
+**[[Galactic Senate/Legends|Galactic Senate]] {{Mo}}
+*[[House of Organa/Legends|House of Organa]]
+*[[Incom Corporation/Legends|Incom Corporation]] {{Mo}}
+*[[Jedi/Legends|Jedi]]
+**[[Jedi Order/Legends|Jedi Order]] {{Mo}}
+***[[Jedi healer/Legends|Jedi healer]] {{1stm}}
+***[[Jedi Master/Legends|Jedi Master]]
+**[[New Jedi Order]]
+*[[Law Elders]] {{1st}}
+*[[Mal'ary'ush]] {{1st}}
+*[[New Republic/Legends|New Republic]]
+**[[New Republic Provisional Council]] {{1st}}
+***[[Inner Council (New Republic)|Inner Council]] {{1st}}
+****[[Supreme Commander (Alliance)/Legends|Commander in Chief]]
+**[[Katarn Commandos|Page's Commandos]] {{1stm}}
+**[[Rogue Squadron/Legends|Rogue Squadron]]
+***[[Rogue Leader/Legends|Rogue Leader]]
+***[[Rogue Five/Legends|Rogue Five]]
+*[[Order of the Sith Lords]]
+**[[Dark Lord of the Sith/Legends|Dark Lord of the Sith]] {{Vision}}
+*[[Pirate/Legends|Pirate]] {{Mo}}
+*[[Prisoner/Legends|Prisoner]]
+*[[Alliance to Restore the Republic/Legends|Rebel Alliance]] {{Mo}}
+*[[Sibha Habadeet]] {{Mo}}
+*[[Slicer/Legends|Slicer]]
+*[[Sluis Control Communications]]
+*[[Smuggler/Legends|Smuggler]]
+*[[Spy/Legends|Spy]] {{Mo}}
+*[[Stonehill Industries]] {{Mo}}
+*[[Zygerrian Slavers Guild]] {{1stm}}
+|species=
+*[[Berchestian]] {{1st}}
+*[[Bimm/Legends|Bimm]] {{1str}}
+*[[Bothan/Legends|Bothan]] {{1st}}
+*[[Bpfasshi/Legends|Bpfasshi]] {{1st}}
+*[[Chiss/Legends|Chiss]] {{1st}}
+*[[Elomin/Legends|Elomin]] {{1st}}
+*[[Gados]] {{1st}}
+*[[Gamorrean/Legends|Gamorrean]] {{Mo}}
+*[[Human/Legends|Human]]
+**[[Cloning/Legends|Clone]]
+*[[Ishi Tib/Legends|Ishi Tib]]
+*[[Klatooinian/Legends|Klatooinian]] {{ID|Barada}}
+*[[Mon Calamari/Legends|Mon Calamari]]
+*[[Myneyrsh]] {{1stm}}
+*[[Noghri/Legends|Noghri]] {{1st}}
+*[[Obroan]] {{1st}}
+*[[Paonnid]] {{1stm}}
+*[[Psadan]] {{1stm}}
+*[[Saffa (species)|Saffa]] {{1st}}
+*[[Sluissi]] {{1st}}
+*[[Stokhli/Legends|Stokhli]] {{1stm}}
+*[[Thennqora]] {{1stm}}
+*[[Ugnaught/Legends|Ugnaught]] {{Mo}}
+*[[Vaathkree (species)|Vaathkree]] {{1stm}}
+*[[Wookiee/Legends|Wookiee]]
+*[[Yuzzum/Legends|Yuzzum]]
+*[[Zygerrian/Legends|Zygerrian]] {{Mo}}
+|vehicles=
+*[[74-Z speeder bike/Legends|74-Z speeder bike]]
+*[[Action IV transport]] {{Mo}}
+*[[Action V transport]] {{1st}}
+**''[[Etherway]]'' {{1st}}
+**''[[Starry Ice]]'' {{1st}}
+*[[Action VI bulk transport/Legends|Action VI bulk transport]] {{1st}}
+**''[[Wild Karrde]]'' {{1st}}
+*[[Airspeeder/Legends|Airspeeder]]
+**[[Airspeeder/Legends|Noghri airspeeder]] {{1st}}
+**[[T-47 airspeeder/Legends|T-47 airspeeder]] {{Mo}}
+*[[All Terrain Armored Transport/Legends|All Terrain Armored Transport]]
+*[[Assault Frigate Mark I|Assault Frigate]]
+*[[Asteroid ship (Stonehill Industries)|Asteroid ship]] {{Mo}}
+*[[A/SF-01 B-wing starfighter/Legends|B-wing starfighter]]
+*[[Bantha-II cargo skiff/Legends|Bantha-II cargo skiff]] {{Vision|Luke Skywalker}}
+*[[BTL Y-wing starfighter/Legends|BTL Y-wing starfighter]] {{Mo}}
+*[[Carrack-class light cruiser/Legends|''Carrack''-class light cruiser]]
+*[[Class VI bulk freighter]] {{1st}}
+*[[Cloud car/Legends|Cloud car]] {{Imo}}
+*[[CR90 corvette/Legends|Corellian corvette]]
+*[[DS-1 Orbital Battle Station/Legends|Death Star I]] {{Mo}}
+*[[Death Star II/Legends|Death Star II]] {{Mo}}
+*[[Dreadnaught-class heavy cruiser/Legends|''Dreadnaught''-class heavy cruiser]] {{Mo}}
+*[[EF76 Nebulon-B escort frigate/Legends|EF76 Nebulon-B escort frigate]]
+**''[[Larkhess]]''
+*[[Escape pod/Legends|Escape pod]]
+*[[Executor-class Star Dreadnought/Legends|''Executor''-class Star Dreadnought]]
+**[[Executor/Legends|''Executor'']] {{Mo}}
+*[[F7 "Landing Brick" Drop-Ship|F7 drop ship]] {{1st}}
+*[[Freighter/Legends|Freighter]]
+**[[Class VI bulk freighter]]
+*[[GAT-12 Skipray Blastboat]] {{1st}}
+*[[Immobilizer 418 Interdictor-class Heavy Cruiser|Immobilizer 418 cruiser]]
+*[[Imperial I-class Star Destroyer/Legends|''Imperial I''-class Star Destroyer]]
+**''[[Death's Head]]'' {{Mo}}
+**[[Inexorable (Imperial I-class)|''Inexorable'']]
+**[[Judicator/Legends|''Judicator'']]
+**[[Nemesis (Thrawn's fleet)|''Nemesis'']] {{Mo}}
+**[[Stormhawk (Imperial I-class)|''Stormhawk'']]
+*[[Imperial II-class Star Destroyer/Legends|''Imperial II''-class Star Destroyer]]
+**[[Chimaera/Legends|''Chimaera'']]
+*[[Katana fleet]] {{1stm}}
+*[[Khetanna/Legends|''Khetanna'']] {{Vision|Luke Skywalker}}
+*[[Liftcar/Legends|Liftcar]] {{1st}}
+*[[LAVr QH-7 Chariot/Legends|LAVr QH-7 Chariot]] {{1st}}
+*[[MC80 Star Cruiser/Legends|MC80 Star Cruiser]]
+*[[Nomad City]] {{1st}}
+*[[Space Dock/Legends|Orbit-dock]] {{1st}}
+*[[Passenger liner/Legends|Passenger liner]]
+*[[Personal Luxury Yacht 3000/Legends|PLY-3000 yacht]] {{1st}}
+**[[Lady Luck/Legends|''Lady Luck'']] {{1st}}
+*[[A-class bulk freighter|PCL 27]] {{1st}}
+**''[[Nartissteu]]'' {{Mo}}
+*[[Plasma-Jet Mole Miner]] {{1st}}
+*[[Hoversled/Legends|Repulsor sled]]
+*[[Scout ship (TIE model)]] {{1st}}
+*[[Shieldship]] {{1st}}
+*[[Shuttle/Legends|Shuttle]]
+**[[Assault shuttle/Legends|Assault shuttle]] {{Mo}}
+**[[Lambda-class T-4a shuttle/Legends|''Lambda''-class T-4a shuttle]]
+*[[Star Cruiser/Legends|Star Cruiser]] {{Mo}}
+*[[Strike-class medium cruiser|''Strike''-class medium cruiser]] {{1st}}
+*[[Swift Assault 5]] {{1stm}}
+*[[T-65 X-wing starfighter/Legends|T-65 X-wing starfighter]]
+**[[AA-589/Legends|AA-589]] {{1st}}
+*[[TIE/ln space superiority starfighter/Legends|TIE/ln space superiority starfighter]]
+*[[Travois/Legends|Travois]]
+*[[YT-1300 light freighter/Legends|YT-1300 light freighter]]
+**[[Millennium Falcon/Legends|''Millennium Falcon'']]
+**[[Millennium Falcon (fake)|Fake ''Millennium Falcon'']] {{1st}}
+*[[Z-95 Headhunter/Legends|Z-95 Headhunter]] {{Mo}}
+|technology=
+*[[Acceleration compensator/Legends|Acceleration compensator]]
+*[[AG-2G quad laser cannon/Legends|AG-2G quad laser cannon]]
+*[[Arc welder/Legends|Arc welder]]
+*[[Cybernetics/Legends|Artificial hand]]
+*[[Bacta tank/Legends|Bacta tank]] {{Mo}}
+*[[Beckon call/Legends|Beckon call]]
+*[[Blaster/Legends|Blaster]]
+**[[Blaster cannon/Legends|Blaster cannon]]
+**[[Blaster pistol/Legends|Blaster pistol]]
+***[[Heavy blaster pistol/Legends|Heavy blaster pistol]]
+****[[DL-44 heavy blaster pistol/Legends|DL-44 heavy blaster pistol]]
+**[[Blaster rifle/Legends|Blaster rifle]]
+***[[E-11 blaster rifle/Legends|E-11 blaster rifle]]
+*[[Borg-implant]] {{1st}}
+*[[Bowcaster/Legends|Bowcaster]]
+*[[Camouflage net|Camo net]] {{1st}}
+*[[Chronometer/Legends|Chrono]]
+*[[Cloaking device/Legends|Cloaking device]] {{1st}}
+*[[Comlink/Legends|Comlink]]
+*[[Comm unit/Legends|Comm unit]]
+*[[Comm station/Legends|Communication station]]
+*[[Computer/Legends|Computer]]
+*[[Crash balloon]]
+*[[Crossbow/Legends|Crossbow]] {{1st}}
+*[[Datacard/Legends|Data card]]
+*[[Datapad/Legends|Data pad]]
+*[[Deflector shield/Legends|Deflector shield]]
+*[[Delta Source]] {{1st}}
+*[[Emergency acceleration compensator]]
+*[[Force Cylinder]]
+*[[Glowrod/Legends|Glowrod]]
+*[[Headset comlink/Legends|Headset comlink]]
+*[[Hologame table/Legends|Holo board]]
+*[[Hologram/Legends|Hologram]]
+*[[Holograph]]
+*[[Holoprojector/Legends|Holoprojector]]
+*[[Hyperdrive/Legends|Hyperdrive]]
+*[[Hyperdrive motivator/Legends|Hyperdrive motivator]]
+*[[Intercom/Legends|Intercom]]
+*[[Ion cannon/Legends|Ion cannon]]
+*[[Laser cannon/Legends|Laser cannon]]
+*[[Life support/Legends|Life support]]
+*[[Lightsaber/Legends|Lightsaber]]
+**[[Leia's lightsaber/Legends|Leia Organa Solo's lightsaber]] {{1st}}
+***[[Activation stud|Control stud]]
+***[[Locking activator]] {{Imo}}
+**[[Luke Skywalker's green lightsaber/Legends|Luke Skywalker's green lightsaber]]
+*[[Macrobinoculars/Legends|Macrobinoculars]]
+*[[Binders/Legends|Manacles]]
+*[[Megaphone disk]] {{1st}}
+*[[Micrel power supply]]
+*[[Plasma-Jet Mole Miner|Mole miner]]
+*[[Proton torpedo/Legends|Proton torpedo]]
+*[[Repulsorlift/Legends|Repulsorlift]]
+*[[Restraining bolt/Legends|Restraining bolt]] {{Mo}}
+*[[Restraint collar]]
+*[[Restraint harness]]
+*[[S-foils/Legends|S-foils]]
+*[[Portable scanner/Legends|Scanner]]
+*[[Rectenna/Legends|Sensor dish]]
+*[[Sensor jammer/Legends|Sensor jammer]] {{1st}}
+*[[Servomotor/Legends|Servo]]
+*[[Sleeve gun]]
+*[[Sonar mapper]]
+*[[Sonde balloon]]
+*[[Spaarti cloning cylinder]] {{Mo}}
+*[[Spray stick/Legends|Stokhli stick]] {{1st}}
+*[[Sublight engine/Legends|Sublight engine]]
+*[[Subspace transceiver/Legends|Subspace transceiver]] {{1st}}
+*[[Swivel gun]]
+*[[Tractor anchorline]] {{1stm}}
+*[[Tractor beam/Legends|Tractor beam]]
+*[[Turbolaser/Legends|Turbolaser]]
+*[[Weapon detector]] {{Mo}}
+|miscellanea=
+*[[Airlock/Legends|Airlock]]
+*[[Borg]]
+*[[Bounty/Legends|Bounty]]
+*[[Dolfrimia]] {{Mo}}
+*[[Flatsculp/Legends|Flatsculp]] {{Mo}}
+*[[Foodstuff/Legends|Foodstuff]]
+**[[Forvish ale]]
+**[[Hot chocolate/Legends|Hot chocolate]]
+**[[Milk/Legends|Milk]]
+**[[Tea/Legends|Tea]]
+**[[Wine/Legends|Wine]]
+***[[Necr'ygor Omic wine]]
+*[[The Force/Legends|The Force]]
+**[[Battle meditation/Legends|Battle meditation]]
+**[[Dark side of the Force/Legends|Dark side of the Force]]
+***[[Force lightning/Legends|Force lightning]]
+**[[Force empathy/Legends|Force empathy]]
+**[[Force jump/Legends|Force jump]]
+**[[Force sense/Legends|Force sense]]
+**[[Force vision/Legends|Force vision]]
+**[[Hibernation trance/Legends|Hibernation trance]]
+**[[Meditation/Legends|Meditation]]
+**[[Telekinesis/Legends|Telekinesis]]
+**[[Telepathy/Legends|Telepathy]]
+**[[Tutaminis]]
+*[[Hit-and-hype raiding|Hit-and-fade]] {{1st}}
+*[[Hyperspace/Legends|Hyperspace]]
+*[[Jedi Code/Legends|Jedi Code]] {{1st}}
+*[[Jedi training/Legends|Jedi training]]
+*[[Kessel Run/Legends|Kessel Run]] {{Mo}}
+*[[Koiogran turn]] {{1st}}
+*[[Korfaise]]
+*[[Language/Legends|Language]]
+**[[Galactic Basic Standard/Legends|Basic]]
+**[[Bimmini/Legends|Bimmini]]
+**[[Honoghran]] {{1st}}
+***[[Mal'ary'ush]] {{1st}}
+**[[Shyriiwook/Legends|Shyriiwook]]
+*[[Life debt/Legends|Life debt]]
+*[[Lightsaber combat/Legends|Lightsaber combat]]
+**[[Cho mok/Legends|Cho mok]] {{Mo}}
+**[[Form I/Legends|Form I]]
+**[[Form III/Legends|Form III]]
+**[[Form IV/Legends|Form IV]]
+**[[Sai tok/Legends|Sai tok]]
+**[[Shiim/Legends|Shiim]]
+*[[Lightspeed/Legends|Lightspeed]]
+*[[Light-year/Legends|Light-year]]
+*[[Magic wand]] {{Mo}}
+*[[Marg Sabl/Legends|Marg Sabl]]
+*[[May the Force be with you/Legends|May the Force be with you]]
+*[[Mass shadow/Legends|Mass shadow]] {{1st}}
+*[[Moisture farm/Legends|Moisture farm]] {{Imo}}
+*[[New Order/Legends|New Order]] {{Mo}}
+*[[Paonidd extrassa art]]
+*[[Permacrete/Legends|Permcrete]]
+*[[Planet/Legends|Planet]]
+**[[Double planet/Legends|Double planet]] {{1st}}
+*[[Plant/Legends|Plant]]
+**[[Grass/Legends|Grass]]
+**[[Kshyy vine]] {{1st}}
+**[[Mint/Legends|Mint]]
+**[[Tree/Legends|Tree]]
+***[[Asaari tree]] {{1st}}
+***[[Gnarltree/Legends|Gnarltree]]
+***[[Olbio tree]] {{1st}} {{Ret}}
+***[[Wroshyr tree/Legends|Wroshyr tree]] {{1stID|Wroshyr tree}}
+*[[Plasma/Legends|Plasma]]
+*[[Sabacc/Legends|Sabacc]]
+**[[Hand pot/Legends|Hand pot]]
+**[[Moderation/Legends|Moderation]]
+**[[Sabacc pot/Legends|Sabacc pot]]
+**[[Skifter/Legends|Skifter]]
+**[[The Idiot/Legends|The Idiot]]
+*[[Saffa paintings]]
+*[[Slavery/Legends|Slavery]] {{Mo}}
+*[[Snubfighter/Legends|Snubfighter]]
+*[[Spaceport/Legends|Spaceport]]
+*[[Stimpill]] {{1st}}
+*[[Survival kit/Legends|Survival kit]] {{1st}}
+*[[Power harpoon launcher|Tow cable]]
+*[[Vacuum/Legends|Vacuum]]
+*[[Viewport/Legends|Viewport]]
+*[[Voiceprint]] {{1stm}}
+*[[Zero-point energy]] {{Mo}}
+}}</onlyinclude>
+
+==Sources==
+{{ScrollBox|content=
+*<!-- 1994-03-08 -->''[[A Guide to the Star Wars Universe, Second Edition, Revised and Expanded]]''
+*<!-- 1994-09-XX -->{{InsiderCite|23|Star Wars Publications Timeline|''Star Wars'' Publications Timeline}}
+*<!-- 1996-05-XX -->''[[The Secrets of Star Wars: Shadows of the Empire]]''
+*<!-- 2010-08-16 -->''[[Star Wars Year by Year: A Visual Chronicle]]''
+*<!-- 2012-10-15 -->[[Star Wars Year by Year: A Visual Chronicle (updated edition)|''Star Wars Year by Year: A Visual Chronicle'', Updated Edition]]
+*<!-- 2014-04-04 -->{{SW|url=news/heir-to-the-empire-critical-reaction|text=Critical Opinion: ''Heir to the Empire'' Reviews}}
+*<!-- 2014-04-25 -->{{SW|url=news/the-legendary-star-wars-expanded-universe-turns-a-new-page|text=The Legendary Star Wars Expanded Universe Turns a New Page}}
+*<!-- 2014-06-10 -->{{InsiderCite|150|Launchpad|Launch Pad}}
+*<!-- 2014-09-09 -->{{InsiderCite|152|The Making of A New Dawn|The Making of ''A New Dawn''}}
+*<!-- 2016-08-02 -->{{SW|url=news/who-is-thrawn|text=Who Is Thrawn?|nolive=1}}
+*<!-- 2016-09-06 -->''[[Star Wars Year By Year: A Visual History, Updated and Expanded Edition]]''
+*<!-- 2018-02-26 -->{{SW|url=news/how-dark-empire-kickstarted-star-wars-comics-for-a-new-generation|text=How ''Dark Empire'' Kickstarted ''Star Wars'' Comics for a New Generation}}
+*<!-- 2020-04-24 -->''[[The Art of Star Wars Rebels]]''
+*<!-- 2021-04-27 -->{{InsiderCite|202|Timothy Zahn: Heir of an Empire}}
+*<!-- 2021-04-27 -->{{InsiderCite|202|Star Wars: The Mandalorian Season Two Companion|''Star Wars: The Mandalorian'' Season Two Companion|reprint=1}}
+*<!-- 2021-12-22 -->{{SW|url=news/star-wars-best-of-2021|text=''Star Wars'': Best of 2021}}
+*<!-- 2022-05-29 -->{{SWYouTube|Vs1UIKxJFJI|Dave Filoni joins us on stage at SWCA 22 &#124; Star Wars Celebration LIVE!}}
+*<!-- 2022-05-29 -->{{SWYouTube|vf7D4MWJofM|Star Wars Celebration LIVE! &ndash; DAY 4|nolive=1}}
+*<!-- 2023-06-13 -->{{InsiderCite|219|Launchpad}}
+*<!-- 2023-12-13 -->{{SW|url=news/ahsoka-interview-eman-esfandi-diana-lee-inosanto|text=Inside ''Ahsoka'': Eman Esfandi and Diana Lee Inosanto on Finding Ezra Bridger and Morgan Elsbeth}}
+*<!-- 2024-03-19 -->{{SW|url=news/leslye-headland-interview|text="Whatever You Think ''The Acolyte'' Is, It's Not": ''Star Wars'' Series Creator Leslye Headland Revels in the First Teaser Trailer}}
+*<!-- 2024-12-03 -->{{HomeVideoCite|set=Ahsoka: The Complete First Season|featurette=Darkness Rising}}
+}}
+
+==Notes and references==
+{{Reflist}}
+
+==External links==
+*{{PenguinRandomHouse|url=books/195416/heir-to-the-empire-star-wars-legends-the-thrawn-trilogy-by-timothy-zahn/9780553296129|text=Heir to the Empire: Star Wars Legends (The Thrawn Trilogy)}}
+
+{{ThrawnTrilogyNav}}
+{{EssentialLegendsCollectionNav}}
+
+{{Interlang
+|cs=Dědic říše
+|de=Erben des Imperiums#legends
+|es=Heredero del Imperio
+|fi=Imperiumin perillinen
+|fr=L'Héritier de l'Empire
+|hu=A Birodalom örökösei
+|it=Heir to the Empire
+|ja=帝国の後継者
+|ka=იმპერიის მემკვიდრე
+|ko=제국의 후예
+|pl=Dziedzic Imperium
+|pt=Herdeiro do Império
+|uk=Спадкоємець Імперії
+}}
+
+[[Category:Legends novels]]
+[[Category:The Essential Legends Collection]]

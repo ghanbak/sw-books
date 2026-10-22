@@ -1,10 +1,9 @@
-import * as Haptics from 'expo-haptics';
-import * as WebBrowser from 'expo-web-browser';
-import { ExternalLink, Info } from 'lucide-react-native';
+import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { openInAppBrowser } from '@/lib/external-link';
 
 type Props = {
 	url: string;
@@ -12,22 +11,20 @@ type Props = {
 };
 
 export function BuyOnAmazonButton({ url, onInfoPress }: Props) {
-	async function handlePress() {
-		await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-		await WebBrowser.openBrowserAsync(url, {
-			presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-		});
-	}
-
 	return (
 		<View style={styles.row}>
 			<Pressable
 				style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-				onPress={handlePress}
+				onPress={() => openInAppBrowser(url)}
 				accessibilityRole="button"
 				accessibilityLabel="Find this book on Amazon"
 			>
-				<ExternalLink size={18} color={tokens.text.inverse} strokeWidth={2.5} />
+				<SymbolView
+					name="arrow.up.forward.app"
+					size={18}
+					tintColor={tokens.text.inverse}
+					weight="semibold"
+				/>
 				<Text style={styles.label}>Find on Amazon</Text>
 			</Pressable>
 			{onInfoPress && (
@@ -38,7 +35,7 @@ export function BuyOnAmazonButton({ url, onInfoPress }: Props) {
 					accessibilityRole="button"
 					accessibilityLabel="Affiliate disclosure"
 				>
-					<Info size={20} color={tokens.text.hint} strokeWidth={2} />
+					<SymbolView name="info.circle" size={20} tintColor={tokens.text.hint} />
 				</Pressable>
 			)}
 		</View>

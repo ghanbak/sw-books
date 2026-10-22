@@ -66,26 +66,33 @@ Live-verified against `starwars.fandom.com` (MediaWiki 1.43.8, 2026-07-01), comp
 ### Action API vs. REST — decided
 **Primary: Action API (`api.php`)** (only API with category listing; batched multi-title facts; section-level intro; `parsetree`). **REST (`rest.php`) optional** for the per-page `license`+`latest.id` object. Dead paths: legacy `/api/v1` (Nirvana, Cloudflare 403), Wikimedia `/api/rest_v1/summary` (403 on Fandom). `prop=extracts` not installed.
 
-### Enumeration recipe (live-verified)
+### Enumeration recipe (live-verified; revised 2026-10-20 to close the sub-category gap)
 
-Union all, dedupe on `pageid`; `cmtype=page&cmnamespace=0`:
+Per bucket, union the FLAT page members with the page members of each non-excluded
+DIRECT sub-category (one level deep), dedupe on `pageid`; `cmtype=page&cmnamespace=0`
+for pages, `cmtype=subcat&cmnamespace=14` to map a bucket's subcats. Across buckets,
+first bucket in order claims a shared `pageid`.
 
-| Category | ~count | `canon` | `type` (from category) |
-| --- | --- | --- | --- |
-| `Category:Canon adult novels` | 48 | Canon | Adult Novel |
-| `Category:Canon young-adult novels` | 17 | Canon | YA Novel |
-| `Category:Canon middle-grade novels` | 29 | Canon | Middle Grade Novel |
-| `Category:Legends novels` (flat) | 86 | Legends | *unset → resolved via OL/Google at promotion* |
+| Bucket | flat | +subcats | union | `canon` | `type` (inherited by subcat members) |
+| --- | --- | --- | --- | --- | --- |
+| `Category:Canon adult novels` | 50 | THR adult | 58 | Canon | Adult Novel |
+| `Category:Canon young-adult novels` | 18 | THR YA | 26 | Canon | YA Novel |
+| `Category:Canon middle-grade novels` | 31 | THR junior, Join the Resistance, Servants of the Empire | 46 | Canon | Middle Grade Novel |
+| `Category:Legends novels` | 84 | X-Wing, New Jedi Order, Legacy of the Force, Fate of the Jedi, Coruscant Nights, Old Republic, Clone Wars (+tie-in), Empire and Rebellion, Essential Legends Collection | 162 | Legends | *unset → resolved via OL/Google at promotion* |
 
-≈ **180 novels**. **Exclude** `Canon novels` (container), `*young-reader*` (picture books), `*novellas*`/`*eNovellas*`, `*graphic novels*` (comics), `*novel series*` (containers). Legends subcats are series groupings already covered by the flat list — dedupe on union.
+Global union ≈ **292 pages → 283 rows** after the `{{Book}}` infobox filter (9 container/boxed-set/interview/dramatis-personae pages have no `{{Book}}` and are dropped).
 
-**Request plan (~8–10 requests, <10s):** 4× `list=categorymembers&cmlimit=500&cmtype=page&cmnamespace=0` (with defensive `cmcontinue`), then ~4× `action=query&prop=revisions|pageimages&rvprop=content|ids&rvslots=main&piprop=original&titles=…(≤50)…&formatversion=2&redirects=1`.
+**Why recursion is required:** many novels live ONLY in series sub-categories, never in the flat parent. Legends series subcats (X-Wing ×10, NJO ×24, LOTF, FOTJ, Coruscant Nights, Old Republic, …) and the Canon **High Republic** novels — which sit in `Star Wars: The High Republic {adult,young-adult,junior} novels`, *sub-categories of the three Canon tier buckets* — were all missing from the flat-only crawl (~88 catalog novels undiscovered). A classify run against prod exposed this; one-level recursion closes it (gap 88 → 13, the residual being title-form mismatches the operator reconciles in `/diff` plus correctly-excluded audio-drama/young-reader/short-story items).
 
-**Drift guard (added per architecture review):** assert each category returns members within an expected band (committed fixture, e.g. `Canon adult novels ≥ 40`); if a category collapses to ~0 or an unexpected sibling appears, **fail loudly and do not overwrite the CSV**. `canon`/`type` derive from *which category*, so a silent taxonomy change would otherwise produce a clean-but-wrong CSV.
+**Exclude** (applied to top-level buckets AND to subcats during recursion): `Canon novels` (container), `*young-reader*` (picture books; catches `Legends young-reader novels`), `*novellas*`/`*eNovellas*`, `*graphic novels*` (comics), `*novel series*` (containers; catches `Legends novel series`), `*audiobooks*` (audio editions). The `{{Book}}` infobox filter is the final safety net for non-novel pages inside a kept subcat.
+
+**Request plan (~25–30 requests, <15s):** per bucket, 1× `list=categorymembers&cmtype=page` + 1× `cmtype=subcat` + 1× `cmtype=page` for each kept subcat (all with defensive `cmcontinue`), then ~6× `action=query&prop=revisions|pageimages&rvprop=content|ids&rvslots=main&piprop=original&titles=…(≤50)…&formatversion=2&redirects=1`.
+
+**Drift guard:** assert each bucket's FULL union count (flat ∪ kept-subcat members, pre-infobox) is within a committed band (adult 45–85, YA 18–45, MG 34–70, Legends 135–200, vs live 58/26/46/162); if a bucket collapses or an unexpected sibling appears, **fail loudly and do not overwrite the CSV**. `canon`/`type` derive from *which bucket*, so a silent taxonomy change would otherwise produce a clean-but-wrong CSV.
 
 ### Field-derivation rules
-- **`canon`** ← crawl bucket (most reliable at scale). **`type`** ← Canon subcat; Legends left unset for OL/Google resolution.
-- **`author`, `publisher`, `date_published`, `isbn`, `timeline_order`** ← `{{Book}}` infobox (~100%). Clean `[[links]]`/`<ref>`/`{{templates}}`. **`date_published`** → ISO via the catalog's `parseDate`. **`timeline_order`** is separate: parse "15 BBY"→ `-15`, "2 ABY"→ `2` (matches the app's `timeline_order < 0 ⇒ BBY` convention); ranges take the start value. Never feed a BBY string to `parseDate`.
+- **`canon`** ← crawl bucket (most reliable at scale). **`type`** ← Canon tier bucket. Under recursion a subcat member inherits its PARENT bucket's `canon` + `type`, because the subcat is a subcategory of that tier (membership is transitive — a THR-adult book IS a Canon-adult book), so no tier is guessed. Legends `type` stays unset (resolved via OL/Google at promotion). If a future source reaches a Canon book ONLY via a non-tier category, leave `type` unset — do not add such a category as a recursing bucket.
+- **`author`, `publisher`, `date_published`, `isbn`, `timeline_order`** ← `{{Book}}` infobox (~100%). Clean `[[links]]`/`<ref>`/`{{templates}}` — including NESTED citation templates (`{{SW}}`, `{{Twitter}}`, `{{SWYouTube}}`, `{{Cite…}}`) inside a field value; the multi-value splitter strips citations BEFORE splitting so a citation's inner `#`/`;`/`&#124;` can't shatter a template into the author. Co-authors split on `<br>`/newline/`*`/`#`/`;`/` & `/` and `. **`date_published`** → ISO via the catalog's `parseDate`. **`timeline_order`** is separate: the sign comes only from BBY→`-`/ABY→`+`; thousands commas are kept (`25,793 BBY`→`-25793`); a range (`67-65 BBY`) takes the start (`-67`); and when tokens span BOTH eras the ancient BBY is treated as a flashback so the first ABY token wins (Crosscurrent `41`, Millennium Falcon `43`) — timeline is noisy and human-reviewed. Never feed a BBY string to `parseDate`.
 - **`series`/`series_order`** ← infobox `series` (~33%) + `preceded/followed by`; leave null when absent (don't fabricate).
 - **`cover_image`** ← `pageimages` URL as a **reference only** (publisher-copyright; keep the OpenLibrary cover pipeline as the real source).
 
@@ -137,47 +144,62 @@ CC BY-SA 3.0 (text only; **cover art is publisher-copyright — do not rehost**)
 
 ## Implementation Phases (v1)
 
-### Phase 1 — Crawl & build the discovery CSV
-`lib/wookieepedia/{client,parse,derive}.ts` + `categories` config (4 buckets + exclusions + drift-guard bands) + `scripts/discover-wookieepedia.ts` (`--dry-run` prints per-category counts; emits deterministic CSV + gitignored meta sidecar).
-**Acceptance:** ~180 rows across 4 categories; comics/picture-books/novellas absent; byte-identical re-run; drift guard fails loudly on a collapsed category.
+### Phase 1 — Crawl & build the discovery CSV ✅
+`lib/wookieepedia/{client,parse,derive}.ts` + `categories` config (4 buckets, each recursing one level into non-excluded direct sub-categories; exclusions; per-bucket union drift-guard bands) + `scripts/discover-wookieepedia.ts` (`--dry-run` prints per-bucket flat/subcat/union counts; emits deterministic CSV + gitignored meta sidecar recording kept/skipped subcats). `client.ts` adds `fetchSubcategories` (`cmtype=subcat`).
+**Acceptance:** ~283 rows across 4 buckets incl. one-level subcat recursion (X-Wing, NJO, LOTF, FOTJ, Coruscant Nights, Old Republic, Canon High Republic now covered); comics/picture-books/novellas/audiobooks/series-containers absent; byte-identical re-run; drift guard fails loudly on a collapsed bucket.
+**Revision 2026-10-20:** closed the sub-category enumeration gap (flat-only crawl missed ~88 catalog novels) and fixed three infobox parse bugs the prod classify run surfaced — nested citation-template stripping, `&` co-author split, and `timeline_order` sign/comma/flashback handling. See the Enumeration recipe + Field-derivation rules above.
 
-### Phase 2 — Match & classify against the live DB
+### Phase 2 — Match & classify against the live DB ✅
 `lib/wookieepedia/match.ts` — ISBN+corroboration → title+author-set+canon → fuzzy(review); classify NEW/DIFFERS/UNMATCHED at diff-time; slug via `slugify`+`ensureUniqueSlug` against live DB slugs.
 **Acceptance:** existing books resolve as matches (no duplicate NEWs); Canon/Legends twins stay distinct; a shared-ISBN omnibus is NOT auto-merged; ISBN normalizer unit tests pass.
 
-### Phase 3 — Human-gated promotion (local admin)
+### Phase 3 — Human-gated promotion (local admin) — superseded for the first bulk pass by the 2026-10-20 changeset revision below
 Extend local admin `/diff`; NEW → `createBook` (OL/Google fills type/cover/isbn); DIFFERS → suggestions; slug re-checked at promote-time; `catalog:backup` after.
 **Acceptance:** operator promotes NEW inserts and applies/ignores suggestions; `data/books.csv` never crawler-overwritten; discovery review is local-only (not on the Vercel deploy); Legends rows get a valid `type` via lookup before insert (no CHECK violation).
 
+### Phase 3 revision (2026-10-20): reviewable changeset + gated apply ✅
+
+Replaces the per-row admin `/diff` promotion for this first bulk pass. The user approves a change file; nothing is applied by the tooling's author.
+
+**Applied to prod 2026-10-21** by the user (`npm run catalog:apply -- --apply`): 149/149 steps — 5 ISBN fixes, 2 cover fixes, 51 updates, 91 inserts. Prod went from 185 to 276 books. A follow-up dry-run shows every step as skip (0 conflicts). Backups: pre-apply `f7b01a4` (185 rows), post-apply `a1e3e4b` (276 rows).
+
+**Decisions (user, authoritative):**
+1. **Existing rows: `date_published` + `format` only.** The wiki date wins when it differs, compared at the raw infobox precision: a month-only wiki date ("February 1996", stored padded as `1996-02-01`) does not overwrite a catalog day in that same month. `format` is an additive, ordered, deduped union. Catalog formats come first and none are removed, mirroring `ordered_text_union`. "Hard Cover" ≡ "Hardcover". Author, timeline, series, publisher, synopsis, cover and every other field stay untouched.
+2. **ISBNs: never add or merge wiki ISBNs.** The only ISBN change is a **conflict fix**, for a catalog ISBN that the wiki assigns to a *different* book. Ownership is decided by title + full author set + canon, never by the (suspect) ISBN arrays. The misfiled ISBN is replaced in place by the holder row's own wiki ISBN; an ISBN the row already carries is preferred. `primary_isbn` follows when it was the removed ISBN, so `primary_isbn ∈ isbn[]` holds. Any unclear link is **flagged, not fixed**: no owner row, no holder wiki page, the wiki listing the ISBN on both pages, the replacement held elsewhere, or Open Library contradicting. Open Library's title for the moved ISBN is recorded as independent evidence.
+3. **NEW inserts include every edition variant**: junior novelizations, Expanded Editions, and the 2017 Egmont "(paperback novel)" OT junior novelizations, which are distinct Canon works, not the Legends Foster/Glut/Kahn novelizations. **Excluded:** "Untitled Boba Fett novel" and "The Odyssey of Star Wars: An Epic Poem". `type` comes from the Canon tier bucket, or for Legends from OL/GB audience evidence (`lib/wookieepedia/audience.ts`):
+   - Google Books BISAC outranks Open Library work subjects, which aggregate kids' reissues.
+   - Only one consistent adult/YA label decides. Juvenile-only, conflicting or ISBN-less rows get `needs_type: true` and no `type`.
+   - Calibration against the full prod catalog: 162/185 rows decided, 0 wrong.
+   - Operator overrides go in `data/discovery/type-overrides.json`.
+   - `cover_image` comes from the OL/GB lookup by ISBN only, never the wiki image.
+   - `synopsis` is null, because catalog synopses are hand-written one-liners.
+4. **Apply mechanism.**
+   - `scripts/build-catalog-changeset.ts --production` (read-only) writes a deterministic `data/discovery/catalog-changeset.json` plus a `.md` summary. Sections are sorted by slug. Lookups are cached in the gitignored `data/discovery/lookup-cache.json`.
+   - Update identity is computed against the catalog *as it will be after the ISBN fixes*, so a misfiled ISBN can't route one book's facts onto another.
+   - `scripts/apply-catalog-changeset.ts` is a dry-run by default. Real writes need `--apply --production`, a clean pre-flight (no `needs_type`, no conflicts), the typed project-ref prompt (as in `seed.ts`), and a fresh, complete `npm run catalog:backup` that the script runs and verifies.
+   - Writes go in order: ISBN fixes, updates (named columns only, keyed by `id` + `slug`), then inserts (plain insert, never upsert; each slug is re-checked immediately before its insert).
+   - Optimistic concurrency: each step re-reads its live row. Live = `after` → skip; live = `before` → write; anything else → stop.
+   - **No transaction.** supabase-js has none, so each row is its own write. The run stops at the first conflict or error; completed rows stay written. Every step is idempotent, so re-running resumes at the failed row. The restore point is `data/catalog-backup.csv`.
+
+**Follow-up decisions (2026-10-20, after the first review):**
+- **Never-published works are excluded.** The 9 titles are listed explicitly in `EXCLUDED_TITLES` with a reason each, and any page tagged `{{Canceled}}` is also auto-excluded at build time, so future runs don't regress. The auto-rule additionally caught *The Mandalorian and Grogu: The Deluxe Junior Novelization*, whose solicitations were pulled.
+- **The 18 flagged date updates are accepted.** Each approval in `APPROVED_DATE_UPDATES` is keyed by slug + the exact `before>after` value. Updates carry `review_status: approved | pending`, so a rebuild that proposes a different date comes back as pending.
+- **Cover fixes are a separate change kind (`cover_fixes`).** A cover URL built from a removed (misfiled) ISBN is rebuilt from the corrected ISBN via the Open Library candidate builder, with the same HEAD/`MIN_COVER_BYTES` check as inserts. The apply step writes `cover_image` only, keyed by `id`. When there is no valid OL cover, or the cover is already used by another row, the case goes to review instead. This covers `red-harvest` and `brotherhood`.
+- **Edition variants own their ISBN.** A wiki ISBN on a base row that belongs to an edition with no catalog row moves off the base row, but only when that edition really becomes an insert in the same changeset; otherwise the case is flagged, so a fix never drops an ISBN. This covers *Heir to the Empire: The 20th Anniversary Edition*, which is inserted and gets 9780345528292.
+
+- **Insert data cleanup.** *Star Wars: Starfighter (junior novelization)* and *The Vow of Silver Dawn* are excluded because their data is incomplete. Insert publishers are normalized:
+  - A run-together multi-imprint value keeps the US/primary imprint. The four values are listed explicitly in `PUBLISHER_SPLITS`.
+  - A spelling or punctuation variant of an existing catalog publisher takes the catalog's spelling (`Disney–Lucasfilm Press` → `Disney Lucasfilm Press`).
+  - Distinct imprints (Random House Worlds, Del Rey, Egmont UK Ltd) are never merged.
+  - Every changed value is listed under `publisher_changes` and in the `.md`.
+
+**Matcher changes:**
+- **Step 2b, series-prefix titles.** One title may be the other minus leading `Series: ` segments: "The New Jedi Order: Destiny's Way" ↔ "Destiny's Way". This still requires the full author set + canon. Generic remainders such as "A Junior Novel" and "Expanded Edition" never count, and a stripped variant is only compared to the other side's full title.
+- **Misfiled-ISBN guard.** An ISBN corroborated only by author is downgraded to AMBIGUOUS when the title identifies a different row. This caught *X-Wing: The Bacta War* being merged onto `x-wing-rogue-squadron`.
+
 ## Part 2: In-universe enrichment (follow-up plan)
 
-**Now its own plan:** [2026-07-01-feat-wookieepedia-enrichment-satellite-plan.md](2026-07-01-feat-wookieepedia-enrichment-satellite-plan.md). Summary retained here for continuity. Adds a **1:1 satellite `book_enrichment`** (PK=FK→`books.id` `ON DELETE CASCADE`) for characters/appearances/timeline detail + provenance (`source_pageid`, `source_url`, `license`, `attribution`, `fetched_at`, `content_hash`), surfaced on `app/book/[id].tsx` with a "View on Wookieepedia" attribution backlink.
-
-```mermaid
-erDiagram
-    books ||--o| book_enrichment : "1:1 enriches"
-    books ||--o{ user_books : shelves
-    book_enrichment {
-        uuid book_id PK_FK "→ books.id ON DELETE CASCADE"
-        bigint source_pageid "stable anchor"
-        text source_url
-        text license "CC-BY-SA-3.0"
-        timestamptz fetched_at
-        text content_hash "gate; hash normalized fields, not raw wikitext"
-        jsonb characters
-        jsonb appearances
-        text timeline_notes
-    }
-```
-
-Part-2 notes captured from review (to honor when written):
-- **Satellite over columns**, same DB — correct (independent RLS/provenance/cadence; no hot-row bloat).
-- **RLS:** mirror the base table's **dual read policies** (`authenticated` *and* `anon`), or the anon PostgREST embed returns null enrichment; **no** client-role write policy.
-- **Merge:** no `merge_books()` change needed — `ON DELETE CASCADE` drops the loser's enrichment; re-sync repopulates if the survivor lacked it.
-- **Read:** embed `book_enrichment(*)` **only on the detail query**, not the shelf list (jsonb payload bloat); handle supabase-js one-to-one-as-array (`[0]` / view / `!left`).
-- **Types:** narrow generated `Json` via a `parseEnrichment(row): Enrichment` boundary — app never indexes raw `Json`.
-- **`pageid` lifecycle:** quarantine mapped pageids that go `missing` or resolve via `redirects` — never silently drop/re-point.
-- **`content_hash`** covers normalized stored fields (not raw wikitext) so cosmetic wiki edits don't churn `fetched_at`.
+**Shipped as its own plan:** [2026-07-01-feat-wookieepedia-enrichment-satellite-plan.md](2026-07-01-feat-wookieepedia-enrichment-satellite-plan.md), which is authoritative for the schema, sync and app UI. Phases 1–3 are done (migration pushed and 269 rows synced to prod; Timeline + Characters cards and the characters sheet on branch `feat/wookieepedia-enrichment`). Only the optional Phase 4 (admin surfacing) remains.
 
 ## Edge cases
 - **Legends `type`** → filled by OL/Google at promotion; CSV leaves it unset; DB CHECK satisfied only at insert.
@@ -191,18 +213,18 @@ Part-2 notes captured from review (to honor when written):
 - **Slug TOCTOU** → re-check against DB at promote-time.
 
 ## Acceptance Criteria (v1)
-- [ ] Deterministic `data/discovery/books-discovered.csv` (~180 novels; comics/picture-books excluded; catalog-shape, no `match_class` column; byte-identical re-run).
-- [ ] `canon`/`type` from category (Legends `type` unset → filled at promotion); infobox facts cleaned; timeline vs date handled separately; volatile metadata in the gitignored sidecar.
-- [ ] Drift guard aborts (no overwrite) if a category collapses / an unexpected sibling appears.
-- [ ] Match cascade resolves existing books as matches (no dup NEWs); shared-ISBN not auto-merged; Canon/Legends twins distinct; ISBN normalizer + slug-tiebreaker unit-tested.
-- [ ] Promotion is local-admin-only, human-gated: NEW → `createBook` (+OL/Google fill), DIFFERS → suggestions; no auto-upsert; `data/books.csv` never crawler-overwritten; slug re-checked at promote-time.
-- [ ] Facts-only in v1 (no prose); enrichment satellite/app UI deferred to Part 2.
+- [x] Deterministic `data/discovery/books-discovered.csv` (283 novels after sub-category recursion; comics/picture-books excluded; catalog-shape, no `match_class` column; byte-identical re-run).
+- [x] `canon`/`type` from category (Legends `type` unset → filled at promotion); infobox facts cleaned; timeline vs date handled separately; volatile metadata in the gitignored sidecar.
+- [x] Drift guard aborts (no overwrite) if a category collapses / an unexpected sibling appears.
+- [x] Match cascade resolves existing books as matches (no dup NEWs); shared-ISBN not auto-merged; Canon/Legends twins distinct; ISBN normalizer + slug-tiebreaker unit-tested.
+- [x] Promotion is human-gated: a reviewed changeset applied by the user through the gated script (Phase 3 revision), with OL/Google filling Legends `type`; no auto-upsert; `data/books.csv` never crawler-overwritten; slug re-checked at apply time.
+- [x] Facts-only in v1 (no prose); enrichment satellite/app UI shipped separately as Part 2.
 
 ## Resolved decisions
 1. **Legends `type`** → resolved via OL/Google Books lookup at promotion (user call); no default fabricated, no migration.
 2. **Middle-Grade** kept a distinct `type` (category is clean).
 3. **v1 = discovery; enrichment = Part 2** (per simplicity review + directive focus).
-4. **Promotion path** = local admin only (per architecture P0).
+4. **Promotion path** = local admin only (per architecture P0). Superseded for the first bulk pass on 2026-10-20 by the reviewed changeset + gated apply script; the local admin stays the path for one-off edits.
 
 ## Risks
 - **Fandom ToU / rate limits** — tiny volume, UA, documented API; serial+backoff, resumable.

@@ -1,10 +1,10 @@
-import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { DarkTheme, ThemeProvider } from 'expo-router/react-navigation';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { type ReactNode, useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import { tokens } from '@/constants/tokens';
@@ -32,17 +32,13 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-	const [fontsLoaded] = useFonts({
-		'sacul-high-alphabet': require('@/assets/fonts/sacul-high-alphabet.otf'),
-		'sacul-basic': require('@/assets/fonts/sacul-basic.otf'),
-	});
 	const [initialAurebesh, setInitialAurebesh] = useState<boolean | null>(null);
 
 	useEffect(() => {
 		loadAurebeshPref().then(setInitialAurebesh);
 	}, []);
 
-	const ready = fontsLoaded && initialAurebesh !== null;
+	const ready = initialAurebesh !== null;
 
 	useEffect(() => {
 		if (!ready) return;
@@ -52,22 +48,24 @@ export default function RootLayout() {
 	if (!ready || initialAurebesh === null) return null;
 
 	return (
-		<FontProvider initialAurebesh={initialAurebesh}>
-			<AuthProvider>
-				<BooksProvider>
-					<UserBooksProvider>
-						<ScanSessionProvider>
-							<ThemeProvider value={appDarkTheme}>
-								<AuthGate>
-									<NavigationStack />
-								</AuthGate>
-								<StatusBar style="light" />
-							</ThemeProvider>
-						</ScanSessionProvider>
-					</UserBooksProvider>
-				</BooksProvider>
-			</AuthProvider>
-		</FontProvider>
+		<GestureHandlerRootView style={{ flex: 1 }}>
+			<FontProvider initialAurebesh={initialAurebesh}>
+				<AuthProvider>
+					<BooksProvider>
+						<UserBooksProvider>
+							<ScanSessionProvider>
+								<ThemeProvider value={appDarkTheme}>
+									<AuthGate>
+										<NavigationStack />
+									</AuthGate>
+									<StatusBar style="light" />
+								</ThemeProvider>
+							</ScanSessionProvider>
+						</UserBooksProvider>
+					</BooksProvider>
+				</AuthProvider>
+			</FontProvider>
+		</GestureHandlerRootView>
 	);
 }
 
@@ -125,6 +123,18 @@ function NavigationStack() {
 					sheetAllowedDetents: [0.6, 1.0],
 					sheetGrabberVisible: true,
 					sheetCornerRadius: 24,
+				}}
+			/>
+			{/* Characters sheet (book detail "See all"): full height only; system corner radius
+          matches the iOS 27 kit sheet. Header + search are drawn in the screen. */}
+			<Stack.Screen
+				name="characters/[id]"
+				options={{
+					presentation: 'formSheet',
+					headerShown: false,
+					sheetAllowedDetents: [1.0],
+					sheetGrabberVisible: true,
+					contentStyle: { backgroundColor: tokens.surface.background },
 				}}
 			/>
 		</Stack>

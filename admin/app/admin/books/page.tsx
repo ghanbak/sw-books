@@ -3,11 +3,13 @@ import path from 'node:path';
 import { getDriftReport } from '@/app/_actions/export';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { contextPageIds, deriveStates, getWikiInfo, loadEnrichmentContext } from '@/lib/enrichment';
 import { ISSUE_DEFS, type IssueKey, issuesFor } from '@/lib/issues';
 import { getDbTarget, getSupabaseAdmin } from '@/lib/supabase-admin';
+import { ENRICHMENT_STATUSES, type EnrichmentStatus } from '@app/wookieepedia/enrichment-status';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
-import { type BookListRow, BooksTable } from './_components/books-table';
+import { BooksTable, type CatalogRow, type EnrichmentSummary } from './_components/books-table';
 import { DbTargetSwitch } from './_components/db-target-switch';
 
 // Always read live from the local DB; never cache/pre-render the catalog.
@@ -33,7 +35,7 @@ async function loadPlaceholderSlugs(): Promise<Set<string>> {
 
 export default async function BooksPage() {
 	const [supabaseAdmin, target] = await Promise.all([getSupabaseAdmin(), getDbTarget()]);
-	const [{ data, error }, placeholderSlugs] = await Promise.all([
+	const [{ data, error }, placeholderSlugs, enrichmentCtx, drift] = await Promise.all([
 		supabaseAdmin
 			.from('books')
 			.select(
@@ -41,6 +43,8 @@ export default async function BooksPage() {
 			)
 			.order('title', { ascending: true }),
 		loadPlaceholderSlugs(),
+		loadEnrichmentContext(supabaseAdmin),
+		getDriftReport(),
 	]);
 
 	if (error) {
@@ -51,19 +55,39 @@ export default async function BooksPage() {
 		);
 	}
 
+	// Enrichment status (sync mapping rules + pins + cached wiki health check).
+	// A failure here degrades to "unknown" rather than breaking the catalog.
+	const wiki = enrichmentCtx.ok ? await getWikiInfo(contextPageIds(enrichmentCtx.data)) : null;
+	const states = enrichmentCtx.ok ? deriveStates(enrichmentCtx.data, wiki) : null;
+
 	// Compute issues server-side, then drop the heavy synopsis text from the payload.
 	const rows = (data ?? []).map((b) => {
 		const { synopsis, ...rest } = b;
+		const state = states?.get(b.slug);
 		return {
 			...rest,
 			issues: issuesFor(b, placeholderSlugs),
-		} satisfies BookListRow & { issues: IssueKey[] };
+			enrichment: state?.status ?? null,
+			enrichmentReason: state?.reasons.join(' · ') || null,
+		} satisfies CatalogRow;
 	});
 
 	const counts = Object.fromEntries(ISSUE_DEFS.map((d) => [d.key, 0])) as Record<IssueKey, number>;
 	for (const r of rows) for (const k of r.issues) counts[k]++;
 
-	const drift = await getDriftReport();
+	const enrichmentCounts = Object.fromEntries(ENRICHMENT_STATUSES.map((s) => [s, 0])) as Record<
+		EnrichmentStatus,
+		number
+	>;
+	for (const r of rows) if (r.enrichment) enrichmentCounts[r.enrichment]++;
+	const enrichment: EnrichmentSummary = {
+		counts: enrichmentCounts,
+		error: enrichmentCtx.ok ? null : enrichmentCtx.message,
+		wikiChecked: wiki !== null,
+		pinsAvailable: enrichmentCtx.ok && enrichmentCtx.data.pins.available,
+		pinErrors: enrichmentCtx.ok ? enrichmentCtx.data.pins.errors.length : 0,
+	};
+
 	const driftRows = drift.ok ? drift.data.summary.rows : 0;
 
 	return (
@@ -97,7 +121,7 @@ export default async function BooksPage() {
 					</Link>
 				</div>
 			</header>
-			<BooksTable rows={rows} counts={counts} />
+			<BooksTable rows={rows} counts={counts} enrichment={enrichment} />
 		</main>
 	);
 }

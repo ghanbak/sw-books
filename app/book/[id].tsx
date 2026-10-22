@@ -1,5 +1,5 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { BookOpen, Calendar, Hash, Layers, Package } from 'lucide-react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,16 +7,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BookDetailSkeleton } from '@/components/book-detail-skeleton';
 import { BookDetailToolbar } from '@/components/book-detail-toolbar';
 import { BuyOnAmazonButton } from '@/components/buy-on-amazon-button';
+import { EnrichmentSection } from '@/components/enrichment/enrichment-section';
 import { ErrorState } from '@/components/error-state';
 import { HoloCover } from '@/components/holo-cover';
-import { Card } from '@/components/ui/card';
+import { Card, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { buildAmazonSearchUrl } from '@/lib/amazon';
 import type { Book } from '@/lib/hooks';
-import { useBooks, useUserBooks } from '@/lib/hooks';
+import { useBookEnrichment, useBooks, useUserBooks } from '@/lib/hooks';
 import { supabase } from '@/lib/supabase';
 import { eraLabel } from '@/lib/timeline';
+import { parseTimeline } from '@/lib/wookieepedia/enrichment-display';
 
 export default function BookDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,6 +28,9 @@ export default function BookDetailScreen() {
 	const [loading, setLoading] = useState(!cached);
 	const [error, setError] = useState<string | null>(null);
 	const insets = useSafeAreaInsets();
+	const router = useRouter();
+	// Separate from the catalog cache: enrichment rows are large and never embedded in the list query.
+	const { enrichment, fromCache } = useBookEnrichment(id);
 	const amazonUrl = book ? buildAmazonSearchUrl(book.isbn?.[0]) : null;
 
 	const fetchBook = useCallback(async () => {
@@ -75,12 +80,24 @@ export default function BookDetailScreen() {
 
 	const publishedDate = formatPublishedDate(book.date_published);
 	const isbns = book.isbn ?? [];
+	// The enrichment Timeline card replaces the Details "Timeline" row when it's shown.
+	const showsEnrichmentTimeline = parseTimeline(enrichment?.timeline_notes).length > 0;
 
 	return (
 		<View style={styles.container}>
 			<Stack.Screen
 				options={{
-					headerLargeTitle: true,
+					// No native large title: the book title is drawn in the body, so a large-title
+					// row here was just an empty band (a big gap above the title) with an opaque
+					// background that cut off the cover's hologram glow.
+					headerLargeTitle: false,
+					// The root stack gives every screen an opaque large-title background, and
+					// react-native-screens applies it to the bar's *scroll-edge* appearance — so at
+					// rest (scrolled to top) it painted a solid band that cut off the cover's glow.
+					// Transparent here, and no material blur: iOS 26+ draws its own soft scroll-edge
+					// effect once content scrolls under the bar.
+					headerLargeStyle: { backgroundColor: 'transparent' },
+					headerBlurEffect: 'none',
 					headerShadowVisible: false,
 					title: '',
 					headerBackTitle: 'Back',
@@ -120,35 +137,46 @@ export default function BookDetailScreen() {
 					</View>
 				)}
 
+				{/* Wookieepedia enrichment: Timeline, Characters, source + attribution */}
+				{enrichment && (
+					<EnrichmentSection
+						enrichment={enrichment}
+						fromCache={fromCache}
+						onSeeAllCharacters={() =>
+							router.push({ pathname: '/characters/[id]', params: { id: book.id } })
+						}
+					/>
+				)}
+
 				{/* Details */}
 				<Card style={styles.card}>
-					<Text style={styles.cardTitle}>Details</Text>
+					<CardTitle>Details</CardTitle>
 					<DetailRow
-						icon={<Layers size={14} color={tokens.text.hint} strokeWidth={2} />}
+						icon={<SymbolView name="square.stack.3d.up" size={14} tintColor={tokens.text.hint} />}
 						label="Continuity"
 						value={book.canon}
 					/>
 					<DetailRow
-						icon={<BookOpen size={14} color={tokens.text.hint} strokeWidth={2} />}
+						icon={<SymbolView name="book" size={14} tintColor={tokens.text.hint} />}
 						label="Type"
 						value={book.type}
 					/>
 					{book.publisher && (
 						<DetailRow
-							icon={<Package size={14} color={tokens.text.hint} strokeWidth={2} />}
+							icon={<SymbolView name="building.columns" size={14} tintColor={tokens.text.hint} />}
 							label="Publisher"
 							value={book.publisher}
 						/>
 					)}
 					{publishedDate && (
 						<DetailRow
-							icon={<Calendar size={14} color={tokens.text.hint} strokeWidth={2} />}
+							icon={<SymbolView name="calendar" size={14} tintColor={tokens.text.hint} />}
 							label="Published"
 							value={publishedDate}
 						/>
 					)}
 					{book.language && <DetailRow label="Language" value={book.language} />}
-					{book.timeline_order != null && (
+					{book.timeline_order != null && !showsEnrichmentTimeline && (
 						<DetailRow label="Timeline" value={eraLabel(book.timeline_order)} mono />
 					)}
 				</Card>
@@ -156,11 +184,11 @@ export default function BookDetailScreen() {
 				{/* Series */}
 				{book.series_name && (
 					<Card style={styles.card}>
-						<Text style={styles.cardTitle}>Series</Text>
+						<CardTitle>Series</CardTitle>
 						<DetailRow label="Name" value={book.series_name} />
 						{book.series_order != null && book.series_order > 0 && (
 							<DetailRow
-								icon={<Hash size={14} color={tokens.text.hint} strokeWidth={2} />}
+								icon={<SymbolView name="number" size={14} tintColor={tokens.text.hint} />}
 								label="Book"
 								value={`#${book.series_order}`}
 							/>
@@ -171,7 +199,7 @@ export default function BookDetailScreen() {
 				{/* Formats */}
 				{book.format && book.format.length > 0 && (
 					<Card style={styles.card}>
-						<Text style={styles.cardTitle}>Formats</Text>
+						<CardTitle>Formats</CardTitle>
 						<View style={styles.formatRow}>
 							{book.format.map((f) => (
 								<View key={f} style={styles.formatChip}>
@@ -185,7 +213,7 @@ export default function BookDetailScreen() {
 				{/* Identifiers */}
 				{isbns.length > 0 && (
 					<Card style={styles.card}>
-						<Text style={styles.cardTitle}>Identifiers</Text>
+						<CardTitle>Identifiers</CardTitle>
 						{isbns.map((isbn) => (
 							<DetailRow key={isbn} label="ISBN" value={isbn} mono />
 						))}
@@ -195,7 +223,7 @@ export default function BookDetailScreen() {
 				{/* Era */}
 				{book.era && (
 					<Card style={styles.card}>
-						<Text style={styles.cardTitle}>Era</Text>
+						<CardTitle>Era</CardTitle>
 						<DetailRow label="Timeline Era" value={book.era} />
 					</Card>
 				)}
@@ -299,14 +327,6 @@ const styles = StyleSheet.create({
 	},
 	card: {
 		marginBottom: 12,
-	},
-	cardTitle: {
-		fontSize: 11,
-		fontWeight: '700',
-		color: tokens.text.hint,
-		textTransform: 'uppercase',
-		letterSpacing: 1.2,
-		marginBottom: 4,
 	},
 	detailRow: {
 		flexDirection: 'row',

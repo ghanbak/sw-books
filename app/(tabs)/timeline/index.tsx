@@ -1,4 +1,4 @@
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -7,22 +7,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HoloCover } from '@/components/holo-cover';
 import { TabHeaderActions } from '@/components/tab-header-actions';
 import { TimelineRail } from '@/components/timeline-rail';
-import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
 import { groupBooksByYear } from '@/lib/timeline';
 
-type CanonFilter = 'all' | 'Canon' | 'Legends';
-
-const CANON_OPTIONS: FilterPillOption<CanonFilter>[] = [
-	{ key: 'all', label: 'All' },
-	{ key: 'Canon', label: 'Canon' },
-	{ key: 'Legends', label: 'Legends' },
-];
-
 const VIEW_CONFIG = { itemVisiblePercentThreshold: 60 } as const;
+const PAGER_OVERRIDES = { style: { overflow: 'visible' } } as const;
 
 /**
  * Timeline tab — a horizontal, snap-paged scroll through the catalog in chronological
@@ -33,18 +25,17 @@ export default function TimelineScreen() {
 	const { width } = useWindowDimensions();
 	const insets = useSafeAreaInsets();
 	// Pager can't use a list header + contentInsetAdjustmentBehavior, so offset the body by the
-	// full header height (not just insets.top) — that puts the filter pills below the large title,
-	// matching Archives/Library. insets.top alone leaves them up in the nav-bar row.
+	// full header height (not just insets.top) — matching Archives/Library. insets.top alone
+	// leaves the content up in the nav-bar row.
 	const headerHeight = useHeaderHeight();
 	const { books } = useBooks();
-	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
 	const [activePage, setActivePage] = useState(0);
 	const [listHeight, setListHeight] = useState(0);
+	const listRef = useRef<FlashListRef<Book>>(null);
 
-	const data = useMemo(() => {
-		const filtered = canonFilter === 'all' ? books : books.filter((b) => b.canon === canonFilter);
-		return groupBooksByYear(filtered);
-	}, [books, canonFilter]);
+	// The Timeline shows the whole chronology — canon/legends is signalled per-hero by a
+	// corner badge, not filtered (focused canon filtering lives on Archives/Search).
+	const data = useMemo(() => groupBooksByYear(books), [books]);
 
 	const activeGroup = data.pageToGroup[activePage] ?? 0;
 
@@ -68,6 +59,7 @@ export default function TimelineScreen() {
 					coverUri={item.cover_image}
 					title={item.title}
 					author={item.author}
+					canon={item.canon}
 					width={coverW}
 					height={coverH}
 				/>
@@ -77,12 +69,22 @@ export default function TimelineScreen() {
 	);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
+	// Tapping or scrubbing the rail moves the pager to that group's first book. Not animated:
+	// a scrub fires this on every date crossed, and queued scroll animations would lag behind
+	// the finger (and an animated jump across millennia is a long blur, not a transition).
+	// scrollToOffset, not scrollToIndex: every page is exactly one screen wide, so the offset
+	// is exact — scrollToIndex estimates the position of pages FlashList hasn't measured yet,
+	// and a fast scrub to a far date could land several pages off.
+	const handleJump = useCallback(
+		(page: number) => {
+			listRef.current?.scrollToOffset({ offset: page * width, animated: false });
+		},
+		[width],
+	);
+
 	return (
 		<View style={[styles.container, { paddingTop: headerHeight, paddingBottom: insets.bottom }]}>
 			<TabHeaderActions />
-			<View style={styles.filters}>
-				<FilterPills options={CANON_OPTIONS} value={canonFilter} onChange={setCanonFilter} />
-			</View>
 
 			{data.books.length === 0 ? (
 				<View style={styles.empty}>
@@ -96,6 +98,13 @@ export default function TimelineScreen() {
 					>
 						{listHeight > 0 && (
 							<FlashList
+								ref={listRef}
+								// UIScrollView clips to its bounds by default (RN maps `overflow` to
+								// clipsToBounds), cutting the hologram's bloom off at the pager's edges.
+								// FlashList wraps the scroll view in its own (overflow: hidden) view, so
+								// both need it: `style` reaches the wrapper, overrideProps the scroll view.
+								style={styles.pager}
+								overrideProps={PAGER_OVERRIDES}
 								data={data.books}
 								horizontal
 								showsHorizontalScrollIndicator={false}
@@ -111,7 +120,12 @@ export default function TimelineScreen() {
 							/>
 						)}
 					</View>
-					<TimelineRail groups={data.groups} activeIndex={activeGroup} width={width} />
+					<TimelineRail
+						groups={data.groups}
+						activeIndex={activeGroup}
+						width={width}
+						onJump={handleJump}
+					/>
 				</>
 			)}
 		</View>
@@ -123,12 +137,11 @@ const styles = StyleSheet.create({
 		flex: 1,
 		backgroundColor: tokens.surface.background,
 	},
-	filters: {
-		paddingHorizontal: 12,
-		paddingVertical: 8,
-	},
 	listWrap: {
 		flex: 1,
+	},
+	pager: {
+		overflow: 'visible',
 	},
 	page: {
 		alignItems: 'center',

@@ -6,6 +6,10 @@
 const DEFAULT_TIMEOUT_MS = 12_000;
 const DEFAULT_MIN_BYTES = 1024;
 
+/** Catalog cover floor: a smaller payload is almost certainly a placeholder
+ *  (refresh-covers.ts). Shared by the changeset and cleanup builders. */
+export const MIN_COVER_BYTES = 2048;
+
 export type HeadCheckOptions = {
 	minBytes?: number;
 	timeoutMs?: number;

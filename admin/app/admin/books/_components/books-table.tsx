@@ -2,6 +2,8 @@
 
 import { deleteBook, patchBook } from '@/app/_actions/books';
 import { fillEmpty, googleBooksStatus, refetchCover } from '@/app/_actions/bulk';
+import { recheckWiki } from '@/app/_actions/enrichment';
+import { EnrichmentStatusBadge } from '@/components/enrichment-status-badge';
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -30,6 +32,11 @@ import { cn } from '@/lib/utils';
 import { isValidIsbn } from '@app/isbn';
 import type { Database } from '@app/types';
 import {
+	ENRICHMENT_STATUSES,
+	ENRICHMENT_STATUS_LABELS,
+	type EnrichmentStatus,
+} from '@app/wookieepedia/enrichment-status';
+import {
 	type CellContext,
 	type Column,
 	type RowData,
@@ -50,6 +57,7 @@ import {
 	ImageDown,
 	ListChecks,
 	Loader2,
+	RefreshCw,
 	Trash2,
 	Wand2,
 } from 'lucide-react';
@@ -80,7 +88,24 @@ export type BookListRow = Pick<
 	| 'cover_image'
 >;
 
-type RowWithIssues = BookListRow & { issues: IssueKey[] };
+type RowWithIssues = BookListRow & {
+	issues: IssueKey[];
+	/** null when the enrichment status couldn't be derived (DB/table error). */
+	enrichment: EnrichmentStatus | null;
+	enrichmentReason: string | null;
+};
+export type CatalogRow = RowWithIssues;
+
+export type EnrichmentSummary = {
+	counts: Record<EnrichmentStatus, number>;
+	/** Why statuses are missing (e.g. book_enrichment unreadable on this target). */
+	error: string | null;
+	/** Whether the live wiki health check ran (missing/redirect flags need it). */
+	wikiChecked: boolean;
+	/** data/enrichment-pins.json readable (false on the hosted deploy). */
+	pinsAvailable: boolean;
+	pinErrors: number;
+};
 
 type EditableField = 'title' | 'publisher' | 'era' | 'date_published';
 
@@ -402,6 +427,20 @@ const columns = [
 		header: 'Era',
 		cell: editableCell('era', { nullable: true }),
 	}),
+	columnHelper.accessor('enrichment', {
+		header: ({ column }) => <SortHeader column={column} label="Wiki" />,
+		sortUndefined: 'last',
+		cell: ({ getValue, row }) => {
+			const status = getValue();
+			return status ? (
+				<Link href={`/admin/books/${row.original.slug}#enrichment`} className="rounded-full">
+					<EnrichmentStatusBadge status={status} reason={row.original.enrichmentReason} />
+				</Link>
+			) : (
+				<span className="text-muted-foreground text-xs">—</span>
+			);
+		},
+	}),
 	columnHelper.display({
 		id: 'actions',
 		header: '',
@@ -426,7 +465,12 @@ const columns = [
 export function BooksTable({
 	rows,
 	counts,
-}: { rows: RowWithIssues[]; counts: Record<IssueKey, number> }) {
+	enrichment,
+}: {
+	rows: RowWithIssues[];
+	counts: Record<IssueKey, number>;
+	enrichment: EnrichmentSummary;
+}) {
 	const router = useRouter();
 	const [data, setData] = useState<RowWithIssues[]>(rows);
 	const [optimisticData, applyOptimistic] = useOptimistic(
@@ -438,13 +482,39 @@ export function BooksTable({
 	const [globalFilter, setGlobalFilter] = useState('');
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 	const [activeIssue, setActiveIssue] = useState<IssueKey | null>(null);
+	const [activeEnrichment, setActiveEnrichment] = useState<EnrichmentStatus | null>(null);
+	const [rechecking, startRecheck] = useTransition();
 	const [bulk, setBulk] = useState<{ label: string; done: number; total: number } | null>(null);
 
 	const visibleData = useMemo(
 		() =>
-			activeIssue ? optimisticData.filter((r) => r.issues.includes(activeIssue)) : optimisticData,
-		[optimisticData, activeIssue],
+			activeIssue || activeEnrichment
+				? optimisticData.filter(
+						(r) =>
+							(!activeIssue || r.issues.includes(activeIssue)) &&
+							(!activeEnrichment || r.enrichment === activeEnrichment),
+					)
+				: optimisticData,
+		[optimisticData, activeIssue, activeEnrichment],
 	);
+	const activeLabel = [
+		activeIssue ? ISSUE_DEFS.find((d) => d.key === activeIssue)?.label : null,
+		activeEnrichment ? `Wiki · ${ENRICHMENT_STATUS_LABELS[activeEnrichment]}` : null,
+	]
+		.filter(Boolean)
+		.join(' + ');
+
+	function recheck() {
+		startRecheck(async () => {
+			const res = await recheckWiki();
+			if (!res.ok) {
+				toast.error(res.error.message);
+				return;
+			}
+			router.refresh();
+			toast.success('Wiki status re-checked');
+		});
+	}
 
 	const updateField = (id: string, field: EditableField, value: string | null) => {
 		startTransition(async () => {
@@ -535,10 +605,14 @@ export function BooksTable({
 			<aside className="w-52 shrink-0 space-y-1">
 				<button
 					type="button"
-					onClick={() => setActiveIssue(null)}
+					onClick={() => {
+						setActiveIssue(null);
+						setActiveEnrichment(null);
+					}}
+					aria-pressed={activeIssue === null && activeEnrichment === null}
 					className={cn(
 						'flex w-full items-center justify-between rounded-md px-3 py-1.5 text-sm hover:bg-secondary/60',
-						activeIssue === null && 'bg-secondary font-medium',
+						activeIssue === null && activeEnrichment === null && 'bg-secondary font-medium',
 					)}
 				>
 					All books
@@ -552,6 +626,7 @@ export function BooksTable({
 						key={def.key}
 						type="button"
 						onClick={() => setActiveIssue((cur) => (cur === def.key ? null : def.key))}
+						aria-pressed={activeIssue === def.key}
 						className={cn(
 							'flex w-full items-center justify-between rounded-md px-3 py-1.5 text-sm hover:bg-secondary/60',
 							activeIssue === def.key && 'bg-secondary font-medium',
@@ -563,6 +638,59 @@ export function BooksTable({
 						</Badge>
 					</button>
 				))}
+
+				<div className="flex items-center justify-between px-3 pt-4 pb-1">
+					<span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+						Wookieepedia
+					</span>
+					<Button
+						variant="ghost"
+						size="sm"
+						className="-mr-2 h-6 px-2 text-muted-foreground text-xs"
+						onClick={recheck}
+						disabled={rechecking}
+						aria-label="Re-check Wookieepedia page status"
+						title="Re-check every mapped page (cached 6 h)"
+					>
+						<RefreshCw className={cn('size-3', rechecking && 'animate-spin')} />
+						Recheck
+					</Button>
+				</div>
+				{enrichment.error ? (
+					<p className="px-3 text-destructive text-xs">{enrichment.error}</p>
+				) : (
+					ENRICHMENT_STATUSES.map((status) => (
+						<button
+							key={status}
+							type="button"
+							onClick={() => setActiveEnrichment((cur) => (cur === status ? null : status))}
+							aria-pressed={activeEnrichment === status}
+							className={cn(
+								'flex w-full items-center justify-between rounded-md px-3 py-1.5 text-sm hover:bg-secondary/60',
+								activeEnrichment === status && 'bg-secondary font-medium',
+							)}
+						>
+							{ENRICHMENT_STATUS_LABELS[status]}
+							<Badge variant="outline" className="ml-2 tabular-nums">
+								{enrichment.counts[status]}
+							</Badge>
+						</button>
+					))
+				)}
+				{!enrichment.error &&
+					(!enrichment.wikiChecked || !enrichment.pinsAvailable || enrichment.pinErrors > 0) && (
+						<ul className="space-y-1 px-3 pt-1 text-muted-foreground text-xs">
+							{!enrichment.wikiChecked && (
+								<li>Wiki unreachable: missing/redirect pages not checked.</li>
+							)}
+							{!enrichment.pinsAvailable && <li>Pin file not on this deploy: pins not shown.</li>}
+							{enrichment.pinErrors > 0 && (
+								<li className="text-destructive">
+									data/enrichment-pins.json has {enrichment.pinErrors} invalid pin(s).
+								</li>
+							)}
+						</ul>
+					)}
 			</aside>
 
 			<div className="min-w-0 flex-1 space-y-3">
@@ -575,9 +703,7 @@ export function BooksTable({
 					/>
 					<span className="text-muted-foreground text-sm tabular-nums">
 						{table.getFilteredRowModel().rows.length}
-						{activeIssue
-							? ` · ${ISSUE_DEFS.find((d) => d.key === activeIssue)?.label}`
-							: ` of ${data.length}`}
+						{activeLabel ? ` · ${activeLabel}` : ` of ${data.length}`}
 					</span>
 				</div>
 

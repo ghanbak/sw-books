@@ -34,6 +34,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      book_enrichment: {
+        Row: {
+          appearances: Json
+          attribution: string | null
+          book_id: string
+          content_hash: string
+          created_at: string
+          fetched_at: string
+          license: string
+          source_pageid: number
+          source_revision_id: number | null
+          source_title: string | null
+          source_url: string
+          timeline_notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          appearances?: Json
+          attribution?: string | null
+          book_id: string
+          content_hash: string
+          created_at?: string
+          fetched_at: string
+          license?: string
+          source_pageid: number
+          source_revision_id?: number | null
+          source_title?: string | null
+          source_url: string
+          timeline_notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appearances?: Json
+          attribution?: string | null
+          book_id?: string
+          content_hash?: string
+          created_at?: string
+          fetched_at?: string
+          license?: string
+          source_pageid?: number
+          source_revision_id?: number | null
+          source_title?: string | null
+          source_url?: string
+          timeline_notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_enrichment_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: true
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       books: {
         Row: {
           author: string[]

@@ -1,6 +1,6 @@
-import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
-import { useFontPref } from "@/lib/font-prefs";
+import { useFontPref } from '@/lib/font-prefs';
 
 // Native tab bar — UIKit on iOS, Material 3 on Android. No custom styling: the
 // system renders its default (the floating Liquid Glass capsule on iOS 26+).
@@ -14,36 +14,36 @@ import { useFontPref } from "@/lib/font-prefs";
 // icons — add `drawable`/`md` icons or a VectorIcon family when we ship Android.
 
 export default function TabLayout() {
-  const { fontFamily } = useFontPref();
-  return (
-    <NativeTabs labelStyle={{ fontFamily }}>
-      <NativeTabs.Trigger name="archives">
-        <NativeTabs.Trigger.Icon sf={{ default: "pyramid", selected: "pyramid.fill" }} />
-        <NativeTabs.Trigger.Label>Archives</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
+	const { fontFamily } = useFontPref();
+	return (
+		<NativeTabs labelStyle={{ fontFamily }}>
+			<NativeTabs.Trigger name="archives">
+				<NativeTabs.Trigger.Icon sf={{ default: 'pyramid', selected: 'pyramid.fill' }} />
+				<NativeTabs.Trigger.Label>Archives</NativeTabs.Trigger.Label>
+			</NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="timeline">
-        <NativeTabs.Trigger.Icon
-          sf={{
-            default: "lines.measurement.horizontal",
-            selected: "lines.measurement.horizontal",
-          }}
-        />
-        <NativeTabs.Trigger.Label>Timeline</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
+			<NativeTabs.Trigger name="timeline">
+				<NativeTabs.Trigger.Icon
+					sf={{
+						default: 'lines.measurement.horizontal',
+						selected: 'lines.measurement.horizontal',
+					}}
+				/>
+				<NativeTabs.Trigger.Label>Timeline</NativeTabs.Trigger.Label>
+			</NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="library">
-        <NativeTabs.Trigger.Icon
-          sf={{ default: "rectangle.stack", selected: "rectangle.stack.fill" }}
-        />
-        <NativeTabs.Trigger.Label>Library</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
+			<NativeTabs.Trigger name="library">
+				<NativeTabs.Trigger.Icon
+					sf={{ default: 'rectangle.stack', selected: 'rectangle.stack.fill' }}
+				/>
+				<NativeTabs.Trigger.Label>Library</NativeTabs.Trigger.Label>
+			</NativeTabs.Trigger>
 
-      {/* biome-ignore lint/a11y/useSemanticElements: NativeTabsTabBarItemRole, not ARIA */}
-      <NativeTabs.Trigger name="search" role="search">
-        <NativeTabs.Trigger.Icon sf="magnifyingglass" />
-        <NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
+			{/* biome-ignore lint/a11y/useSemanticElements: NativeTabsTabBarItemRole, not ARIA */}
+			<NativeTabs.Trigger name="search" role="search">
+				<NativeTabs.Trigger.Icon sf="magnifyingglass" />
+				<NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
+			</NativeTabs.Trigger>
+		</NativeTabs>
+	);
 }

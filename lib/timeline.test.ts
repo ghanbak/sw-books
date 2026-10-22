@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Book } from '@/lib/hooks';
-import { eraLabel, groupBooksByYear } from './timeline';
+import {
+	RAIL_PITCH,
+	clampIndex,
+	eraLabel,
+	fractionalIndexForOrder,
+	groupBooksByYear,
+	indexAtScreenX,
+	railTranslateX,
+} from './timeline';
 
 function book(overrides: Partial<Book>): Book {
 	return {
@@ -55,5 +63,76 @@ describe('groupBooksByYear', () => {
 		expect(data.books.map((b) => b.title)).toEqual(['A', 'B', 'C']);
 		// the two same-date books map to the same group; the third to the next
 		expect(data.pageToGroup).toEqual([0, 0, 1]);
+	});
+
+	it('records each group’s firstPage (strictly increasing, indexes the group’s first book)', () => {
+		const data = groupBooksByYear([
+			book({ title: 'A', timeline_order: -100 }),
+			book({ title: 'B', timeline_order: -100 }),
+			book({ title: 'C', timeline_order: 5 }),
+			book({ title: 'D', timeline_order: 30 }),
+		]);
+		const firstPages = data.groups.map((g) => g.firstPage);
+		expect(firstPages).toEqual([0, 2, 3]);
+		for (let i = 1; i < firstPages.length; i++) {
+			expect(firstPages[i]).toBeGreaterThan(firstPages[i - 1] as number);
+		}
+		for (const g of data.groups) {
+			expect(data.books[g.firstPage]?.timeline_order).toBe(g.order);
+		}
+	});
+});
+
+describe('rail geometry', () => {
+	const W = 402;
+
+	it('indexAtScreenX ∘ railTranslateX is the identity at screen center (fractional k)', () => {
+		for (const k of [0, 1, 2.5, 7, 13.75]) {
+			expect(indexAtScreenX(W / 2, railTranslateX(W, k))).toBeCloseTo(k, 10);
+		}
+	});
+
+	it('resolves a tapped tick back to its own group index', () => {
+		const translateX = railTranslateX(W, 4); // group 4 centered under the hero
+		const tickX = translateX + (6 * RAIL_PITCH + RAIL_PITCH / 2); // group 6's on-screen tick
+		expect(Math.round(indexAtScreenX(tickX, translateX))).toBe(6);
+	});
+
+	it('clampIndex bounds to [0, count - 1]', () => {
+		expect(clampIndex(-3, 10)).toBe(0);
+		expect(clampIndex(99, 10)).toBe(9);
+		expect(clampIndex(4, 10)).toBe(4);
+	});
+});
+
+describe('fractionalIndexForOrder', () => {
+	// Notches at -100, 0, 50 → indices 0, 1, 2.
+	const groups = groupBooksByYear([
+		book({ title: 'A', timeline_order: -100 }),
+		book({ title: 'B', timeline_order: 0 }),
+		book({ title: 'C', timeline_order: 50 }),
+	]).groups;
+
+	it('returns the exact index for a date that matches a notch', () => {
+		expect(fractionalIndexForOrder(-100, groups)).toBe(0);
+		expect(fractionalIndexForOrder(0, groups)).toBe(1);
+		expect(fractionalIndexForOrder(50, groups)).toBe(2);
+	});
+
+	it('interpolates between the notches a date falls between', () => {
+		expect(fractionalIndexForOrder(-50, groups)).toBeCloseTo(0.5, 10);
+		expect(fractionalIndexForOrder(25, groups)).toBeCloseTo(1.5, 10);
+	});
+
+	it('clamps dates outside the catalog range to the first/last notch', () => {
+		expect(fractionalIndexForOrder(-9999, groups)).toBe(0);
+		expect(fractionalIndexForOrder(9999, groups)).toBe(2);
+	});
+
+	it('is safe for empty and single-notch rails', () => {
+		expect(fractionalIndexForOrder(5, [])).toBe(0);
+		const one = groupBooksByYear([book({ title: 'Solo', timeline_order: 7 })]).groups;
+		expect(fractionalIndexForOrder(-999, one)).toBe(0);
+		expect(fractionalIndexForOrder(999, one)).toBe(0);
 	});
 });

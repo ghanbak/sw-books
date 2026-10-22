@@ -13,8 +13,8 @@
  *   npx tsx scripts/apply-cover-replacements.ts
  */
 
-import { readFileSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 const CSV_PATH = resolve(__dirname, '..', 'data', 'books.csv');
 const REPLACEMENTS_PATH = resolve(__dirname, 'cover-replacements.json');
@@ -38,7 +38,8 @@ type CollisionFix = {
 const COLLISION_FIXES: CollisionFix[] = [
 	{
 		slugMarker: ',thrawn-ascendancy-lesser-evil,',
-		description: 'Thrawn Ascendancy: Lesser Evil was sharing Light of the Jedi ISBN (9780593157718)',
+		description:
+			'Thrawn Ascendancy: Lesser Evil was sharing Light of the Jedi ISBN (9780593157718)',
 		oldIsbn13: '9780593157718',
 		newIsbn13: '9780593158326',
 		oldAsinAnd10: '593157710',
@@ -52,7 +53,8 @@ const COLLISION_FIXES: CollisionFix[] = [
 	},
 	{
 		slugMarker: ',hand-of-thrawn-specter,',
-		description: 'Specter of the Past had the same bogus ISBN as I, Jedi — corrected to Bantam 1997 pb',
+		description:
+			'Specter of the Past had the same bogus ISBN as I, Jedi — corrected to Bantam 1997 pb',
 		oldIsbn13: '9780553572986',
 		newIsbn13: '9780553298048',
 	},
@@ -60,7 +62,10 @@ const COLLISION_FIXES: CollisionFix[] = [
 
 function main() {
 	const raw = readFileSync(CSV_PATH, 'utf-8');
-	const replacements = JSON.parse(readFileSync(REPLACEMENTS_PATH, 'utf-8')) as Record<string, Replacement>;
+	const replacements = JSON.parse(readFileSync(REPLACEMENTS_PATH, 'utf-8')) as Record<
+		string,
+		Replacement
+	>;
 	const audit = JSON.parse(readFileSync(AUDIT_PATH, 'utf-8')) as {
 		non_2xx: Array<{ slug: string; url: string }>;
 	};
@@ -94,7 +99,8 @@ function main() {
 
 	// Stage 2: collision fixes — scoped per line, multiple field updates.
 	const lines = patched.split('\n');
-	const collisionStatus: Array<{ fix: CollisionFix; state: 'applied' | 'already' | 'missing' }> = [];
+	const collisionStatus: Array<{ fix: CollisionFix; state: 'applied' | 'already' | 'missing' }> =
+		[];
 	for (const fix of COLLISION_FIXES) {
 		let found = false;
 		for (let i = 0; i < lines.length; i++) {

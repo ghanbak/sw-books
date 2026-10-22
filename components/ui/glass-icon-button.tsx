@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react-native';
+import { type SFSymbol, SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { tokens } from '@/constants/tokens';
@@ -7,13 +7,14 @@ import { GlassView, liquidGlassAvailable } from '@/lib/glass';
 const SIZE = 36;
 
 type Props = {
-	icon: LucideIcon;
+	/** SF Symbol name, e.g. `xmark`. */
+	icon: SFSymbol;
 	onPress: () => void;
 	accessibilityLabel: string;
 	/** Tints the icon with the primary accent (e.g. an active favorite). */
 	active?: boolean;
-	/** Fills the icon (e.g. a filled star when favorited). */
-	filled?: boolean;
+	/** Circle diameter. Default 36; 44 for sheet toolbars (iOS 27 kit). */
+	size?: number;
 };
 
 /**
@@ -21,14 +22,9 @@ type Props = {
  * circle when glass isn't available (iOS < 26, Android, Expo Go). Step 1 baseline;
  * enriched in the design-primitives step (reduce-transparency, container merging).
  */
-export function GlassIconButton({
-	icon: Icon,
-	onPress,
-	accessibilityLabel,
-	active,
-	filled,
-}: Props) {
+export function GlassIconButton({ icon, onPress, accessibilityLabel, active, size = SIZE }: Props) {
 	const iconColor = active ? tokens.accent.primary : tokens.text.primary;
+	const shape = size === SIZE ? null : { width: size, height: size, borderRadius: size / 2 };
 	return (
 		<Pressable
 			onPress={onPress}
@@ -36,14 +32,18 @@ export function GlassIconButton({
 			accessibilityRole="button"
 			accessibilityLabel={accessibilityLabel}
 			accessibilityState={{ selected: active }}
-			style={({ pressed }) => [styles.circle, pressed && styles.pressed]}
+			style={({ pressed }) => [styles.circle, shape, pressed && styles.pressed]}
 		>
 			{liquidGlassAvailable ? (
-				<GlassView style={[StyleSheet.absoluteFill, styles.glass]} />
+				<GlassView
+					style={[StyleSheet.absoluteFill, styles.glass, shape && { borderRadius: size / 2 }]}
+				/>
 			) : (
-				<View style={[StyleSheet.absoluteFill, styles.fallback]} />
+				<View
+					style={[StyleSheet.absoluteFill, styles.fallback, shape && { borderRadius: size / 2 }]}
+				/>
 			)}
-			<Icon size={18} color={iconColor} fill={filled ? iconColor : 'transparent'} strokeWidth={2} />
+			<SymbolView name={icon} size={Math.round(size / 2)} tintColor={iconColor} weight="medium" />
 		</Pressable>
 	);
 }

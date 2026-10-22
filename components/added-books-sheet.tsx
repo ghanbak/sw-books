@@ -1,4 +1,4 @@
-import { Check, X } from 'lucide-react-native';
+import { SymbolView } from 'expo-symbols';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -36,7 +36,7 @@ export function AddedBooksSheet({
 					accessibilityRole="button"
 					accessibilityLabel="Dismiss"
 				>
-					<X size={18} color={tokens.text.primary} strokeWidth={2} />
+					<SymbolView name="xmark" size={18} tintColor={tokens.text.primary} weight="medium" />
 				</Pressable>
 				<Text style={styles.title}>{title}</Text>
 				<Pressable
@@ -45,7 +45,12 @@ export function AddedBooksSheet({
 					accessibilityRole="button"
 					accessibilityLabel="Add to library"
 				>
-					<Check size={18} color={tokens.text.inverse} strokeWidth={2.5} />
+					<SymbolView
+						name="checkmark"
+						size={18}
+						tintColor={tokens.text.inverse}
+						weight="semibold"
+					/>
 				</Pressable>
 			</View>
 
