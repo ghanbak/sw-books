@@ -127,7 +127,7 @@ eas update --channel preview --message "…"
 
 **What needs a new build** (`eas build` → TestFlight → review): adding/upgrading a native module or the Expo SDK, changes to `app.json` native fields or `plugins/`, and edits to `patches/` (they touch native code).
 
-**Compatibility is automatic.** `app.json` sets `runtimeVersion: { policy: "fingerprint" }`: the runtime version is a hash of the native layer (native deps, config plugins, `patches/`). An update only reaches builds with the same fingerprint, so a JS update that depends on new native code can't land on an old binary and crash it — it simply waits for users to install the new build. Run `npm ci` before `eas build` / `eas update`, since the fingerprint is computed from your local `node_modules`.
+**Compatibility is automatic.** `app.json` sets `runtimeVersion: { policy: "fingerprint" }`: the runtime version is a hash of the native layer (native deps, config plugins, `patches/`). An update only reaches builds with the same fingerprint, so a JS update that depends on new native code can't land on an old binary and crash it — it simply waits for users to install the new build. Run `npm ci` before `eas build` / `eas update`, since the fingerprint is computed from your local `node_modules`. [fingerprint.config.js](fingerprint.config.js) leaves `package.json` scripts and `.gitignore` out of the hash, so tooling-only edits don't strand updates. Check compatibility with `eas fingerprint:compare --build-id <id>` before publishing.
 
 To roll back, republish a previous update to the channel (`eas update:republish`) or view history with `eas update:list`. Apple allows OTA for fixes and features, but not for changing the app's core purpose.
 
