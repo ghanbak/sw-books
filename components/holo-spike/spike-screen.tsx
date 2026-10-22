@@ -68,7 +68,7 @@ const TUNING_RANGES: { key: keyof Tuning; label: string; min: number; max: numbe
 	{ key: 'threshold', label: 'bloom threshold', min: 0, max: 1 },
 	{ key: 'edge', label: 'edge bloom', min: 0, max: 2 },
 	{ key: 'halo', label: 'face halo', min: 0, max: 0.5 },
-	{ key: 'emitter', label: 'emitter bloom', min: 0, max: 2 },
+	{ key: 'emitter', label: 'emitter bloom', min: 0, max: 4 },
 	{ key: 'edgeLight', label: 'edge light', min: 0, max: 1.5 },
 ];
 

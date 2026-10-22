@@ -81,13 +81,13 @@ export type Tuning = {
 };
 
 export const DEFAULT_TUNING: Tuning = {
-	strength: 0.7,
+	strength: 0.41,
 	radius: 0.5,
 	threshold: 0,
-	edge: 0.85,
-	halo: 0.01,
-	emitter: 1,
-	edgeLight: 0.27,
+	edge: 0.7,
+	halo: 0,
+	emitter: 2,
+	edgeLight: 0.16,
 };
 
 type FloatUniform = ReturnType<typeof makeFloat>;
