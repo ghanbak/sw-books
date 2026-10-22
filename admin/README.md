@@ -47,6 +47,10 @@ npm run admin            # → http://127.0.0.1:3100/books
   confirmation.
 - **`/admin/diff`** — review every field that differs from `data/`, then **Export to
   CSV**.
+- **Wookieepedia enrichment** — a **Wiki** status column + left-rail filter on
+  `/admin/books` (Enriched / Pinned / Flagged / No page), and a Wookieepedia card
+  on `/admin/books/[slug]` (mapped page, pageid, revision, `fetched_at`, counts,
+  timeline) with a **manual page pin** editor. See below.
 
 ## Export & verify
 
@@ -68,6 +72,24 @@ edits from disk. If an export looks wrong, recover with `git checkout data/`.
 
 > Don't hand-edit `data/books.csv` except for slug renames (slugs are read-only
 > in the tool). Everything else flows through the admin → export loop.
+
+## Wookieepedia pins
+
+The admin **never writes `book_enrichment`** (local or prod). It reads it from the
+selected DB target, read-only. A pin is a request in the git-tracked
+`data/enrichment-pins.json` (`slug → { pageid, title, note?, pinned_at }`):
+
+1. On a book's page, search Wookieepedia (title, pageid or wiki URL). Each result
+   shows redirect, `{{Book}}` infobox, `{{App}}` + entry count, timeline. Pages the
+   sync would refuse (missing, redirect, not a book, owned by another book) can't
+   be pinned.
+2. Commit `data/enrichment-pins.json`.
+3. `npm run catalog:enrich -- --production` (dry-run) → `--apply`.
+
+A pin on a book that already has a row is reported as a conflict and ignored until
+you run the sync with `--repin`. The status column's missing/redirect check is a
+cached `prop=info` call (6 h; **Recheck** in the rail refreshes it). Pins are
+read-only on the hosted deploy (no `data/` there).
 
 ## Troubleshooting
 

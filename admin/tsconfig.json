@@ -26,7 +26,8 @@
 			"@app/csv/*": ["../lib/csv/*"],
 			"@app/isbn": ["../lib/isbn.ts"],
 			"@app/result": ["../lib/result.ts"],
-			"@app/slug": ["../lib/slug.ts"]
+			"@app/slug": ["../lib/slug.ts"],
+			"@app/wookieepedia/*": ["../lib/wookieepedia/*"]
 		}
 	},
 	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
