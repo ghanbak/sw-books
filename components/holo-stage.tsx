@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { useIsFocused } from 'expo-router/react-navigation';
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
@@ -56,25 +56,20 @@ export function HoloStage({
 	const status = useHoloStatus();
 	const reduceMotion = useReduceMotion();
 	const [size, setSize] = useState<{ width: number; height: number } | null>(null);
-	const [focused, setFocused] = useState(true);
-	const [parked, setParked] = useState(false);
+	// Not useFocusEffect + a `true` default: native tabs mount screens that are never focused
+	// (and that hook only reports blur after a focus), so a hidden tab would render 3D at full rate.
+	const focused = useIsFocused();
+	// A stage that mounts unfocused stays parked (no device) until its screen is first shown.
+	const [parked, setParked] = useState(!focused);
 	const [appState, setAppState] = useState(AppState.currentState);
-	const focusedRef = useRef(true);
-
-	useFocusEffect(
-		useCallback(() => {
-			focusedRef.current = true;
-			setFocused(true);
-			setParked(false);
-			return () => {
-				focusedRef.current = false;
-				setFocused(false);
-			};
-		}, []),
-	);
+	const focusedRef = useRef(focused);
 
 	useEffect(() => {
-		if (focused) return;
+		focusedRef.current = focused;
+		if (focused) {
+			setParked(false);
+			return;
+		}
 		const timer = setTimeout(() => setParked(true), PARK_AFTER_MS);
 		return () => clearTimeout(timer);
 	}, [focused]);

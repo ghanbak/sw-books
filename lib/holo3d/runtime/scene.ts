@@ -69,8 +69,9 @@ const LOOK = {
 const SCANLINES = 25; // ≈ the 2D face's 12pt pitch on a 300pt card
 const CORNER = 0.04; // ≈ 8pt on a 200pt card
 
-/** sRGB token → linear THREE.Color (THREE parses rgba() RGB and ignores alpha). */
-const tokenColor = (value: string) => new Color(value);
+/** sRGB token → linear THREE.Color. Alpha is dropped up front (THREE ignores it, with a warning). */
+const tokenColor = (value: string) =>
+	new Color(value.replace(/^rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)$/, 'rgb($1,$2,$3)'));
 
 /** Frame-driven clock + flicker, set from the CPU so Reduce Motion can freeze them. */
 export type SceneClock = {
