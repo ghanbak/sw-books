@@ -380,6 +380,16 @@ npx expo install @types/three@0.186.0 -- --save-dev --save-exact
 **Output:** measurements are appended to the research doc. Go/no-go with the user.
 
 **Carrier build** (after a go, with the user's approval to submit):
+
+> **Carrier branch prepared (2026-10-28):** `claude/holo-carrier-1.4.0` = `main` (1.3.0) plus the deps/config commit only (no spike, no 3D screens). Local iOS fingerprints (`npx expo-updates fingerprint:generate --platform ios`, clean worktrees):
+> - carrier `b8279622809f5f809490746ccd16370285d61937`
+> - full feature branch `b8279622809f5f809490746ccd16370285d61937`, **identical**, so every Phase 1–3 change ships OTA onto the carrier
+> - `main` / 1.3.0 `6dcc9ab86d5ab4e15bff2bc6cca85e3f27e3c452`, **different**, so 1.3.0 binaries never receive the 3D updates
+>
+> Still to do at cut time:
+> - bump `version` to 1.4.0
+> - merge in any other 1.4.0 work
+> - re-run the compare against the EAS build id
 1. The spike route stays env-gated off. No shipped screen imports the 3D runtime; the app is visually identical to 1.3.0.
 2. `npm ci` → `eas build --profile production` (plus `--profile preview` for the OTA test bed: same native layer, `preview` channel) → TestFlight smoke test (app launches, 2D heroes unchanged) → submit 1.4.0 for review.
 3. **Record the carrier fingerprint and build id** in the research doc. Every later update is compared against it.
