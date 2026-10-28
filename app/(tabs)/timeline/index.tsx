@@ -1,4 +1,5 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -20,6 +21,7 @@ import { TimelineRail } from '@/components/timeline-rail';
 import { CanonBadge } from '@/components/ui/canon-badge';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { useReduceMotion } from '@/hooks/useAccessibility';
 import { getCoverColor } from '@/lib/cover';
 import { cardRect } from '@/lib/holo3d/pager';
 import { useHoloStatus } from '@/lib/holo3d/status';
@@ -58,6 +60,7 @@ export default function TimelineScreen() {
 	const listRef = useRef<FlashListRef<Book>>(null);
 	const scrollX = useSharedValue(0);
 	const holoStatus = useHoloStatus();
+	const reduceMotion = useReduceMotion();
 	const show3D = holoStatus.kind === 'available' && stageReady;
 
 	// The Timeline shows the whole chronology — canon/legends is signalled per-hero by a
@@ -104,7 +107,11 @@ export default function TimelineScreen() {
 				<Pressable
 					style={[styles.card, { left: rect.x, top: rect.y, width: coverW, height: coverH }]}
 					onPress={() => router.push(`/book/${item.id}`)}
-					onPressIn={() => setPressedPage(index)}
+					onPressIn={() => {
+						setPressedPage(index);
+						// The 3D press brighten is subtle; under Reduce Motion also confirm by touch.
+						if (reduceMotion) Haptics.selectionAsync();
+					}}
 					onPressOut={() => setPressedPage(null)}
 					accessibilityRole="button"
 					accessibilityLabel={`${item.title} by ${item.author.join(', ')}`}
@@ -136,7 +143,7 @@ export default function TimelineScreen() {
 				</Pressable>
 			</View>
 		),
-		[width, listHeight, rect.x, rect.y, coverW, coverH, show3D, router],
+		[width, listHeight, rect.x, rect.y, coverW, coverH, show3D, reduceMotion, router],
 	);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
