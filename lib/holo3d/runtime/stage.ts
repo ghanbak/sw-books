@@ -29,7 +29,10 @@ export type StageOptions = {
 	/** Pager page width (points) and live horizontal offset. */
 	pageWidth?: number;
 	getScrollX?: () => number;
+	/** First frame presented with the active cover settled (uploaded, failed, or none). */
 	onFirstFrame?: () => void;
+	/** A cover failed to fetch/decode/upload — the card shows its tinted fallback. */
+	onCoverFailed?: (index: number) => void;
 	onError?: (reason: 'init' | 'frame') => void;
 };
 
@@ -46,6 +49,8 @@ export type HoloStageController = {
 
 /** A scroll offset change within this window counts as "scrolling" — no uploads then. */
 const SCROLL_SETTLE_MS = 150;
+/** Report ready after this long even if the active cover is still loading (slow network). */
+const READY_TIMEOUT_MS = 1500;
 
 export function createHoloStage(opts: StageOptions): HoloStageController {
 	const { context, device, mode } = opts;
@@ -71,10 +76,17 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 	let wpp = 0;
 	let lastScrollX = Number.NaN;
 	let lastScrollChange = 0;
-	let firstFrame = true;
+	let firstPresentAt = 0;
+	let readyReported = false;
 
 	const inWindow = (index: number) =>
 		mode === 'single' ? index === 0 : Math.abs(index - activePage) <= 1;
+
+	const markFailed = (index: number) => {
+		failed.add(index);
+		dirty = true;
+		opts.onCoverFailed?.(index);
+	};
 
 	const refreshWindow = () => {
 		const wanted =
@@ -85,6 +97,8 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 				textures.delete(index);
 			}
 		}
+		// A failure is retried on the next window visit (fetch failures aren't cached).
+		for (const index of failed) if (!wanted.includes(index)) failed.delete(index);
 		const gen = generation;
 		for (const index of wanted) {
 			const uri = books[index]?.coverUri;
@@ -92,7 +106,7 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 			loading.add(index);
 			decodeCover(uri)
 				.then((bitmap) => {
-					loading.delete(index);
+					if (gen === generation) loading.delete(index);
 					if (disposed || gen !== generation || !inWindow(index)) {
 						bitmap.close();
 						return;
@@ -100,9 +114,10 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 					ready.push({ index, generation: gen, bitmap });
 				})
 				.catch(() => {
-					loading.delete(index);
 					// 404 / decode failure → the card keeps its tinted fallback (and RN title overlay).
-					if (gen === generation) failed.add(index);
+					if (gen !== generation || disposed) return;
+					loading.delete(index);
+					markFailed(index);
 				});
 		}
 		dirty = true;
@@ -122,8 +137,19 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 			item.bitmap.close();
 			return false;
 		}
-		textures.set(item.index, uploadCover(renderer, item.bitmap));
+		try {
+			textures.set(item.index, uploadCover(renderer, item.bitmap));
+		} catch {
+			// One bad cover shouldn't turn 3D off for the session — fall back for this card only.
+			markFailed(item.index);
+		}
 		return true;
+	};
+
+	/** The cover the user is looking at has resolved one way or another. */
+	const activeSettled = () => {
+		const index = mode === 'single' ? 0 : activePage;
+		return !books[index]?.coverUri || textures.has(index) || failed.has(index);
 	};
 
 	const layoutCards = (scene: HoloScene, now: number) => {
@@ -172,15 +198,23 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 			layoutCards(holo, now);
 			if (uploadOne(now)) dirty = true;
 			// Reduce Motion: a still image — only redraw when something actually changed.
-			if (!dirty && !firstFrame) return;
+			// Until ready is reported, keep drawing so the settle check (and timeout) runs.
+			if (!dirty && readyReported) return;
 			dirty = false;
 			holo.pipeline.render();
 			context.present();
-			if (firstFrame) {
-				firstFrame = false;
-				void device.queue.onSubmittedWorkDone().then(() => {
-					if (!disposed) opts.onFirstFrame?.();
-				});
+			if (!readyReported) {
+				if (firstPresentAt === 0) firstPresentAt = now;
+				// Don't swap HoloFace (cover already showing) for a cover-less tint: wait for the cover.
+				if (activeSettled() || now - firstPresentAt > READY_TIMEOUT_MS) {
+					readyReported = true;
+					device.queue
+						.onSubmittedWorkDone()
+						.then(() => {
+							if (!disposed) opts.onFirstFrame?.();
+						})
+						.catch(() => {});
+				}
 			}
 		} catch (error) {
 			console.warn(`[holo3d] frame failed: ${error instanceof Error ? error.message : error}`);

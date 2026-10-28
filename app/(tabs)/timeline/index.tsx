@@ -57,6 +57,8 @@ export default function TimelineScreen() {
 	const [listHeight, setListHeight] = useState(0);
 	const [stageReady, setStageReady] = useState(false);
 	const [pressedPage, setPressedPage] = useState<number | null>(null);
+	// Books whose cover failed to load in 3D — their tinted card needs the RN title overlay.
+	const [failedCovers, setFailedCovers] = useState<ReadonlySet<string>>(() => new Set());
 	const listRef = useRef<FlashListRef<Book>>(null);
 	const scrollX = useSharedValue(0);
 	const holoStatus = useHoloStatus();
@@ -78,6 +80,14 @@ export default function TimelineScreen() {
 	);
 
 	const activeGroup = data.pageToGroup[activePage] ?? 0;
+
+	const onCoverFailed = useCallback(
+		(index: number) => {
+			const id = data.books[index]?.id;
+			if (id) setFailedCovers((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
+		},
+		[data.books],
+	);
 
 	// Stable callback — FlashList rejects an onViewableItemsChanged that changes identity.
 	const onViewableItemsChanged = useRef(
@@ -118,7 +128,7 @@ export default function TimelineScreen() {
 				>
 					{show3D ? (
 						<>
-							{item.cover_image ? null : (
+							{item.cover_image && !failedCovers.has(item.id) ? null : (
 								<View style={styles.noCover}>
 									<Text numberOfLines={3} style={styles.noCoverTitle}>
 										{item.title}
@@ -143,7 +153,7 @@ export default function TimelineScreen() {
 				</Pressable>
 			</View>
 		),
-		[width, listHeight, rect.x, rect.y, coverW, coverH, show3D, reduceMotion, router],
+		[width, listHeight, rect.x, rect.y, coverW, coverH, show3D, failedCovers, reduceMotion, router],
 	);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
@@ -186,6 +196,7 @@ export default function TimelineScreen() {
 									scrollX={scrollX}
 									pressedPage={pressedPage}
 									onReadyChange={setStageReady}
+									onCoverFailed={onCoverFailed}
 								/>
 								<FlashList
 									ref={listRef}

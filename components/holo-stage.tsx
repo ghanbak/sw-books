@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 
@@ -26,8 +26,10 @@ type Props = {
 	pageWidth?: number;
 	scrollX?: SharedValue<number>;
 	pressedPage?: number | null;
-	/** Called with true on the first presented frame, false when the canvas goes away. */
+	/** True once the 3D card (with its cover) is on screen; false when the canvas goes away. */
 	onReadyChange?: (ready: boolean) => void;
+	/** A cover failed to load; the 3D card shows a tint, so callers show its title. */
+	onCoverFailed?: (index: number) => void;
 	style?: StyleProp<ViewStyle>;
 };
 
@@ -35,7 +37,7 @@ type Props = {
  * The 3D hologram stage (Timeline pager or detail hero). Owns layout, pausing and parking;
  * the canvas itself is lazy. Renders nothing when 3D is unavailable — callers show HoloFace.
  *
- * - Blurred (another screen/tab on top) → paused: no render/present.
+ * - Blurred (another screen/tab on top) or app inactive → paused: no render/present.
  * - Blurred for 30 s, or app backgrounded → parked: canvas + device disposed.
  */
 export function HoloStage({
@@ -48,6 +50,7 @@ export function HoloStage({
 	scrollX,
 	pressedPage = null,
 	onReadyChange,
+	onCoverFailed,
 	style,
 }: Props) {
 	const status = useHoloStatus();
@@ -55,13 +58,18 @@ export function HoloStage({
 	const [size, setSize] = useState<{ width: number; height: number } | null>(null);
 	const [focused, setFocused] = useState(true);
 	const [parked, setParked] = useState(false);
-	const [foreground, setForeground] = useState(AppState.currentState === 'active');
+	const [appState, setAppState] = useState(AppState.currentState);
+	const focusedRef = useRef(true);
 
 	useFocusEffect(
 		useCallback(() => {
+			focusedRef.current = true;
 			setFocused(true);
 			setParked(false);
-			return () => setFocused(false);
+			return () => {
+				focusedRef.current = false;
+				setFocused(false);
+			};
 		}, []),
 	);
 
@@ -73,20 +81,23 @@ export function HoloStage({
 
 	useEffect(() => {
 		const sub = AppState.addEventListener('change', (state) => {
-			const active = state === 'active';
-			setForeground(active);
-			if (!active) setParked(true);
-			else setParked(false);
+			setAppState(state);
+			// Backgrounded → park (release the device). Coming back only un-parks a focused stage:
+			// a blurred one stays parked and re-inits on focus.
+			if (state === 'background') setParked(true);
+			else if (state === 'active' && focusedRef.current) setParked(false);
 		});
 		return () => sub.remove();
 	}, []);
 
-	const mounted = status.kind === 'available' && size !== null && !parked && foreground;
-	useEffect(() => {
-		if (!mounted) onReadyChange?.(false);
-	}, [mounted, onReadyChange]);
-
-	const handleFirstFrame = useCallback(() => onReadyChange?.(true), [onReadyChange]);
+	// `inactive` (Control Center, app switcher, Face ID, call banners) only pauses — no teardown.
+	const mounted =
+		status.kind === 'available' && size !== null && !parked && appState !== 'background';
+	const handleReadyChange = useCallback(
+		(ready: boolean) => onReadyChange?.(ready),
+		[onReadyChange],
+	);
+	const handleCoverFailed = useCallback((index: number) => onCoverFailed?.(index), [onCoverFailed]);
 
 	if (status.kind === 'unavailable') return null;
 
@@ -94,6 +105,7 @@ export function HoloStage({
 		<View
 			pointerEvents="none"
 			accessible={false}
+			accessibilityElementsHidden
 			importantForAccessibility="no-hide-descendants"
 			style={[StyleSheet.absoluteFill, style]}
 			onLayout={(e) => {
@@ -116,9 +128,10 @@ export function HoloStage({
 						pageWidth={pageWidth}
 						scrollX={scrollX}
 						pressedPage={pressedPage}
-						paused={!focused}
+						paused={!focused || appState !== 'active'}
 						reduceMotion={reduceMotion}
-						onFirstFrame={handleFirstFrame}
+						onReadyChange={handleReadyChange}
+						onCoverFailed={handleCoverFailed}
 					/>
 				</Suspense>
 			) : null}

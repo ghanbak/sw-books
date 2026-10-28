@@ -24,8 +24,13 @@ export type HoloStageCanvasProps = {
 	pressedPage: number | null;
 	paused: boolean;
 	reduceMotion: boolean;
-	onFirstFrame: () => void;
+	/** True once the first frame (with the active cover settled) is on screen; false on unmount. */
+	onReadyChange: (ready: boolean) => void;
+	onCoverFailed: (index: number) => void;
 };
+
+/** Frames to wait for a non-zero layout before giving up on the context. */
+const CONTEXT_RETRY_FRAMES = 30;
 
 /**
  * The WebGPU canvas + its stage controller. The only module that imports three.js — loaded
@@ -44,13 +49,15 @@ export default function HoloStageCanvas(props: HoloStageCanvasProps) {
 	useEffect(() => {
 		let alive = true;
 		let raf = 0;
+		let retries = 0;
 		let controller: HoloStageController | null = null;
 
 		const start = async () => {
 			const context = ref.current?.getContext('webgpu');
 			if (!context) {
 				// Zero-size layout on the first frame — retry (react-native-webgpu docs).
-				raf = requestAnimationFrame(() => void start());
+				if (++retries > CONTEXT_RETRY_FRAMES) throw new Error('no webgpu context');
+				raf = requestAnimationFrame(launch);
 				return;
 			}
 			const device = await requestStageDevice();
@@ -70,7 +77,8 @@ export default function HoloStageCanvas(props: HoloStageCanvasProps) {
 				cardWidth: p.cardWidth,
 				pageWidth: p.pageWidth,
 				getScrollX: () => latest.current.scrollX?.get() ?? 0,
-				onFirstFrame: () => latest.current.onFirstFrame(),
+				onFirstFrame: () => latest.current.onReadyChange(true),
+				onCoverFailed: (index) => latest.current.onCoverFailed(index),
 				onError: (reason) => reportHoloUnavailable(reason),
 			});
 			controller.setBooks(p.books);
@@ -80,13 +88,20 @@ export default function HoloStageCanvas(props: HoloStageCanvasProps) {
 			if (p.paused) controller.pause();
 			controllerRef.current = controller;
 		};
-		void start().catch(() => reportHoloUnavailable('init'));
+		const launch = () => {
+			start().catch(() => {
+				if (alive) reportHoloUnavailable('init');
+			});
+		};
+		launch();
 
 		return () => {
 			alive = false;
 			cancelAnimationFrame(raf);
 			controller?.dispose();
 			controllerRef.current = null;
+			// Covers both parking and a `key` remount: callers fall back to HoloFace until the next frame.
+			latest.current.onReadyChange(false);
 		};
 	}, []);
 
