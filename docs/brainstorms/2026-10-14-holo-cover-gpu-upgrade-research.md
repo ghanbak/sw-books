@@ -79,6 +79,22 @@ Spike: `app/dev/holo-spike.tsx` + `components/holo-spike/`, built with `EXPO_PUB
   - Failed covers show the RN title and retry on the next window visit.
   - The context retry is capped.
   - One bad upload no longer disables 3D for the session.
+  - **Simulator QA fixes:**
+    - Focus now comes from `useIsFocused`. Native tabs mount never-focused screens, and the old `true` default rendered 3D in hidden tabs.
+    - The rail date label has a fixed line height. Its scrub growth was resizing the pager, which rebuilt the stage twice per scrub.
+- **Simulator acceptance (2026-10-28):**
+  - Passing:
+    - Archives unchanged
+    - Timeline 3D with covers
+    - tap → detail → back
+    - background and return
+    - Reduce Motion (identical frames 1.5 s apart)
+    - `EXPO_PUBLIC_HOLO_3D=0` fallback on both surfaces
+    - no-cover title overlay
+  - Not run: VoiceOver (labels verified in code only).
+  - Open issues:
+    1. After a long rail jump, the active card shows an empty tint for 1–3 s while its cover fetches.
+    2. The root `unstable_settings.anchor: '(tabs)'` mounts the whole tab tree twice at launch. This is pre-existing on `main`; the duplicate Timeline stays parked, so it costs no GPU.
 - **Device Release build** (iPhone 15 Pro, iOS 27.2): `.app` 74 MB (binary 30 MB, `main.jsbundle` 7.1 MB).
 - **Pending:**
   - G2, G3 and G7 on the device, and the 10-minute soak.
