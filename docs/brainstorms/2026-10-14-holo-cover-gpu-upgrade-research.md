@@ -2,7 +2,7 @@
 title: "Research: GPU/shader upgrade for the hologram cover (Timeline tab)"
 type: research
 date: 2026-10-14
-status: decided (2026-10-14) — WebGPU + three.js (option C)
+status: decided (2026-10-14) — WebGPU + three.js (option C); Phases 0–3 built (2026-10-28), device gates pending
 related:
   - components/holo-cover.tsx
   - app/(tabs)/timeline/index.tsx
@@ -67,6 +67,23 @@ Spike: `app/dev/holo-spike.tsx` + `components/holo-spike/`, built with `EXPO_PUB
 - **Env changes need a Metro cache clear:** `EXPO_PUBLIC_*` values are inlined at transform time, and the Metro cache key doesn't include them. Clear the cache after env changes, or a Release build ships stale values (this caused the `supabaseUrl is required` crash).
 - **Release builds drop `console.log`.** On-screen readouts are the reliable channel for spike measurements.
 - **CocoaPods needs a UTF-8 locale** (`LANG`/`LC_ALL`) in non-interactive shells.
+
+## Build status (2026-10-28)
+
+- **Phases 1–3 are built** on the branch and verified on the simulator: Timeline shared stage with tap-to-open, detail hero, the 2D projector hero removed, and the user-tuned selective bloom.
+- **Code review fixes:**
+  - `inactive` pauses the stage; only `background` parks it.
+  - A blurred stage stays parked after returning from background.
+  - Ready waits for the active cover, so `HoloFace` never swaps to a blank tint.
+  - A `key` remount reports not-ready.
+  - Failed covers show the RN title and retry on the next window visit.
+  - The context retry is capped.
+  - One bad upload no longer disables 3D for the session.
+- **Device Release build** (iPhone 15 Pro, iOS 27.2): `.app` 74 MB (binary 30 MB, `main.jsbundle` 7.1 MB).
+- **Pending:**
+  - G2, G3 and G7 on the device, and the 10-minute soak.
+  - G5 IPA delta: compare the 1.4.0 carrier archive against 1.3.0.
+  - Go/no-go with the user.
 
 ## Current state
 
