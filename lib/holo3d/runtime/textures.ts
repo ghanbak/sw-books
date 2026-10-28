@@ -1,5 +1,7 @@
 import { texture } from 'three/tsl';
 import {
+	DataTexture,
+	LinearFilter,
 	LinearMipmapLinearFilter,
 	MeshBasicNodeMaterial,
 	QuadMesh,
@@ -8,6 +10,8 @@ import {
 	Texture,
 	type WebGPURenderer,
 } from 'three/webgpu';
+
+import { starfield } from '@/lib/starfield';
 
 /**
  * Cover textures for the 3D stage.
@@ -88,4 +92,48 @@ export function uploadCover(renderer: WebGPURenderer, bitmap: ImageBitmap): Cove
 	bitmap.close();
 	target.texture.anisotropy = 2;
 	return { texture: target.texture, dispose: () => target.dispose() };
+}
+
+const SKY_W = 320;
+const SKY_H = 480;
+
+/**
+ * The no-cover face for the 3D card: the same deterministic stars as the 2D face
+ * (lib/starfield.ts), rasterized on the CPU (≈50 soft discs on black — well under a ms).
+ * `coverWidth` is the on-screen card width, so star counts match the HoloFace it replaces.
+ */
+export function makeStarfieldTexture(seed: string, coverWidth: number): CoverTexture {
+	const data = new Uint8Array(SKY_W * SKY_H * 4);
+	for (let i = 3; i < data.length; i += 4) data[i] = 255;
+	for (const star of starfield(seed, coverWidth)) {
+		const cx = star.x * SKY_W;
+		// DataTexture rows run bottom-up in UV space; the card samples top-down like the 2D face.
+		const cy = (1 - star.y) * SKY_H;
+		// A touch larger than the 2D dot: the hologram tint + 92% opacity dims small stars.
+		const radius = Math.max(1, star.r * SKY_W * 1.5);
+		const x0 = Math.max(0, Math.floor(cx - radius - 1));
+		const x1 = Math.min(SKY_W - 1, Math.ceil(cx + radius + 1));
+		const y0 = Math.max(0, Math.floor(cy - radius - 1));
+		const y1 = Math.min(SKY_H - 1, Math.ceil(cy + radius + 1));
+		for (let y = y0; y <= y1; y++) {
+			for (let x = x0; x <= x1; x++) {
+				const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+				const coverage = Math.min(1, Math.max(0, radius + 0.5 - d));
+				if (coverage <= 0) continue;
+				const v = Math.round(255 * coverage * star.a);
+				const o = (y * SKY_W + x) * 4;
+				if (v > data[o]) {
+					data[o] = v;
+					data[o + 1] = v;
+					data[o + 2] = v;
+				}
+			}
+		}
+	}
+	const sky = new DataTexture(data, SKY_W, SKY_H);
+	sky.colorSpace = SRGBColorSpace;
+	sky.magFilter = LinearFilter;
+	sky.minFilter = LinearFilter;
+	sky.needsUpdate = true;
+	return { texture: sky, dispose: () => sky.dispose() };
 }

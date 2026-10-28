@@ -14,7 +14,7 @@ import {
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HoloFace } from '@/components/holo-cover';
+import { HoloFace, NoCoverText } from '@/components/holo-cover';
 import { HoloStage, type StageBook } from '@/components/holo-stage';
 import { TabHeaderActions } from '@/components/tab-header-actions';
 import { TimelineRail } from '@/components/timeline-rail';
@@ -75,6 +75,7 @@ export default function TimelineScreen() {
 				key: b.id,
 				coverUri: b.cover_image,
 				fallbackColor: getCoverColor(b.title),
+				skySeed: b.title,
 			})),
 		[data.books],
 	);
@@ -129,14 +130,7 @@ export default function TimelineScreen() {
 					{show3D ? (
 						<>
 							{item.cover_image && !failedCovers.has(item.id) ? null : (
-								<View style={styles.noCover}>
-									<Text numberOfLines={3} style={styles.noCoverTitle}>
-										{item.title}
-									</Text>
-									<Text numberOfLines={1} style={styles.noCoverAuthor}>
-										{item.author.join(', ')}
-									</Text>
-								</View>
+								<NoCoverText title={item.title} author={item.author} width={coverW} />
 							)}
 							<CanonBadge canon={item.canon} style={styles.badge} />
 						</>
@@ -255,28 +249,6 @@ const styles = StyleSheet.create({
 		position: 'absolute',
 		top: 8,
 		left: 8,
-	},
-	noCover: {
-		position: 'absolute',
-		top: 0,
-		right: 0,
-		bottom: 0,
-		left: 0,
-		alignItems: 'center',
-		justifyContent: 'center',
-		padding: 12,
-	},
-	noCoverTitle: {
-		color: tokens.text.primary,
-		fontWeight: '700',
-		textAlign: 'center',
-		fontSize: 13,
-	},
-	noCoverAuthor: {
-		color: tokens.text.secondary,
-		textAlign: 'center',
-		fontSize: 10,
-		marginTop: 4,
 	},
 	empty: {
 		flex: 1,

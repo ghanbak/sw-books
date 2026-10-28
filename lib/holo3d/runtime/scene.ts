@@ -8,6 +8,7 @@ import {
 	length,
 	luminance,
 	max,
+	min,
 	mix,
 	mrt,
 	normalView,
@@ -82,7 +83,8 @@ const makeFloat = (v: number) => uniform(v);
 
 export type HoloCard = {
 	mesh: Mesh;
-	setCover: (cover: Texture | null) => void;
+	/** `sky` = the no-cover starfield: keeps its black (no projection floor) so stars read. */
+	setCover: (cover: Texture | null, kind?: 'cover' | 'sky') => void;
 	setFallbackColor: (hex: string) => void;
 	setFade: (opacity: number) => void;
 	setPressed: (pressed: boolean) => void;
@@ -93,6 +95,10 @@ function makeCard(clock: SceneClock): HoloCard {
 	placeholder.needsUpdate = true;
 	const coverNode = texture(placeholder);
 	const hasCover = uniform(0);
+	// Projection brightness floor: lifts a cover's blacks into the hologram blue. The starfield
+	// keeps its black sky.
+	const floor = uniform(0.3);
+	const isSky = uniform(0);
 	const fallback = uniform(new Color(tokens.badge.canon));
 	const fade = uniform(1);
 	const pressed = uniform(0);
@@ -100,9 +106,15 @@ function makeCard(clock: SceneClock): HoloCard {
 	// Rounded-rect SDF in card space → alpha mask + inner edge glow.
 	const p = uv().sub(0.5).mul(vec2(1, CARD_ASPECT));
 	const half = vec2(0.5 - CORNER, CARD_ASPECT / 2 - CORNER);
-	const dist = length(max(abs(p).sub(half), 0)).sub(CORNER);
+	const q = abs(p).sub(half);
+	const dist = length(max(q, 0)).sub(CORNER);
 	const mask = oneMinus(smoothstep(-0.004, 0.004, dist));
-	const edgeGlow = oneMinus(smoothstep(0, 0.07, dist.negate()));
+	// `dist` is a constant -CORNER inside the card, so this "edge" glow is really a cyan wash over
+	// the whole face — part of the tuned cover look. The starfield needs black, so it uses the
+	// exact interior distance (a true rim glow) instead.
+	const rimDist = dist.add(min(max(q.x, q.y), 0));
+	const rimGlow = oneMinus(smoothstep(0, 0.07, rimDist.negate()));
+	const edgeGlow = mix(oneMinus(smoothstep(0, 0.07, dist.negate())), rimGlow, isSky);
 
 	// Luminosity-style projection: keep the cover's brightness, take the hologram's hue.
 	const lum = luminance(coverNode.rgb);
@@ -110,7 +122,7 @@ function makeCard(clock: SceneClock): HoloCard {
 		color(tokenColor(tokens.holo.tintBottom)),
 		color(tokenColor(tokens.holo.tintTop)),
 		lum,
-	).mul(lum.mul(0.9).add(0.3));
+	).mul(lum.mul(0.9).add(floor));
 	const base = mix(fallback.mul(0.8), tinted, hasCover);
 
 	const scan = step(0.5, fract(uv().y.mul(SCANLINES).sub(clock.time.mul(0.12))));
@@ -132,9 +144,14 @@ function makeCard(clock: SceneClock): HoloCard {
 	const mesh = new Mesh(new PlaneGeometry(1, CARD_ASPECT), material);
 	return {
 		mesh,
-		setCover: (cover) => {
+		setCover: (cover, kind = 'cover') => {
 			coverNode.value = cover ?? placeholder;
 			hasCover.value = cover ? 1 : 0;
+			const sky = kind === 'sky';
+			floor.value = sky ? 0.02 : 0.3;
+			isSky.value = sky ? 1 : 0;
+			// Drawn after the additive beam, so the beam doesn't show through the black sky.
+			mesh.renderOrder = sky ? 1 : 0;
 		},
 		setFallbackColor: (hex) => {
 			fallback.value.set(hex);

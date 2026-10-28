@@ -4,7 +4,7 @@ import type { WebGPURenderer } from 'three/webgpu';
 import { RIG_LIFT, cardTransform, pageAt, windowIndices, worldPerPoint } from '../pager';
 import { createHoloRenderer, disposeHoloRenderer } from './gpu';
 import { type HoloScene, buildHoloScene } from './scene';
-import { type CoverTexture, decodeCover, uploadCover } from './textures';
+import { type CoverTexture, decodeCover, makeStarfieldTexture, uploadCover } from './textures';
 
 /**
  * Imperative controller for one hologram canvas — the only owner of three objects. React syncs
@@ -14,7 +14,14 @@ import { type CoverTexture, decodeCover, uploadCover } from './textures';
  * Owns its GPU device and destroys it on dispose (see gpu.ts: a shared device leaks renderers).
  */
 
-export type StageBook = { key: string; coverUri: string | null; fallbackColor: string };
+export type StageBook = {
+	key: string;
+	coverUri: string | null;
+	/** Tint while a cover loads. */
+	fallbackColor: string;
+	/** Seeds the no-cover starfield (the title, matching the 2D face). */
+	skySeed: string;
+};
 
 export type StageOptions = {
 	context: RNCanvasContext;
@@ -66,6 +73,8 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 	let pressedPage: number | null = null;
 
 	const textures = new Map<number, CoverTexture>();
+	/** Indices whose resident texture is a starfield (no cover, or the cover failed). */
+	const skies = new Set<number>();
 	const loading = new Set<number>();
 	const failed = new Set<number>();
 	const ready: { index: number; generation: number; bitmap: ImageBitmap }[] = [];
@@ -82,27 +91,40 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 	const inWindow = (index: number) =>
 		mode === 'single' ? index === 0 : Math.abs(index - activePage) <= 1;
 
+	const setSky = (index: number) => {
+		const book = books[index];
+		if (!book || textures.has(index)) return;
+		textures.set(index, makeStarfieldTexture(book.skySeed, opts.cardWidth));
+		skies.add(index);
+		dirty = true;
+	};
+
 	const markFailed = (index: number) => {
 		failed.add(index);
-		dirty = true;
+		setSky(index);
 		opts.onCoverFailed?.(index);
+	};
+
+	const dropTexture = (index: number) => {
+		textures.get(index)?.dispose();
+		textures.delete(index);
+		skies.delete(index);
 	};
 
 	const refreshWindow = () => {
 		const wanted =
 			mode === 'single' ? (books.length ? [0] : []) : windowIndices(activePage, books.length);
-		for (const [index, cover] of textures) {
-			if (!wanted.includes(index)) {
-				cover.dispose();
-				textures.delete(index);
-			}
-		}
+		for (const index of [...textures.keys()]) if (!wanted.includes(index)) dropTexture(index);
 		// A failure is retried on the next window visit (fetch failures aren't cached).
 		for (const index of failed) if (!wanted.includes(index)) failed.delete(index);
 		const gen = generation;
 		for (const index of wanted) {
 			const uri = books[index]?.coverUri;
-			if (!uri || textures.has(index) || loading.has(index) || failed.has(index)) continue;
+			if (!uri) {
+				setSky(index);
+				continue;
+			}
+			if (textures.has(index) || loading.has(index) || failed.has(index)) continue;
 			loading.add(index);
 			decodeCover(uri)
 				.then((bitmap) => {
@@ -156,7 +178,7 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 		if (mode === 'single') {
 			const card = scene.cards[0];
 			card.mesh.visible = books.length > 0;
-			card.setCover(textures.get(0)?.texture ?? null);
+			card.setCover(textures.get(0)?.texture ?? null, skies.has(0) ? 'sky' : 'cover');
 			if (books[0]) card.setFallbackColor(books[0].fallbackColor);
 			return;
 		}
@@ -179,7 +201,7 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 			card.mesh.position.x = t.offset * wpp;
 			card.mesh.rotation.y = t.rotationY;
 			card.setFade(t.opacity);
-			card.setCover(textures.get(index)?.texture ?? null);
+			card.setCover(textures.get(index)?.texture ?? null, skies.has(index) ? 'sky' : 'cover');
 			card.setFallbackColor(book.fallbackColor);
 			card.setPressed(pressedPage === index);
 		});
@@ -259,6 +281,7 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 			books = next;
 			for (const cover of textures.values()) cover.dispose();
 			textures.clear();
+			skies.clear();
 			loading.clear();
 			failed.clear();
 			dropReady();

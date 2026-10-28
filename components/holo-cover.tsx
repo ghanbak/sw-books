@@ -1,12 +1,12 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { CanonBadge } from '@/components/ui/canon-badge';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
-import { getCoverColor } from '@/lib/cover';
+import { MIN_STAR_RADIUS_PT, noCoverType, starfield } from '@/lib/starfield';
 
 type HoloCoverProps = {
 	coverUri: string | null;
@@ -51,7 +51,7 @@ export function HoloCover({
 	);
 }
 
-/** The cover image, or a deterministic colored fallback with the title/author. */
+/** The cover image, or the starfield no-cover face with the title/author. */
 function CoverFace({
 	coverUri,
 	title,
@@ -68,19 +68,9 @@ function CoverFace({
 	const [errored, setErrored] = useState(false);
 	if (!coverUri || errored) {
 		return (
-			<View
-				style={[
-					styles.face,
-					styles.fallback,
-					{ width, height, backgroundColor: getCoverColor(title) },
-				]}
-			>
-				<Text numberOfLines={3} style={styles.fallbackTitle}>
-					{title}
-				</Text>
-				<Text numberOfLines={1} style={styles.fallbackAuthor}>
-					{author.join(', ')}
-				</Text>
+			<View style={[styles.face, styles.sky, { width, height }]}>
+				<Starfield seed={title} width={width} height={height} />
+				<NoCoverText title={title} author={author} width={width} />
 			</View>
 		);
 	}
@@ -148,6 +138,73 @@ export function HoloFace({
 			</View>
 			{/* Corner badge sits on the unclipped wrapper (full opacity, above the tinted clip). */}
 			{canon ? <CanonBadge canon={canon} style={styles.heroBadge} /> : null}
+		</View>
+	);
+}
+
+/** The no-cover sky: deterministic stars for this title (same stars the 3D stage draws). */
+function Starfield({ seed, width, height }: { seed: string; width: number; height: number }) {
+	const stars = useMemo(() => starfield(seed, width), [seed, width]);
+	return (
+		<View pointerEvents="none" style={StyleSheet.absoluteFill}>
+			{stars.map((s, i) => {
+				const radius = Math.max(MIN_STAR_RADIUS_PT, s.r * width);
+				return (
+					<View
+						// biome-ignore lint/suspicious/noArrayIndexKey: fixed, never-reordered list
+						key={i}
+						style={[
+							styles.star,
+							{
+								left: s.x * width - radius,
+								top: s.y * height - radius,
+								width: radius * 2,
+								height: radius * 2,
+								borderRadius: radius,
+								opacity: s.a,
+							},
+						]}
+					/>
+				);
+			})}
+		</View>
+	);
+}
+
+/**
+ * Title and author on a no-cover face: the title's last line sits on the cover's horizontal
+ * center line, the author is centered at the bottom. Fills its (cover-sized) parent — also
+ * overlaid on the 3D stage's starfield card, which can't draw text itself.
+ */
+export function NoCoverText({
+	title,
+	author,
+	width,
+}: {
+	title: string;
+	author: string[];
+	width: number;
+}) {
+	const type = noCoverType(width);
+	return (
+		<View pointerEvents="none" style={StyleSheet.absoluteFill}>
+			<View style={[styles.titleBox, { paddingHorizontal: type.inset }]}>
+				<Text
+					numberOfLines={4}
+					style={[styles.noCoverTitle, { fontSize: type.title, lineHeight: type.title * 1.15 }]}
+				>
+					{title}
+				</Text>
+			</View>
+			<Text
+				numberOfLines={1}
+				style={[
+					styles.noCoverAuthor,
+					{ fontSize: type.author, bottom: type.bottom, left: type.inset, right: type.inset },
+				]}
+			>
+				{author.join(', ')}
+			</Text>
 		</View>
 	);
 }
@@ -226,22 +283,31 @@ const styles = StyleSheet.create({
 		height: 2,
 		backgroundColor: tokens.holo.scanline,
 	},
-	fallback: {
-		justifyContent: 'center',
-		alignItems: 'center',
-		padding: 12,
+	sky: {
+		backgroundColor: tokens.noCover.sky,
 	},
-	fallbackTitle: {
+	star: {
+		position: 'absolute',
+		backgroundColor: tokens.noCover.star,
+	},
+	// Top half of the cover; the title is bottom-aligned in it, so its last line ends at center.
+	titleBox: {
+		position: 'absolute',
+		top: 0,
+		left: 0,
+		right: 0,
+		height: '50%',
+		justifyContent: 'flex-end',
+	},
+	noCoverTitle: {
 		color: tokens.text.primary,
 		fontWeight: '700',
 		textAlign: 'center',
-		fontSize: 13,
 	},
-	fallbackAuthor: {
+	noCoverAuthor: {
+		position: 'absolute',
 		color: tokens.text.secondary,
 		textAlign: 'center',
-		fontSize: 10,
-		marginTop: 4,
 	},
 	heroBadge: {
 		position: 'absolute',

@@ -9,7 +9,7 @@ import { BookDetailToolbar } from '@/components/book-detail-toolbar';
 import { BuyOnAmazonButton } from '@/components/buy-on-amazon-button';
 import { EnrichmentSection } from '@/components/enrichment/enrichment-section';
 import { ErrorState } from '@/components/error-state';
-import { HoloFace } from '@/components/holo-cover';
+import { HoloFace, NoCoverText } from '@/components/holo-cover';
 import { HoloStage, type StageBook } from '@/components/holo-stage';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
@@ -323,6 +323,10 @@ const styles = StyleSheet.create({
 		// + beam + emitter are centred) — keep the static face on the same spot as the 3D card.
 		top: Math.round((HERO_CARD_W * RIG_HEIGHT - HERO_CARD_W * 1.5) / 2 - HERO_CARD_W * RIG_LIFT),
 	},
+	heroText: {
+		width: HERO_CARD_W,
+		height: HERO_CARD_W * 1.5,
+	},
 	synopsis: {
 		fontSize: 14,
 		lineHeight: 20,
@@ -387,10 +391,20 @@ const styles = StyleSheet.create({
 function DetailHero({ book }: { book: Book }) {
 	const status = useHoloStatus();
 	const [stageReady, setStageReady] = useState(false);
+	// No cover, or it failed to load in 3D: the stage draws a starfield, the title goes on top.
+	const [coverFailed, setCoverFailed] = useState(false);
 	const stageBooks = useMemo<StageBook[]>(
-		() => [{ key: book.id, coverUri: book.cover_image, fallbackColor: getCoverColor(book.title) }],
+		() => [
+			{
+				key: book.id,
+				coverUri: book.cover_image,
+				fallbackColor: getCoverColor(book.title),
+				skySeed: book.title,
+			},
+		],
 		[book.id, book.cover_image, book.title],
 	);
+	const onCoverFailed = useCallback(() => setCoverFailed(true), []);
 	const show3D = status.kind === 'available' && stageReady;
 	return (
 		<View style={styles.hero}>
@@ -400,8 +414,15 @@ function DetailHero({ book }: { book: Book }) {
 				cardWidth={HERO_CARD_W}
 				pixelRatioCap={2}
 				onReadyChange={setStageReady}
+				onCoverFailed={onCoverFailed}
 			/>
-			{show3D ? null : (
+			{show3D ? (
+				book.cover_image && !coverFailed ? null : (
+					<View pointerEvents="none" style={[styles.heroFace, styles.heroText]}>
+						<NoCoverText title={book.title} author={book.author} width={HERO_CARD_W} />
+					</View>
+				)
+			) : (
 				<View style={styles.heroFace}>
 					<HoloFace
 						coverUri={book.cover_image}
