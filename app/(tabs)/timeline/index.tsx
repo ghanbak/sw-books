@@ -15,7 +15,7 @@ import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HoloFace, NoCoverText } from '@/components/holo-cover';
-import { HoloStage, type StageBook } from '@/components/holo-stage';
+import { HoloStage, type StageBook, type StageFace } from '@/components/holo-stage';
 import { TabHeaderActions } from '@/components/tab-header-actions';
 import { TimelineRail } from '@/components/timeline-rail';
 import { CanonBadge } from '@/components/ui/canon-badge';
@@ -57,11 +57,10 @@ export default function TimelineScreen() {
 	const [listHeight, setListHeight] = useState(0);
 	const [stageReady, setStageReady] = useState(false);
 	const [pressedPage, setPressedPage] = useState<number | null>(null);
-	// Books whose cover failed to load in 3D — their tinted card needs the RN title overlay.
-	const [failedCovers, setFailedCovers] = useState<ReadonlySet<string>>(() => new Set());
-	// Books whose 3D card already shows its cover. Until then (e.g. right after a rail jump, while
-	// the cover fetches) the cell shows HoloFace over the 3D card's empty tint.
-	const [residentCovers, setResidentCovers] = useState<ReadonlySet<string>>(() => new Set());
+	// What each book's 3D card shows. No entry yet (e.g. right after a rail jump, while the cover
+	// fetches) → the cell shows HoloFace over the card's empty tint; `sky` (no cover, or it
+	// failed) → the title is overlaid, since 3D can't draw text.
+	const [faces, setFaces] = useState<ReadonlyMap<string, StageFace>>(() => new Map());
 	const listRef = useRef<FlashListRef<Book>>(null);
 	const scrollX = useSharedValue(0);
 	const holoStatus = useHoloStatus();
@@ -85,18 +84,14 @@ export default function TimelineScreen() {
 
 	const activeGroup = data.pageToGroup[activePage] ?? 0;
 
-	const onCoverFailed = useCallback(
-		(index: number) => {
-			const id = data.books[index]?.id;
-			if (id) setFailedCovers((prev) => (prev.has(id) ? prev : new Set(prev).add(id)));
-		},
-		[data.books],
-	);
-
-	const onResidentChange = useCallback(
-		(indices: number[]) => {
-			const ids = indices.flatMap((i) => data.books[i]?.id ?? []);
-			setResidentCovers(new Set(ids));
+	const onFacesChange = useCallback(
+		(stageFaces: ReadonlyMap<number, StageFace>) => {
+			const next = new Map<string, StageFace>();
+			for (const [index, face] of stageFaces) {
+				const id = data.books[index]?.id;
+				if (id) next.set(id, face);
+			}
+			setFaces(next);
 		},
 		[data.books],
 	);
@@ -125,8 +120,7 @@ export default function TimelineScreen() {
 
 	const renderItem = useCallback(
 		({ item, index }: { item: Book; index: number }) => {
-			const coverPending =
-				!!item.cover_image && !failedCovers.has(item.id) && !residentCovers.has(item.id);
+			const face = faces.get(item.id);
 			return (
 				<View style={{ width, height: listHeight }}>
 					<Pressable
@@ -141,11 +135,11 @@ export default function TimelineScreen() {
 						accessibilityRole="button"
 						accessibilityLabel={`${item.title} by ${item.author.join(', ')}`}
 					>
-						{show3D && !coverPending ? (
+						{show3D && face ? (
 							<>
-								{item.cover_image && !failedCovers.has(item.id) ? null : (
+								{face === 'sky' ? (
 									<NoCoverText title={item.title} author={item.author} width={coverW} />
-								)}
+								) : null}
 								<CanonBadge canon={item.canon} style={styles.badge} />
 							</>
 						) : (
@@ -162,19 +156,7 @@ export default function TimelineScreen() {
 				</View>
 			);
 		},
-		[
-			width,
-			listHeight,
-			rect.x,
-			rect.y,
-			coverW,
-			coverH,
-			show3D,
-			failedCovers,
-			residentCovers,
-			reduceMotion,
-			router,
-		],
+		[width, listHeight, rect.x, rect.y, coverW, coverH, show3D, faces, reduceMotion, router],
 	);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
@@ -217,8 +199,7 @@ export default function TimelineScreen() {
 									scrollX={scrollX}
 									pressedPage={pressedPage}
 									onReadyChange={setStageReady}
-									onCoverFailed={onCoverFailed}
-									onResidentChange={onResidentChange}
+									onFacesChange={onFacesChange}
 								/>
 								<FlashList
 									ref={listRef}

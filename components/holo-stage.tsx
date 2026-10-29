@@ -4,7 +4,7 @@ import { AppState, type StyleProp, StyleSheet, View, type ViewStyle } from 'reac
 import type { SharedValue } from 'react-native-reanimated';
 
 import { useReduceMotion } from '@/hooks/useAccessibility';
-import type { StageBook } from '@/lib/holo3d/runtime/stage';
+import type { StageBook, StageFace } from '@/lib/holo3d/runtime/stage';
 import { useHoloStatus } from '@/lib/holo3d/status';
 
 // three.js + react-native-webgpu only load (and evaluate) when a stage first mounts.
@@ -13,7 +13,7 @@ const HoloStageCanvas = lazy(() => import('@/components/holo-stage-canvas'));
 /** After this long off-screen, the stage is disposed (re-inits on return, HoloFace meanwhile). */
 const PARK_AFTER_MS = 30_000;
 
-export type { StageBook };
+export type { StageBook, StageFace };
 
 type Props = {
 	mode: 'pager' | 'single';
@@ -28,10 +28,11 @@ type Props = {
 	pressedPage?: number | null;
 	/** True once the 3D card (with its cover) is on screen; false when the canvas goes away. */
 	onReadyChange?: (ready: boolean) => void;
-	/** A cover failed to load; the 3D card shows a tint, so callers show its title. */
-	onCoverFailed?: (index: number) => void;
-	/** Indices whose 3D card shows its cover (or starfield); the others still show a tint. */
-	onResidentChange?: (indices: number[]) => void;
+	/**
+	 * What each 3D card shows (index → cover or starfield). Cards missing from the map still show
+	 * a tint (cover loading); starfield cards need the title overlaid, since 3D can't draw text.
+	 */
+	onFacesChange?: (faces: ReadonlyMap<number, StageFace>) => void;
 	style?: StyleProp<ViewStyle>;
 };
 
@@ -52,8 +53,7 @@ export function HoloStage({
 	scrollX,
 	pressedPage = null,
 	onReadyChange,
-	onCoverFailed,
-	onResidentChange,
+	onFacesChange,
 	style,
 }: Props) {
 	const status = useHoloStatus();
@@ -95,10 +95,9 @@ export function HoloStage({
 		(ready: boolean) => onReadyChange?.(ready),
 		[onReadyChange],
 	);
-	const handleCoverFailed = useCallback((index: number) => onCoverFailed?.(index), [onCoverFailed]);
-	const handleResidentChange = useCallback(
-		(indices: number[]) => onResidentChange?.(indices),
-		[onResidentChange],
+	const handleFacesChange = useCallback(
+		(faces: ReadonlyMap<number, StageFace>) => onFacesChange?.(faces),
+		[onFacesChange],
 	);
 
 	if (status.kind === 'unavailable') return null;
@@ -133,8 +132,7 @@ export function HoloStage({
 						paused={!focused || appState !== 'active'}
 						reduceMotion={reduceMotion}
 						onReadyChange={handleReadyChange}
-						onCoverFailed={handleCoverFailed}
-						onResidentChange={handleResidentChange}
+						onFacesChange={handleFacesChange}
 					/>
 				</Suspense>
 			) : null}

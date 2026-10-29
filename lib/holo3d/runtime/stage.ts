@@ -23,6 +23,9 @@ export type StageBook = {
 	skySeed: string;
 };
 
+/** What a 3D card shows: its uploaded cover, or the starfield (no cover, or it failed). */
+export type StageFace = 'cover' | 'sky';
+
 export type StageOptions = {
 	context: RNCanvasContext;
 	device: GPUDevice;
@@ -38,13 +41,12 @@ export type StageOptions = {
 	getScrollX?: () => number;
 	/** First frame presented with the active cover settled (uploaded, failed, or none). */
 	onFirstFrame?: () => void;
-	/** A cover failed to fetch/decode/upload — the card shows its tinted fallback. */
-	onCoverFailed?: (index: number) => void;
 	/**
-	 * Indices whose 3D card shows its final face (uploaded cover or starfield), reported after
-	 * the frame that first draws it. The rest show a tint — callers cover them with HoloFace.
+	 * Which cards show a face (index → cover or starfield), reported after the frame that first
+	 * draws it. Cards missing from the map show a tint — callers cover them with HoloFace. A
+	 * failed cover is retried on its next window visit, so a `sky` can later become `cover`.
 	 */
-	onResidentChange?: (indices: number[]) => void;
+	onFacesChange?: (faces: ReadonlyMap<number, StageFace>) => void;
 	onError?: (reason: 'init' | 'frame') => void;
 };
 
@@ -92,7 +94,7 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 	let lastScrollChange = 0;
 	let firstPresentAt = 0;
 	let readyReported = false;
-	let residentKey = '';
+	let facesKey = '';
 
 	const inWindow = (index: number) =>
 		mode === 'single' ? index === 0 : Math.abs(index - activePage) <= 1;
@@ -108,7 +110,6 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 	const markFailed = (index: number) => {
 		failed.add(index);
 		setSky(index);
-		opts.onCoverFailed?.(index);
 	};
 
 	const dropTexture = (index: number) => {
@@ -213,13 +214,16 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 		});
 	};
 
-	/** Report the resident set when it changed (after present, so the card is already on screen). */
-	const reportResident = () => {
-		const indices = [...textures.keys()].sort((a, b) => a - b);
-		const key = indices.join(',');
-		if (key === residentKey) return;
-		residentKey = key;
-		opts.onResidentChange?.(indices);
+	/** Report the faces when they changed (after present, so the card is already on screen). */
+	const reportFaces = () => {
+		const faces = new Map<number, StageFace>();
+		for (const index of [...textures.keys()].sort((a, b) => a - b)) {
+			faces.set(index, skies.has(index) ? 'sky' : 'cover');
+		}
+		const key = [...faces].map(([index, face]) => `${index}${face}`).join(',');
+		if (key === facesKey) return;
+		facesKey = key;
+		opts.onFacesChange?.(faces);
 	};
 
 	const frame = (time: number) => {
@@ -240,7 +244,7 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 			dirty = false;
 			holo.pipeline.render();
 			context.present();
-			reportResident();
+			reportFaces();
 			if (!readyReported) {
 				if (firstPresentAt === 0) firstPresentAt = now;
 				// Don't swap HoloFace (cover already showing) for a cover-less tint: wait for the cover.

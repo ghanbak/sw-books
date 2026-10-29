@@ -10,7 +10,7 @@ import { BuyOnAmazonButton } from '@/components/buy-on-amazon-button';
 import { EnrichmentSection } from '@/components/enrichment/enrichment-section';
 import { ErrorState } from '@/components/error-state';
 import { HoloFace, NoCoverText } from '@/components/holo-cover';
-import { HoloStage, type StageBook } from '@/components/holo-stage';
+import { HoloStage, type StageBook, type StageFace } from '@/components/holo-stage';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
@@ -391,8 +391,6 @@ const styles = StyleSheet.create({
 function DetailHero({ book }: { book: Book }) {
 	const status = useHoloStatus();
 	const [stageReady, setStageReady] = useState(false);
-	// No cover, or it failed to load in 3D: the stage draws a starfield, the title goes on top.
-	const [coverFailed, setCoverFailed] = useState(false);
 	const stageBooks = useMemo<StageBook[]>(
 		() => [
 			{
@@ -404,15 +402,13 @@ function DetailHero({ book }: { book: Book }) {
 		],
 		[book.id, book.cover_image, book.title],
 	);
-	// The stage reports ready after a timeout even if the cover is still loading; keep HoloFace
-	// up until the 3D card actually shows it.
-	const [coverResident, setCoverResident] = useState(false);
-	const onCoverFailed = useCallback(() => setCoverFailed(true), []);
-	const onResidentChange = useCallback((indices: number[]) => {
-		setCoverResident(indices.includes(0));
+	// What the 3D card shows. None yet (the stage reports ready after a timeout even if the cover
+	// is still loading) → keep HoloFace up; `sky` (no cover, or it failed) → overlay the title.
+	const [face, setFace] = useState<StageFace | null>(null);
+	const onFacesChange = useCallback((faces: ReadonlyMap<number, StageFace>) => {
+		setFace(faces.get(0) ?? null);
 	}, []);
-	const coverPending = !!book.cover_image && !coverFailed && !coverResident;
-	const show3D = status.kind === 'available' && stageReady && !coverPending;
+	const show3D = status.kind === 'available' && stageReady && face !== null;
 	return (
 		<View style={styles.hero}>
 			<HoloStage
@@ -421,15 +417,14 @@ function DetailHero({ book }: { book: Book }) {
 				cardWidth={HERO_CARD_W}
 				pixelRatioCap={2}
 				onReadyChange={setStageReady}
-				onCoverFailed={onCoverFailed}
-				onResidentChange={onResidentChange}
+				onFacesChange={onFacesChange}
 			/>
 			{show3D ? (
-				book.cover_image && !coverFailed ? null : (
+				face === 'sky' ? (
 					<View pointerEvents="none" style={[styles.heroFace, styles.heroText]}>
 						<NoCoverText title={book.title} author={book.author} width={HERO_CARD_W} />
 					</View>
-				)
+				) : null
 			) : (
 				<View style={styles.heroFace}>
 					<HoloFace

@@ -7,6 +7,7 @@ import { requestStageDevice } from '@/lib/holo3d/runtime/gpu';
 import {
 	type HoloStageController,
 	type StageBook,
+	type StageFace,
 	createHoloStage,
 } from '@/lib/holo3d/runtime/stage';
 import { reportHoloUnavailable } from '@/lib/holo3d/status';
@@ -26,8 +27,7 @@ export type HoloStageCanvasProps = {
 	reduceMotion: boolean;
 	/** True once the first frame (with the active cover settled) is on screen; false on unmount. */
 	onReadyChange: (ready: boolean) => void;
-	onCoverFailed: (index: number) => void;
-	onResidentChange: (indices: number[]) => void;
+	onFacesChange: (faces: ReadonlyMap<number, StageFace>) => void;
 };
 
 /** Frames to wait for a non-zero layout before giving up on the context. */
@@ -79,8 +79,7 @@ export default function HoloStageCanvas(props: HoloStageCanvasProps) {
 				pageWidth: p.pageWidth,
 				getScrollX: () => latest.current.scrollX?.get() ?? 0,
 				onFirstFrame: () => latest.current.onReadyChange(true),
-				onCoverFailed: (index) => latest.current.onCoverFailed(index),
-				onResidentChange: (indices) => latest.current.onResidentChange(indices),
+				onFacesChange: (faces) => latest.current.onFacesChange(faces),
 				onError: (reason) => reportHoloUnavailable(reason),
 			});
 			controller.setBooks(p.books);
