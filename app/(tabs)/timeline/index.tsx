@@ -59,6 +59,9 @@ export default function TimelineScreen() {
 	const [pressedPage, setPressedPage] = useState<number | null>(null);
 	// Books whose cover failed to load in 3D — their tinted card needs the RN title overlay.
 	const [failedCovers, setFailedCovers] = useState<ReadonlySet<string>>(() => new Set());
+	// Books whose 3D card already shows its cover. Until then (e.g. right after a rail jump, while
+	// the cover fetches) the cell shows HoloFace over the 3D card's empty tint.
+	const [residentCovers, setResidentCovers] = useState<ReadonlySet<string>>(() => new Set());
 	const listRef = useRef<FlashListRef<Book>>(null);
 	const scrollX = useSharedValue(0);
 	const holoStatus = useHoloStatus();
@@ -90,6 +93,14 @@ export default function TimelineScreen() {
 		[data.books],
 	);
 
+	const onResidentChange = useCallback(
+		(indices: number[]) => {
+			const ids = indices.flatMap((i) => data.books[i]?.id ?? []);
+			setResidentCovers(new Set(ids));
+		},
+		[data.books],
+	);
+
 	// Stable callback — FlashList rejects an onViewableItemsChanged that changes identity.
 	const onViewableItemsChanged = useRef(
 		({ viewableItems }: { viewableItems: { index: number | null }[] }) => {
@@ -113,41 +124,57 @@ export default function TimelineScreen() {
 	);
 
 	const renderItem = useCallback(
-		({ item, index }: { item: Book; index: number }) => (
-			<View style={{ width, height: listHeight }}>
-				<Pressable
-					style={[styles.card, { left: rect.x, top: rect.y, width: coverW, height: coverH }]}
-					onPress={() => router.push(`/book/${item.id}`)}
-					onPressIn={() => {
-						setPressedPage(index);
-						// The 3D press brighten is subtle; under Reduce Motion also confirm by touch.
-						if (reduceMotion) Haptics.selectionAsync();
-					}}
-					onPressOut={() => setPressedPage(null)}
-					accessibilityRole="button"
-					accessibilityLabel={`${item.title} by ${item.author.join(', ')}`}
-				>
-					{show3D ? (
-						<>
-							{item.cover_image && !failedCovers.has(item.id) ? null : (
-								<NoCoverText title={item.title} author={item.author} width={coverW} />
-							)}
-							<CanonBadge canon={item.canon} style={styles.badge} />
-						</>
-					) : (
-						<HoloFace
-							coverUri={item.cover_image}
-							title={item.title}
-							author={item.author}
-							canon={item.canon}
-							width={coverW}
-							height={coverH}
-						/>
-					)}
-				</Pressable>
-			</View>
-		),
-		[width, listHeight, rect.x, rect.y, coverW, coverH, show3D, failedCovers, reduceMotion, router],
+		({ item, index }: { item: Book; index: number }) => {
+			const coverPending =
+				!!item.cover_image && !failedCovers.has(item.id) && !residentCovers.has(item.id);
+			return (
+				<View style={{ width, height: listHeight }}>
+					<Pressable
+						style={[styles.card, { left: rect.x, top: rect.y, width: coverW, height: coverH }]}
+						onPress={() => router.push(`/book/${item.id}`)}
+						onPressIn={() => {
+							setPressedPage(index);
+							// The 3D press brighten is subtle; under Reduce Motion also confirm by touch.
+							if (reduceMotion) Haptics.selectionAsync();
+						}}
+						onPressOut={() => setPressedPage(null)}
+						accessibilityRole="button"
+						accessibilityLabel={`${item.title} by ${item.author.join(', ')}`}
+					>
+						{show3D && !coverPending ? (
+							<>
+								{item.cover_image && !failedCovers.has(item.id) ? null : (
+									<NoCoverText title={item.title} author={item.author} width={coverW} />
+								)}
+								<CanonBadge canon={item.canon} style={styles.badge} />
+							</>
+						) : (
+							<HoloFace
+								coverUri={item.cover_image}
+								title={item.title}
+								author={item.author}
+								canon={item.canon}
+								width={coverW}
+								height={coverH}
+							/>
+						)}
+					</Pressable>
+				</View>
+			);
+		},
+		[
+			width,
+			listHeight,
+			rect.x,
+			rect.y,
+			coverW,
+			coverH,
+			show3D,
+			failedCovers,
+			residentCovers,
+			reduceMotion,
+			router,
+		],
 	);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
@@ -191,6 +218,7 @@ export default function TimelineScreen() {
 									pressedPage={pressedPage}
 									onReadyChange={setStageReady}
 									onCoverFailed={onCoverFailed}
+									onResidentChange={onResidentChange}
 								/>
 								<FlashList
 									ref={listRef}

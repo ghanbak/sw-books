@@ -93,8 +93,8 @@ Spike: `app/dev/holo-spike.tsx` + `components/holo-spike/`, built with `EXPO_PUB
     - no-cover title overlay
   - Not run: VoiceOver (labels verified in code only).
   - Open issues:
-    1. After a long rail jump, the active card shows an empty tint for 1–3 s while its cover fetches.
-    2. The root `unstable_settings.anchor: '(tabs)'` mounts the whole tab tree twice at launch. This is pre-existing on `main`; the duplicate Timeline stays parked, so it costs no GPU.
+    1. ~~After a long rail jump, the active card shows an empty tint for 1–3 s while its cover fetches.~~ Fixed: the stage reports which cards show their cover, and the cell shows HoloFace until then (detail hero too).
+    2. ~~The root `unstable_settings.anchor: '(tabs)'` mounts the whole tab tree twice at launch.~~ Fixed: the redirect off `/` (and off login) uses `dismissTo`, returning to the anchor `(tabs)` instead of replacing `/` with a second one.
 - **Device Release build** (iPhone 15 Pro, iOS 27.2): `.app` 74 MB (binary 30 MB, `main.jsbundle` 7.1 MB).
 - **Pending:**
   - G2, G3 and G7 on the device, and the 10-minute soak.

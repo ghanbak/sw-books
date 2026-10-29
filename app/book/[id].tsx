@@ -404,8 +404,15 @@ function DetailHero({ book }: { book: Book }) {
 		],
 		[book.id, book.cover_image, book.title],
 	);
+	// The stage reports ready after a timeout even if the cover is still loading; keep HoloFace
+	// up until the 3D card actually shows it.
+	const [coverResident, setCoverResident] = useState(false);
 	const onCoverFailed = useCallback(() => setCoverFailed(true), []);
-	const show3D = status.kind === 'available' && stageReady;
+	const onResidentChange = useCallback((indices: number[]) => {
+		setCoverResident(indices.includes(0));
+	}, []);
+	const coverPending = !!book.cover_image && !coverFailed && !coverResident;
+	const show3D = status.kind === 'available' && stageReady && !coverPending;
 	return (
 		<View style={styles.hero}>
 			<HoloStage
@@ -415,6 +422,7 @@ function DetailHero({ book }: { book: Book }) {
 				pixelRatioCap={2}
 				onReadyChange={setStageReady}
 				onCoverFailed={onCoverFailed}
+				onResidentChange={onResidentChange}
 			/>
 			{show3D ? (
 				book.cover_image && !coverFailed ? null : (

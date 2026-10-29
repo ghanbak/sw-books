@@ -30,6 +30,8 @@ type Props = {
 	onReadyChange?: (ready: boolean) => void;
 	/** A cover failed to load; the 3D card shows a tint, so callers show its title. */
 	onCoverFailed?: (index: number) => void;
+	/** Indices whose 3D card shows its cover (or starfield); the others still show a tint. */
+	onResidentChange?: (indices: number[]) => void;
 	style?: StyleProp<ViewStyle>;
 };
 
@@ -51,6 +53,7 @@ export function HoloStage({
 	pressedPage = null,
 	onReadyChange,
 	onCoverFailed,
+	onResidentChange,
 	style,
 }: Props) {
 	const status = useHoloStatus();
@@ -93,6 +96,10 @@ export function HoloStage({
 		[onReadyChange],
 	);
 	const handleCoverFailed = useCallback((index: number) => onCoverFailed?.(index), [onCoverFailed]);
+	const handleResidentChange = useCallback(
+		(indices: number[]) => onResidentChange?.(indices),
+		[onResidentChange],
+	);
 
 	if (status.kind === 'unavailable') return null;
 
@@ -127,6 +134,7 @@ export function HoloStage({
 						reduceMotion={reduceMotion}
 						onReadyChange={handleReadyChange}
 						onCoverFailed={handleCoverFailed}
+						onResidentChange={handleResidentChange}
 					/>
 				</Suspense>
 			) : null}

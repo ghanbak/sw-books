@@ -27,6 +27,7 @@ export type HoloStageCanvasProps = {
 	/** True once the first frame (with the active cover settled) is on screen; false on unmount. */
 	onReadyChange: (ready: boolean) => void;
 	onCoverFailed: (index: number) => void;
+	onResidentChange: (indices: number[]) => void;
 };
 
 /** Frames to wait for a non-zero layout before giving up on the context. */
@@ -79,6 +80,7 @@ export default function HoloStageCanvas(props: HoloStageCanvasProps) {
 				getScrollX: () => latest.current.scrollX?.get() ?? 0,
 				onFirstFrame: () => latest.current.onReadyChange(true),
 				onCoverFailed: (index) => latest.current.onCoverFailed(index),
+				onResidentChange: (indices) => latest.current.onResidentChange(indices),
 				onError: (reason) => reportHoloUnavailable(reason),
 			});
 			controller.setBooks(p.books);

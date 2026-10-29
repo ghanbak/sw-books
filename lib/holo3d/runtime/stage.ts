@@ -40,6 +40,11 @@ export type StageOptions = {
 	onFirstFrame?: () => void;
 	/** A cover failed to fetch/decode/upload — the card shows its tinted fallback. */
 	onCoverFailed?: (index: number) => void;
+	/**
+	 * Indices whose 3D card shows its final face (uploaded cover or starfield), reported after
+	 * the frame that first draws it. The rest show a tint — callers cover them with HoloFace.
+	 */
+	onResidentChange?: (indices: number[]) => void;
 	onError?: (reason: 'init' | 'frame') => void;
 };
 
@@ -87,6 +92,7 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 	let lastScrollChange = 0;
 	let firstPresentAt = 0;
 	let readyReported = false;
+	let residentKey = '';
 
 	const inWindow = (index: number) =>
 		mode === 'single' ? index === 0 : Math.abs(index - activePage) <= 1;
@@ -207,6 +213,15 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 		});
 	};
 
+	/** Report the resident set when it changed (after present, so the card is already on screen). */
+	const reportResident = () => {
+		const indices = [...textures.keys()].sort((a, b) => a - b);
+		const key = indices.join(',');
+		if (key === residentKey) return;
+		residentKey = key;
+		opts.onResidentChange?.(indices);
+	};
+
 	const frame = (time: number) => {
 		if (disposed || paused || !holo || !renderer) return;
 		try {
@@ -225,6 +240,7 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 			dirty = false;
 			holo.pipeline.render();
 			context.present();
+			reportResident();
 			if (!readyReported) {
 				if (firstPresentAt === 0) firstPresentAt = now;
 				// Don't swap HoloFace (cover already showing) for a cover-less tint: wait for the cover.
