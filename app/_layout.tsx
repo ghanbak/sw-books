@@ -162,7 +162,9 @@ function AuthGate({ children }: { children: ReactNode }) {
 		if (!session && !inAuthGroup && !inSpike) {
 			router.replace('/(auth)/login');
 		} else if (session && (inAuthGroup || atRoot)) {
-			router.replace('/archives');
+			// dismissTo, not replace: the `(tabs)` anchor is already mounted under `/` and the
+			// login screen, so replacing the top screen would mount a second tab tree.
+			router.dismissTo('/archives');
 		}
 	}, [session, loading, topSegment, router]);
 
