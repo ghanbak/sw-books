@@ -1,29 +1,53 @@
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import {
+	type NativeScrollEvent,
+	type NativeSyntheticEvent,
+	Pressable,
+	StyleSheet,
+	View,
+	useWindowDimensions,
+} from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HoloCover } from '@/components/holo-cover';
+import { HoloFace, NoCoverText } from '@/components/holo-cover';
+import { HoloStage, type StageBook, type StageFace } from '@/components/holo-stage';
 import { TabHeaderActions } from '@/components/tab-header-actions';
 import { TimelineRail } from '@/components/timeline-rail';
+import { CanonBadge } from '@/components/ui/canon-badge';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { useReduceMotion } from '@/hooks/useAccessibility';
+import { getCoverColor } from '@/lib/cover';
+import { cardRect } from '@/lib/holo3d/pager';
+import { useHoloStatus } from '@/lib/holo3d/status';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
 import { groupBooksByYear } from '@/lib/timeline';
 
 const VIEW_CONFIG = { itemVisiblePercentThreshold: 60 } as const;
 const PAGER_OVERRIDES = { style: { overflow: 'visible' } } as const;
+/** Vertical space the 3D rig needs, in card widths, when the card is centred (no lift). */
+const PAGER_RIG_HEIGHT = 2.4;
 
 /**
  * Timeline tab — a horizontal, snap-paged scroll through the catalog in chronological
- * order (oldest -> newest), one hologram hero per book, with a notch rail below that
- * stays anchored on the current date as you page within a year.
+ * order (oldest -> newest), with a notch rail below that stays anchored on the current date
+ * as you page within a year.
+ *
+ * The heroes are ONE 3D WebGPU stage behind the pager (components/holo-stage.tsx): the pages
+ * themselves are transparent tappable cells (badge, no-cover title, VoiceOver) whose card
+ * rect lines up with the 3D card the stage draws from the scroll offset. Until the stage's
+ * first frame — or when 3D is unavailable — each cell shows the static HoloFace instead.
  */
 export default function TimelineScreen() {
 	const { width } = useWindowDimensions();
 	const insets = useSafeAreaInsets();
+	const router = useRouter();
 	// Pager can't use a list header + contentInsetAdjustmentBehavior, so offset the body by the
 	// full header height (not just insets.top) — matching Archives/Library. insets.top alone
 	// leaves the content up in the nav-bar row.
@@ -31,13 +55,46 @@ export default function TimelineScreen() {
 	const { books } = useBooks();
 	const [activePage, setActivePage] = useState(0);
 	const [listHeight, setListHeight] = useState(0);
+	const [stageReady, setStageReady] = useState(false);
+	const [pressedPage, setPressedPage] = useState<number | null>(null);
+	// What each book's 3D card shows. No entry yet (e.g. right after a rail jump, while the cover
+	// fetches) → the cell shows HoloFace over the card's empty tint; `sky` (no cover, or it
+	// failed) → the title is overlaid, since 3D can't draw text.
+	const [faces, setFaces] = useState<ReadonlyMap<string, StageFace>>(() => new Map());
 	const listRef = useRef<FlashListRef<Book>>(null);
+	const scrollX = useSharedValue(0);
+	const holoStatus = useHoloStatus();
+	const reduceMotion = useReduceMotion();
+	const show3D = holoStatus.kind === 'available' && stageReady;
 
 	// The Timeline shows the whole chronology — canon/legends is signalled per-hero by a
 	// corner badge, not filtered (focused canon filtering lives on Archives/Search).
 	const data = useMemo(() => groupBooksByYear(books), [books]);
 
+	const stageBooks = useMemo<StageBook[]>(
+		() =>
+			data.books.map((b) => ({
+				key: b.id,
+				coverUri: b.cover_image,
+				fallbackColor: getCoverColor(b.title),
+				skySeed: b.title,
+			})),
+		[data.books],
+	);
+
 	const activeGroup = data.pageToGroup[activePage] ?? 0;
+
+	const onFacesChange = useCallback(
+		(stageFaces: ReadonlyMap<number, StageFace>) => {
+			const next = new Map<string, StageFace>();
+			for (const [index, face] of stageFaces) {
+				const id = data.books[index]?.id;
+				if (id) next.set(id, face);
+			}
+			setFaces(next);
+		},
+		[data.books],
+	);
 
 	// Stable callback — FlashList rejects an onViewableItemsChanged that changes identity.
 	const onViewableItemsChanged = useRef(
@@ -47,25 +104,59 @@ export default function TimelineScreen() {
 		},
 	).current;
 
-	const coverW = Math.min(220, Math.round(width * 0.55));
+	// Fit the card so the whole rig (card + beam + emitter + glow) fits the pager height.
+	const coverW = Math.round(
+		Math.min(220, width * 0.55, listHeight > 0 ? listHeight / PAGER_RIG_HEIGHT : 220),
+	);
 	const coverH = Math.round(coverW * 1.5);
+	const rect = cardRect(width, listHeight, coverW, coverH);
+
+	const onScroll = useCallback(
+		(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+			scrollX.set(e.nativeEvent.contentOffset.x);
+		},
+		[scrollX],
+	);
 
 	const renderItem = useCallback(
-		({ item }: { item: Book }) => (
-			<View style={[styles.page, { width, height: listHeight }]}>
-				<HoloCover
-					variant="hero"
-					tilt={false}
-					coverUri={item.cover_image}
-					title={item.title}
-					author={item.author}
-					canon={item.canon}
-					width={coverW}
-					height={coverH}
-				/>
-			</View>
-		),
-		[width, listHeight, coverW, coverH],
+		({ item, index }: { item: Book; index: number }) => {
+			const face = faces.get(item.id);
+			return (
+				<View style={{ width, height: listHeight }}>
+					<Pressable
+						style={[styles.card, { left: rect.x, top: rect.y, width: coverW, height: coverH }]}
+						onPress={() => router.push(`/book/${item.id}`)}
+						onPressIn={() => {
+							setPressedPage(index);
+							// The 3D press brighten is subtle; under Reduce Motion also confirm by touch.
+							if (reduceMotion) Haptics.selectionAsync();
+						}}
+						onPressOut={() => setPressedPage(null)}
+						accessibilityRole="button"
+						accessibilityLabel={`${item.title} by ${item.author.join(', ')}`}
+					>
+						{show3D && face ? (
+							<>
+								{face === 'sky' ? (
+									<NoCoverText title={item.title} author={item.author} width={coverW} />
+								) : null}
+								<CanonBadge canon={item.canon} style={styles.badge} />
+							</>
+						) : (
+							<HoloFace
+								coverUri={item.cover_image}
+								title={item.title}
+								author={item.author}
+								canon={item.canon}
+								width={coverW}
+								height={coverH}
+							/>
+						)}
+					</Pressable>
+				</View>
+			);
+		},
+		[width, listHeight, rect.x, rect.y, coverW, coverH, show3D, faces, reduceMotion, router],
 	);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
@@ -97,27 +188,44 @@ export default function TimelineScreen() {
 						onLayout={(e) => setListHeight(e.nativeEvent.layout.height)}
 					>
 						{listHeight > 0 && (
-							<FlashList
-								ref={listRef}
-								// UIScrollView clips to its bounds by default (RN maps `overflow` to
-								// clipsToBounds), cutting the hologram's bloom off at the pager's edges.
-								// FlashList wraps the scroll view in its own (overflow: hidden) view, so
-								// both need it: `style` reaches the wrapper, overrideProps the scroll view.
-								style={styles.pager}
-								overrideProps={PAGER_OVERRIDES}
-								data={data.books}
-								horizontal
-								showsHorizontalScrollIndicator={false}
-								snapToInterval={width}
-								snapToAlignment="start"
-								decelerationRate="fast"
-								disableIntervalMomentum
-								renderItem={renderItem}
-								keyExtractor={keyExtractor}
-								getItemType={() => 'page'}
-								onViewableItemsChanged={onViewableItemsChanged}
-								viewabilityConfig={VIEW_CONFIG}
-							/>
+							<>
+								<HoloStage
+									mode="pager"
+									books={stageBooks}
+									cardWidth={coverW}
+									pixelRatioCap={1.5}
+									activePage={activePage}
+									pageWidth={width}
+									scrollX={scrollX}
+									pressedPage={pressedPage}
+									onReadyChange={setStageReady}
+									onFacesChange={onFacesChange}
+								/>
+								<FlashList
+									ref={listRef}
+									// UIScrollView clips to its bounds by default (RN maps `overflow` to
+									// clipsToBounds), cutting the hologram's bloom off at the pager's edges.
+									// FlashList wraps the scroll view in its own (overflow: hidden) view, so
+									// both need it: `style` reaches the wrapper, overrideProps the scroll view.
+									style={styles.pager}
+									overrideProps={PAGER_OVERRIDES}
+									data={data.books}
+									horizontal
+									showsHorizontalScrollIndicator={false}
+									snapToInterval={width}
+									snapToAlignment="start"
+									decelerationRate="fast"
+									disableIntervalMomentum
+									// Feeds the 3D stage's card positions (read by its frame loop).
+									onScroll={onScroll}
+									scrollEventThrottle={16}
+									renderItem={renderItem}
+									keyExtractor={keyExtractor}
+									getItemType={() => 'page'}
+									onViewableItemsChanged={onViewableItemsChanged}
+									viewabilityConfig={VIEW_CONFIG}
+								/>
+							</>
 						)}
 					</View>
 					<TimelineRail
@@ -143,9 +251,13 @@ const styles = StyleSheet.create({
 	pager: {
 		overflow: 'visible',
 	},
-	page: {
-		alignItems: 'center',
-		justifyContent: 'center',
+	card: {
+		position: 'absolute',
+	},
+	badge: {
+		position: 'absolute',
+		top: 8,
+		left: 8,
 	},
 	empty: {
 		flex: 1,

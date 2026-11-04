@@ -157,10 +157,14 @@ function AuthGate({ children }: { children: ReactNode }) {
 		// from a deep link with no path). Treat that as needing a redirect for
 		// signed-in users so they don't see the "Unmatched Route" page.
 		const atRoot = topSegment === undefined;
-		if (!session && !inAuthGroup) {
+		// Phase 0 WebGPU spike (no user data): reachable signed-out, only in spike builds.
+		const inSpike = process.env.EXPO_PUBLIC_HOLO_SPIKE === '1' && topSegment === 'dev';
+		if (!session && !inAuthGroup && !inSpike) {
 			router.replace('/(auth)/login');
 		} else if (session && (inAuthGroup || atRoot)) {
-			router.replace('/archives');
+			// dismissTo, not replace: the `(tabs)` anchor is already mounted under `/` and the
+			// login screen, so replacing the top screen would mount a second tab tree.
+			router.dismissTo('/archives');
 		}
 	}, [session, loading, topSegment, router]);
 

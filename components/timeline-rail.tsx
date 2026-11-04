@@ -389,6 +389,9 @@ const styles = StyleSheet.create({
 	},
 	label: {
 		fontSize: 13,
+		// Fixed to fit the scrubbing size: a growing label would resize the pager above it,
+		// which rebuilds the 3D stage (new device + shader compile) mid-scrub.
+		lineHeight: 22,
 		fontWeight: '600',
 		color: tokens.text.secondary,
 		fontVariant: ['tabular-nums'],

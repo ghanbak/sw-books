@@ -63,6 +63,8 @@ Star Wars book tracker mobile app built with Expo (React Native) + Supabase.
 
 **Aesthetic:** Dark mode cinematic + skeuomorphic book covers. Dark surfaces, books are the visual heroes. Inspiration: Apple Books shelf UI + official Star Wars app datapad aesthetic.
 
+**Hologram covers:** the Timeline and book detail heroes are 3D WebGPU + three.js holograms (`components/holo-stage.tsx`, `lib/holo3d/`), with selective bloom so the cover stays crisp. List thumbnails keep the 2D `HoloCover`, and `HoloFace` is the fallback while loading or when 3D is unavailable. Kill switch: `EXPO_PUBLIC_HOLO_3D=0`. Import three from `three/webgpu`, never `three`.
+
 **Color tokens (design for theming):**
 - Primary accent: Lightsaber blue (`#4A90D9`) — buttons, active states, toggles
 - Secondary accent: Star Wars yellow (`#FFE81F`) — scanner, badges, emphasis only

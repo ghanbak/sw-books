@@ -55,6 +55,11 @@ export const tokens = {
 		bloom: 'rgba(111,195,255,0.3)',
 		innerGlow: 'rgba(158,224,255,0.56)',
 	},
+	// No-cover face: a starfield (lib/starfield.ts) with the title/author on it.
+	noCover: {
+		sky: '#000000',
+		star: '#FFFFFF',
+	},
 } as const;
 
 export type AppTheme = typeof tokens;
