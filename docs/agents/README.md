@@ -5,7 +5,7 @@ Three scheduled loops keep sw-books moving. Each runs every 4 hours, staggered, 
 | Loop | Playbook | Writes code? |
 |---|---|---|
 | PR caretaker | [pr-caretaker.md](pr-caretaker.md) | Only on agent branches |
-| Scout + triage | [scout-triage.md](scout-triage.md) | No, files and labels issues |
+| Scout + triage | [scout-triage.md](scout-triage.md) | No, files, labels and assigns issues |
 | Execute | [execute.md](execute.md) | Yes, on `agent/*` branches |
 
 Every loop follows the shared rules below, then its own playbook. The weekly retro (owner-approved) is the only thing that edits these playbooks, the agent definitions or CLAUDE.md.
@@ -30,27 +30,29 @@ Every loop follows the shared rules below, then its own playbook. The weekly ret
 - Run Supabase commands against a hosted project: no `--remote`, no `--linked`, never `--yes`. No `db:seed:prod`, `catalog:*:prod`, `catalog:apply`, or anything that writes production data.
 - Edit `lib/types.ts` by hand, hand-edit `data/books.csv`, touch `.env*` files or secrets.
 - Delete, skip or weaken a test to get green. A reviewer who sees a test change must justify it.
-- Change the design direction in CLAUDE.md. Restoring it is fine; changing it is `tier:needs-approval`.
+- Change the design direction in CLAUDE.md. Restoring it is fine; changing it needs the owner's review.
+- Unassign the owner (`ghanbak`) from anything, run `gh pr merge`, or touch the review-gate and auto-merge workflows. Only the owner removes themselves.
 
-**Tiers** (labels decide, not judgment in the moment)
-- `tier:auto-merge`: bug fixes with a regression test, measured perf wins, lint/type fixes, a11y fixes, and **safe dependency bumps**. Merge with `gh pr merge <n> --squash --auto` after CI passes and the independent reviewer approves.
-- `tier:auto-pr`: refactors, design-drift fixes that restore the documented direction, minor UX polish. Open the PR; the owner merges.
-- `tier:needs-approval`: features, design-direction changes, migrations, user-facing copy or flows, unsafe dependency bumps. Do not start work until the issue has the `approved` label.
-- **Bugs never need approval** (owner's rule, 2026-11-06). A bug is `tier:auto-merge` when the fix comes with a regression test, otherwise `tier:auto-pr`, never `tier:needs-approval`. If the fix needs a schema migration or a production data write, open it as `tier:auto-pr` and leave the production step to the owner in the PR body.
-- `owner-only` issues need Ethan (consoles, secrets, accounts, a physical device, production data, licences). Agents never execute them; they may prepare a PR for any code part and leave the rest to the owner.
-- `owner-review` issues are waiting on the owner's keep-or-close decision. Every loop ignores them.
+**Labels** describe the work, nothing else: type (`bug`, `enhancement`, `perf`, `a11y`, `design-drift`, `tech-debt`, `documentation`, `dependencies`), owner agent (`agent:tregg|luis|dylan|brandon`), product (`product:app|web|admin`, `area:data`), plus `source:scout` and `launch` where they apply.
 
-**Safe dependency bump** (all must hold)
-- Author is Dependabot, every bump is patch or minor semver.
-- No bumped package is native or Expo-coupled: not `expo`, `expo-*`, `@expo/*`, `react`, `react-native`, `react-native-*`, `@react-native*`, `@shopify/*`, `react-native-webgpu`, `three`, and no bumped package ships `ios/`, `android/` or `expo-module.config.json` (check in `node_modules/<pkg>` after `npm ci`).
-- Admin-only bumps (`/admin`) are safe when `verify:admin` passes, but they redeploy the website and admin on merge, so the reviewer reads the release notes.
-- Anything else, or a grouped PR mixing safe and unsafe bumps → `tier:needs-approval`, with a comment saying what changed and what to test on a device.
+**Assigned to `ghanbak` = the owner's turn** (owner's rule, 2026-11-06). Agents start any triaged work without approval, and every change lands as a PR with auto-merge on.
+- **Issues** assigned to the owner: don't start work. They're waiting on a keep-or-close decision, a question, or a step only Ethan can do (consoles, secrets, accounts, a physical device, production data, licences). Say which in a comment. When the owner unassigns, the issue goes back to triage.
+- **PRs** assigned to the owner can't merge: the required `review-gate` check fails while anyone is assigned. The caretaker still addresses review comments. When the owner unassigns, GitHub merges once CI is green.
+- The `auto-merge` workflow turns on auto-merge for every `agent/*` and Dependabot PR when it opens. Agents never run `gh pr merge`.
+
+**When to assign the owner** (assign at creation: `gh pr create --assignee ghanbak` / `gh issue create --assignee ghanbak`, so the gate holds from the first check)
+- PRs with features or improvements: new features, UX or visual changes (including design-drift fixes, since CI can't check visuals), user-facing copy or flows, schema migrations, and changes to the design direction.
+- PRs that would otherwise auto-merge but are missing their proof: a bug fix without a regression test, a perf change without a before/after measurement, or anything the independent reviewer blocked.
+- Unsafe dependency bumps. The auto-merge workflow already holds major and native/Expo-coupled Dependabot bumps by name. The caretaker also assigns the owner if a bumped package ships `ios/`, `android/` or `expo-module.config.json`, or if its release notes list breaking changes.
+- Issues, rarely. The goal is maximum automation with the owner keeping creative and product-roadmap control. Assign an issue only when it's a roadmap call (a new feature or product direction an agent is proposing, not one the owner filed) or needs the owner's hands, or when an agent is truly blocked. Bugs, perf, a11y, maintenance and tech debt never wait on the owner at the issue stage. If you can decide it under these rules, decide it.
+- Everything else stays unassigned and merges on its own: bug fixes with a regression test, perf wins with a measurement, lint/type fixes, a11y fixes, refactors and tech debt with no behavior change, tests, docs, and safe dependency bumps.
+- If a bug or maintenance fix also needs a production step (data write, secret, console), let the code merge and open a separate issue assigned to the owner for that step.
 
 **Independent reviewer**
-- Before any merge or PR, spawn a separate reviewer subagent (`general-purpose`) that gets only the diff, the issue or PR description and the tier rules, not your reasoning. Ask it to find reasons not to ship and end with `APPROVE` or `BLOCK: <reason>`. `BLOCK` means no merge; fix it or downgrade the tier to `auto-pr` with the reason in a comment.
+- Before opening a PR (or before the caretaker clears a Dependabot PR), spawn a separate reviewer subagent (`general-purpose`) that gets only the diff, the issue or PR description and these rules, not your reasoning. Ask it to find reasons not to ship and end with `APPROVE` or `BLOCK: <reason>`. On `BLOCK`, fix it, or assign the owner with the reason in a comment.
 
 **Backpressure**
-- If 6 or more agent PRs (branch `agent/*`) are open and waiting on the owner, the execute loop opens nothing new.
+- If 6 or more agent PRs (branch `agent/*`) are assigned to the owner, the execute loop only takes work that won't need the owner's review (bugs, perf, maintenance) until the owner catches up.
 
 **Talking to the owner**
 - Start every PR or issue comment with `🤖 <loop name>:`. Be terse.

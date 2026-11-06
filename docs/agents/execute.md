@@ -2,11 +2,11 @@
 
 Goal: turn up to 2 `Todo` items per run into verified, reviewed PRs.
 
-Follow [README.md](README.md) shared rules first. Check backpressure before starting: 6 or more open `agent/*` PRs waiting on the owner → stop and say so.
+Follow [README.md](README.md) shared rules first. Check backpressure before starting: 6 or more `agent/*` PRs assigned to the owner → take only bug, perf and maintenance items this run, and say so.
 
 ## Pick work
 - From the Roadmap project (project 4), items with Status `Todo`, highest Priority first, then oldest.
-- Eligible only if the issue has `tier:auto-merge` or `tier:auto-pr`, or `tier:needs-approval` plus `approved`. Skip anything labeled `needs-info`, `owner-only` or `owner-review`.
+- No approval is needed to start. Skip any issue assigned to the owner.
 - Take at most 2. Set each to `In Progress` before starting.
 
 ## Do the work (per item)
@@ -16,14 +16,15 @@ Follow [README.md](README.md) shared rules first. Check backpressure before star
    - Bugs: a regression test that fails before the fix and passes after.
    - Perf: a before/after measurement in the PR body.
    - Design drift: cite the rule restored; screenshots if a simulator or browser is available.
-   - Keep the diff to what the issue asks for. Unrelated problems found along the way become new issues with `triage`.
-4. Verify per the README. Failing after two attempts → push nothing, add `needs-info` with what's blocking, set Status `Backlog`, move on.
-5. Independent reviewer on the diff. `BLOCK` → fix and re-review once; still blocked → open the PR as `tier:auto-pr` with the reviewer's objection in the body, or stop with `needs-info` if it's a correctness problem.
+   - Keep the diff to what the issue asks for. Unrelated problems found along the way become new issues (labels plus `source:scout`, added to the Roadmap with Status `Triage`).
+4. Verify per the README. Failing after two attempts → push nothing, assign the issue to the owner with a comment on what's blocking, set Status `Backlog`, move on.
+5. Independent reviewer on the diff. `BLOCK` → fix and re-review once; still blocked → open the PR assigned to the owner with the reviewer's objection in the body.
 
 ## Open the PR
-- `gh pr create --repo ghanbak/sw-books --base main --head agent/<...>` with a title in the repo's conventional-commit style and a body containing: `Closes #<n>`, what changed, how it was verified, the reviewer verdict, and the subagent's lessons.
-- Copy the issue's tier, agent and product labels onto the PR. Set the issue's Roadmap Status to `In Review`.
-- `tier:auto-merge` with reviewer `APPROVE`: `gh pr merge <n> --squash --auto`. CI decides the rest.
+- Decide first whether the owner must review it (README "When to assign the owner").
+- `gh pr create --repo ghanbak/sw-books --base main --head agent/<...>` with a title in the repo's conventional-commit style, the issue's type, agent and product labels, and `--assignee ghanbak` if review is needed. Body: `Closes #<n>`, what changed, how it was verified, the reviewer verdict, and the subagent's lessons. For review PRs, put a short "What to look at" list at the top (screens, flows, decisions), with screenshots when a simulator or browser is available.
+- The auto-merge workflow turns on auto-merge when the PR opens; don't run `gh pr merge`. Unassigned PRs merge once CI is green; assigned ones wait for the owner.
+- Set the issue's Roadmap Status to `In Review`.
 
 ## Summary
-PRs opened (numbers and tiers), auto-merge enabled on which, items blocked and why.
+PRs opened (numbers; which are assigned to the owner), items blocked and why.

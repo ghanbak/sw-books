@@ -1,6 +1,7 @@
 name: Design drift
 description: UI that departs from the documented design direction (CLAUDE.md Design Context).
-labels: ["design-drift", "triage"]
+labels: ["design-drift"]
+projects: ["ghanbak/4"]
 body:
   - type: dropdown
     id: product
@@ -38,4 +39,4 @@ body:
     id: fix
     attributes:
       label: Proposed fix
-      description: Fixes that restore the documented direction are tier:auto-pr. Changing the direction itself is tier:needs-approval.
+      description: Drift fixes open as PRs assigned to the owner for review, whether they restore the documented direction or change it.

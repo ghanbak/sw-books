@@ -16,20 +16,21 @@ Pick the focus from the current local hour: `(hour / 4) % 4` → 0 bugs, 1 desig
 Rules for filing:
 - At most 3 new issues per run. Prefer one well-evidenced issue over three vague ones.
 - Search first: `gh issue list --repo ghanbak/sw-books --state all --search "<key terms>"`. If it exists, comment new evidence instead of filing a duplicate.
-- Use the matching issue form's fields (Bug, Design drift, or Feature) in the body. Include file paths with line numbers and the exact error or rule. Labels: the type label, `triage`, `source:scout`, the product label.
+- Use the matching issue form's fields (Bug, Design drift, or Feature) in the body. Include file paths with line numbers and the exact error or rule. Labels: the type label, `source:scout`, the product label. Add it to the Roadmap with Status `Triage`.
 - Nothing found → file nothing. Say so in the summary.
 
-## 2. Triage (every open issue labeled `triage`, including the owner's)
+## 2. Triage
+
+The queue: open issues that aren't assigned to the owner and are either not on the Roadmap yet or have Status `Triage` (or no Status). This includes issues the owner just unassigned themselves from.
 
 For each issue:
-- Set exactly one tier label using the README tier rules. When unsure between two tiers, pick the stricter one.
-- Set the owner label (`agent:tregg|luis|dylan|brandon`) and product label (`product:app|web|admin`, `area:data`).
+- Set the type label, owner agent label (`agent:tregg|luis|dylan|brandon`) and product label (`product:app|web|admin`, `area:data`); add `launch` if it blocks the App Store or Play launch. No other labels.
 - Add it to the Roadmap project if missing and set fields: Priority (P0 broken production, auth or data loss; P1 user-visible bug or blocker; P2 normal; P3 nice-to-have), Product, Effort (S/M/L).
-- Fill in missing acceptance criteria and a "How to verify" section as a comment if the author left them blank.
-- Status: `Todo` if it's eligible for the execute loop (`tier:auto-merge` or `tier:auto-pr`, or `tier:needs-approval` with `approved`), isn't `owner-only`, and Effort is S or M; otherwise `Backlog`. Effort L goes to `Backlog` with a comment proposing how to split it. `owner-only` goes to `Backlog` with a one-line comment on what Ethan has to do.
-- Remove the `triage` label.
+- Fill in missing acceptance criteria and a "How to verify" section as a comment if the author left them blank. Note whether the eventual PR will need the owner's review (README "When to assign the owner").
+- If the work needs the owner's hands (console, secret, account, device, production data, licence) or a decision only they can make: assign `ghanbak`, comment one line on what's needed, Status `Backlog`.
+- Otherwise Status `Todo` if Effort is S or M, else `Backlog` with a comment proposing how to split it.
 
 Keep at most 6 items in `Todo`; extra eligible items stay in `Backlog`, highest priority first.
 
 ## 3. Summary
-Issues filed (numbers), issues triaged with tier and priority, anything P0 called out on its own line.
+Issues filed (numbers), issues triaged with priority (and which were assigned to the owner), anything P0 called out on its own line.

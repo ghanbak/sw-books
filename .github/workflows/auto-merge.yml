@@ -1,0 +1,56 @@
+name: Auto-merge
+
+# Turns on auto-merge for agent PRs (branch agent/*) and Dependabot PRs when
+# they open. GitHub then merges once CI and review-gate pass, so a PR that's
+# assigned to the owner waits for them. Dependabot bumps that are major or touch
+# native/Expo-coupled packages get assigned to the owner here, before CI can
+# finish, so they always wait for review.
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    if: >-
+      !github.event.pull_request.draft &&
+      (startsWith(github.head_ref, 'agent/') || github.event.pull_request.user.login == 'dependabot[bot]')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR_URL: ${{ github.event.pull_request.html_url }}
+      OWNER: ghanbak
+    steps:
+      - name: Dependabot metadata
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        id: meta
+        uses: dependabot/fetch-metadata@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Hold unsafe Dependabot bumps for review
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        env:
+          NAMES: ${{ steps.meta.outputs.dependency-names }}
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+        run: |
+          reason=""
+          if [ "$UPDATE_TYPE" = "version-update:semver-major" ] || [ -z "$UPDATE_TYPE" ]; then
+            reason="major (or unknown) version bump"
+          fi
+          for dep in $(echo "$NAMES" | tr ',' ' '); do
+            case "$dep" in
+              expo|expo-*|@expo/*|react|react-native|react-native-*|@react-native*|@shopify/*|three)
+                reason="${reason:+$reason; }native or Expo-coupled package: $dep" ;;
+            esac
+          done
+          if [ -n "$reason" ]; then
+            gh pr edit "$PR_URL" --add-assignee "$OWNER"
+            gh pr comment "$PR_URL" --body "🤖 auto-merge: held for review ($reason). Unassign yourself to let it merge."
+          fi
+
+      - name: Enable auto-merge
+        run: gh pr merge "$PR_URL" --auto --squash

@@ -1,6 +1,7 @@
 name: Feature or update
-description: A new feature or a change to existing behavior. Triage sets tier, owner and priority.
-labels: ["enhancement", "triage"]
+description: A new feature or a change to existing behavior. Triage sets the agent, product and priority.
+labels: ["enhancement"]
+projects: ["ghanbak/4"]
 body:
   - type: dropdown
     id: product
