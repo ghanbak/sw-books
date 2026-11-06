@@ -156,7 +156,7 @@ This applies all migrations in `supabase/migrations/` and runs `supabase/seed.sq
 **Step 6: Generate TypeScript types**
 
 ```bash
-supabase gen types typescript --local > lib/types.ts
+supabase gen types typescript > lib/types.ts
 ```
 
 Re-run this whenever you change the schema.
@@ -168,8 +168,8 @@ Re-run this whenever you change the schema.
 | `supabase start` | Start local stack |
 | `supabase stop` | Stop local stack |
 | `supabase db reset` | Drop all tables, re-run migrations + seed |
-| `supabase db diff --local` | Generate migration from manual Studio changes |
-| `supabase gen types typescript --local` | Regenerate TS types |
+| `supabase db diff` | Generate migration from manual Studio changes |
+| `supabase gen types typescript` | Regenerate TS types |
 | `supabase status` | Show local URLs and keys |
 
 ### Expo Dev Server
@@ -443,10 +443,10 @@ The project ref is the subdomain of your Supabase URL (e.g., if URL is `https://
 ### Push Migrations to Cloud
 
 ```bash
-supabase db push
+supabase db push --remote
 ```
 
-This applies all local migrations to the cloud database.
+This applies all local migrations to the linked cloud database. Since Supabase CLI v3, `db push` without `--remote` targets the local stack, and every hosted change asks for confirmation.
 
 ### Seed the Cloud Database
 
@@ -473,7 +473,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ### Generate Types from Cloud
 
 ```bash
-supabase gen types typescript --project-id YOUR_PROJECT_REF > lib/types.ts
+supabase gen types typescript --remote > lib/types.ts
 ```
 
 ---

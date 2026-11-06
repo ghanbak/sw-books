@@ -39,8 +39,16 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# agents
-/.claude
+# agents — track shared harness config (skills, agents, settings.json); ignore local state
+/.claude/*
+!/.claude/skills/
+!/.claude/agents/
+!/.claude/settings.json
+# autoharness: usage counters churn every session; evidence files are session transcript
+# excerpts and this repo is public — keep both local. SKILL.md + .ledger.jsonl stay tracked.
+/.claude/skills/**/.sidecar.json
+/.claude/skills/**/references/evidence-*
+/.claude/skills/.archive/
 /.codex
 /.conductor
 

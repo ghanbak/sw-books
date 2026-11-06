@@ -14,7 +14,7 @@
 		"test": "vitest run",
 		"version": "node scripts/sync-app-version.mjs",
 		"db:reset": "supabase db reset",
-		"db:types": "supabase gen types typescript --local > lib/types.ts",
+		"db:types": "supabase gen types typescript > lib/types.ts",
 		"db:seed": "npx tsx scripts/seed.ts",
 		"db:seed:prod": "npx tsx scripts/seed.ts --production",
 		"catalog:export": "npx tsx scripts/export-db-to-csv.ts",
