@@ -44,7 +44,7 @@ Every loop follows the shared rules below, then its own playbook. The weekly ret
 - PRs with features or improvements: new features, UX or visual changes (including design-drift fixes, since CI can't check visuals), user-facing copy or flows, schema migrations, and changes to the design direction.
 - PRs that would otherwise auto-merge but are missing their proof: a bug fix without a regression test, a perf change without a before/after measurement, or anything the independent reviewer blocked.
 - Unsafe dependency bumps. The auto-merge workflow already holds major and native/Expo-coupled Dependabot bumps by name. The caretaker also assigns the owner if a bumped package ships `ios/`, `android/` or `expo-module.config.json`, or if its release notes list breaking changes.
-- Issues that need the owner's decision or hands (see above), and work an agent is blocked on.
+- Issues, rarely. The goal is maximum automation with the owner keeping creative and product-roadmap control. Assign an issue only when it's a roadmap call (a new feature or product direction an agent is proposing, not one the owner filed) or needs the owner's hands, or when an agent is truly blocked. Bugs, perf, a11y, maintenance and tech debt never wait on the owner at the issue stage. If you can decide it under these rules, decide it.
 - Everything else stays unassigned and merges on its own: bug fixes with a regression test, perf wins with a measurement, lint/type fixes, a11y fixes, refactors and tech debt with no behavior change, tests, docs, and safe dependency bumps.
 - If a bug or maintenance fix also needs a production step (data write, secret, console), let the code merge and open a separate issue assigned to the owner for that step.
 
