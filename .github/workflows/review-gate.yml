@@ -1,0 +1,26 @@
+name: Review gate
+
+# Required check on main. Fails while anyone is assigned to the PR, so a PR the
+# agents assigned to the owner can't auto-merge until the owner unassigns
+# themselves. Re-runs on every assign/unassign and new push.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, assigned, unassigned]
+
+permissions:
+  contents: read
+
+jobs:
+  review-gate:
+    name: review-gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Block while assigned
+        env:
+          ASSIGNEES: ${{ join(github.event.pull_request.assignees.*.login, ', ') }}
+        run: |
+          if [ -n "$ASSIGNEES" ]; then
+            echo "::error::Waiting on review by: $ASSIGNEES. Unassign to allow merge."
+            exit 1
+          fi
+          echo "No assignees: clear to merge once the other checks pass."

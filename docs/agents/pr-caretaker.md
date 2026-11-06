@@ -1,32 +1,31 @@
 # PR caretaker
 
-Goal: no open PR sits stuck. Merge what's safe, unblock what's fixable, and hand the owner a clear decision on the rest.
+Goal: no open PR sits stuck. Keep PRs green and conflict-free, address review comments, and make sure anything that needs the owner is assigned to them.
 
-Follow [README.md](README.md) shared rules first (lock, worktrees, never-list).
+Follow [README.md](README.md) shared rules first (lock, worktrees, never-list, assignment rules). Never run `gh pr merge` and never unassign the owner. The auto-merge workflow and the review-gate check handle merging.
 
 ## Steps
 
-1. List open PRs: `gh pr list --repo ghanbak/sw-books --state open --json number,title,author,headRefName,labels,mergeable,statusCheckRollup,updatedAt`.
+1. List open PRs: `gh pr list --repo ghanbak/sw-books --state open --json number,title,author,headRefName,labels,assignees,mergeable,autoMergeRequest,statusCheckRollup,updatedAt`.
 2. For each PR, by author:
 
 **Dependabot**
-- No CI run on the current head (opened before CI existed) → comment `@dependabot rebase` and move on; next run picks it up.
-- Classify with the safe-bump rules. To check for native code, create a worktree on the PR head, `npm ci`, and inspect `node_modules/<pkg>` for each bumped package.
-- **Safe**, CI green: run the independent reviewer on the diff plus each package's release notes (`gh api repos/<owner>/<repo>/releases` or the changelog) between the old and new version. On `APPROVE`: add `tier:auto-merge`, comment one line on why it's safe, `gh pr merge <n> --squash --auto`.
-- **Safe**, CI failing: comment the failing check and its first error. Don't fix Dependabot branches.
-- **Unsafe** (native, Expo-coupled, major, or mixed group): add `tier:review` once, and comment once with what changed, the breaking changes from release notes, and what to test on a device. Don't repeat the comment on later runs unless the PR head changed.
-- Two Dependabot PRs bumping the same package: keep the newer, comment on the older that it's superseded.
+- No CI or `review-gate` run on the current head (opened before those workflows existed): comment `@dependabot rebase` once per head and move on.
+- Unassigned (the workflow judged it safe by name): create a worktree on the PR head, `npm ci`, and check each bumped package in `node_modules/<pkg>` for `ios/`, `android/` or `expo-module.config.json`. Run the independent reviewer on the diff plus each package's release notes between the old and new version (`gh api repos/<owner>/<repo>/releases` or the changelog). Found native code, breaking changes, or `BLOCK`: assign the owner (`gh pr edit <n> --add-assignee ghanbak`) and comment once with what changed and what to test. Otherwise comment one line on why it's safe and leave it to auto-merge.
+- Assigned to the owner: comment once with what changed, breaking changes from the release notes, and what to test on a device. Don't repeat it unless the head changed.
+- CI failing: comment the failing check and its first error. Don't fix Dependabot branches.
+- Auto-merge not on (`autoMergeRequest` empty) and the PR predates the auto-merge workflow: mention it in the summary for the owner; don't enable it yourself.
+- Two Dependabot PRs bumping the same package: comment on the older one that it's superseded.
 
 **Agent PRs** (branch `agent/*`)
 - Merge conflict: rebase the branch on `origin/main` in a worktree, re-run verify, push.
-- CI failing: fix in a worktree on the branch, verify, push. After two failed fix attempts, add `needs-info`, comment what's failing and stop.
-- Owner review comments (on any tier): address each one in a commit, verify, push, and reply to the comment with the commit SHA. If a comment asks for something out of scope, reply with a new issue number instead of growing the PR.
-- `tier:auto-merge`, CI green, no unresolved review comments: run the reviewer if it hasn't approved the current head, then `gh pr merge <n> --squash --auto`.
-- `tier:review`: never merge. Keep it green and conflict-free, and once all owner comments are addressed, comment once: "Ready for another look."
+- CI failing: fix in a worktree on the branch, verify, push. After two failed fix attempts, assign the owner, comment what's failing, and stop.
+- Owner review comments: address each one in a commit, verify, push, and reply to the comment with the commit SHA. If a comment asks for something out of scope, reply with a new issue number instead of growing the PR. Once all of them are addressed, comment once: "Ready for another look."
+- Unassigned PR whose diff turns out to need review (see README "When to assign the owner"): assign the owner with a one-line reason.
 - Merged: set the linked issue's Roadmap Status to `Done`.
 
 **Owner PRs** (author `ghanbak`, not `agent/*`)
 - Never push. Comment only if CI fails or there's a conflict, once per head SHA.
 
 3. Any PR with no activity for 14 days: comment once asking whether to keep it. Never close PRs.
-4. Summary: merged, labeled, rebased, fixed, waiting on owner (list numbers).
+4. Summary: what's merging on its own, what's assigned to the owner (with numbers), rebased, fixed, and anything stuck.

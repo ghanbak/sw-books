@@ -1,6 +1,7 @@
 name: Bug
 description: Something is broken or behaves wrongly.
-labels: ["bug", "triage"]
+labels: ["bug"]
+projects: ["ghanbak/4"]
 body:
   - type: dropdown
     id: product
@@ -37,4 +38,4 @@ body:
     attributes:
       label: Fix requirements
       options:
-        - label: The fix must include a regression test (required for tier:auto-merge)
+        - label: The fix must include a regression test (required for it to merge without review)

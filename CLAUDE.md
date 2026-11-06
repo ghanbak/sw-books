@@ -34,7 +34,7 @@ Star Wars book tracker mobile app built with Expo (React Native) + Supabase.
 
 ## Agent loops
 
-- Scheduled PR caretaker, scout + triage, and execute loops follow [docs/agents/README.md](docs/agents/README.md) (tiers, never-list, verify rules)
+- Scheduled PR caretaker, scout + triage, and execute loops follow [docs/agents/README.md](docs/agents/README.md) (labels, assignee-based review, never-list, verify rules)
 - `npm run verify` (app) and `npm run verify:admin` are the CI checks; run them in a fresh worktree
 
 ## Project Structure
