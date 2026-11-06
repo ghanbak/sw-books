@@ -1,0 +1,41 @@
+name: Design drift
+description: UI that departs from the documented design direction (CLAUDE.md Design Context).
+labels: ["design-drift", "triage"]
+body:
+  - type: dropdown
+    id: product
+    attributes:
+      label: Product
+      options:
+        - App (Expo mobile)
+        - Web (ossusarchives.com)
+        - Admin (catalog tool)
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Screen or component
+      placeholder: e.g. Timeline tab, components/holo-stage.tsx
+    validations:
+      required: true
+  - type: textarea
+    id: rule
+    attributes:
+      label: Rule it breaks
+      description: Quote the token, principle or rule from the design direction.
+      placeholder: 'e.g. "Secondary accent: Star Wars yellow — scanner, badges, emphasis only"'
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Screenshot or code reference showing the drift.
+    validations:
+      required: true
+  - type: textarea
+    id: fix
+    attributes:
+      label: Proposed fix
+      description: Fixes that restore the documented direction are tier:auto-pr. Changing the direction itself is tier:needs-approval.

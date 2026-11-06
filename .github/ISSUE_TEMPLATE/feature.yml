@@ -1,0 +1,39 @@
+name: Feature or update
+description: A new feature or a change to existing behavior. Triage sets tier, owner and priority.
+labels: ["enhancement", "triage"]
+body:
+  - type: dropdown
+    id: product
+    attributes:
+      label: Product
+      options:
+        - App (Expo mobile)
+        - Web (ossusarchives.com)
+        - Admin (catalog tool)
+        - Data (catalog, seed, pipelines)
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why
+      description: Describe it in plain words. Who is it for, and what problem does it solve?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How we know it's done. Triage fills this in if left blank.
+      placeholder: |
+        - [ ] ...
+  - type: textarea
+    id: verify
+    attributes:
+      label: How to verify
+      description: Tests, screenshots, or manual steps that prove it works.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Design notes or references
+      description: Figma links, screenshots, related issues.

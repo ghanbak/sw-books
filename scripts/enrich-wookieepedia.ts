@@ -70,7 +70,7 @@ async function requireTable(url: string): Promise<void> {
 			`\nStopping: table public.book_enrichment does not exist on ${isLocal(url) ? 'LOCAL' : 'PRODUCTION'} (${url}).`,
 		);
 		console.error(
-			'Run `supabase db push` first (applies supabase/migrations/20261020221839_add_book_enrichment.sql). Nothing written.',
+			`Run \`${isLocal(url) ? 'npm run db:reset' : 'supabase db push --remote'}\` first (applies supabase/migrations/20261020221839_add_book_enrichment.sql). Nothing written.`,
 		);
 		process.exit(1);
 	}

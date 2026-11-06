@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    name: app (lint, typecheck, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx biome check .
+      - run: npm run typecheck
+      - run: npm test
+
+  admin:
+    name: admin (lint, typecheck, build, bundle check)
+    runs-on: ubuntu-latest
+    env:
+      # Placeholders so the env schema validates at build time. Not real credentials.
+      SUPABASE_LOCAL_URL: http://127.0.0.1:54321
+      SUPABASE_LOCAL_SERVICE_ROLE_KEY: ci-placeholder-not-a-real-key-000000
+      SUPABASE_PROD_URL: http://127.0.0.1:54321
+      SUPABASE_PROD_SERVICE_ROLE_KEY: ci-placeholder-not-a-real-key-000000
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-not-a-real-key-000000
+      ADMIN_USER_IDS: 00000000-0000-0000-0000-000000000000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: admin
+      - run: npx biome check .
+        working-directory: admin
+      - run: npx tsc --noEmit -p .
+        working-directory: admin
+      - run: npx next build
+        working-directory: admin
+      - run: bash scripts/check-admin-bundle.sh

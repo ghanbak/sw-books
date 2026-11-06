@@ -32,6 +32,11 @@ Star Wars book tracker mobile app built with Expo (React Native) + Supabase.
 - Complete one action item at a time, summarize next, ask to proceed
 - Always read latest documentation and TypeScript typings for third-party packages
 
+## Agent loops
+
+- Scheduled PR caretaker, scout + triage, and execute loops follow [docs/agents/README.md](docs/agents/README.md) (tiers, never-list, verify rules)
+- `npm run verify` (app) and `npm run verify:admin` are the CI checks; run them in a fresh worktree
+
 ## Project Structure
 
 - `app/` — Expo Router file-based routes
