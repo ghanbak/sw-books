@@ -7,7 +7,8 @@ name: Auto-merge
 # finish, so they always wait for review.
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    # synchronize: PRs that predate this workflow pick it up on their next rebase.
+    types: [opened, reopened, ready_for_review, synchronize]
 
 permissions:
   contents: write
@@ -47,7 +48,9 @@ jobs:
                 reason="${reason:+$reason; }native or Expo-coupled package: $dep" ;;
             esac
           done
-          if [ -n "$reason" ]; then
+          # Hold once per PR: after the owner unassigns, a later rebase doesn't re-assign them.
+          held_before=$(gh pr view "$PR_URL" --json comments --jq '[.comments[].body | select(startswith("🤖 auto-merge: held for review"))] | length')
+          if [ -n "$reason" ] && [ "$held_before" = "0" ]; then
             gh pr edit "$PR_URL" --add-assignee "$OWNER"
             gh pr comment "$PR_URL" --body "🤖 auto-merge: held for review ($reason). Unassign yourself to let it merge."
           fi
