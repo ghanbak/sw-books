@@ -6,7 +6,7 @@ Follow [README.md](README.md) shared rules first. Check backpressure before star
 
 ## Pick work
 - From the Roadmap project (project 4), items with Status `Todo`, highest Priority first, then oldest.
-- Eligible only if the issue has `tier:auto-merge` or `tier:auto-pr`, or `tier:needs-approval` plus `approved`. Skip anything labeled `needs-info`.
+- Eligible only if the issue has `tier:auto-merge` or `tier:auto-pr`, or `tier:needs-approval` plus `approved`. Skip anything labeled `needs-info`, `owner-only` or `owner-review`.
 - Take at most 2. Set each to `In Progress` before starting.
 
 ## Do the work (per item)

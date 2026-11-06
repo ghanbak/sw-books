@@ -36,6 +36,9 @@ Every loop follows the shared rules below, then its own playbook. The weekly ret
 - `tier:auto-merge`: bug fixes with a regression test, measured perf wins, lint/type fixes, a11y fixes, and **safe dependency bumps**. Merge with `gh pr merge <n> --squash --auto` after CI passes and the independent reviewer approves.
 - `tier:auto-pr`: refactors, design-drift fixes that restore the documented direction, minor UX polish. Open the PR; the owner merges.
 - `tier:needs-approval`: features, design-direction changes, migrations, user-facing copy or flows, unsafe dependency bumps. Do not start work until the issue has the `approved` label.
+- **Bugs never need approval** (owner's rule, 2026-11-06). A bug is `tier:auto-merge` when the fix comes with a regression test, otherwise `tier:auto-pr`, never `tier:needs-approval`. If the fix needs a schema migration or a production data write, open it as `tier:auto-pr` and leave the production step to the owner in the PR body.
+- `owner-only` issues need Ethan (consoles, secrets, accounts, a physical device, production data, licences). Agents never execute them; they may prepare a PR for any code part and leave the rest to the owner.
+- `owner-review` issues are waiting on the owner's keep-or-close decision. Every loop ignores them.
 
 **Safe dependency bump** (all must hold)
 - Author is Dependabot, every bump is patch or minor semver.

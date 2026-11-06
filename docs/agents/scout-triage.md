@@ -26,7 +26,7 @@ For each issue:
 - Set the owner label (`agent:tregg|luis|dylan|brandon`) and product label (`product:app|web|admin`, `area:data`).
 - Add it to the Roadmap project if missing and set fields: Priority (P0 broken production, auth or data loss; P1 user-visible bug or blocker; P2 normal; P3 nice-to-have), Product, Effort (S/M/L).
 - Fill in missing acceptance criteria and a "How to verify" section as a comment if the author left them blank.
-- Status: `Todo` if it's eligible for the execute loop (`tier:auto-merge` or `tier:auto-pr`, or `tier:needs-approval` with `approved`) and Effort is S or M; otherwise `Backlog`. Effort L goes to `Backlog` with a comment proposing how to split it.
+- Status: `Todo` if it's eligible for the execute loop (`tier:auto-merge` or `tier:auto-pr`, or `tier:needs-approval` with `approved`), isn't `owner-only`, and Effort is S or M; otherwise `Backlog`. Effort L goes to `Backlog` with a comment proposing how to split it. `owner-only` goes to `Backlog` with a one-line comment on what Ethan has to do.
 - Remove the `triage` label.
 
 Keep at most 6 items in `Todo`; extra eligible items stay in `Backlog`, highest priority first.
