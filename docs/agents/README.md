@@ -30,13 +30,12 @@ Every loop follows the shared rules below, then its own playbook. The weekly ret
 - Run Supabase commands against a hosted project: no `--remote`, no `--linked`, never `--yes`. No `db:seed:prod`, `catalog:*:prod`, `catalog:apply`, or anything that writes production data.
 - Edit `lib/types.ts` by hand, hand-edit `data/books.csv`, touch `.env*` files or secrets.
 - Delete, skip or weaken a test to get green. A reviewer who sees a test change must justify it.
-- Change the design direction in CLAUDE.md. Restoring it is fine; changing it is `tier:needs-approval`.
+- Change the design direction in CLAUDE.md. Restoring it is fine; changing it is `tier:review`.
 
-**Tiers** (labels decide, not judgment in the moment)
-- `tier:auto-merge`: bug fixes with a regression test, measured perf wins, lint/type fixes, a11y fixes, and **safe dependency bumps**. Merge with `gh pr merge <n> --squash --auto` after CI passes and the independent reviewer approves.
-- `tier:auto-pr`: refactors, design-drift fixes that restore the documented direction, minor UX polish. Open the PR; the owner merges.
-- `tier:needs-approval`: features, design-direction changes, migrations, user-facing copy or flows, unsafe dependency bumps. Do not start work until the issue has the `approved` label.
-- **Bugs never need approval** (owner's rule, 2026-11-06). A bug is `tier:auto-merge` when the fix comes with a regression test, otherwise `tier:auto-pr`, never `tier:needs-approval`. If the fix needs a schema migration or a production data write, open it as `tier:auto-pr` and leave the production step to the owner in the PR body.
+**Tiers** (owner's rule, 2026-11-06: agents may start any triaged work without approval, and every change lands as a PR; the tier only decides how it merges)
+- `tier:auto-merge` (bugs, performance, maintenance): bug fixes with a regression test, perf wins with a before/after measurement, lint/type fixes, a11y fixes, refactors and tech debt with no behavior change, tests, docs, and **safe dependency bumps**. Merge with `gh pr merge <n> --squash --auto` once CI passes and the independent reviewer approves.
+- `tier:review` (features and improvements): new features, UX or visual changes (including design-drift fixes, since CI can't check visuals), user-facing copy or flows, schema migrations, unsafe dependency bumps, and any `auto-merge` change that's missing its regression test or measurement or that the reviewer blocked. Open the PR and never merge it. The owner reviews and comments, the caretaker addresses the comments, and the owner merges or turns on auto-merge.
+- If a bug or maintenance fix needs a production step (data write, secret, console), the code still lands under its tier and the PR body lists the production step for the owner.
 - `owner-only` issues need Ethan (consoles, secrets, accounts, a physical device, production data, licences). Agents never execute them; they may prepare a PR for any code part and leave the rest to the owner.
 - `owner-review` issues are waiting on the owner's keep-or-close decision. Every loop ignores them.
 
@@ -44,13 +43,13 @@ Every loop follows the shared rules below, then its own playbook. The weekly ret
 - Author is Dependabot, every bump is patch or minor semver.
 - No bumped package is native or Expo-coupled: not `expo`, `expo-*`, `@expo/*`, `react`, `react-native`, `react-native-*`, `@react-native*`, `@shopify/*`, `react-native-webgpu`, `three`, and no bumped package ships `ios/`, `android/` or `expo-module.config.json` (check in `node_modules/<pkg>` after `npm ci`).
 - Admin-only bumps (`/admin`) are safe when `verify:admin` passes, but they redeploy the website and admin on merge, so the reviewer reads the release notes.
-- Anything else, or a grouped PR mixing safe and unsafe bumps → `tier:needs-approval`, with a comment saying what changed and what to test on a device.
+- Anything else, or a grouped PR mixing safe and unsafe bumps → `tier:review`, with a comment saying what changed and what to test on a device.
 
 **Independent reviewer**
-- Before any merge or PR, spawn a separate reviewer subagent (`general-purpose`) that gets only the diff, the issue or PR description and the tier rules, not your reasoning. Ask it to find reasons not to ship and end with `APPROVE` or `BLOCK: <reason>`. `BLOCK` means no merge; fix it or downgrade the tier to `auto-pr` with the reason in a comment.
+- Before any merge or PR, spawn a separate reviewer subagent (`general-purpose`) that gets only the diff, the issue or PR description and the tier rules, not your reasoning. Ask it to find reasons not to ship and end with `APPROVE` or `BLOCK: <reason>`. `BLOCK` means no merge; fix it, or move the PR to `tier:review` with the reason in a comment.
 
 **Backpressure**
-- If 6 or more agent PRs (branch `agent/*`) are open and waiting on the owner, the execute loop opens nothing new.
+- If 6 or more `tier:review` agent PRs (branch `agent/*`) are open and waiting on the owner, the execute loop only takes `tier:auto-merge` work until the owner catches up.
 
 **Talking to the owner**
 - Start every PR or issue comment with `🤖 <loop name>:`. Be terse.

@@ -38,4 +38,4 @@ body:
     id: fix
     attributes:
       label: Proposed fix
-      description: Fixes that restore the documented direction are tier:auto-pr. Changing the direction itself is tier:needs-approval.
+      description: Drift fixes are opened as PRs for the owner to review (tier:review), whether they restore the documented direction or change it.
