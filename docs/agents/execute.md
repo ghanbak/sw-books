@@ -11,7 +11,7 @@ Follow [README.md](README.md) shared rules first. Check backpressure before star
 
 ## Do the work (per item)
 1. Worktree on a new branch from `origin/main`: `agent/<issue-number>-<short-slug>`.
-2. Delegate the implementation to the owning subagent from the `agent:*` label (Tregg, Luis, Dylan, Brandon). Give it the issue body, acceptance criteria, the worktree path, and the README never-list. Ask it to end its report with a "Lessons / corrections" section.
+2. Delegate the implementation to the owning subagent from the `agent:*` label (Tregg, Luis, Dylan, Brandon). Give it the issue body, the owner's comments on the issue (the owner's latest instructions override the body), acceptance criteria, the worktree path, and the README never-list. Ask it to end its report with a "Lessons / corrections" section.
 3. Requirements:
    - Bugs: a regression test that fails before the fix and passes after.
    - Perf: a before/after measurement in the PR body.

@@ -21,7 +21,7 @@ Rules for filing:
 
 ## 2. Triage
 
-The queue: open issues that aren't assigned to the owner and are either not on the Roadmap yet or have Status `Triage` (or no Status). This includes issues the owner just unassigned themselves from.
+The queue: open issues that aren't assigned to the owner and are either not on the Roadmap yet or have Status `Triage` (or no Status). Also include any issue the owner unassigned themselves from since its last 🤖 comment (check `gh api repos/ghanbak/sw-books/issues/<n>/timeline` for an `unassigned` event by `ghanbak`). For those, read the owner's latest comments first: their instructions override the issue body, so copy them into the body under "Owner instructions" and set Status `Todo`.
 
 For each issue:
 - Set the type label, owner agent label (`agent:tregg|luis|dylan|brandon`) and product label (`product:app|web|admin`, `area:data`); add `launch` if it blocks the App Store or Play launch. No other labels.
