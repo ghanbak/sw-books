@@ -39,7 +39,7 @@
 		"@react-native-google-signin/google-signin": "^16.1.2",
 		"@shopify/flash-list": "2.0.2",
 		"@supabase/supabase-js": "^2.103.0",
-		"expo": "~56.0.23",
+		"expo": "~58.0.23",
 		"expo-apple-authentication": "~56.0.4",
 		"expo-build-properties": "~56.0.27",
 		"expo-camera": "~56.0.8",
@@ -90,7 +90,7 @@
 		"tsx": "^4.21.0",
 		"typescript": "~6.0.3",
 		"vitest": "^4.1.11",
-		"zod": "^4.4.3"
+		"zod": "^4.6.7"
 	},
 	"overrides": {
 		"@xmldom/xmldom": "0.8.13",
