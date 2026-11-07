@@ -2,13 +2,14 @@
 
 import { getAdmin } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { type ActionError, dbError } from '@app/action-errors';
 import { ensureUniqueSlug } from '@app/slug';
+import { guardedUpdate } from '@app/stale-write';
 import type { Database, Json } from '@app/types';
 import { revalidateTag } from 'next/cache';
 import { z } from 'zod';
 
 type BookRow = Database['public']['Tables']['books']['Row'];
-type ActionError = { code: string; message: string };
 type Result<T> = { ok: true; data: T } | { ok: false; error: ActionError };
 
 const DATE = z
@@ -47,8 +48,24 @@ const patchSchema = z
 
 export type BookPatchInput = z.input<typeof patchSchema>;
 
-export async function patchBook(id: string, raw: unknown): Promise<Result<BookRow>> {
+/** The `updated_at` the client loaded the row with (ISO timestamptz, or null). */
+const expectedUpdatedAt = z.string().min(1).max(64).nullable();
+
+/**
+ * Patch a book. `loadedUpdatedAt` is the row's `updated_at` as the caller loaded
+ * it; if the row has been written since, the update is rejected with CONFLICT
+ * instead of overwriting the newer data.
+ */
+export async function patchBook(
+	id: string,
+	loadedUpdatedAt: string | null,
+	raw: unknown,
+): Promise<Result<BookRow>> {
 	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
+	const expected = expectedUpdatedAt.safeParse(loadedUpdatedAt);
+	if (!expected.success) {
+		return { ok: false, error: { code: 'INVALID', message: 'missing updated_at' } };
+	}
 	const parsed = patchSchema.safeParse(raw);
 	if (!parsed.success) {
 		return {
@@ -61,16 +78,17 @@ export async function patchBook(id: string, raw: unknown): Promise<Result<BookRo
 	}
 
 	const supabaseAdmin = await getSupabaseAdmin();
-	const { data, error } = await supabaseAdmin
-		.from('books')
-		.update(parsed.data)
-		.eq('id', id)
-		.select()
-		.single();
-
-	if (error) return { ok: false, error: { code: 'DB', message: error.message } };
-	revalidateTag('books');
-	return { ok: true, data };
+	const res = await guardedUpdate<BookRow>('patchBook', expected.data, {
+		update: (at) => {
+			const q = supabaseAdmin.from('books').update(parsed.data).eq('id', id);
+			return (at === null ? q.is('updated_at', null) : q.eq('updated_at', at))
+				.select()
+				.maybeSingle();
+		},
+		current: () => supabaseAdmin.from('books').select('updated_at').eq('id', id).maybeSingle(),
+	});
+	if (res.ok) revalidateTag('books');
+	return res;
 }
 
 /**
@@ -144,7 +162,7 @@ export async function createBook(raw: unknown): Promise<Result<BookRow>> {
 		if (error.code === '23505') {
 			return { ok: false, error: { code: 'SLUG_TAKEN', message: `slug "${input.slug}" is taken` } };
 		}
-		return { ok: false, error: { code: 'DB', message: error.message } };
+		return { ok: false, error: dbError('createBook', error) };
 	}
 	revalidateTag('books');
 	return { ok: true, data };
@@ -165,7 +183,7 @@ export async function deleteBook(id: string, typedSlug: string): Promise<Result<
 		.select('slug')
 		.eq('id', id)
 		.maybeSingle();
-	if (fetchErr) return { ok: false, error: { code: 'DB', message: fetchErr.message } };
+	if (fetchErr) return { ok: false, error: dbError('deleteBook', fetchErr) };
 	if (!book) return { ok: false, error: { code: 'NOT_FOUND', message: 'book not found' } };
 	if (typedSlug.trim() !== book.slug) {
 		return {
@@ -175,7 +193,7 @@ export async function deleteBook(id: string, typedSlug: string): Promise<Result<
 	}
 
 	const { error } = await supabaseAdmin.from('books').delete().eq('id', id);
-	if (error) return { ok: false, error: { code: 'DB', message: error.message } };
+	if (error) return { ok: false, error: dbError('deleteBook', error) };
 	revalidateTag('books');
 	return { ok: true, data: { slug: book.slug } };
 }
@@ -205,9 +223,8 @@ export async function mergeBooks(
 		losers: loserIds,
 		resolution,
 	});
-	if (error || !data) {
-		return { ok: false, error: { code: 'DB', message: error?.message ?? 'merge failed' } };
-	}
+	if (error) return { ok: false, error: dbError('mergeBooks', error) };
+	if (!data) return { ok: false, error: { code: 'DB', message: 'merge failed' } };
 	revalidateTag('books');
 	return { ok: true, data };
 }

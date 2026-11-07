@@ -1,5 +1,6 @@
 import { getDriftReport } from '@/app/_actions/export';
 import { Badge } from '@/components/ui/badge';
+import { IS_HOSTED } from '@/lib/admin-allowlist';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { ExportButton } from './_components/export-button';
@@ -7,6 +8,24 @@ import { ExportButton } from './_components/export-button';
 export const dynamic = 'force-dynamic';
 
 export default async function DiffPage() {
+	if (IS_HOSTED) {
+		return (
+			<main className="mx-auto max-w-5xl p-6">
+				<Link
+					href="/admin/books"
+					className="mb-4 inline-flex items-center gap-1 text-muted-foreground text-sm hover:text-foreground"
+				>
+					<ArrowLeft className="size-4" /> Catalog
+				</Link>
+				<h1 className="font-semibold text-2xl tracking-tight">Unsaved changes</h1>
+				<p className="mt-2 text-muted-foreground text-sm">
+					Drift review and Export to CSV run in the local admin (
+					<code className="text-saber-blue">npm run admin</code>). This deploy has no{' '}
+					<code className="text-saber-blue">data/</code> to compare against or write to.
+				</p>
+			</main>
+		);
+	}
 	const res = await getDriftReport();
 
 	return (

@@ -3,9 +3,11 @@ import path from 'node:path';
 import { getDriftReport } from '@/app/_actions/export';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { IS_HOSTED } from '@/lib/admin-allowlist';
 import { contextPageIds, deriveStates, getWikiInfo, loadEnrichmentContext } from '@/lib/enrichment';
 import { ISSUE_DEFS, type IssueKey, issuesFor } from '@/lib/issues';
 import { getDbTarget, getSupabaseAdmin } from '@/lib/supabase-admin';
+import { dbError } from '@app/action-errors';
 import { ENRICHMENT_STATUSES, type EnrichmentStatus } from '@app/wookieepedia/enrichment-status';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
@@ -39,18 +41,21 @@ export default async function BooksPage() {
 		supabaseAdmin
 			.from('books')
 			.select(
-				'id, slug, title, author, canon, era, type, series_name, series_order, timeline_order, primary_isbn, isbn, format, publisher, date_published, cover_image, synopsis',
+				'id, slug, title, author, canon, era, type, series_name, series_order, timeline_order, primary_isbn, isbn, format, publisher, date_published, cover_image, synopsis, updated_at',
 			)
 			.order('title', { ascending: true }),
 		loadPlaceholderSlugs(),
 		loadEnrichmentContext(supabaseAdmin),
-		getDriftReport(),
+		// Drift is N/A on hosted: there's no data/books.csv to compare against.
+		IS_HOSTED ? null : getDriftReport(),
 	]);
 
 	if (error) {
 		return (
 			<main className="p-8">
-				<p className="text-destructive">Failed to load catalog: {error.message}</p>
+				<p className="text-destructive">
+					Failed to load catalog: {dbError('BooksPage', error).message}
+				</p>
 			</main>
 		);
 	}
@@ -88,7 +93,7 @@ export default async function BooksPage() {
 		pinErrors: enrichmentCtx.ok ? enrichmentCtx.data.pins.errors.length : 0,
 	};
 
-	const driftRows = drift.ok ? drift.data.summary.rows : 0;
+	const driftRows = drift?.ok ? drift.data.summary.rows : 0;
 
 	return (
 		<main className="mx-auto max-w-[1600px] p-6">
@@ -97,22 +102,28 @@ export default async function BooksPage() {
 					<h1 className="font-semibold text-2xl tracking-tight">Catalog</h1>
 					<div className="mt-1 flex items-center gap-2 text-muted-foreground text-sm">
 						<span className="tabular-nums">{rows.length} books ·</span>
-						<DbTargetSwitch current={target} />
+						{IS_HOSTED ? (
+							<span className="font-medium text-saber-yellow text-xs">Production</span>
+						) : (
+							<DbTargetSwitch current={target} />
+						)}
 					</div>
 				</div>
 				<div className="flex items-center gap-3">
-					<Link href="/admin/diff">
-						<Badge
-							variant="outline"
-							className={
-								driftRows > 0
-									? 'border-saber-yellow/40 bg-saber-yellow/10 text-saber-yellow tabular-nums'
-									: 'text-muted-foreground tabular-nums'
-							}
-						>
-							{driftRows > 0 ? `${driftRows} unsaved` : 'Synced to books.csv'}
-						</Badge>
-					</Link>
+					{IS_HOSTED ? null : (
+						<Link href="/admin/diff">
+							<Badge
+								variant="outline"
+								className={
+									driftRows > 0
+										? 'border-saber-yellow/40 bg-saber-yellow/10 text-saber-yellow tabular-nums'
+										: 'text-muted-foreground tabular-nums'
+								}
+							>
+								{driftRows > 0 ? `${driftRows} unsaved` : 'Synced to books.csv'}
+							</Badge>
+						</Link>
+					)}
 					<Link href="/admin/books/new">
 						<Button size="sm">
 							<Plus className="size-4" />
