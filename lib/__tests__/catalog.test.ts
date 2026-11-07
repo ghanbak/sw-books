@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
 	type CatalogOverrides,
 	buildBookFields,
@@ -45,6 +45,33 @@ describe('catalog helpers', () => {
 		expect(parseDate('January 5, 2021')).toBe('2021-01-05');
 		expect(parseDate('')).toBe(null);
 		expect(parseDate('not a date')).toBe(null);
+	});
+
+	describe('parseDate is timezone-independent', () => {
+		const zones = ['UTC', 'Asia/Tokyo', 'Pacific/Kiritimati', 'America/Los_Angeles'];
+		const originalTz = process.env.TZ;
+		afterEach(() => {
+			// `process.env.TZ = undefined` would store the string "undefined".
+			if (originalTz === undefined) Reflect.deleteProperty(process.env, 'TZ');
+			else process.env.TZ = originalTz;
+		});
+
+		for (const tz of zones) {
+			it(`keeps the calendar day in ${tz}`, () => {
+				process.env.TZ = tz;
+				expect(parseDate('January 1, 2015')).toBe('2015-01-01');
+				expect(parseDate('May 2006')).toBe('2006-05-01');
+				expect(parseDate('December 31, 1999')).toBe('1999-12-31');
+				expect(parseDate('June 29, 2021')).toBe('2021-06-29');
+				expect(parseDate('1996')).toBe('1996-01-01');
+				expect(parseDate('2021-01-05')).toBe('2021-01-05');
+			});
+		}
+	});
+
+	it('parseDate rejects impossible days', () => {
+		expect(parseDate('February 30, 2021')).toBe(null);
+		expect(parseDate('2021-13-01')).toBe(null);
 	});
 
 	it('splitMultiValue splits, trims, dedupes', () => {
