@@ -139,8 +139,10 @@ export function planIsbnFix(fix: IsbnFix, live: LiveState | null): Step {
 /** Cleanup ISBN repair: add primary_isbn to isbn[], or reset primary_isbn. */
 export function planIsbnMembershipFix(fix: IsbnMembershipFix, live: LiveState | null): Step {
 	const added = fix.after.isbn.filter((i) => !fix.before.isbn.includes(i));
+	const removed = fix.before.isbn.filter((i) => !fix.after.isbn.includes(i));
 	const parts: string[] = [];
 	if (added.length) parts.push(`isbn[] += ${added.join(', ')}`);
+	if (removed.length) parts.push(`isbn[] -= ${removed.join(', ')}`);
 	if (fix.before.primary_isbn !== fix.after.primary_isbn) {
 		parts.push(`primary_isbn ${fix.before.primary_isbn} → ${fix.after.primary_isbn}`);
 	}
@@ -301,7 +303,9 @@ export function cleanupBlockingProblems(cs: CleanupChangeset): string[] {
 		if (p != null && !f.after.isbn.includes(p)) {
 			out.push(`isbn_fix "${f.slug}" leaves primary_isbn ∉ isbn[]`);
 		}
-		const dropped = f.before.isbn.filter((i) => !f.after.isbn.includes(i));
+		// Only an operator-approved collision removal may drop an ISBN.
+		const approved = new Set((f.approved_removals ?? []).map((r) => r.isbn));
+		const dropped = f.before.isbn.filter((i) => !f.after.isbn.includes(i) && !approved.has(i));
 		if (dropped.length)
 			out.push(`isbn_fix "${f.slug}" would remove curated ISBN(s) ${dropped.join(', ')}`);
 	}

@@ -1,11 +1,11 @@
 # Catalog cleanup changeset
 
-Built 2026-10-22 against the PRODUCTION catalog (276 rows), read-only.
+Built 2026-11-06 against the PRODUCTION-snapshot (data/catalog-backup.csv) catalog (276 rows), read-only.
 Apply (dry-run first): `npx tsx scripts/apply-catalog-changeset.ts --production --changeset data/discovery/catalog-cleanup.json`
 
 | Section | Count |
 | --- | --- |
-| ISBN repairs (primary_isbn ∉ isbn[]) | 0 (flagged: 0) |
+| ISBN repairs (primary_isbn ∉ isbn[]) | 20 (flagged: 0) |
 | Cover fills (null cover_image) | 2 |
 | … of which work-level fallback (may be a different printing) | 2 |
 | Covers still missing (released) | 3 |
@@ -14,6 +14,232 @@ Apply (dry-run first): `npx tsx scripts/apply-catalog-changeset.ts --production 
 | Synopses skipped | 1 |
 
 ## ISBN repairs
+
+### `acolyte-crystal-crown` — operator-approved isbn[] addition
+
+- before: isbn [9781368099123, 9781368082167] · primary 9781368082167
+- after: isbn [9781368099123, 9781368082167, 9781368070126] · primary 9781368082167
+- why: operator-approved: isbn[] += 9781368070126 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Disney–Lucasfilm Press hardcover, July 29 2025); Open Library: "Star Wars: the Acolyte: the Crystal Crown", Tessa Gratton)
+- wiki: *The Acolyte: The Crystal Crown* — infobox [9781368070126]; page lists [9781368070126, 9781368082167]
+- Open Library 9781368082167: no record
+- Open Library 9781368099123: no record
+- Open Library 9781368070126: "Star Wars : the Acolyte / the Crystal Crown" (/works/OL42429960W)
+- other rows holding 9781368082167: none
+- operator-approved addition 9781368070126: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Disney–Lucasfilm Press hardcover, July 29 2025); Open Library: "Star Wars: the Acolyte: the Crystal Crown", Tessa Gratton
+
+### `acolyte-wayseeker` — operator-approved isbn[] addition
+
+- before: isbn [9780593723456] · primary 9780593723456
+- after: isbn [9780593723456, 9780593874431] · primary 9780593723456
+- why: operator-approved: isbn[] += 9780593874431 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, May 6 2025); penguinrandomhouse.com lists it as "The Acolyte: Wayseeker" by Justina Ireland; not on Open Library)
+- wiki: *The Acolyte: Wayseeker* — infobox [9780593874431]; page lists [9780593874431, 9780593874448, 9780593874455]
+- Open Library 9780593723456: no record
+- Open Library 9780593874431: no record
+- other rows holding 9780593723456: none
+- operator-approved addition 9780593874431: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, May 6 2025); penguinrandomhouse.com lists it as "The Acolyte: Wayseeker" by Justina Ireland; not on Open Library
+
+### `aftermath-life-debt` — operator-approved isbn[] addition
+
+- before: isbn [9780345511638] · primary 9780345511638
+- after: isbn [9780345511638, 9781101966938] · primary 9780345511638
+- why: operator-approved: isbn[] += 9781101966938 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey US hardcover, July 12 2016); Open Library: "Star Wars: Aftermath: Life debt", Chuck Wendig, Del Rey)
+- wiki: *Aftermath: Life Debt* — infobox [9781101966938]; page lists [9780425286746, 9780425286852, 9780593972762, 9781101966938, 9781101966945, 9781101966952]
+- Open Library 9780345511638: "Bubby's brunch cookbook / recipes and menus from New York's favorite comfort food restaurant" (/works/OL16470121W)
+- Open Library 9781101966938: "Star Wars / Aftermath : Life debt" (/works/OL17846581W)
+- other rows holding 9780345511638: none
+- operator-approved addition 9781101966938: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey US hardcover, July 12 2016); Open Library: "Star Wars: Aftermath: Life debt", Chuck Wendig, Del Rey
+
+### `corellian-trilogy-ambush` — operator-approved isbn[] addition
+
+- before: isbn [9780553572832] · primary 9780553572832
+- after: isbn [9780553572832, 9780553298031] · primary 9780553572832
+- why: operator-approved: isbn[] += 9780553298031 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US paperback, Feb 2 1995); Open Library: "Star Wars: Ambush at Corellia", Roger MacBride Allen, Spectra)
+- wiki: *Ambush at Corellia* — infobox [9780553298031]; page lists [9780307796141, 9780553298031]
+- Open Library 9780553572832: no record
+- Open Library 9780553298031: "Star Wars: Ambush at Corellia / The Corellian Trilogy - Book 1" (/works/OL92395W)
+- other rows holding 9780553572832: none
+- operator-approved addition 9780553298031: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US paperback, Feb 2 1995); Open Library: "Star Wars: Ambush at Corellia", Roger MacBride Allen, Spectra
+
+### `defy-the-storm` — operator-approved isbn[] addition
+
+- before: isbn [9781368093941] · primary 9781368093941
+- after: isbn [9781368093941, 9781368093811] · primary 9781368093941
+- why: operator-approved: isbn[] += 9781368093811 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Disney–Lucasfilm Press US hardcover, Mar 5 2024); Open Library: "Defy the Storm: Star Wars: The High Republic", Tessa Gratton + Justina Ireland)
+- wiki: *The High Republic: Defy the Storm* — infobox [9781368093811]; page lists [9781368093811, 9781761214059]
+- Open Library 9781368093941: no record
+- Open Library 9781368093811: "Defy the Storm / Star Wars: The High Republic" (/works/OL37564083W)
+- other rows holding 9781368093941: none
+- operator-approved addition 9781368093811: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Disney–Lucasfilm Press US hardcover, Mar 5 2024); Open Library: "Defy the Storm: Star Wars: The High Republic", Tessa Gratton + Justina Ireland
+
+### `hand-of-thrawn-vision` — operator-approved isbn[] addition
+
+- before: isbn [9780553572993] · primary 9780553572993
+- after: isbn [9780553572993, 9780553100358] · primary 9780553572993
+- why: operator-approved: isbn[] += 9780553100358 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US hardcover, Sep 1998); Open Library: "Star Wars: Vision of the Future", Timothy Zahn, Bantam)
+- wiki: *Vision of the Future* — infobox [9780553100358]; page lists [9780307796448, 9780553100358, 9780553578799]
+- Open Library 9780553572993: no record
+- Open Library 9780553100358: "Star Wars: Vision of the Future / Hand of Thrawn Duology - Book 2" (/works/OL83582W)
+- other rows holding 9780553572993: none
+- operator-approved addition 9780553100358: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US hardcover, Sep 1998); Open Library: "Star Wars: Vision of the Future", Timothy Zahn, Bantam
+
+### `mace-windu-glass-abyss` — operator-approved isbn[] addition
+
+- before: isbn [9780593722718, 9780593723449] · primary 9780593723449
+- after: isbn [9780593722718, 9780593723449, 9780593723432] · primary 9780593723449
+- why: operator-approved: isbn[] += 9780593723432 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, Oct 15 2024); Open Library: "Mace Windu: The Glass Abyss: Star Wars", Steven Barnes)
+- wiki: *Mace Windu: The Glass Abyss* — infobox [9780593723432]; page lists [9780593723432, 9780593723449, 9780593723456]
+- Open Library 9780593723449: no record
+- Open Library 9780593722718: no record
+- Open Library 9780593723432: "Mace Windu: The Glass Abyss / Star Wars" (/works/OL37566914W)
+- other rows holding 9780593723449: none
+- operator-approved addition 9780593723432: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, Oct 15 2024); Open Library: "Mace Windu: The Glass Abyss: Star Wars", Steven Barnes
+
+### `njo-force-heretic-reunion` — operator-approved isbn[] addition
+
+- before: isbn [9780307795625, 9780307795601, 9781448151974, 9781299271388] · primary 9780307795625
+- after: isbn [9780307795625, 9780307795601, 9781448151974, 9781299271388, 9780345428721] · primary 9780307795625
+- why: operator-approved: isbn[] += 9780345428721 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey paperback, July 2003); Open Library: "Reunion", Ballantine Books 2003)
+- wiki: *The New Jedi Order: Force Heretic III: Reunion* — infobox [9780345428721]; page lists [9780345428721, 9788025220214]
+- Open Library 9780307795625: "Reunion : Star Wars Legends / Force Heretic, Book III" (/works/OL28031246W)
+- Open Library 9780307795601: "Remnant : Star Wars Legends / Force Heretic, Book I" (/works/OL28031244W)
+- Open Library 9781448151974: "Star Wars / the New Jedi Order - Force Heretic III Reunion" (/works/OL1732960W)
+- Open Library 9781299271388: no record
+- Open Library 9780345428721: "Reunion" (/works/OL1732960W)
+- other rows holding 9780307795625: none
+- operator-approved addition 9780345428721: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey paperback, July 2003); Open Library: "Reunion", Ballantine Books 2003
+
+### `queens-peril` — operator-approved collision removal
+
+- before: isbn [9781368057141, 9781368063258, 9781368057943] · primary 9781368057141
+- after: isbn [9781368057141, 9781368063258] · primary 9781368057141
+- why: operator-approved: isbn[] -= 9781368057943 (belongs to "queens-shadow") (2026-11-06 (#78, approved on merge) — Open Library titles 9781368057943 "Queen's Shadow" (Disney Lucasfilm Press, 2020 paperback); it is queens-shadow's primary_isbn, so a scan could return Queen's Peril)
+- wiki: *Queen's Peril* — infobox [9781368057141]; page lists [9781368057141, 9781368063258, 9781368077194]
+- Open Library 9781368057141: "Queen's Peril / Star Wars" (/works/OL21888343W)
+- Open Library 9781368063258: no record
+- Open Library 9781368057943: "Queen's Shadow / Star Wars" (/works/OL19860554W)
+- other rows holding 9781368057141: none
+- operator-approved removal 9781368057943 (owner `queens-shadow`): 2026-11-06 (#78, approved on merge) — Open Library titles 9781368057943 "Queen's Shadow" (Disney Lucasfilm Press, 2020 paperback); it is queens-shadow's primary_isbn, so a scan could return Queen's Peril
+
+### `reign-of-the-empire-mask-of-fear` — operator-approved isbn[] addition
+
+- before: isbn [9780593723487] · primary 9780593723487
+- after: isbn [9780593723487, 9780593723463] · primary 9780593723487
+- why: operator-approved: isbn[] += 9780593723463 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, Feb 25 2025); Open Library: "Reign of the Empire: The Mask of Fear", Alexander Freed)
+- wiki: *Reign of the Empire: The Mask of Fear* — infobox [9780593723463]; page lists [9780593723463, 9780593723470, 9780593723487, 9780593975862, 9781529919424]
+- Open Library 9780593723487: "Star Wars / the Mask of Fear" (/works/OL24244423W)
+- Open Library 9780593723463: "Reign of the Empire: The Mask of Fear" (/works/OL43926434W)
+- other rows holding 9780593723487: none
+- operator-approved addition 9780593723463: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, Feb 25 2025); Open Library: "Reign of the Empire: The Mask of Fear", Alexander Freed
+
+### `temptation-of-the-force` — operator-approved isbn[] addition
+
+- before: isbn [9780593598535] · primary 9780593598535
+- after: isbn [9780593598535, 9780593723098] · primary 9780593598535
+- why: operator-approved: isbn[] += 9780593723098 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, June 11 2024); Open Library: "Temptation of the Force: Star Wars: The High Republic", Tessa Gratton)
+- wiki: *The High Republic: Temptation of the Force* — infobox [9780593723098]; page lists [9780593723098, 9780593723104, 9780593723111]
+- Open Library 9780593598535: no record
+- Open Library 9780593723098: "Temptation of the Force / Star Wars: The High Republic" (/works/OL37583441W)
+- other rows holding 9780593598535: none
+- operator-approved addition 9780593723098: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, June 11 2024); Open Library: "Temptation of the Force: Star Wars: The High Republic", Tessa Gratton
+
+### `the-living-force` — operator-approved isbn[] addition
+
+- before: isbn [9780593598559] · primary 9780593598559
+- after: isbn [9780593598559, 9780593597958] · primary 9780593598559
+- why: operator-approved: isbn[] += 9780593597958 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, Apr 9 2024); Open Library: "The Living Force: Star Wars", John Jackson Miller)
+- wiki: *The Living Force* — infobox [9780593597958]; page lists [9780593128381, 9780593597958, 9780593597965, 9780593724699, 9780593871515, 9781529919455]
+- Open Library 9780593598559: no record
+- Open Library 9780593597958: "The Living Force / Star Wars" (/works/OL37565122W)
+- other rows holding 9780593598559: none
+- operator-approved addition 9780593597958: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, Apr 9 2024); Open Library: "The Living Force: Star Wars", John Jackson Miller
+
+### `thrawn-ascendancy-chaos-rising` — operator-approved isbn[] addition
+
+- before: isbn [9780593157695] · primary 9780593157695
+- after: isbn [9780593157695, 9780593157688] · primary 9780593157695
+- why: operator-approved: isbn[] += 9780593157688 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey US hardcover, Sep 1 2020); Open Library: "Chaos Rising: Star Wars: Thrawn Ascendancy, Book 1", Timothy Zahn, hardcover)
+- wiki: *Thrawn Ascendancy: Chaos Rising* — infobox [9780593157688]; page lists [9780593157398, 9780593157688, 9780593157695, 9780593157701, 9781529124583]
+- Open Library 9780593157695: "Star Wars / Thrawn Ascendancy" (/works/OL23764596W)
+- Open Library 9780593157688: "Chaos Rising / Star Wars: Thrawn Ascendancy, Book 1" (/works/OL21212127W)
+- other rows holding 9780593157695: none
+- operator-approved addition 9780593157688: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey US hardcover, Sep 1 2020); Open Library: "Chaos Rising: Star Wars: Thrawn Ascendancy, Book 1", Timothy Zahn, hardcover
+
+### `thrawn-ascendancy-greater-good` — operator-approved isbn[] addition
+
+- before: isbn [9780593157701] · primary 9780593157701
+- after: isbn [9780593157701, 9780593158296] · primary 9780593157701
+- why: operator-approved: isbn[] += 9780593158296 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey US hardcover, Apr 27 2021); Open Library: "Greater Good: Star Wars: Thrawn Ascendancy, Book 2", Timothy Zahn, hardcover)
+- wiki: *Thrawn Ascendancy: Greater Good* — infobox [9780593158296]; page lists [9780593158296, 9780593158302, 9780593158319, 9780593357316, 9780593358153]
+- Open Library 9780593157701: "Star Wars / Thrawn Ascendancy" (/works/OL21212127W)
+- Open Library 9780593158296: "Greater Good / Star Wars: Thrawn Ascendancy, Book 2" (/works/OL23764596W)
+- other rows holding 9780593157701: none
+- operator-approved addition 9780593158296: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey US hardcover, Apr 27 2021); Open Library: "Greater Good: Star Wars: Thrawn Ascendancy, Book 2", Timothy Zahn, hardcover
+
+### `trials-of-the-jedi` — operator-approved isbn[] addition
+
+- before: isbn [9780593723548] · primary 9780593723548
+- after: isbn [9780593723548, 9780593723524] · primary 9780593723548
+- why: operator-approved: isbn[] += 9780593723524 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, June 17 2025); penguinrandomhouse.com resolves it to "Trials of the Jedi" by Charles Soule; not on Open Library)
+- wiki: *The High Republic: Trials of the Jedi* — infobox [9780593723524]; page lists [9780593723524, 9780593723531, 9780593723548]
+- Open Library 9780593723548: no record
+- Open Library 9780593723524: no record
+- other rows holding 9780593723548: none
+- operator-approved addition 9780593723524: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, June 17 2025); penguinrandomhouse.com resolves it to "Trials of the Jedi" by Charles Soule; not on Open Library
+
+### `x-wing-bacta-war` — operator-approved isbn[] addition
+
+- before: isbn [9780553570074] · primary 9780553570074
+- after: isbn [9780553570074, 9780553568042] · primary 9780553570074
+- why: operator-approved: isbn[] += 9780553568042 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, Feb 1997); Open Library: "Star Wars: The Bacta War: X-Wing Book 4", Michael A. Stackpole)
+- wiki: *X-Wing: The Bacta War* — infobox [9780553568042]; page lists [9780553568042, 9780593498927, 9788025224427]
+- Open Library 9780553570074: no record
+- Open Library 9780553568042: "Star Wars: The Bacta War / X-Wing Book 4" (/works/OL84518W)
+- other rows holding 9780553570074: none
+- operator-approved addition 9780553568042: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, Feb 1997); Open Library: "Star Wars: The Bacta War: X-Wing Book 4", Michael A. Stackpole
+
+### `x-wing-iron-fist` — operator-approved isbn[] addition
+
+- before: isbn [9780553570098] · primary 9780553570098
+- after: isbn [9780553570098, 9780553578973] · primary 9780553570098
+- why: operator-approved: isbn[] += 9780553578973 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox ISBN-10 0553578979 (Bantam Spectra paperback, July 1998); Open Library: "Star Wars: Iron Fist: X-Wing Book 6", Aaron Allston)
+- wiki: *X-Wing: Iron Fist* — infobox [9780553578973]; page lists [9780593726082, 9782265074576, 9788025228180]
+- Open Library 9780553570098: no record
+- Open Library 9780553578973: "Star Wars: Iron Fist / X-Wing Book 6" (/works/OL3567789W)
+- other rows holding 9780553570098: none
+- operator-approved addition 9780553578973: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox ISBN-10 0553578979 (Bantam Spectra paperback, July 1998); Open Library: "Star Wars: Iron Fist: X-Wing Book 6", Aaron Allston
+
+### `x-wing-krytos-trap` — operator-approved isbn[] addition
+
+- before: isbn [9780553570067] · primary 9780553570067
+- after: isbn [9780553570067, 9780553568035] · primary 9780553570067
+- why: operator-approved: isbn[] += 9780553568035 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, Oct 1996); Open Library: "Star Wars: The Krytos Trap: X-Wing - Book 3", Michael A. Stackpole)
+- wiki: *X-Wing: The Krytos Trap* — infobox [9780553568035]; page lists [9780553568035, 9780593497340, 9788025224410]
+- Open Library 9780553570067: no record
+- Open Library 9780553568035: "Star Wars: The Krytos Trap / X-Wing - Book 3" (/works/OL84530W)
+- other rows holding 9780553570067: none
+- operator-approved addition 9780553568035: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, Oct 1996); Open Library: "Star Wars: The Krytos Trap: X-Wing - Book 3", Michael A. Stackpole
+
+### `x-wing-solo-command` — operator-approved isbn[] addition
+
+- before: isbn [9780553570104] · primary 9780553570104
+- after: isbn [9780553570104, 9780553579000] · primary 9780553570104
+- why: operator-approved: isbn[] += 9780553579000 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US paperback, Feb 2 1999); Open Library: "Star Wars: Solo Command: X-Wing - Book 7", Aaron Allston)
+- wiki: *X-Wing: Solo Command* — infobox [9780553579000]; page lists [9780307796516, 9780553579000, 9780593726112]
+- Open Library 9780553570104: no record
+- Open Library 9780553579000: "Star Wars: Solo Command / X-Wing - Book 7" (/works/OL3567800W)
+- other rows holding 9780553570104: none
+- operator-approved addition 9780553579000: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US paperback, Feb 2 1999); Open Library: "Star Wars: Solo Command: X-Wing - Book 7", Aaron Allston
+
+### `x-wing-wedges-gamble` — operator-approved isbn[] addition
+
+- before: isbn [9780553570050] · primary 9780553570050
+- after: isbn [9780553570050, 9780553568028] · primary 9780553570050
+- why: operator-approved: isbn[] += 9780553568028 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, May 1996); Open Library: "Star Wars: Wedge's Gamble: X-Wing - Book 2", Michael A. Stackpole)
+- wiki: *X-Wing: Wedge's Gamble* — infobox [9780553568028]; page lists [9780553568028, 9780593497074, 9788025221723]
+- Open Library 9780553570050: no record
+- Open Library 9780553568028: "Star Wars: Wedge's Gamble / X-Wing - Book 2" (/works/OL84536W)
+- other rows holding 9780553570050: none
+- operator-approved addition 9780553568028: 2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, May 1996); Open Library: "Star Wars: Wedge's Gamble: X-Wing - Book 2", Michael A. Stackpole
 
 
 ## Cover fills (cover_image was null)
@@ -28,7 +254,7 @@ No per-ISBN source had a cover, so these come from the Open Library **work** (al
 
 ## Covers still missing
 
-- `sanctuary-a-bad-batch-novel` (*Sanctuary: A Bad Batch Novel*): tried 9780593874462 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check; work-level fallback: same-work: OL44264240W "Star Wars / Sanctuary: A Bad Batch Novel" (via 9780593874462): authors [—] ≠ row [Lamar Giles]
+- `sanctuary-a-bad-batch-novel` (*Sanctuary: A Bad Batch Novel*): tried 9780593874462 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check; work-level fallback: same-work: OL44264240W "Star Wars / Sanctuary: A Bad Batch Novel" (via 9780593874462) has no cover
 - `servants-of-the-empire-imperial-justice` (*Servants of the Empire: Imperial Justice*): tried 9781484716601 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check; work-level fallback: same-work: OL27832612W "Star Wars Rebels Servants of the Empire" (via 9781484716601): title does not match "Servants of the Empire: Imperial Justice"
 - `the-high-republic-a-valiant-vow` (*The High Republic: A Valiant Vow*): tried 9781368095204 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check; work-level fallback: same-work: OL42425956W "Star Wars : the High Republic" (via 9781368095204): title does not match "The High Republic: A Valiant Vow"
 
