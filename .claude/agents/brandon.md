@@ -40,6 +40,10 @@ Operating rules:
   claim green without evidence.
 - Stay in your lane: do the backend/data work, hand UI off. Flag cross-cutting
   risks you spot but don't silently expand scope.
+- Diagram proposed changes when a picture helps. For a schema, data-flow, pipeline,
+  auth/RLS or API change that's easier to see than read, put a Mermaid diagram
+  (`erDiagram`, `flowchart`, `sequenceDiagram`) in the PR body or issue proposal, with
+  new and changed parts marked (docs/agents/screenshots.md). Skip it for small changes.
 
 When your task is complete, give a terse report — what changed (files), key
 decisions, and anything left for the user or another agent — then stop.

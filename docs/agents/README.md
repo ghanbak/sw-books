@@ -8,7 +8,7 @@ Three scheduled loops keep sw-books moving: PR caretaker and scout + triage ever
 | Scout + triage | [scout-triage.md](scout-triage.md) | No, files, labels and assigns issues |
 | Execute | [execute.md](execute.md) | Yes, on `agent/*` branches |
 
-Every loop follows the shared rules below, then its own playbook. [releases.md](releases.md) covers OTA updates and store builds. The weekly retro (owner-approved) is the only thing that edits these playbooks, the agent definitions or CLAUDE.md.
+Every loop follows the shared rules below, then its own playbook. [releases.md](releases.md) covers OTA updates and store builds; [screenshots.md](screenshots.md) covers PR screenshots and diagrams. The weekly retro (owner-approved) is the only thing that edits these playbooks, the agent definitions or CLAUDE.md.
 
 ## Shared rules
 
@@ -28,7 +28,7 @@ Every loop follows the shared rules below, then its own playbook. [releases.md](
 **Never**
 - Push to `main`, force-push a branch you didn't create, or edit a PR branch owned by the owner.
 - Run Supabase commands against a hosted project: no `--remote`, no `--linked`, never `--yes`. No `db:seed:prod`, `catalog:*:prod`, `catalog:apply`, or anything that writes production data.
-- Edit `lib/types.ts` by hand, hand-edit `data/books.csv`, touch `.env*` files or secrets.
+- Edit `lib/types.ts` by hand, hand-edit `data/books.csv`, touch `.env*` files or secrets. (Copying the local `.env.local` files into a worktree for screenshots is fine; screenshots.md.)
 - Delete, skip or weaken a test to get green. A reviewer who sees a test change must justify it.
 - Change the design direction in CLAUDE.md. Restoring it is fine; changing it needs the owner's review.
 - Unassign the owner (`ghanbak`) from anything, run `gh pr merge`, or touch the review-gate, auto-merge or fingerprint workflows or `.eas/workflows/`. Only the owner removes themselves.
@@ -52,6 +52,7 @@ Every loop follows the shared rules below, then its own playbook. [releases.md](
 
 **Independent reviewer**
 - Before opening a PR (or before the caretaker clears a Dependabot PR), spawn a separate reviewer subagent (`general-purpose`) that gets only the diff, the issue or PR description and these rules, not your reasoning. Ask it to find reasons not to ship and end with `APPROVE` or `BLOCK: <reason>`. On `BLOCK`, fix it, or assign the owner with the reason in a comment.
+- Visual changes (screenshots.md): the reviewer blocks a PR with no `## Screenshots` section and no `Screenshots: not captured (<reason>)` line, and any image showing data that isn't local seed data.
 
 **Feature branches** (owner's rule, 2026-11-06: nothing half-built reaches `main`)
 - Work that needs more than one agent, or several issues that only make sense together, is a **feature**: a parent issue with one sub-issue per piece of work (GitHub sub-issues), usually one per agent (e.g. Tregg design, Brandon backend, Luis mobile).
