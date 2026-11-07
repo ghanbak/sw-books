@@ -28,6 +28,7 @@
 		"catalog:apply": "npx tsx scripts/apply-catalog-changeset.ts --production",
 		"catalog:cleanup": "npx tsx scripts/build-catalog-cleanup.ts --production",
 		"catalog:enrich": "npx tsx scripts/enrich-wookieepedia.ts",
+		"catalog:health": "npx tsx scripts/catalog-health.ts",
 		"admin": "npm --prefix admin run dev",
 		"admin:install": "npm --prefix admin install",
 		"admin:predev": "npm run db:types"
