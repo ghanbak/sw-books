@@ -19,6 +19,7 @@ import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
 import { type Book, useBooks, useUserBooks } from '@/lib/hooks';
+import { addToOwnedLabel, reviewMatchLabel, swapCandidateLabel } from '@/lib/scan-a11y';
 import { exitScanTo } from '@/lib/scan-exit';
 import { useScanSession } from '@/lib/scan-session';
 import { swapMatch, toggleSelection } from '@/lib/shelf';
@@ -145,17 +146,31 @@ export function ShelfScanReview({
 		return (
 			<Animated.View style={styles.overlay} entering={FadeIn.duration(200)}>
 				<View style={styles.doneBody}>
-					<View style={styles.doneCheck}>
+					<View
+						style={styles.doneCheck}
+						accessibilityElementsHidden
+						importantForAccessibility="no-hide-descendants"
+					>
 						<SymbolView name="checkmark" size={36} tintColor={tokens.text.primary} weight="bold" />
 					</View>
 					<Text style={styles.doneTitle} accessibilityRole="header">
 						{addedCount === 1 ? '1 book added to Owned' : `${addedCount} books added to Owned`}
 					</Text>
 					<Text style={styles.doneText}>Your archive grows.</Text>
-					<Pressable style={styles.primaryButton} onPress={goToShelf} accessibilityRole="button">
+					<Pressable
+						style={styles.primaryButton}
+						onPress={goToShelf}
+						accessibilityRole="button"
+						accessibilityHint="Closes the scanner and opens your library"
+					>
 						<Text style={styles.primaryButtonText}>View Shelf</Text>
 					</Pressable>
-					<Pressable style={styles.secondaryButton} onPress={onReset} accessibilityRole="button">
+					<Pressable
+						style={styles.secondaryButton}
+						onPress={onReset}
+						accessibilityRole="button"
+						accessibilityHint="Starts a new shelf scan"
+					>
 						<Text style={styles.secondaryButtonText}>Scan More</Text>
 					</Pressable>
 				</View>
@@ -166,6 +181,8 @@ export function ShelfScanReview({
 	if (!draft) return null;
 	const { matches } = draft;
 	const adding = phase === 'adding';
+	// Android has no accessibilityViewIsModal: hide the review behind an open swap sheet.
+	const behindSheet = swapTarget ? 'no-hide-descendants' : 'auto';
 
 	return (
 		<Animated.View
@@ -173,7 +190,10 @@ export function ShelfScanReview({
 			entering={FadeIn.duration(200)}
 			exiting={FadeOut.duration(200)}
 		>
-			<View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+			<View
+				style={[styles.header, { paddingTop: insets.top + 16 }]}
+				importantForAccessibility={behindSheet}
+			>
 				<View style={styles.headerText}>
 					<Text style={styles.title} accessibilityRole="header">
 						Your shelf, recognized
@@ -212,7 +232,10 @@ export function ShelfScanReview({
 				</View>
 			</View>
 
-			<View style={[styles.body, adding && styles.bodyDisabled]}>
+			<View
+				style={[styles.body, adding && styles.bodyDisabled]}
+				importantForAccessibility={behindSheet}
+			>
 				{view === 'list' ? (
 					<FlatList
 						data={ordered}
@@ -260,7 +283,10 @@ export function ShelfScanReview({
 				)}
 			</View>
 
-			<View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+			<View
+				style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}
+				importantForAccessibility={behindSheet}
+			>
 				{addError && <Text style={styles.errorText}>{addError}</Text>}
 				<Pressable
 					style={[
@@ -270,7 +296,11 @@ export function ShelfScanReview({
 					onPress={onAdd}
 					disabled={adding || effectiveSelected.length === 0}
 					accessibilityRole="button"
-					accessibilityLabel={`Add ${effectiveSelected.length} books to owned shelf`}
+					accessibilityLabel={addToOwnedLabel(effectiveSelected.length)}
+					accessibilityState={{
+						disabled: adding || effectiveSelected.length === 0,
+						busy: adding,
+					}}
 				>
 					{adding ? (
 						<ActivityIndicator color={tokens.text.primary} />
@@ -287,6 +317,8 @@ export function ShelfScanReview({
 					onPress={onReset}
 					disabled={adding}
 					accessibilityRole="button"
+					accessibilityHint="Discards these matches and your photos"
+					accessibilityState={{ disabled: adding }}
 				>
 					<Text style={styles.startOverText}>Discard & start over</Text>
 				</Pressable>
@@ -328,7 +360,12 @@ function ReviewRow({
 				disabled={owned}
 				accessibilityRole="checkbox"
 				accessibilityState={{ checked: selected, disabled: owned }}
-				accessibilityLabel={`${book.title} by ${book.author.join(', ')}${owned ? ', already owned' : ''}`}
+				accessibilityLabel={reviewMatchLabel({
+					title: book.title,
+					authors: book.author,
+					owned,
+					lowConfidence: match.bucket === 'low',
+				})}
 			>
 				<View style={[styles.checkbox, selected && styles.checkboxOn]}>
 					{selected && (
@@ -370,6 +407,7 @@ function ReviewRow({
 				onPress={() => onSwap(book.id)}
 				accessibilityRole="button"
 				accessibilityLabel={`Wrong match? Swap ${book.title}`}
+				accessibilityHint="Opens alternates and catalog search"
 			>
 				<SymbolView name="arrow.left.arrow.right" size={16} tintColor={tokens.text.secondary} />
 			</Pressable>
@@ -396,7 +434,12 @@ function ReviewTile({
 			disabled={owned}
 			accessibilityRole="checkbox"
 			accessibilityState={{ checked: selected, disabled: owned }}
-			accessibilityLabel={`${book.title}${owned ? ', already owned' : ''}`}
+			accessibilityLabel={reviewMatchLabel({
+				title: book.title,
+				authors: book.author,
+				owned,
+				lowConfidence: match.bucket === 'low',
+			})}
 		>
 			<View style={[styles.tileCover, selected && styles.tileSelected, owned && styles.tileOwned]}>
 				<View
@@ -471,12 +514,19 @@ function SwapSheet({
 	}, [query, books, match.alternates, takenIds]);
 
 	return (
-		<Animated.View style={styles.sheetBackdrop} entering={FadeIn.duration(150)}>
+		<Animated.View
+			style={styles.sheetBackdrop}
+			entering={FadeIn.duration(150)}
+			accessibilityViewIsModal
+			onAccessibilityEscape={onClose}
+		>
+			{/* Tap-outside dismiss; Cancel is the screen-reader path, so keep it out of the
+			    swipe order (a full-screen nameless-feeling target before the sheet). */}
 			<Pressable
 				style={StyleSheet.absoluteFill}
 				onPress={onClose}
-				accessibilityRole="button"
-				accessibilityLabel="Close"
+				accessible={false}
+				importantForAccessibility="no"
 			/>
 			<KeyboardAvoidingView
 				behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -514,7 +564,11 @@ function SwapSheet({
 								style={styles.sheetRow}
 								onPress={() => onPick(item)}
 								accessibilityRole="button"
-								accessibilityLabel={`Swap to ${item.title}`}
+								accessibilityLabel={swapCandidateLabel({
+									title: item.title,
+									authors: item.author,
+									owned: ownedIds.has(item.id),
+								})}
 							>
 								<View
 									pointerEvents="none"
@@ -547,7 +601,12 @@ function SwapSheet({
 						)}
 						style={styles.sheetList}
 					/>
-					<Pressable style={styles.secondaryButton} onPress={onClose} accessibilityRole="button">
+					<Pressable
+						style={styles.secondaryButton}
+						onPress={onClose}
+						accessibilityRole="button"
+						accessibilityHint="Keeps the current match"
+					>
 						<Text style={styles.secondaryButtonText}>Cancel</Text>
 					</Pressable>
 				</View>
