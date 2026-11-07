@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
 	},
 	message: {
 		fontSize: 13,
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		marginBottom: 16,
 		textAlign: 'center',
 	},

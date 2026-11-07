@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 	},
 	messageIsbn: {
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		fontSize: 12,
 		fontFamily: 'monospace',
 		marginTop: 8,

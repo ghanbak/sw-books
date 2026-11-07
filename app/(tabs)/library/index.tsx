@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
 	},
 	emptyFilterText: {
 		fontSize: 15,
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		textAlign: 'center',
 	},
 });

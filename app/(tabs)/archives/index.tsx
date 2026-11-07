@@ -92,6 +92,6 @@ const styles = StyleSheet.create({
 	},
 	emptyText: {
 		fontSize: 15,
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 	},
 });

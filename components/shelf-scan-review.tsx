@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
 		paddingBottom: 12,
 	},
 	sectionLabel: {
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		fontSize: 12,
 		fontWeight: '600',
 		textTransform: 'uppercase',
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 	},
 	tileOwnedText: {
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		fontSize: 10,
 	},
 	// Footer
@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
 	},
 	startOver: { alignItems: 'center', paddingVertical: 6 },
 	startOverText: {
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		fontSize: 13,
 	},
 	// Done
@@ -833,7 +833,7 @@ const styles = StyleSheet.create({
 		paddingVertical: 10,
 	},
 	sheetEmpty: {
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		fontSize: 13,
 		textAlign: 'center',
 		paddingVertical: 12,

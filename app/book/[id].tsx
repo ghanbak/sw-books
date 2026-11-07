@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.surface.background,
 	},
 	notFoundText: {
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		fontSize: 16,
 	},
 	title: {
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
 	},
 	detailLabel: {
 		fontSize: 13,
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		width: 80,
 	},
 	detailValue: {

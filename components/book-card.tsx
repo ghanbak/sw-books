@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
 		fontSize: 9,
 		fontWeight: '600',
 		letterSpacing: 0.6,
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 	},
 	dataValue: {
 		fontSize: 11,
