@@ -256,7 +256,9 @@ type RpcResult = Awaited<ReturnType<AddOwnedDeps['rpc']>>;
  * state (updated functionally), one write tracker per user, a toggler and an adder per
  * tracker, and a fetch that merges with `mergeFetchedShelf`. Writes resolve on demand.
  */
-function provider(initial: UserBook[] = []) {
+function provider(initial: UserBook[] = [], opts: { deferState?: boolean } = {}) {
+	/** With `deferState`, addOwned's state updaters run only on `flushState()` (a deferred setUserBooks). */
+	const queued: ((prev: ReadonlyMap<string, UserBook>) => Map<string, UserBook>)[] = [];
 	let ref = new Map(initial.map((r) => [r.book_id, r]));
 	let state = ref;
 	let userId = 'user-a';
@@ -283,7 +285,8 @@ function provider(initial: UserBook[] = []) {
 			current: () => ref,
 			update: (fn) => {
 				ref = fn(ref);
-				state = fn(state);
+				if (opts.deferState) queued.push(fn);
+				else state = fn(state);
 			},
 			rpc: (ids) =>
 				new Promise<RpcResult>((resolve) => {
@@ -301,6 +304,9 @@ function provider(initial: UserBook[] = []) {
 		onError,
 		ref: () => ref,
 		state: () => state,
+		flushState: () => {
+			for (const fn of queued.splice(0)) state = fn(state);
+		},
 		toggle: (bookId: string, field: Parameters<typeof current.toggle>[1]) =>
 			current.toggle(bookId, field, userId),
 		addOwned: (ids: string[]) => current.addOwned(ids, userId),
@@ -314,6 +320,7 @@ function provider(initial: UserBook[] = []) {
 			const writes = writesFor(userId);
 			const startSeq = writes.seq();
 			return (rows: UserBook[]) => {
+				writes.adoptFetched(rows);
 				const keep = (bookId: string) => writes.touchedSince(bookId, startSeq);
 				ref = mergeFetchedShelf(rows, ref, keep);
 				state = mergeFetchedShelf(rows, state, keep);
@@ -445,6 +452,102 @@ describe('shelf provider — failed write during the first fetch (#133)', () => 
 		await toggle;
 		land([]);
 		expect(p.state().get('b1')).toEqual(inserted);
+	});
+});
+
+describe('shelf provider — fetch lands during a pending write (#146)', () => {
+	it('a toggle that fails after the fetch landed restores the fetched row', async () => {
+		const p = provider(); // cold launch: nothing local yet
+		const land = p.startFetch();
+		const toggle = p.toggle('b1', 'owned'); // insert pending
+		const srv = row({ id: 'srv-1', book_id: 'b1', read: true });
+		land([srv]);
+		expect(p.state().get('b1')?.id).toMatch(/^optimistic:/); // pending write keeps local
+
+		p.toggleWrites[0].resolve({ row: null, error: { message: 'duplicate key' } });
+		expect(await toggle).toBe('failed');
+		expect(p.state().get('b1')).toEqual(srv);
+		expect(p.ref()).toEqual(p.state());
+
+		// The next tap updates the real row instead of hitting UNIQUE again.
+		p.toggle('b1', 'owned');
+		expect(p.toggleWrites[1].write).toEqual({
+			kind: 'update',
+			id: 'srv-1',
+			patch: { owned: true },
+		});
+	});
+
+	it('a failed update after the fetch landed restores the fetched row, not the pre-tap one', async () => {
+		const before = row({ book_id: 'b1', owned: true });
+		const p = provider([before]);
+		const land = p.startFetch();
+		const toggle = p.toggle('b1', 'favorite');
+		const srv = row({ book_id: 'b1', owned: true, read: true });
+		land([srv]);
+
+		p.toggleWrites[0].resolve({ row: null, error: { message: 'offline' } });
+		await toggle;
+		expect(p.state().get('b1')).toEqual(srv);
+	});
+
+	it('an addOwned that fails after the fetch landed restores the fetched rows', async () => {
+		const p = provider();
+		const land = p.startFetch();
+		const add = p.addOwned(['b1', 'b2']);
+		const srv = row({ id: 'srv-1', book_id: 'b1', want_to_read: true });
+		land([srv]);
+		expect(p.state().get('b1')?.id).toMatch(/^optimistic:/);
+
+		p.rpcs[0].resolve({ rows: null, error: { message: 'rpc failed' } });
+		await add;
+		expect(p.state().get('b1')).toEqual(srv);
+		expect(p.state().has('b2')).toBe(false);
+		expect(p.ref()).toEqual(p.state());
+	});
+
+	it('a deferred state updater rolls back to the fetched row like the ref', async () => {
+		const p = provider([], { deferState: true });
+		const land = p.startFetch();
+		const add = p.addOwned(['b1']);
+		const srv = row({ id: 'srv-1', book_id: 'b1', read: true });
+		land([srv]);
+		p.rpcs[0].resolve({ rows: null, error: { message: 'rpc failed' } });
+		await add; // the write is released before React runs the updater
+		p.flushState();
+		expect(p.ref().get('b1')).toEqual(srv);
+		expect(p.state().get('b1')).toEqual(srv);
+	});
+
+	it("a failed addOwned keeps an overlapping addOwned's committed owned flag", async () => {
+		const p = provider();
+		const land = p.startFetch();
+		const first = p.addOwned(['b1']);
+		const second = p.addOwned(['b1']);
+		land([row({ id: 'srv-1', book_id: 'b1', read: true })]);
+
+		const committed = row({ id: 'srv-1', book_id: 'b1', owned: true, read: true });
+		p.rpcs[0].resolve({ rows: [committed], error: null });
+		await first;
+		p.rpcs[1].resolve({ rows: null, error: { message: 'rpc failed' } });
+		await second;
+		expect(p.state().get('b1')).toMatchObject({ id: 'srv-1', owned: true, read: true });
+		expect(p.ref()).toEqual(p.state());
+	});
+
+	it('a later write does not reuse an earlier fetch as its rollback target', async () => {
+		const p = provider();
+		const land = p.startFetch();
+		const first = p.toggle('b1', 'owned');
+		land([row({ id: 'srv-1', book_id: 'b1', read: true })]);
+		p.toggleWrites[0].resolve({ row: null, error: { message: 'x' } });
+		await first;
+
+		const local = p.state().get('b1');
+		const second = p.toggle('b1', 'favorite');
+		p.toggleWrites[1].resolve({ row: null, error: { message: 'x' } });
+		await second;
+		expect(p.state().get('b1')).toEqual(local);
 	});
 });
 

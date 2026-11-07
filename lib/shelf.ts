@@ -122,6 +122,10 @@ export function isOptimisticRow(row: UserBook | undefined): boolean {
  * half-ignored), toggles use `tryClaim`. A write that failed and was rolled back
  * releases with `applied: false`: it left nothing local worth keeping over the
  * server (#133), so it doesn't count as activity once it settles.
+ * A fetch that lands while a write is pending keeps the local row, so it records the
+ * fetched row (or absence) as that book's rollback target (#146): a failed write then
+ * restores what the server returned, not the pre-tap row. An applied release drops
+ * it, so a later failure can't undo a write that committed after the fetch.
  */
 export type ShelfWriteTracker = {
 	/** Claim one book unless any write on it is pending. */
@@ -133,11 +137,16 @@ export type ShelfWriteTracker = {
 	seq: () => number;
 	/** A write on the book is pending, or an applied write settled after `since`. */
 	touchedSince: (bookId: string, since: number) => boolean;
+	/** Record fetched rows as the rollback target of every book with a pending write. */
+	adoptFetched: (rows: readonly UserBook[]) => void;
+	/** Rollback target from a fetch that landed mid-write (`null` = absent); `undefined` if none. */
+	fetchedBase: (bookId: string) => UserBook | null | undefined;
 };
 
 export function createShelfWriteTracker(): ShelfWriteTracker {
 	const pending = new Map<string, number>();
 	const lastActivity = new Map<string, number>();
+	const fetchedBase = new Map<string, UserBook | null>();
 	let seq = 0;
 	const claim = (bookIds: readonly string[]) => {
 		for (const id of bookIds) pending.set(id, (pending.get(id) ?? 0) + 1);
@@ -154,6 +163,9 @@ export function createShelfWriteTracker(): ShelfWriteTracker {
 				const n = (pending.get(id) ?? 0) - 1;
 				if (n > 0) pending.set(id, n);
 				else pending.delete(id);
+				// No pending write left, or an applied one committed past the fetched row:
+				// either way the fetched row is no longer a safe rollback target.
+				if (n <= 0 || applied) fetchedBase.delete(id);
 				if (applied) {
 					seq += 1;
 					lastActivity.set(id, seq);
@@ -162,6 +174,12 @@ export function createShelfWriteTracker(): ShelfWriteTracker {
 		},
 		seq: () => seq,
 		touchedSince: (bookId, since) => pending.has(bookId) || (lastActivity.get(bookId) ?? 0) > since,
+		adoptFetched: (rows) => {
+			if (pending.size === 0) return;
+			const byBook = new Map(rows.map((r) => [r.book_id, r]));
+			for (const id of pending.keys()) fetchedBase.set(id, byBook.get(id) ?? null);
+		},
+		fetchedBase: (bookId) => fetchedBase.get(bookId),
 	};
 }
 
@@ -196,6 +214,16 @@ export function revertToggle(
 	return reverted.owned || reverted.read || reverted.want_to_read || reverted.favorite
 		? reverted
 		: null;
+}
+
+/** Pre-write row to roll back to: a fetch that landed mid-write beats the pre-tap row (#146). */
+function rollbackBase(
+	writes: ShelfWriteTracker,
+	bookId: string,
+	preWrite: UserBook | undefined,
+): UserBook | undefined {
+	const fetched = writes.fetchedBase(bookId);
+	return fetched === undefined ? preWrite : (fetched ?? undefined);
 }
 
 /** Row to show after a successful insert; keeps an `owned` a concurrent `addOwned` set. */
@@ -253,7 +281,8 @@ export function createShelfToggler(deps: ShelfToggleDeps) {
 			if (!deps.isCurrentUser(userId)) return 'stale';
 			if (error) {
 				applied = false;
-				deps.set(bookId, revertToggle(deps.get(bookId), existing, optimistic, field));
+				const base = rollbackBase(deps.writes, bookId, existing);
+				deps.set(bookId, revertToggle(deps.get(bookId), base, optimistic, field));
 				deps.onError(error);
 				return 'failed';
 			}
@@ -318,12 +347,16 @@ export function createOwnedAdder(deps: AddOwnedDeps) {
 			if (error) {
 				applied = false;
 				if (!stale) {
+					// Resolve bases now: the updater may run after `release` clears them.
+					const bases = new Map(
+						ids.map((id) => [id, rollbackBase(deps.writes, id, before.get(id))]),
+					);
 					deps.update((prev) => {
 						let next = new Map(prev);
 						for (const id of ids) {
 							const reverted = revertToggle(
 								prev.get(id),
-								before.get(id),
+								bases.get(id),
 								optimistic.get(id) ?? null,
 								'owned',
 							);

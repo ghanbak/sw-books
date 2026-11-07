@@ -152,6 +152,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 			return;
 		}
 		const rows = data ?? [];
+		writes.adoptFetched(rows); // rollback target for writes still pending (#146)
 		setUserBooks((prev) =>
 			mergeFetchedShelf(rows, prev, (bookId) => writes.touchedSince(bookId, startSeq)),
 		);
