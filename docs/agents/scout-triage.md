@@ -28,9 +28,13 @@ For each issue:
 - Add it to the Roadmap project if missing and set fields: Priority (P0 broken production, auth or data loss; P1 user-visible bug or blocker; P2 normal; P3 nice-to-have), Product, Effort (S/M/L).
 - Fill in missing acceptance criteria and a "How to verify" section as a comment if the author left them blank. Note whether the eventual PR will need the owner's review (README "When to assign the owner").
 - If the work needs the owner's hands (console, secret, account, device, production data, licence) or a decision only they can make: assign `ghanbak`, comment one line on what's needed, Status `Backlog`.
+- **Feature breakdown:** if the issue needs more than one agent (design + mobile + backend, say) or more than one PR to be shippable, make it a feature (README "Feature branches"):
+  - Write the shared contract into the parent issue body under "Contract": data shape or API, screens and states, and which sub-issue owns what.
+  - Create one sub-issue per piece of work, usually one per agent, each with its own labels, acceptance criteria and Effort S or M, and attach it to the parent (`gh api repos/ghanbak/sw-books/issues/<parent>/sub_issues -F sub_issue_id=<child issue id>`, where the id comes from `gh api repos/ghanbak/sw-books/issues/<child> --jq .id`). Add `Blocked by #<n>` only where parallel work truly isn't possible.
+  - Sub-issues go to `Todo` (unless blocked); the parent goes to `Backlog` and stays there until the feature PR merges. Comment on the parent with the breakdown.
 - Otherwise Status `Todo` if Effort is S or M, else `Backlog` with a comment proposing how to split it.
 
-Keep at most 6 items in `Todo`; extra eligible items stay in `Backlog`, highest priority first.
+Keep at most 9 items in `Todo`; extra eligible items stay in `Backlog`, highest priority first.
 
 ## 3. Summary
 Issues filed (numbers), issues triaged with priority (and which were assigned to the owner), anything P0 called out on its own line.
