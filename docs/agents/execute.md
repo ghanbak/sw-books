@@ -1,13 +1,13 @@
 # Execute
 
-Goal: turn up to 2 `Todo` items per run into verified, reviewed PRs.
+Goal: turn up to 3 `Todo` items per run into verified, reviewed PRs, worked in parallel (one worktree and subagent per item). The loop runs every 2 hours.
 
 Follow [README.md](README.md) shared rules first. Check backpressure before starting: 6 or more `agent/*` PRs assigned to the owner → take only bug, perf and maintenance items this run, and say so.
 
 ## Pick work
 - From the Roadmap project (project 4), items with Status `Todo`, highest Priority first, then oldest.
 - No approval is needed to start. Skip any issue assigned to the owner.
-- Take at most 2. Set each to `In Progress` before starting.
+- Take at most 3. Set each to `In Progress` before starting. Too large for one run (Effort L, or useless without the owner's secrets or console work)? Land what can land in a PR, list the rest in the body, and file a follow-up issue.
 
 ## Do the work (per item)
 1. Worktree on a new branch from `origin/main`: `agent/<issue-number>-<short-slug>`.

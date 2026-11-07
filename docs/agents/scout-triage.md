@@ -30,7 +30,7 @@ For each issue:
 - If the work needs the owner's hands (console, secret, account, device, production data, licence) or a decision only they can make: assign `ghanbak`, comment one line on what's needed, Status `Backlog`.
 - Otherwise Status `Todo` if Effort is S or M, else `Backlog` with a comment proposing how to split it.
 
-Keep at most 6 items in `Todo`; extra eligible items stay in `Backlog`, highest priority first.
+Keep at most 9 items in `Todo`; extra eligible items stay in `Backlog`, highest priority first.
 
 ## 3. Summary
 Issues filed (numbers), issues triaged with priority (and which were assigned to the owner), anything P0 called out on its own line.
