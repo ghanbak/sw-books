@@ -1275,12 +1275,11 @@
       "after": {
         "isbn": [
           "9780553568011",
-          "9781101968758",
           "9780553409260"
         ],
         "primary_isbn": "9780553568011"
       },
-      "reason": "operator-approved: isbn[] -= 9781845764692 (is the X-Wing: Rogue Squadron comic (Titan Books, 2007)), 9781569713303 (is the X-Wing: Rogue Squadron comic (Dark Horse Comics, 1998)), primary_isbn → 9780553568011 (2026-11-07 (#143) — Open Library: \"X-Wing Rogue Squadron\", Titan Books 2007 (work OL37923497W, not the novel's OL84533W). Primary → Bantam Spectra PB (OL: \"Star Wars: Rogue Squadron\", 400 pp); 2026-11-07 (#143) — Open Library: \"Star wars / X-Wing Rogue Squadron.\", Dark Horse Comics 1998 (work OL15219983W, not the novel's OL84533W))",
+      "reason": "operator-approved: isbn[] -= 9781845764692 (is the X-Wing: Rogue Squadron comic (Titan Books, 2007)), 9781569713303 (is the X-Wing: Rogue Squadron comic (Dark Horse Comics, 1998)), 9781101968758 (is The X-Wing Series: Star Wars Legends 10-Book Bundle (ebook, Random House 2016)), primary_isbn → 9780553568011 (2026-11-07 (#143) — Open Library: \"X-Wing Rogue Squadron\", Titan Books 2007 (work OL37923497W, not the novel's OL84533W). Primary → Bantam Spectra PB (OL: \"Star Wars: Rogue Squadron\", 400 pp); 2026-11-07 (#143) — Open Library: \"Star wars / X-Wing Rogue Squadron.\", Dark Horse Comics 1998 (work OL15219983W, not the novel's OL84533W); 2026-11-07 (#154) — penguinrandomhouse.com + Open Library: \"X-Wing Series : Star Wars Legends 10-Book Bundle\" (work OL28042739W, not the novel's OL84533W). Multi-book bundle; no single row owns it)",
       "evidence": {
         "wiki_title": "X-Wing: Rogue Squadron",
         "wiki_infobox_isbns": [
@@ -1334,6 +1333,12 @@
           "isbn": "9781569713303",
           "belongs_to": "the X-Wing: Rogue Squadron comic (Dark Horse Comics, 1998)",
           "note": "2026-11-07 (#143) — Open Library: \"Star wars / X-Wing Rogue Squadron.\", Dark Horse Comics 1998 (work OL15219983W, not the novel's OL84533W)"
+        },
+        {
+          "slug": "x-wing-rogue-squadron",
+          "isbn": "9781101968758",
+          "belongs_to": "The X-Wing Series: Star Wars Legends 10-Book Bundle (ebook, Random House 2016)",
+          "note": "2026-11-07 (#154) — penguinrandomhouse.com + Open Library: \"X-Wing Series : Star Wars Legends 10-Book Bundle\" (work OL28042739W, not the novel's OL84533W). Multi-book bundle; no single row owns it"
         }
       ],
       "notes": []
