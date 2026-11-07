@@ -12,3 +12,6 @@ export async function openInAppBrowser(url: string): Promise<void> {
 		presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
 	});
 }
+
+/** Public privacy policy (served by the admin/marketing site, `admin/app/privacy`). */
+export const PRIVACY_POLICY_URL = 'https://ossusarchives.com/privacy';

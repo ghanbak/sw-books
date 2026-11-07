@@ -76,17 +76,24 @@ export async function signInWithGoogle() {
 	if (error) throw error;
 }
 
-export async function signInWithApple() {
+/**
+ * Show the Apple sign-in sheet with a fresh nonce. Shared by sign-in and the
+ * account-deletion re-auth (`lib/account.ts`), which needs `authorizationCode`.
+ */
+export async function requestAppleCredential(
+	requestedScopes: AppleAuthentication.AppleAuthenticationScope[] = [],
+) {
 	const rawNonce = Crypto.randomUUID();
 	const hashedNonce = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, rawNonce);
+	const credential = await AppleAuthentication.signInAsync({ requestedScopes, nonce: hashedNonce });
+	return { credential, rawNonce };
+}
 
-	const credential = await AppleAuthentication.signInAsync({
-		requestedScopes: [
-			AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-			AppleAuthentication.AppleAuthenticationScope.EMAIL,
-		],
-		nonce: hashedNonce,
-	});
+export async function signInWithApple() {
+	const { credential, rawNonce } = await requestAppleCredential([
+		AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+		AppleAuthentication.AppleAuthenticationScope.EMAIL,
+	]);
 
 	if (!credential.identityToken) {
 		throw new Error('Apple did not return an identity token.');

@@ -380,6 +380,13 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# In-app account deletion + Sign in with Apple token revocation. Users only: the
+# platform verifies the JWT before the handler runs (see functions/delete-account/README.md).
+[functions.delete-account]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/delete-account/index.ts"
+
 [analytics]
 enabled = true
 port = 54327

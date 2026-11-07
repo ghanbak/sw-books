@@ -7,5 +7,5 @@
 		}
 	},
 	"include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
-	"exclude": ["node_modules", "admin"]
+	"exclude": ["node_modules", "admin", "supabase/functions/*/index.ts"]
 }
