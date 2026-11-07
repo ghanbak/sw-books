@@ -2,13 +2,13 @@
  * Shared Supabase credential resolution for catalog scripts.
  *
  * Default target is the local stack; `--production` reads creds from the
- * gitignored `.env.production` (same convention as scripts/seed.ts). Kept
- * separate so the export/restore scripts share one source of truth without
- * touching the frozen seed script.
+ * gitignored `.env.production`. Kept separate so the export/restore scripts
+ * share one source of truth without touching the frozen, local-only seed script.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { type SupabaseClient, createClient } from '@supabase/supabase-js';
+import { isLocalUrl } from '../lib/seed-guard';
 import type { Database } from '../lib/types';
 
 function parseEnvFile(path: string): Record<string, string> {
@@ -31,8 +31,9 @@ export function productionEnv(): Record<string, string> {
 	return parseEnvFile(resolve(__dirname, '..', '.env.production'));
 }
 
+/** Exact-hostname local check (lib/seed-guard.ts); unparseable URLs count as non-local. */
 export function isLocal(url: string): boolean {
-	return url.includes('127.0.0.1') || url.includes('localhost');
+	return isLocalUrl(url);
 }
 
 export function resolveCredentials(prod: boolean): { url: string; key: string } {
