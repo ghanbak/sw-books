@@ -184,6 +184,21 @@ describe('ISBN override files', () => {
 		expect(reunion.isbn).toContain('9780345428721');
 	});
 
+	// #154: a bundle ISBN on one row makes a scan of the bundle match that book.
+	it('keep multi-book bundle ISBNs off every row', () => {
+		// PRH + Open Library (work OL28042739W, not the novel's OL84533W):
+		// The X-Wing Series: Star Wars Legends 10-Book Bundle (ebook, 2016).
+		const BUNDLES = ['9781101968758'];
+		const h = holders();
+		for (const bundle of BUNDLES) {
+			expect(h.get(bundle)).toBeUndefined();
+			for (const file of OVERRIDE_FILES) {
+				expect(JSON.stringify(load(file)), `${bundle} in ${file}`).not.toContain(bundle);
+			}
+		}
+		expect(seeded('x-wing-rogue-squadron').isbn).toEqual(['9780553568011', '9780553409260']);
+	});
+
 	it('seed every ISBN-anchored manual cover with that ISBN in the row isbn[]', () => {
 		const unanchored: Record<string, string> = {};
 		for (const [slug, url] of Object.entries(seedOverrides.manualCovers)) {

@@ -557,6 +557,35 @@ describe('misfiled-ISBN removals (#143)', () => {
 		expect(badPrimary.flags[0]?.reason).toMatch(/not a valid ISBN-13/);
 	});
 
+	it('drops a multi-book bundle ISBN with the comics, keeping only single-edition ISBNs (#154)', () => {
+		const BUNDLE = '9781101968758'; // X-Wing Series 10-Book Bundle ebook, OL28042739W
+		const prod = row({ ...rogue, isbn: [TITAN, DARK_HORSE, PB, BUNDLE, PB2] });
+		const bundleEv = evidence({
+			...ev,
+			openlibrary: {
+				...ev.openlibrary,
+				[BUNDLE]: {
+					title: 'X-Wing Series : Star Wars Legends 10-Book Bundle',
+					subtitle: null,
+					work: '/works/OL28042739W',
+				},
+			},
+		});
+		const bundle: MisfiledIsbnRemoval = {
+			slug: rogue.slug,
+			isbn: BUNDLE,
+			belongs_to: 'the 10-book bundle',
+			note: 'bundle',
+		};
+		const cs = build([prod], [titan, darkHorse, bundle], [], bundleEv);
+		expect(cs.flagged.isbn).toEqual([]);
+		const f = cs.isbn_fixes[0];
+		expect(f?.action).toBe('remove_misfiled_isbn');
+		expect(f?.after).toEqual({ isbn: [PB, PB2], primary_isbn: PB });
+		expect(f?.after.isbn).not.toContain(BUNDLE);
+		expect(cleanupBlockingProblems({ ...cs, cover_fills: [], synopsis_fills: [] })).toEqual([]);
+	});
+
 	it('is a no-op once removed; blocks a changeset that drops an invalid ISBN as misfiled', () => {
 		const done = row({ ...rogue, isbn: [PB, PB2], primary_isbn: PB });
 		expect(applyMisfiledIsbnRemovals(done, null, [titan, darkHorse], ev)).toEqual({
