@@ -18,7 +18,8 @@ Follow [README.md](README.md) shared rules first. Check backpressure before star
 4. Requirements:
    - Bugs: a regression test that fails before the fix and passes after.
    - Perf: a before/after measurement in the PR body.
-   - Design drift: cite the rule restored; screenshots if a simulator or browser is available.
+   - Design drift: cite the rule restored.
+   - Visual changes (Tregg, Luis, Dylan): before/after screenshots per [screenshots.md](screenshots.md), in a `## Screenshots` section, or `Screenshots: not captured (<reason>)`. Schema, data-flow or API changes (Brandon): a Mermaid diagram when it's easier to see than read. Tell the subagent this in the brief. Parallel items share one simulator, so app captures take turns via its lock.
    - App changes: prefer JS-only. Compare the iOS fingerprint against the base (releases.md) and end the PR body with `OTA-safe: yes` or `OTA-safe: no (<what changed>)`. A fingerprint change on an issue that isn't under a release issue: open the PR into `main` anyway; the `fingerprint` check holds it for the owner.
    - Sub-issues: stay inside the parent's contract. If the contract is wrong, say so on the parent issue instead of quietly diverging.
    - Keep the diff to what the issue asks for. Unrelated problems found along the way become new issues (labels plus `source:scout`, added to the Roadmap with Status `Triage`).
@@ -27,7 +28,7 @@ Follow [README.md](README.md) shared rules first. Check backpressure before star
 
 ## Open the PR
 - **Into a feature branch:** `gh pr create --base feature/<...> --head agent/<...>`, never assigned to the owner. Body: `Part of #<parent>`, `Implements #<n>` (not `Closes`, since issues only auto-close on merges to `main`), what changed, how it was verified, the reviewer verdict, the subagent's lessons. It auto-merges into the feature branch once CI passes. Set the sub-issue's Roadmap Status to `In Review`.
-- **Into `main`:** decide first whether the owner must review it (README "When to assign the owner"). `gh pr create --base main --head agent/<...>` with `--assignee ghanbak` if review is needed. Body: `Closes #<n>`, what changed, how it was verified, the reviewer verdict, and the subagent's lessons. For review PRs, put a short "What to look at" list at the top, with screenshots when a simulator or browser is available. Set the issue's Roadmap Status to `In Review`.
+- **Into `main`:** decide first whether the owner must review it (README "When to assign the owner"). `gh pr create --base main --head agent/<...>` with `--assignee ghanbak` if review is needed. Body: `Closes #<n>`, what changed, how it was verified, the reviewer verdict, and the subagent's lessons. For review PRs, put a short "What to look at" list at the top; the `## Screenshots` section goes right after it. Set the issue's Roadmap Status to `In Review`.
 - Either way: the issue's type, agent and product labels go on the PR, title in conventional-commit style. The auto-merge workflow turns on auto-merge when the PR opens; don't run `gh pr merge`.
 
 ## Summary

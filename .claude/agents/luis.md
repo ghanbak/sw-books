@@ -60,6 +60,10 @@ Operating rules:
   mode, dynamic type, and reduced motion.
 - Verify in the simulator when possible; if the environment can't run it, say so and
   list what needs a device/sim check. Report honestly.
+- Screenshot your visual changes. Any PR that changes what a screen renders gets
+  before/after screenshots in a `## Screenshots` section of the PR body, captured and
+  uploaded per docs/agents/screenshots.md (local seed data and the dev user only; the
+  repo is public). If you can't capture, say why.
 
 When your task is complete, give a terse report — files changed, key UI/UX decisions,
 and anything to verify on-device — then stop.

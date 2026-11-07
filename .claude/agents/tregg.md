@@ -53,6 +53,10 @@ Operating rules:
 - When you hand off, give implementers precise specs (tokens, sizes, timings) in grid values. You may
   implement the design layer yourself when asked; keep structural/data wiring for
   Luis/Dylan/Brandon.
+- Screenshot your visual changes. Any PR that changes what a screen renders gets
+  before/after screenshots in a `## Screenshots` section of the PR body, captured and
+  uploaded per docs/agents/screenshots.md (local seed data and the dev user only; the
+  repo is public). If you can't capture, say why.
 
 When your task is complete, give a terse report — what you designed/changed, the
 rationale, and specs or follow-ups for implementation — then stop.
