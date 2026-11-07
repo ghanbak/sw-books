@@ -4,12 +4,20 @@ import {
 	useCallback,
 	useContext,
 	useEffect,
+	useMemo,
 	useRef,
 	useState,
 } from 'react';
+import { Alert } from 'react-native';
 import { useAuth } from './auth';
 import { type Result, err, ok } from './result';
-import { applyOwnedOptimistic, mergeServerRows } from './shelf';
+import {
+	type ShelfField,
+	applyOwnedOptimistic,
+	createShelfToggler,
+	mergeServerRows,
+	setShelfRow,
+} from './shelf';
 import { supabase } from './supabase';
 import type { Database } from './types';
 import { type Enrichment, parseEnrichment } from './wookieepedia/enrichment';
@@ -76,10 +84,7 @@ type UserBooksContextValue = {
 	userBooks: Map<string, UserBook>;
 	loading: boolean;
 	refetch: () => Promise<void>;
-	toggleShelf: (
-		bookId: string,
-		field: 'owned' | 'read' | 'want_to_read' | 'favorite',
-	) => Promise<void>;
+	toggleShelf: (bookId: string, field: ShelfField) => Promise<void>;
 	addOwned: (bookIds: string[]) => Promise<Result<{ rows: UserBook[] }>>;
 };
 
@@ -132,74 +137,46 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 		}
 	}, [user, fetchUserBooks]);
 
-	const toggleShelf = useCallback(
-		async (bookId: string, field: 'owned' | 'read' | 'want_to_read' | 'favorite') => {
-			if (!user) return;
-
-			const existing = userBooksRef.current.get(bookId);
-
-			if (existing) {
-				const newValue = !existing[field];
-				const updated = { ...existing, [field]: newValue };
-				const allOff =
-					!updated.owned && !updated.read && !updated.want_to_read && !updated.favorite;
-
-				setUserBooks((prev) => {
-					const next = new Map(prev);
-					if (allOff) {
-						next.delete(bookId);
-					} else {
-						next.set(bookId, updated);
+	// One toggler per provider: holds the per-book in-flight guard (see createShelfToggler).
+	// `get`/`set` go through the ref so a write is visible to the next tap before React
+	// re-renders; `set` also updates state functionally so concurrent addOwned merges survive.
+	const toggler = useMemo(
+		() =>
+			createShelfToggler({
+				get: (bookId) => userBooksRef.current.get(bookId),
+				set: (bookId, row) => {
+					userBooksRef.current = setShelfRow(userBooksRef.current, bookId, row);
+					setUserBooks((prev) => setShelfRow(prev, bookId, row));
+				},
+				write: async (w) => {
+					if (w.kind === 'insert') {
+						const { data, error } = await supabase
+							.from('user_books')
+							.insert(w.entry)
+							.select()
+							.single();
+						return { row: data, error };
 					}
-					return next;
-				});
+					const { error } =
+						w.kind === 'update'
+							? await supabase.from('user_books').update(w.patch).eq('id', w.id)
+							: await supabase.from('user_books').delete().eq('id', w.id);
+					return { row: null, error };
+				},
+				onError: (error) => {
+					console.warn('[user_books] toggle failed, reverted:', error.message);
+					Alert.alert('Couldn’t update shelf', 'Your change wasn’t saved. Try again.');
+				},
+			}),
+		[],
+	);
 
-				const updatePayload = {
-					[field]: newValue,
-				} as Database['public']['Tables']['user_books']['Update'];
-
-				const { error } = allOff
-					? await supabase.from('user_books').delete().eq('id', existing.id)
-					: await supabase.from('user_books').update(updatePayload).eq('id', existing.id);
-
-				if (error) {
-					console.warn('[user_books] toggle failed, reverting:', error.message);
-					setUserBooks((prev) => {
-						const next = new Map(prev);
-						next.set(bookId, existing);
-						return next;
-					});
-				}
-			} else {
-				const newEntry = {
-					user_id: user.id,
-					book_id: bookId,
-					owned: field === 'owned',
-					read: field === 'read',
-					want_to_read: field === 'want_to_read',
-					favorite: field === 'favorite',
-				};
-
-				const { data, error } = await supabase
-					.from('user_books')
-					.insert(newEntry)
-					.select()
-					.single();
-
-				if (error) {
-					console.warn('[user_books] insert failed:', error.message);
-					return;
-				}
-				if (data) {
-					setUserBooks((prev) => {
-						const next = new Map(prev);
-						next.set(bookId, data);
-						return next;
-					});
-				}
-			}
+	const toggleShelf = useCallback(
+		async (bookId: string, field: ShelfField) => {
+			if (!user) return;
+			await toggler(bookId, field, user.id);
 		},
-		[user],
+		[user, toggler],
 	);
 
 	/**
