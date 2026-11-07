@@ -21,6 +21,7 @@
 			"csv-parse/sync": ["./node_modules/csv-parse/lib/sync"],
 			"csv-stringify/sync": ["./node_modules/csv-stringify/lib/sync"],
 			"@app/types": ["../lib/types.ts"],
+			"@app/bulk-run": ["../lib/bulk-run.ts"],
 			"@app/catalog": ["../lib/catalog.ts"],
 			"@app/sources/*": ["../lib/sources/*"],
 			"@app/csv/*": ["../lib/csv/*"],

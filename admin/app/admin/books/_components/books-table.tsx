@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/table';
 import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
 import { cn } from '@/lib/utils';
+import { type BulkItemResult, runBulkSequential } from '@app/bulk-run';
 import { isValidIsbn } from '@app/isbn';
 import type { Database } from '@app/types';
 import {
@@ -567,40 +568,42 @@ export function BooksTable({
 	const selectedCount = selectedRows.length;
 	const running = bulk !== null;
 
-	async function runSequential<T extends { slug: string }>(
+	function runSequential<T extends { slug: string }>(
 		label: string,
 		items: T[],
-		fn: (item: T) => Promise<{ status: string; message?: string }>,
+		fn: (item: T) => Promise<BulkItemResult>,
 		opts: { usesGoogleBooks?: boolean } = {},
 	) {
-		if (opts.usesGoogleBooks) {
-			const gb = await googleBooksStatus();
-			if (!gb.available) {
-				toast.warning(
-					gb.keyed
-						? 'Google Books unavailable (check GOOGLE_BOOKS_API_KEY / quota). Using Open Library only.'
-						: 'Google Books is quota-blocked (keyless). Set GOOGLE_BOOKS_API_KEY in admin/.env.local to include it — using Open Library only.',
-				);
-			}
-		}
-		setBulk({ label, done: 0, total: items.length });
-		let updated = 0;
-		const failures: string[] = [];
-		for (let i = 0; i < items.length; i++) {
-			const item = items[i];
-			if (!item) continue;
-			const res = await fn(item);
-			if (res.status === 'updated') updated++;
-			if (res.status === 'error') failures.push(item.slug);
-			setBulk({ label, done: i + 1, total: items.length });
-		}
-		setBulk(null);
-		if (failures.length)
-			toast.error(`${label}: ${failures.length} failed (${failures.slice(0, 3).join(', ')}…)`);
-		// Only claim success if something didn't fail outright.
-		if (failures.length < items.length)
-			toast.success(`${label}: ${updated} updated / ${items.length}`);
-		startTransition(() => router.refresh());
+		return runBulkSequential({
+			items,
+			fn,
+			probe: opts.usesGoogleBooks
+				? async () => {
+						const gb = await googleBooksStatus();
+						if (!gb.available) {
+							toast.warning(
+								gb.keyed
+									? 'Google Books unavailable (check GOOGLE_BOOKS_API_KEY / quota). Using Open Library only.'
+									: 'Google Books is quota-blocked (keyless). Set GOOGLE_BOOKS_API_KEY in admin/.env.local to include it — using Open Library only.',
+							);
+						}
+					}
+				: undefined,
+			onProbeError: (error) => {
+				console.error(`${label}: Google Books status check failed`, error);
+				toast.warning('Google Books status check failed. Continuing.');
+			},
+			onItemError: (item, error) => console.error(`${label}: ${item.slug} threw`, error),
+			onProgress: (done, total) => setBulk({ label, done, total }),
+			onSettled: ({ updated, failures, total }) => {
+				setBulk(null);
+				if (failures.length)
+					toast.error(`${label}: ${failures.length} failed (${failures.slice(0, 3).join(', ')}…)`);
+				// Only claim success if something didn't fail outright.
+				if (failures.length < total) toast.success(`${label}: ${updated} updated / ${total}`);
+				startTransition(() => router.refresh());
+			},
+		});
 	}
 
 	function validateIsbns() {
