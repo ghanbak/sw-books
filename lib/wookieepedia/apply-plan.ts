@@ -1,3 +1,4 @@
+import { isValidIsbn13 } from '../isbn';
 import {
 	CHANGESET_VERSION,
 	type Changeset,
@@ -303,11 +304,18 @@ export function cleanupBlockingProblems(cs: CleanupChangeset): string[] {
 		if (p != null && !f.after.isbn.includes(p)) {
 			out.push(`isbn_fix "${f.slug}" leaves primary_isbn ∉ isbn[]`);
 		}
-		// Only an operator-approved collision removal may drop an ISBN.
-		const approved = new Set((f.approved_removals ?? []).map((r) => r.isbn));
+		// Only an operator-approved collision or invalid-ISBN removal may drop an ISBN.
+		const approved = new Set(
+			[...(f.approved_removals ?? []), ...(f.invalid_removals ?? [])].map((r) => r.isbn),
+		);
 		const dropped = f.before.isbn.filter((i) => !f.after.isbn.includes(i) && !approved.has(i));
 		if (dropped.length)
 			out.push(`isbn_fix "${f.slug}" would remove curated ISBN(s) ${dropped.join(', ')}`);
+		const valid = (f.invalid_removals ?? []).filter((r) => isValidIsbn13(r.isbn));
+		if (valid.length)
+			out.push(
+				`isbn_fix "${f.slug}" drops ${valid.map((r) => r.isbn).join(', ')} as invalid, but it passes the check digit`,
+			);
 	}
 	const covers = new Map<string, string>();
 	for (const c of cs.cover_fills) {
