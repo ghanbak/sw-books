@@ -41,7 +41,7 @@ Every loop follows the shared rules below, then its own playbook. The weekly ret
 - The `auto-merge` workflow turns on auto-merge for every `agent/*` and Dependabot PR when it opens. Agents never run `gh pr merge`.
 
 **When to assign the owner** (assign at creation: `gh pr create --assignee ghanbak` / `gh issue create --assignee ghanbak`, so the gate holds from the first check)
-- PRs with features or improvements: new features, UX or visual changes (including design-drift fixes, since CI can't check visuals), user-facing copy or flows, schema migrations, and changes to the design direction.
+- PRs with features or improvements (except sub-issue PRs into a feature branch; the feature → main PR is what gets reviewed): new features, UX or visual changes (including design-drift fixes, since CI can't check visuals), user-facing copy or flows, schema migrations, and changes to the design direction.
 - PRs that would otherwise auto-merge but are missing their proof: a bug fix without a regression test, a perf change without a before/after measurement, or anything the independent reviewer blocked.
 - Unsafe dependency bumps. The auto-merge workflow already holds major and native/Expo-coupled Dependabot bumps by name. The caretaker also assigns the owner if a bumped package ships `ios/`, `android/` or `expo-module.config.json`, or if its release notes list breaking changes.
 - Issues, rarely. The goal is maximum automation with the owner keeping creative and product-roadmap control. Assign an issue only when it's a roadmap call (a new feature or product direction an agent is proposing, not one the owner filed) or needs the owner's hands, or when an agent is truly blocked. Bugs, perf, a11y, maintenance and tech debt never wait on the owner at the issue stage. If you can decide it under these rules, decide it.
@@ -50,6 +50,15 @@ Every loop follows the shared rules below, then its own playbook. The weekly ret
 
 **Independent reviewer**
 - Before opening a PR (or before the caretaker clears a Dependabot PR), spawn a separate reviewer subagent (`general-purpose`) that gets only the diff, the issue or PR description and these rules, not your reasoning. Ask it to find reasons not to ship and end with `APPROVE` or `BLOCK: <reason>`. On `BLOCK`, fix it, or assign the owner with the reason in a comment.
+
+**Feature branches** (owner's rule, 2026-11-06: nothing half-built reaches `main`)
+- Work that needs more than one agent, or several issues that only make sense together, is a **feature**: a parent issue with one sub-issue per piece of work (GitHub sub-issues), usually one per agent (e.g. Tregg design, Brandon backend, Luis mobile).
+- The parent issue holds the shared contract so agents can work in parallel: the data shape or API, the screens and states, and which sub-issue owns what. A sub-issue that truly can't start until another lands says `Blocked by #<n>` in its body and stays out of `Todo` until that one is closed.
+- Each feature has one branch, `feature/<parent-number>-<slug>`, created from `origin/main` by the first execute run that picks up one of its sub-issues. A ruleset on `feature/*` requires CI and blocks direct pushes, so all changes arrive by PR.
+- Sub-issue PRs (`agent/<n>-<slug>` → `feature/...`) auto-merge into the feature branch once CI and the independent reviewer pass. Don't assign the owner on them, even for design or UX work; the owner reviews the feature as a whole.
+- When every sub-issue is closed, the caretaker opens one PR `feature/...` → `main`, assigned to the owner, with `Closes #<parent>`, a "What to look at" list and links to each sub-issue PR. The review gate holds it until the owner unassigns.
+- Keep the feature branch current: when it falls behind `main` or conflicts, open an `agent/sync-<parent>` PR that merges `origin/main` into it.
+- Single-agent bugs, perf and maintenance work skip all this and PR straight to `main` as before.
 
 **Backpressure**
 - If 6 or more agent PRs (branch `agent/*`) are assigned to the owner, the execute loop only takes work that won't need the owner's review (bugs, perf, maintenance) until the owner catches up.

@@ -1,6 +1,7 @@
 name: Auto-merge
 
-# Turns on auto-merge for agent PRs (branch agent/*) and Dependabot PRs when
+# Turns on auto-merge for agent PRs (branch agent/*), feature PRs (feature/* → main)
+# and Dependabot PRs when
 # they open. GitHub then merges once CI and review-gate pass, so a PR that's
 # assigned to the owner waits for them. Dependabot bumps that are major or touch
 # native/Expo-coupled packages get assigned to the owner here, before CI can
@@ -18,7 +19,7 @@ jobs:
   enable:
     if: >-
       !github.event.pull_request.draft &&
-      (startsWith(github.head_ref, 'agent/') || github.event.pull_request.user.login == 'dependabot[bot]')
+      (startsWith(github.head_ref, 'agent/') || startsWith(github.head_ref, 'feature/') || github.event.pull_request.user.login == 'dependabot[bot]')
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
