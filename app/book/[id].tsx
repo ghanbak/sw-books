@@ -20,6 +20,7 @@ import { RIG_HEIGHT, RIG_LIFT } from '@/lib/holo3d/pager';
 import { useHoloStatus } from '@/lib/holo3d/status';
 import type { Book } from '@/lib/hooks';
 import { useBookEnrichment, useBooks, useUserBooks } from '@/lib/hooks';
+import { displayIsbn } from '@/lib/isbn';
 import { supabase } from '@/lib/supabase';
 import { eraLabel } from '@/lib/timeline';
 import { parseTimeline } from '@/lib/wookieepedia/enrichment-display';
@@ -38,7 +39,7 @@ export default function BookDetailScreen() {
 	const router = useRouter();
 	// Separate from the catalog cache: enrichment rows are large and never embedded in the list query.
 	const { enrichment, fromCache } = useBookEnrichment(id);
-	const amazonUrl = book ? buildAmazonSearchUrl(book.isbn?.[0]) : null;
+	const amazonUrl = book ? buildAmazonSearchUrl(displayIsbn(book)) : null;
 
 	const fetchBook = useCallback(async () => {
 		setLoading(true);

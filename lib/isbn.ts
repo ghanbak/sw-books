@@ -81,3 +81,14 @@ export function hyphenateIsbn(raw: string): string {
 export function isEnglishIsbn(raw: string): boolean {
 	return parse(raw.trim())?.groupname === 'English language';
 }
+
+/**
+ * The ISBN to show and link for a book: the curated `primary_isbn`, falling back
+ * to the first catalog ISBN. `isbn[0]` is often a UK or ebook edition.
+ */
+export function displayIsbn(book: {
+	primary_isbn: string | null;
+	isbn: string[] | null;
+}): string | null {
+	return book.primary_isbn ?? book.isbn?.[0] ?? null;
+}
