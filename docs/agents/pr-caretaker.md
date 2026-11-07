@@ -33,5 +33,6 @@ Follow [README.md](README.md) shared rules first (lock, worktrees, never-list, a
    - Every sub-issue `Done` and no open PRs into the feature branch → open the feature PR: `gh pr create --base main --head feature/<...> --assignee ghanbak`, title in conventional-commit style, body with `Closes #<parent>` plus `Closes #<n>` for each sub-issue, a "What to look at" list (screens, flows, decisions), and links to each sub-issue PR. Run the independent reviewer on the full feature diff first and put its verdict in the body. Set the parent's Status to `In Review`.
    - Open feature PR: treat it like an agent PR (keep it green, address the owner's comments with `agent/*` PRs into the feature branch, comment "Ready for another look" when done). Never unassign the owner.
 
-4. Any PR with no activity for 14 days: comment once asking whether to keep it. Never close PRs.
-5. Summary: what's merging on its own, what's assigned to the owner (with numbers), rebased, fixed, and anything stuck.
+4. **Releases** (releases.md): for the open release issue (label `release`), rewrite its "What's new" and "Why it needs a build" sections from PRs merged to `main` since the last store build (`eas build:list --platform ios --profile production --status finished --limit 1 --json --non-interactive` gives its commit). Keep the owner's edits to the other sections. Add held native Dependabot PRs and open `needs-build` PRs to its milestone. A release issue is a feature parent: its release PR follows step 3.
+5. Any PR with no activity for 14 days: comment once asking whether to keep it. Never close PRs.
+6. Summary: what's merging on its own, what's assigned to the owner (with numbers), rebased, fixed, and anything stuck.

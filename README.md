@@ -154,7 +154,7 @@ Fuller setup (credentials, Apple Developer prerequisites, env/secrets via `eas e
 | `npm run lint` / `lint:fix`   | Biome check / autofix                               |
 | `npm run db:reset`            | Reset local Supabase, apply migrations, run seed    |
 | `npm run db:types`            | Regenerate `lib/types.ts` from local Supabase       |
-| `npm run db:seed`             | Re-import the CSV seed                              |
+| `npm run db:seed`             | Re-import the frozen CSV seed (local only)          |
 | `npm run admin:install`       | Install the admin tool's dependencies (first run only) |
 | `npm run admin`               | Start the local catalog admin (Next.js, `127.0.0.1:3100`) |
 
@@ -191,7 +191,10 @@ Two tables:
 - `books` — public catalog. All authenticated users can read. Edited with the local admin tool (see below), not from the app.
 - `user_books` — per-user shelves (owned / read / want-to-read). CRUD restricted to the owner via Postgres Row-Level Security.
 
-The CSV in `data/` is the source of truth for the catalog.
+The **production database** is the source of truth for the catalog.
+`data/catalog-backup.csv` is a one-way, git-committed mirror of prod (for
+rollback and seeding empty dev DBs). The legacy `data/books.csv` + override
+JSONs are a frozen fixture that only feeds the local `npm run db:seed`.
 
 ## Catalog management — the admin tool
 
@@ -231,11 +234,22 @@ workflow + troubleshooting: [admin/README.md](admin/README.md).
 > `package.json` owns `admin` / `admin:install` (they `--prefix admin` for you).
 > Running them inside `admin/` fails with `Missing script: "admin"`.
 
-To push the catalog to production, copy `.env.production.example` →
-`.env.production` (prod URL + secret key from the Supabase dashboard) and run
-`npm run db:seed:prod`. It upserts on `slug` (existing IDs preserved, so shelves
-stay intact) and prompts for the project ref before writing. It does **not**
-delete books removed from the CSV — remove those in the dashboard.
+Production is edited in place, never re-seeded from `data/books.csv`:
+`npm run db:seed:prod` refuses to run (the frozen CSV would roll curated rows
+back). Prod scripts read the prod URL + secret key from the gitignored
+`.env.production` (copy `.env.production.example`) and prompt for the project
+ref before writing.
+
+- **Change prod** — the admin tool pointed at prod, or a reviewed changeset:
+  `npm run catalog:changeset` (read-only build) → `npm run catalog:apply`
+  (dry-run by default; real writes need `--apply` and take a fresh backup first).
+- **Back up** — `npm run catalog:backup` exports prod to
+  `data/catalog-backup.csv` and commits it if it changed. Run it after every
+  editing session.
+- **Roll back / rebuild** — `npm run catalog:restore -- --production` upserts
+  `data/catalog-backup.csv` on `id` (identities and shelves preserved; rows added
+  after the backup are not deleted). Without `--production` it restores into the
+  local stack.
 
 ## Identifiers
 

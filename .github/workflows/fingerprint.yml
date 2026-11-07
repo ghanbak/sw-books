@@ -1,0 +1,124 @@
+name: Fingerprint
+
+# Flags PRs into main that change the iOS native fingerprint (app.json
+# runtimeVersion policy "fingerprint"). Those can't reach the current store
+# build as an OTA update, so they wait for the owner: label needs-build, assign
+# the owner once, and fail while anyone is assigned. Unassigning lets it land.
+# See docs/agents/releases.md.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review, assigned, unassigned]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: fingerprint-${{ github.event.pull_request.number }}
+
+jobs:
+  fingerprint:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR: ${{ github.event.pull_request.number }}
+      REPO: ${{ github.repository }}
+      OWNER: ghanbak
+      LABEL: needs-build
+      ACTION: ${{ github.event.action }}
+    steps:
+      # Assign/unassign events only re-check the hold; code events recompute.
+      # Files under these paths never feed the native fingerprint.
+      - name: Decide whether to compute
+        id: scope
+        run: |
+          compute=false
+          if [ "$ACTION" != "assigned" ] && [ "$ACTION" != "unassigned" ]; then
+            native=$(gh pr diff "$PR" --repo "$REPO" --name-only \
+              | grep -v -E '^(app|components|hooks|lib|admin|docs|data|supabase|scripts|\.claude|\.github|\.eas)/|\.md$' || true)
+            if [ -n "$native" ]; then compute=true; fi
+            echo "native-relevant files: ${native:-none}"
+          fi
+          echo "compute=$compute" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.scope.outputs.compute == 'true'
+        with:
+          path: head
+
+      - uses: actions/checkout@v4
+        if: steps.scope.outputs.compute == 'true'
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      - uses: actions/setup-node@v4
+        if: steps.scope.outputs.compute == 'true'
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            head/package-lock.json
+            base/package-lock.json
+
+      - name: Compare iOS fingerprints
+        id: fp
+        if: steps.scope.outputs.compute == 'true'
+        run: |
+          for side in base head; do
+            (cd "$side" && npm ci --no-audit --no-fund >/dev/null && npx expo-updates fingerprint:generate --platform ios > "../$side.json")
+          done
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json
+          def load(p):
+              f = json.load(open(p))
+              return f["hash"], {(s.get("type"), s.get("id") or s.get("filePath")): s.get("hash") for s in f["sources"]}
+          bh, b = load("base.json")
+          hh, h = load("head.json")
+          changed = [f"{'added' if k not in b else 'removed' if k not in h else 'changed'} {k[1]}"
+                     for k in sorted(set(b) | set(h), key=str) if b.get(k) != h.get(k)]
+          print(f"changed={'true' if bh != hh else 'false'}")
+          print(f"base={bh[:8]}")
+          print(f"head={hh[:8]}")
+          print("sources<<SRC")
+          print("\n".join(f"- `{c}`" for c in changed[:15]) + ("\n- …" if len(changed) > 15 else ""))
+          print("SRC")
+          EOF
+
+      - name: Label, hold and gate
+        env:
+          COMPUTE: ${{ steps.scope.outputs.compute }}
+          CHANGED: ${{ steps.fp.outputs.changed }}
+          BASE_FP: ${{ steps.fp.outputs.base }}
+          HEAD_FP: ${{ steps.fp.outputs.head }}
+          SOURCES: ${{ steps.fp.outputs.sources }}
+        run: |
+          has_label() { gh pr view "$PR" --repo "$REPO" --json labels --jq "[.labels[].name] | index(\"$LABEL\") != null"; }
+          if [ "$ACTION" != "assigned" ] && [ "$ACTION" != "unassigned" ]; then
+            if [ "$CHANGED" = "true" ]; then
+              gh pr edit "$PR" --repo "$REPO" --add-label "$LABEL"
+            elif [ "$(has_label)" = "true" ]; then
+              gh pr edit "$PR" --repo "$REPO" --remove-label "$LABEL"
+            fi
+          fi
+          [ "$(has_label)" = "true" ] || { echo "OTA-safe: native fingerprint unchanged."; exit 0; }
+
+          # Hold once per PR: after the owner unassigns, a later push doesn't re-assign them.
+          held_before=$(gh pr view "$PR" --repo "$REPO" --json comments --jq '[.comments[].body | select(startswith("🤖 fingerprint: needs a new build"))] | length')
+          if [ "$CHANGED" = "true" ] && [ "$held_before" = "0" ]; then
+            printf '%s\n' "🤖 fingerprint: needs a new build. This PR changes the iOS native fingerprint (\`$BASE_FP\` → \`$HEAD_FP\`), so it can't reach the current store build as an OTA update." \
+              "" "Changed sources:" "$SOURCES" "" \
+              "Unassign yourself to land it on \`main\`. OTA updates to the store build stop until the next build ships ([releases](https://github.com/$REPO/blob/main/docs/agents/releases.md))." \
+              > /tmp/comment.md
+            gh pr comment "$PR" --repo "$REPO" --body-file /tmp/comment.md
+            gh pr edit "$PR" --repo "$REPO" --add-assignee "$OWNER"
+          fi
+
+          assignees=$(gh pr view "$PR" --repo "$REPO" --json assignees --jq '[.assignees[].login] | join(", ")')
+          if [ -n "$assignees" ]; then
+            echo "::error::Changes the native fingerprint and is assigned to $assignees. Unassign to approve a new store build."
+            exit 1
+          fi
+          echo "Native change approved by the owner (unassigned)."
