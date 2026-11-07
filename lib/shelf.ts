@@ -1,5 +1,6 @@
 import type { Book, UserBook } from '@/lib/hooks';
 import type { SpineMatch } from '@/lib/spine-match';
+import type { Database } from '@/lib/types';
 
 /**
  * Pure helpers for the shelf scanner's data layer (batch add + scan-session draft).
@@ -51,6 +52,118 @@ export function mergeServerRows(
 	for (const row of rows) {
 		next.set(row.book_id, row);
 	}
+	return next;
+}
+
+export type ShelfField = 'owned' | 'read' | 'want_to_read' | 'favorite';
+
+type UserBookInsert = Database['public']['Tables']['user_books']['Insert'];
+
+/** The single server write a shelf toggle needs. */
+export type ShelfWrite =
+	| { kind: 'insert'; entry: UserBookInsert }
+	| { kind: 'update'; id: string; patch: Partial<Pick<UserBook, ShelfField>> }
+	| { kind: 'delete'; id: string };
+
+/**
+ * Plan one shelf toggle: the optimistic row to show now (`null` = the book leaves
+ * every shelf) and the write that makes it true on the server. A book not yet on
+ * any shelf gets a placeholder row, replaced by the inserted row on success.
+ */
+export function planToggle(
+	existing: UserBook | undefined,
+	bookId: string,
+	field: ShelfField,
+	userId: string,
+): { optimistic: UserBook | null; write: ShelfWrite } {
+	if (!existing) {
+		const flags = {
+			owned: field === 'owned',
+			read: field === 'read',
+			want_to_read: field === 'want_to_read',
+			favorite: field === 'favorite',
+		};
+		return {
+			optimistic: {
+				id: `${OPTIMISTIC_ID_PREFIX}${bookId}`,
+				user_id: userId,
+				book_id: bookId,
+				...flags,
+				created_at: null,
+				updated_at: null,
+			},
+			write: { kind: 'insert', entry: { user_id: userId, book_id: bookId, ...flags } },
+		};
+	}
+	const value = !existing[field];
+	const updated = { ...existing, [field]: value };
+	if (!updated.owned && !updated.read && !updated.want_to_read && !updated.favorite) {
+		return { optimistic: null, write: { kind: 'delete', id: existing.id } };
+	}
+	return {
+		optimistic: updated,
+		write: { kind: 'update', id: existing.id, patch: { [field]: value } },
+	};
+}
+
+export type ShelfToggleDeps = {
+	/** Latest local row for a book (must reflect `set` immediately, not after a render). */
+	get: (bookId: string) => UserBook | undefined;
+	/** Replace one book's row; `null` removes it. Per-book so other books' writes survive. */
+	set: (bookId: string, row: UserBook | null) => void;
+	/** Perform the write; `row` is the inserted row for an insert. */
+	write: (
+		write: ShelfWrite,
+	) => Promise<{ row: UserBook | null; error: { message: string } | null }>;
+	/** Called once per failed write, after the rollback. */
+	onError: (error: { message: string }) => void;
+};
+
+export type ToggleOutcome = 'ok' | 'failed' | 'ignored';
+
+/**
+ * Optimistic shelf toggle with a per-book in-flight guard. A tap on a book whose
+ * write is still pending is IGNORED (not queued): the first tap's optimistic state
+ * is already on screen, and a rapid double-tap is almost always accidental — queueing
+ * it would undo the user's change and double the round-trips. On failure the book's
+ * row is restored to its pre-tap value (removed, for a first flag) and `onError` fires.
+ */
+export function createShelfToggler(deps: ShelfToggleDeps) {
+	const inFlight = new Set<string>();
+	return async function toggle(
+		bookId: string,
+		field: ShelfField,
+		userId: string,
+	): Promise<ToggleOutcome> {
+		if (inFlight.has(bookId)) return 'ignored';
+		inFlight.add(bookId);
+		try {
+			const existing = deps.get(bookId);
+			const { optimistic, write } = planToggle(existing, bookId, field, userId);
+			deps.set(bookId, optimistic);
+			const { row, error } = await deps.write(write);
+			if (error) {
+				deps.set(bookId, existing ?? null);
+				deps.onError(error);
+				return 'failed';
+			}
+			if (write.kind === 'insert' && row) deps.set(bookId, row);
+			return 'ok';
+		} finally {
+			inFlight.delete(bookId);
+		}
+	};
+}
+
+/** Per-book Map update for `ShelfToggleDeps.set`. */
+export function setShelfRow(
+	userBooks: ReadonlyMap<string, UserBook>,
+	bookId: string,
+	row: UserBook | null,
+): Map<string, UserBook> {
+	const next = new Map(userBooks);
+	if (row) next.set(bookId, row);
+	else next.delete(bookId);
 	return next;
 }
 
