@@ -16,7 +16,7 @@ import { slugify } from '@app/slug';
 import type { BookCandidate, LookupResult } from '@app/sources/types';
 import { Loader2, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState, useTransition } from 'react';
+import { type ReactNode, useId, useMemo, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
 const CANON = ['Canon', 'Legends'] as const;
@@ -180,17 +180,24 @@ export function NewBookForm() {
 				<h2 className="mb-3 font-medium text-sm">Search Open Library + Google Books</h2>
 				<div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
 					<Field label="ISBN">
-						<Input
-							value={form.isbn}
-							onChange={(e) => set('isbn', e.target.value)}
-							placeholder="978…"
-						/>
+						{(id) => (
+							<Input
+								id={id}
+								value={form.isbn}
+								onChange={(e) => set('isbn', e.target.value)}
+								placeholder="978…"
+							/>
+						)}
 					</Field>
 					<Field label="Title">
-						<Input value={form.title} onChange={(e) => set('title', e.target.value)} />
+						{(id) => (
+							<Input id={id} value={form.title} onChange={(e) => set('title', e.target.value)} />
+						)}
 					</Field>
 					<Field label="Author">
-						<Input value={form.author} onChange={(e) => set('author', e.target.value)} />
+						{(id) => (
+							<Input id={id} value={form.author} onChange={(e) => set('author', e.target.value)} />
+						)}
 					</Field>
 				</div>
 				<Button className="mt-3" onClick={runSearch} disabled={searching}>
@@ -221,78 +228,147 @@ export function NewBookForm() {
 			{/* Form */}
 			<section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<Field label="Title *">
-					<Input value={form.title} onChange={(e) => set('title', e.target.value)} />
+					{(id) => (
+						<Input id={id} value={form.title} onChange={(e) => set('title', e.target.value)} />
+					)}
 				</Field>
 				<Field label="Slug * (editable now, immutable after create)">
-					<Input
-						value={effectiveSlug}
-						onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value, slugTouched: true }))}
-					/>
+					{(id) => (
+						<Input
+							id={id}
+							value={effectiveSlug}
+							onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value, slugTouched: true }))}
+						/>
+					)}
 				</Field>
 				<Field label="Author (comma-separated)">
-					<Input value={form.author} onChange={(e) => set('author', e.target.value)} />
+					{(id) => (
+						<Input id={id} value={form.author} onChange={(e) => set('author', e.target.value)} />
+					)}
 				</Field>
 				<div className="grid grid-cols-2 gap-3">
 					<Field label="Canon">
-						<EnumSelect value={form.canon} options={CANON} onChange={(v) => set('canon', v)} />
+						{(id) => (
+							<EnumSelect
+								id={id}
+								value={form.canon}
+								options={CANON}
+								onChange={(v) => set('canon', v)}
+							/>
+						)}
 					</Field>
 					<Field label="Type">
-						<EnumSelect value={form.type} options={TYPE} onChange={(v) => set('type', v)} />
+						{(id) => (
+							<EnumSelect
+								id={id}
+								value={form.type}
+								options={TYPE}
+								onChange={(v) => set('type', v)}
+							/>
+						)}
 					</Field>
 				</div>
 				<Field label="Series name">
-					<Input value={form.series_name} onChange={(e) => set('series_name', e.target.value)} />
+					{(id) => (
+						<Input
+							id={id}
+							value={form.series_name}
+							onChange={(e) => set('series_name', e.target.value)}
+						/>
+					)}
 				</Field>
 				<div className="grid grid-cols-3 gap-3">
 					<Field label="Series #">
-						<Input
-							value={form.series_order}
-							onChange={(e) => set('series_order', e.target.value)}
-						/>
+						{(id) => (
+							<Input
+								id={id}
+								value={form.series_order}
+								onChange={(e) => set('series_order', e.target.value)}
+							/>
+						)}
 					</Field>
 					<Field label="Timeline">
-						<Input
-							value={form.timeline_order}
-							onChange={(e) => set('timeline_order', e.target.value)}
-						/>
+						{(id) => (
+							<Input
+								id={id}
+								value={form.timeline_order}
+								onChange={(e) => set('timeline_order', e.target.value)}
+							/>
+						)}
 					</Field>
 					<Field label="Era">
-						<Input value={form.era} onChange={(e) => set('era', e.target.value)} />
+						{(id) => (
+							<Input id={id} value={form.era} onChange={(e) => set('era', e.target.value)} />
+						)}
 					</Field>
 				</div>
 				<Field label="Publisher">
-					<Input value={form.publisher} onChange={(e) => set('publisher', e.target.value)} />
+					{(id) => (
+						<Input
+							id={id}
+							value={form.publisher}
+							onChange={(e) => set('publisher', e.target.value)}
+						/>
+					)}
 				</Field>
 				<div className="grid grid-cols-2 gap-3">
 					<Field label="Published (YYYY-MM-DD)">
-						<Input
-							value={form.date_published}
-							onChange={(e) => set('date_published', e.target.value)}
-						/>
+						{(id) => (
+							<Input
+								id={id}
+								value={form.date_published}
+								onChange={(e) => set('date_published', e.target.value)}
+							/>
+						)}
 					</Field>
 					<Field label="Language">
-						<Input value={form.language} onChange={(e) => set('language', e.target.value)} />
+						{(id) => (
+							<Input
+								id={id}
+								value={form.language}
+								onChange={(e) => set('language', e.target.value)}
+							/>
+						)}
 					</Field>
 				</div>
 				<Field label="ISBNs (semicolon-separated)">
-					<Input value={form.isbn} onChange={(e) => set('isbn', e.target.value)} />
+					{(id) => (
+						<Input id={id} value={form.isbn} onChange={(e) => set('isbn', e.target.value)} />
+					)}
 				</Field>
 				<Field label="Primary ISBN (must be one of the ISBNs)">
-					<Input value={form.primary_isbn} onChange={(e) => set('primary_isbn', e.target.value)} />
+					{(id) => (
+						<Input
+							id={id}
+							value={form.primary_isbn}
+							onChange={(e) => set('primary_isbn', e.target.value)}
+						/>
+					)}
 				</Field>
 				<Field label="Formats (semicolon-separated)">
-					<Input value={form.format} onChange={(e) => set('format', e.target.value)} />
+					{(id) => (
+						<Input id={id} value={form.format} onChange={(e) => set('format', e.target.value)} />
+					)}
 				</Field>
 				<Field label="Cover image URL">
-					<Input value={form.cover_image} onChange={(e) => set('cover_image', e.target.value)} />
+					{(id) => (
+						<Input
+							id={id}
+							value={form.cover_image}
+							onChange={(e) => set('cover_image', e.target.value)}
+						/>
+					)}
 				</Field>
 				<div className="sm:col-span-2">
 					<Field label="Synopsis">
-						<textarea
-							className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-							value={form.synopsis}
-							onChange={(e) => set('synopsis', e.target.value)}
-						/>
+						{(id) => (
+							<textarea
+								id={id}
+								className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+								value={form.synopsis}
+								onChange={(e) => set('synopsis', e.target.value)}
+							/>
+						)}
 					</Field>
 				</div>
 			</section>
@@ -310,27 +386,33 @@ export function NewBookForm() {
 	);
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+// Children is a render prop so the label and its control share one useId() id.
+function Field({ label, children }: { label: string; children: (id: string) => ReactNode }) {
+	const id = useId();
 	return (
 		<div className="space-y-1.5">
-			<Label className="text-muted-foreground text-xs">{label}</Label>
-			{children}
+			<Label htmlFor={id} className="text-muted-foreground text-xs">
+				{label}
+			</Label>
+			{children(id)}
 		</div>
 	);
 }
 
 function EnumSelect<T extends string>({
+	id,
 	value,
 	options,
 	onChange,
 }: {
+	id: string;
 	value: T;
 	options: readonly T[];
 	onChange: (value: T) => void;
 }) {
 	return (
 		<Select value={value} onValueChange={(v) => onChange(v as T)}>
-			<SelectTrigger>
+			<SelectTrigger id={id}>
 				<SelectValue />
 			</SelectTrigger>
 			<SelectContent>

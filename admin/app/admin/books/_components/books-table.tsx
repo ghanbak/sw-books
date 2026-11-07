@@ -145,7 +145,7 @@ function DeleteBookCell({
 				<Button
 					variant="ghost"
 					size="sm"
-					className="h-7 text-muted-foreground hover:text-destructive"
+					className="h-7 text-muted-foreground hover:text-destructive-text"
 					aria-label={`Delete ${title}`}
 				>
 					<Trash2 className="size-3.5" />
@@ -162,6 +162,7 @@ function DeleteBookCell({
 				</AlertDialogHeader>
 				<Input
 					autoFocus
+					aria-label={`Type ${slug} to confirm deletion`}
 					value={typed}
 					placeholder={slug}
 					onChange={(e) => setTyped(e.target.value)}
@@ -677,7 +678,7 @@ export function BooksTable({
 					</Button>
 				</div>
 				{enrichment.error ? (
-					<p className="px-3 text-destructive text-xs">{enrichment.error}</p>
+					<p className="px-3 text-destructive-text text-xs">{enrichment.error}</p>
 				) : (
 					ENRICHMENT_STATUSES.map((status) => (
 						<button
@@ -705,7 +706,7 @@ export function BooksTable({
 							)}
 							{!enrichment.pinsAvailable && <li>Pin file not on this deploy: pins not shown.</li>}
 							{enrichment.pinErrors > 0 && (
-								<li className="text-destructive">
+								<li className="text-destructive-text">
 									data/enrichment-pins.json has {enrichment.pinErrors} invalid pin(s).
 								</li>
 							)}
@@ -716,6 +717,8 @@ export function BooksTable({
 			<div className="min-w-0 flex-1 space-y-3">
 				<div className="flex flex-wrap items-center gap-3">
 					<Input
+						type="search"
+						aria-label="Filter catalog"
 						placeholder="Filter by title, author, series, publisher…"
 						value={globalFilter}
 						onChange={(e) => setGlobalFilter(e.target.value)}
