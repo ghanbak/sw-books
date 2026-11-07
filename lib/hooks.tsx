@@ -15,6 +15,9 @@ import {
 	type ShelfField,
 	applyOwnedOptimistic,
 	createShelfToggler,
+	createShelfWriteTracker,
+	isFetchCurrent,
+	mergeFetchedShelf,
 	mergeServerRows,
 	setShelfRow,
 } from './shelf';
@@ -100,10 +103,12 @@ const UserBooksContext = createContext<UserBooksContextValue>({
  * Provides the current user's shelf entries to the app. Single source of truth —
  * any screen that toggles a shelf updates this state and every other screen sees it.
  *
- * Refetches when the auth user changes (sign-in, sign-out, account switch).
+ * Refetches when the signed-in user id changes (sign-in, sign-out, account switch) —
+ * not on token refresh, which hands out a new `user` object for the same id.
  */
 export function UserBooksProvider({ children }: { children: ReactNode }) {
 	const { user } = useAuth();
+	const userId = user?.id ?? null;
 	const [userBooks, setUserBooks] = useState<Map<string, UserBook>>(new Map());
 	const [loading, setLoading] = useState(true);
 
@@ -111,31 +116,52 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 	// callback on every shelf change (which would invalidate every memoized consumer).
 	const userBooksRef = useRef(userBooks);
 	userBooksRef.current = userBooks;
+	// Read after an await to drop results that belong to a signed-out/switched user.
+	const userIdRef = useRef(userId);
+	userIdRef.current = userId;
+
+	// Pending writes (toggles + addOwned), shared so they guard each other and so a
+	// refetch knows which books changed locally while it was in flight.
+	const [writes] = useState(createShelfWriteTracker);
+	const latestFetchRef = useRef(0);
 
 	const fetchUserBooks = useCallback(async () => {
+		const requestUserId = userIdRef.current;
+		if (!requestUserId) return;
+		const requestId = ++latestFetchRef.current;
+		const startSeq = writes.seq();
 		setLoading(true);
 		const { data, error } = await supabase.from('user_books').select('*');
+		const current = isFetchCurrent({
+			requestId,
+			latestRequestId: latestFetchRef.current,
+			requestUserId,
+			currentUserId: userIdRef.current,
+		});
+		// A newer fetch or the user change owns `userBooks` and `loading` now.
+		if (!current) return;
 		if (error) {
 			console.warn('[user_books] fetch failed:', error.message);
 			setLoading(false);
 			return;
 		}
-		const map = new Map<string, UserBook>();
-		for (const ub of data ?? []) {
-			map.set(ub.book_id, ub);
-		}
-		setUserBooks(map);
+		const rows = data ?? [];
+		setUserBooks((prev) =>
+			mergeFetchedShelf(rows, prev, (bookId) => writes.touchedSince(bookId, startSeq)),
+		);
 		setLoading(false);
-	}, []);
+	}, [writes]);
 
 	useEffect(() => {
-		if (user) {
+		if (userId) {
 			fetchUserBooks();
 		} else {
-			setUserBooks(new Map());
+			latestFetchRef.current += 1; // invalidate any fetch still in flight
+			userBooksRef.current = new Map();
+			setUserBooks(userBooksRef.current);
 			setLoading(false);
 		}
-	}, [user, fetchUserBooks]);
+	}, [userId, fetchUserBooks]);
 
 	// One toggler per provider: holds the per-book in-flight guard (see createShelfToggler).
 	// `get`/`set` go through the ref so a write is visible to the next tap before React
@@ -167,16 +193,18 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 					console.warn('[user_books] toggle failed, reverted:', error.message);
 					Alert.alert('Couldn’t update shelf', 'Your change wasn’t saved. Try again.');
 				},
+				writes,
+				isCurrentUser: (id) => userIdRef.current === id,
 			}),
-		[],
+		[writes],
 	);
 
 	const toggleShelf = useCallback(
 		async (bookId: string, field: ShelfField) => {
-			if (!user) return;
-			await toggler(bookId, field, user.id);
+			if (!userId) return;
+			await toggler(bookId, field, userId);
 		},
-		[user, toggler],
+		[userId, toggler],
 	);
 
 	/**
@@ -192,7 +220,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 	 */
 	const addOwned = useCallback(
 		async (bookIds: string[]): Promise<Result<{ rows: UserBook[] }>> => {
-			if (!user) {
+			if (!userId) {
 				return err({ code: 'not_signed_in', message: 'Sign in to add books to your shelf.' });
 			}
 			// Dedupe defensively: duplicate ids inside ONE statement make Postgres reject
@@ -203,21 +231,30 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 
 			// Snapshot BEFORE the optimistic flip — the whole-batch revert target.
 			const snapshot = userBooksRef.current;
-			setUserBooks(applyOwnedOptimistic(snapshot, ids, user.id));
+			userBooksRef.current = applyOwnedOptimistic(snapshot, ids, userId);
+			setUserBooks(userBooksRef.current);
+			// Toggles on these books are ignored until the RPC settles — otherwise one
+			// could write with a placeholder id or race the batch's rows.
+			writes.claim(ids);
 
-			const { data, error } = await supabase.rpc('add_owned_books', { book_ids: ids });
+			try {
+				const { data, error } = await supabase.rpc('add_owned_books', { book_ids: ids });
+				const stale = userIdRef.current !== userId; // signed out / switched meanwhile
 
-			if (error) {
-				console.warn('[user_books] addOwned failed, reverting:', error.message);
-				setUserBooks(snapshot);
-				return err({ code: 'add_failed', message: error.message });
+				if (error) {
+					console.warn('[user_books] addOwned failed, reverting:', error.message);
+					if (!stale) setUserBooks(snapshot);
+					return err({ code: 'add_failed', message: error.message });
+				}
+
+				const rows = data ?? [];
+				if (!stale) setUserBooks((prev) => mergeServerRows(prev, rows));
+				return ok({ rows });
+			} finally {
+				writes.release(ids);
 			}
-
-			const rows = data ?? [];
-			setUserBooks((prev) => mergeServerRows(prev, rows));
-			return ok({ rows });
 		},
-		[user],
+		[userId, writes],
 	);
 
 	return (
