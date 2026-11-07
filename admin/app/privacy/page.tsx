@@ -93,7 +93,7 @@ export default function PrivacyPolicy() {
 			<Section title="Data retention and deletion">
 				<p>
 					We keep your account and library until you delete your account. You can delete your
-					account and all associated data from within the app (Settings → Delete account), or by
+					account and all associated data from within the app (Account → Delete account), or by
 					emailing us at{' '}
 					<a className="text-saber-blue hover:underline" href={`mailto:${CONTACT}`}>
 						{CONTACT}
