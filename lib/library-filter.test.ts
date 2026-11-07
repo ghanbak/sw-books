@@ -73,7 +73,7 @@ describe('deriveLibraryFilter', () => {
 
 describe('selectLibraryView', () => {
 	const loaded = { loading: false, error: null, count: 10 };
-	const idle = (rows: UserBook[]) => ({ loading: false, rows });
+	const idle = (rows: UserBook[]) => ({ loading: false, error: null, rows });
 
 	it('favorites-only user gets the pills (incl. Favorites), not onboarding', () => {
 		const view = selectLibraryView({
@@ -101,7 +101,7 @@ describe('selectLibraryView', () => {
 	it('shelf still loading is loading, not onboarding', () => {
 		const view = selectLibraryView({
 			catalog: loaded,
-			shelf: { loading: true, rows: [] },
+			shelf: { loading: true, error: null, rows: [] },
 			visibleCount: 0,
 			filter: 'all',
 		});
@@ -131,12 +131,34 @@ describe('selectLibraryView', () => {
 	it('pull-to-refresh with rows keeps the pills', () => {
 		const view = selectLibraryView({
 			catalog: loaded,
-			shelf: { loading: true, rows: [ub({ owned: true })] },
+			shelf: { loading: true, error: null, rows: [ub({ owned: true })] },
 			visibleCount: 0,
 			filter: 'read',
 		});
 		expect(view.kind).toBe('list');
 		expect(view.pills).toEqual(LIBRARY_FILTER_KEYS);
+	});
+
+	it('shelf fetch failure with no rows is a shelf error, not onboarding', () => {
+		const view = selectLibraryView({
+			catalog: loaded,
+			shelf: { loading: false, error: 'network down', rows: [] },
+			visibleCount: 0,
+			filter: 'all',
+		});
+		expect(view.kind).toBe('error');
+		expect(view.kind === 'error' && view.source).toBe('shelf');
+		expect(view.pills).toEqual([]);
+	});
+
+	it('shelf refetch failure with rows already loaded keeps the list', () => {
+		const view = selectLibraryView({
+			catalog: loaded,
+			shelf: { loading: false, error: 'network down', rows: [ub({ owned: true })] },
+			visibleCount: 0,
+			filter: 'read',
+		});
+		expect(view.kind).toBe('list');
 	});
 
 	it("empty pill gets that pill's copy", () => {

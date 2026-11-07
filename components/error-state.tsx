@@ -28,7 +28,12 @@ export function ErrorState({
 			<Text style={styles.title}>{title}</Text>
 			{message ? <Text style={styles.message}>{message}</Text> : null}
 			{onRetry ? (
-				<Pressable style={styles.retryButton} onPress={onRetry}>
+				<Pressable
+					style={styles.retryButton}
+					onPress={onRetry}
+					accessibilityRole="button"
+					accessibilityLabel={retryLabel}
+				>
 					<Text style={styles.retryText}>{retryLabel}</Text>
 				</Pressable>
 			) : null}

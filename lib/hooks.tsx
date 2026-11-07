@@ -85,6 +85,7 @@ export function useBooks() {
 type UserBooksContextValue = {
 	userBooks: Map<string, UserBook>;
 	loading: boolean;
+	error: string | null;
 	refetch: () => Promise<void>;
 	toggleShelf: (bookId: string, field: ShelfField) => Promise<void>;
 	addOwned: (bookIds: string[]) => Promise<Result<{ rows: UserBook[] }>>;
@@ -93,6 +94,7 @@ type UserBooksContextValue = {
 const UserBooksContext = createContext<UserBooksContextValue>({
 	userBooks: new Map(),
 	loading: true,
+	error: null,
 	refetch: async () => {},
 	toggleShelf: async () => {},
 	addOwned: async () => err({ code: 'no_provider', message: 'UserBooksProvider missing' }),
@@ -110,6 +112,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 	const userId = user?.id ?? null;
 	const [userBooks, setUserBooks] = useState<Map<string, UserBook>>(new Map());
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
 	// Mirror of userBooks for reads inside toggleShelf without re-creating the
 	// callback on every shelf change (which would invalidate every memoized consumer).
@@ -132,7 +135,8 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 		const requestId = ++latestFetchRef.current;
 		const startSeq = writes.seq();
 		setLoading(true);
-		const { data, error } = await supabase.from('user_books').select('*');
+		setError(null);
+		const { data, error: fetchError } = await supabase.from('user_books').select('*');
 		const current = isFetchCurrent({
 			requestId,
 			latestRequestId: latestFetchRef.current,
@@ -141,8 +145,9 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 		});
 		// A newer fetch or the user change owns `userBooks` and `loading` now.
 		if (!current) return;
-		if (error) {
-			console.warn('[user_books] fetch failed:', error.message);
+		if (fetchError) {
+			console.warn('[user_books] fetch failed:', fetchError.message);
+			setError(fetchError.message);
 			setLoading(false);
 			return;
 		}
@@ -160,6 +165,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 			latestFetchRef.current += 1; // invalidate any fetch still in flight
 			userBooksRef.current = new Map();
 			setUserBooks(userBooksRef.current);
+			setError(null);
 			setLoading(false);
 		}
 	}, [userId, fetchUserBooks]);
@@ -250,7 +256,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 
 	return (
 		<UserBooksContext.Provider
-			value={{ userBooks, loading, refetch: fetchUserBooks, toggleShelf, addOwned }}
+			value={{ userBooks, loading, error, refetch: fetchUserBooks, toggleShelf, addOwned }}
 		>
 			{children}
 		</UserBooksContext.Provider>
