@@ -293,6 +293,12 @@ const MISFILED_ISBN_REMOVALS: readonly MisfiledIsbnRemoval[] = [
 		note: '2026-11-07 (#143) — Open Library: "Star wars / X-Wing Rogue Squadron.", Dark Horse Comics 1998 (work OL15219983W, not the novel\'s OL84533W)',
 	},
 	{
+		slug: 'x-wing-rogue-squadron',
+		isbn: '9781101968758',
+		belongs_to: 'The X-Wing Series: Star Wars Legends 10-Book Bundle (ebook, Random House 2016)',
+		note: '2026-11-07 (#154) — penguinrandomhouse.com + Open Library: "X-Wing Series : Star Wars Legends 10-Book Bundle" (work OL28042739W, not the novel\'s OL84533W). Multi-book bundle; no single row owns it',
+	},
+	{
 		slug: 'acolyte-wayseeker',
 		isbn: '9780593723456',
 		belongs_to: 'Mace Windu: The Glass Abyss (Random House Worlds paperback)',
