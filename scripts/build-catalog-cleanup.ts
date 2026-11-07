@@ -44,6 +44,7 @@ import {
 } from '../lib/sources/open-library';
 import { normalizeIsbnList } from '../lib/wookieepedia/changeset';
 import {
+	type ApprovedCover,
 	type ApprovedIsbnAddition,
 	type ApprovedIsbnRemoval,
 	type CleanupChangeset,
@@ -330,6 +331,35 @@ const COVER_FALLBACK_REVIEWS: readonly CoverReview[] = [
 	},
 ];
 
+/**
+ * Operator-approved covers (lib/wookieepedia/cleanup.ts `vetApprovedCover`):
+ * images for a row ISBN from a source no automated pass reads — the
+ * publisher's cover endpoint. Each was downloaded and looked at; the ISBN was
+ * cross-checked against the publisher page and Open Library. PRH's endpoint
+ * answers 200 with a ~2 KB 400×400 placeholder for unknown ISBNs, so it is
+ * never an automated source — only reviewed entries here.
+ */
+const APPROVED_COVERS: readonly ApprovedCover[] = [
+	{
+		slug: 'sanctuary-a-bad-batch-novel',
+		isbn: '9780593874462',
+		url: 'https://images2.penguinrandomhouse.com/cover/9780593874462',
+		note: '2026-11-07 (#79) — downloaded 296×450 JPEG of the Random House Worlds cover ("Star Wars / Sanctuary / A Bad Batch Novel / Lamar Giles"); penguinrandomhouse.com resolves the ISBN to Sanctuary: A Bad Batch Novel; Open Library: "Star Wars: Sanctuary" (OL44264240W)',
+	},
+	{
+		slug: 'servants-of-the-empire-imperial-justice',
+		isbn: '9781484716601',
+		url: 'https://images2.penguinrandomhouse.com/cover/9781484716601',
+		note: '2026-11-07 (#79) — downloaded 275×400 JPEG of the Disney Lucasfilm Press cover ("Star Wars Rebels / Servants of the Empire / Imperial Justice / Jason Fry"); Open Library: "Star Wars Rebels Servants of the Empire", subtitle "Imperial Justice"',
+	},
+	{
+		slug: 'the-high-republic-a-valiant-vow',
+		isbn: '9781368095204',
+		url: 'https://images2.penguinrandomhouse.com/cover/9781368095204',
+		note: '2026-11-07 (#79) — downloaded 357×450 JPEG of the Disney Lucasfilm Press cover ("Star Wars / The High Republic / A Valiant Vow / Justina Ireland"); penguinrandomhouse.com resolves the ISBN to The High Republic: A Valiant Vow',
+	},
+];
+
 const PROD = process.argv.includes('--production');
 /** Build from the committed prod snapshot instead of a live read (offline, no credentials). */
 const FROM_BACKUP = process.argv.includes('--from-backup');
@@ -601,8 +631,21 @@ function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: strin
 	flagLines(L, 'Flagged ISBN rows (not changed)', cs.flagged.isbn);
 
 	L.push('', '## Cover fills (cover_image was null)', '');
-	for (const c of cs.cover_fills.filter((f) => !f.fallback)) {
+	for (const c of cs.cover_fills.filter((f) => !f.fallback && !f.approved)) {
 		L.push(`- \`${c.slug}\`: ${c.after} (${c.source}) — ${c.reason}`);
+	}
+	const approved = cs.cover_fills.filter((f) => f.approved);
+	if (approved.length) {
+		L.push(
+			'',
+			'### Operator-approved covers',
+			'',
+			'Sourced by hand for a row ISBN (publisher image) and visually reviewed; listed in the builder’s `APPROVED_COVERS`.',
+			'',
+		);
+		for (const c of approved) {
+			L.push(`- \`${c.slug}\`: ${c.after} (\`${c.source}\`) — ${c.reason}`);
+		}
 	}
 	const fallback = cs.cover_fills.filter((f) => f.fallback);
 	if (fallback.length) {
@@ -760,6 +803,7 @@ async function main(): Promise<void> {
 		[
 			...Object.values(cache.covers).flatMap((c) => [c.ol, c.gb]),
 			...Object.values(cache.gbSearch).map((g) => g?.cover_image ?? null),
+			...APPROVED_COVERS.map((a) => a.url),
 		].filter((u): u is string => !!u),
 	);
 	const headCheck = (u: string) =>
@@ -924,6 +968,8 @@ async function main(): Promise<void> {
 		workCovers,
 		fallbackHead: new Map(fallbackUrls.map((u) => [u, cache.head[u] === true] as const)),
 		coverReviews: COVER_FALLBACK_REVIEWS,
+		approvedCovers: APPROVED_COVERS,
+		approvedCoverHead: new Map(APPROVED_COVERS.map((a) => [a.url, cache.head[a.url] === true])),
 	});
 	writeFileSync(OUT_JSON, `${JSON.stringify(cs, null, 2)}\n`);
 	writeFileSync(OUT_MD, summaryMarkdown(cs, catalog.length, label));

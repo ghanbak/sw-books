@@ -7,6 +7,7 @@ import {
 	planSynopsisFill,
 } from './apply-plan';
 import {
+	type ApprovedCover,
 	type CleanupChangeset,
 	type CleanupRow,
 	type CoverCandidate,
@@ -32,6 +33,7 @@ import {
 	pickResetPrimary,
 	sharedPhrases,
 	synopsisProblems,
+	vetApprovedCover,
 	vetFallbackCover,
 } from './cleanup';
 
@@ -1003,6 +1005,121 @@ describe('work-level cover fallback', () => {
 			coverReviews: [accept('last-shot', 'ol:8568524')],
 		});
 		expect(won.cover_fills.map((c) => [c.after, c.fallback])).toEqual([[perIsbn, undefined]]);
+	});
+});
+
+describe('operator-approved covers (#79)', () => {
+	const VOW = '9781368095204';
+	const VOW_URL = `https://images2.penguinrandomhouse.com/cover/${VOW}`;
+	const vow = row({
+		id: 'id-vow',
+		slug: 'the-high-republic-a-valiant-vow',
+		title: 'The High Republic: A Valiant Vow',
+		isbn: [VOW],
+		primary_isbn: VOW,
+		cover_image: null,
+		date_published: '2025-05-06',
+	});
+	const approved = (over: Partial<ApprovedCover> = {}): ApprovedCover => ({
+		slug: vow.slug,
+		isbn: VOW,
+		url: VOW_URL,
+		note: 'looked at it',
+		...over,
+	});
+	const build = (
+		rows: CleanupRow[],
+		opts: {
+			covers?: ApprovedCover[];
+			head?: boolean;
+			candidates?: CoverCandidate[];
+		} = {},
+	) =>
+		buildCleanupChangeset({
+			rows,
+			asOf: '2026-11-07',
+			isbnEvidence: new Map(),
+			coverCandidates: new Map(opts.candidates ? [[vow.slug, opts.candidates]] : []),
+			drafts: { drafts: {}, skipped: {} },
+			wikiText: new Map(),
+			approvedIsbnAdditions: [],
+			isbnHolders: new Map(),
+			approvedCovers: opts.covers ?? [approved()],
+			approvedCoverHead: new Map([[VOW_URL, opts.head ?? true]]),
+		});
+
+	it('vetApprovedCover: blank row, ISBN on the row, not wiki, HEAD-checked, not shared', () => {
+		const ok = { headOk: true, inUse: new Map<string, string>() };
+		expect(vetApprovedCover(vow, approved(), ok)).toEqual({ ok: true });
+		expect(vetApprovedCover({ ...vow, cover_image: 'https://x/y.jpg' }, approved(), ok)).toEqual({
+			ok: false,
+			reason: expect.stringMatching(/never overwritten/),
+		});
+		const other = vetApprovedCover(vow, approved({ isbn: HOPE_HC }), ok);
+		expect(other.ok === false && other.reason).toMatch(/not an ISBN on the row/);
+		const wiki = vetApprovedCover(
+			vow,
+			approved({ url: 'https://static.wikia.nocookie.net/starwars/images/v.jpg' }),
+			ok,
+		);
+		expect(wiki.ok === false && wiki.reason).toMatch(/Wookieepedia image/);
+		const head = vetApprovedCover(vow, approved(), { ...ok, headOk: false });
+		expect(head.ok === false && head.reason).toMatch(/HEAD check/);
+		const shared = vetApprovedCover(vow, approved(), {
+			headOk: true,
+			inUse: new Map([[VOW_URL, 'someone-else']]),
+		});
+		expect(shared.ok === false && shared.reason).toMatch(/already used by someone-else/);
+		expect(
+			vetApprovedCover(vow, approved(), { headOk: true, inUse: new Map([[VOW_URL, vow.slug]]) }),
+		).toEqual({ ok: true });
+	});
+
+	it('build: fills with provenance and wins over an automated per-ISBN pick', () => {
+		const auto: CoverCandidate = {
+			isbn: VOW,
+			source: 'openlibrary',
+			url: 'https://covers.openlibrary.org/b/id/99-L.jpg',
+			head_ok: true,
+		};
+		const cs = build([vow], { candidates: [auto] });
+		expect(cs.cover_fills).toEqual([
+			{
+				id: 'id-vow',
+				slug: vow.slug,
+				title: vow.title,
+				before: null,
+				after: VOW_URL,
+				source: `operator-approved:isbn:${VOW}`,
+				reason: `no cover; operator-approved cover for ${VOW}; visual review: looked at it`,
+				approved: { isbn: VOW, review: 'looked at it' },
+			},
+		]);
+		expect(cs.flagged.covers_missing).toEqual([]);
+	});
+
+	it('build: a refused approved cover falls through and its reason is listed', () => {
+		const cs = build([vow], { head: false });
+		expect(cs.cover_fills).toEqual([]);
+		expect(cs.flagged.covers_missing[0]?.reason).toMatch(/operator-approved cover: .*HEAD check/);
+		// Falls through to the automated pick when one exists.
+		const auto: CoverCandidate = {
+			isbn: VOW,
+			source: 'openlibrary',
+			url: 'https://covers.openlibrary.org/b/id/99-L.jpg',
+			head_ok: true,
+		};
+		const fb = build([vow], { head: false, candidates: [auto] });
+		expect(fb.cover_fills.map((c) => [c.after, c.approved])).toEqual([[auto.url, undefined]]);
+	});
+
+	it('build: never replaces a cover, never reuses another row’s image', () => {
+		const covered = { ...vow, cover_image: 'https://covers.openlibrary.org/b/id/1-L.jpg' };
+		expect(build([covered]).cover_fills).toEqual([]);
+		const holder = row({ id: 'id-h', slug: 'holder', cover_image: VOW_URL });
+		const cs = build([vow, holder]);
+		expect(cs.cover_fills).toEqual([]);
+		expect(cs.flagged.covers_missing[0]?.reason).toMatch(/already used by holder/);
 	});
 });
 
