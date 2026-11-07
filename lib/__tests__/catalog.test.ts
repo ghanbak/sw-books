@@ -65,6 +65,7 @@ describe('catalog helpers', () => {
 				expect(parseDate('June 29, 2021')).toBe('2021-06-29');
 				expect(parseDate('1996')).toBe('1996-01-01');
 				expect(parseDate('2021-01-05')).toBe('2021-01-05');
+				expect(parseDate('2021-01')).toBe('2021-01-01');
 			});
 		}
 	});
