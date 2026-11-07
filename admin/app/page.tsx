@@ -82,7 +82,13 @@ export default function Home() {
 					Join the TestFlight
 					<span className="sr-only">(opens in a new tab)</span>
 				</a>
-				<nav>
+				<nav className="flex gap-4">
+					<Link
+						href="/support"
+						className="text-foreground/75 text-halo text-sm hover:text-foreground hover:underline"
+					>
+						Support
+					</Link>
 					<Link
 						href="/privacy"
 						className="text-foreground/75 text-halo text-sm hover:text-foreground hover:underline"
