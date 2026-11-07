@@ -19,6 +19,8 @@ Follow [README.md](README.md) shared rules first. Check backpressure before star
    - Bugs: a regression test that fails before the fix and passes after.
    - Perf: a before/after measurement in the PR body.
    - Design drift: cite the rule restored.
+   - Migrations and SQL: `scripts/verify-db.sh` output (the PASS lines) and a fail-before run with the new migration removed, in the PR body.
+   - Missing proof never means assigning the owner; see README "When to assign the owner" (draft + `needs-proof`).
    - Visual changes (Tregg, Luis, Dylan): before/after screenshots per [screenshots.md](screenshots.md), in a `## Screenshots` section, or `Screenshots: not captured (<reason>)`. Schema, data-flow or API changes (Brandon): a Mermaid diagram when it's easier to see than read. Tell the subagent this in the brief. Parallel items share one simulator, so app captures take turns via its lock.
    - App changes: prefer JS-only. Compare the iOS fingerprint against the base (releases.md) and end the PR body with `OTA-safe: yes` or `OTA-safe: no (<what changed>)`. A fingerprint change on an issue that isn't under a release issue: open the PR into `main` anyway; the `fingerprint` check holds it for the owner.
    - Sub-issues: stay inside the parent's contract. If the contract is wrong, say so on the parent issue instead of quietly diverging.
