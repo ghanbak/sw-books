@@ -19,6 +19,7 @@ import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
 import { type Book, useBooks, useUserBooks } from '@/lib/hooks';
+import { exitScanTo } from '@/lib/scan-exit';
 import { useScanSession } from '@/lib/scan-session';
 import { swapMatch, toggleSelection } from '@/lib/shelf';
 import type { ShelfScanPhase } from '@/lib/shelf-scan';
@@ -118,7 +119,7 @@ export function ShelfScanReview({
 
 	const goToShelf = useCallback(() => {
 		onReset();
-		router.push('/library');
+		exitScanTo(router, '/library');
 	}, [onReset, router]);
 
 	// Screen-reader narration. The review arrives via a silent overlay swap (no nav),
