@@ -2,7 +2,9 @@ import type { UserBook } from '@/lib/hooks';
 import {
 	type ShelfToggleDeps,
 	type ShelfWrite,
+	applyOwnedOptimistic,
 	createShelfToggler,
+	createShelfWriteTracker,
 	planToggle,
 	setShelfRow,
 } from '@/lib/shelf';
@@ -27,6 +29,8 @@ type WriteResult = Awaited<ReturnType<ShelfToggleDeps['write']>>;
 /** In-memory store + a write fake whose calls resolve only when the test says so. */
 function harness(initial: UserBook[] = []) {
 	let map = new Map(initial.map((r) => [r.book_id, r]));
+	let signedIn = 'user-a';
+	const writes = createShelfWriteTracker();
 	const pending: { write: ShelfWrite; resolve: (r: WriteResult) => void }[] = [];
 	const deps: ShelfToggleDeps = {
 		get: (bookId) => map.get(bookId),
@@ -40,8 +44,23 @@ function harness(initial: UserBook[] = []) {
 				}),
 		),
 		onError: vi.fn(),
+		writes,
+		isCurrentUser: (id) => id === signedIn,
 	};
-	return { deps, pending, toggle: createShelfToggler(deps), state: () => map };
+	return {
+		deps,
+		pending,
+		writes,
+		toggle: createShelfToggler(deps),
+		state: () => map,
+		/** Simulate another writer (addOwned) replacing the Map. */
+		replace: (next: Map<string, UserBook>) => {
+			map = next;
+		},
+		signIn: (id: string) => {
+			signedIn = id;
+		},
+	};
 }
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
@@ -149,6 +168,79 @@ describe('createShelfToggler — existing row (update/delete)', () => {
 		h.pending[0].resolve({ row: null, error: { message: 'x' } });
 		await p;
 		expect(h.state().get('b2')).toBe(other);
+	});
+});
+
+describe('createShelfToggler — concurrent addOwned (#102)', () => {
+	it('ignores a toggle on a book whose addOwned batch is pending', async () => {
+		const h = harness();
+		h.replace(applyOwnedOptimistic(h.state(), ['b1'], 'user-a'));
+		h.writes.claim(['b1']); // addOwned in flight
+
+		expect(await h.toggle('b1', 'read', 'user-a')).toBe('ignored');
+		expect(h.deps.write).not.toHaveBeenCalled();
+
+		h.writes.release(['b1']);
+		h.replace(new Map([['b1', row({ id: 'srv-1', book_id: 'b1', owned: true })]]));
+		h.toggle('b1', 'read', 'user-a');
+		expect(h.deps.write).toHaveBeenCalledWith({
+			kind: 'update',
+			id: 'srv-1',
+			patch: { read: true },
+		});
+	});
+
+	it('never writes back an optimistic placeholder id', async () => {
+		const h = harness();
+		h.replace(applyOwnedOptimistic(h.state(), ['b1'], 'user-a'));
+		expect(await h.toggle('b1', 'favorite', 'user-a')).toBe('ignored');
+		expect(h.deps.write).not.toHaveBeenCalled();
+	});
+
+	it('a failed toggle keeps an owned flag set by addOwned while it was pending', async () => {
+		const h = harness([row({ book_id: 'b1', read: true })]);
+		const p = h.toggle('b1', 'favorite', 'user-a');
+		h.replace(applyOwnedOptimistic(h.state(), ['b1'], 'user-a'));
+
+		h.pending[0].resolve({ row: null, error: { message: 'offline' } });
+		expect(await p).toBe('failed');
+		expect(h.state().get('b1')).toMatchObject({ owned: true, read: true, favorite: false });
+	});
+
+	it('a successful insert keeps an owned flag set by addOwned while it was pending', async () => {
+		const h = harness();
+		const p = h.toggle('b1', 'read', 'user-a');
+		h.replace(applyOwnedOptimistic(h.state(), ['b1'], 'user-a'));
+
+		const inserted = row({ id: 'srv-1', book_id: 'b1', read: true });
+		h.pending[0].resolve({ row: inserted, error: null });
+		await p;
+		expect(h.state().get('b1')).toMatchObject({ id: 'srv-1', owned: true, read: true });
+	});
+});
+
+describe('createShelfToggler — user change (#102)', () => {
+	it('a write settling after sign-out leaves the new state alone', async () => {
+		const h = harness();
+		const p = h.toggle('b1', 'owned', 'user-a');
+		h.signIn('user-b');
+		h.replace(new Map());
+
+		h.pending[0].resolve({ row: row({ id: 'srv-1', book_id: 'b1', owned: true }), error: null });
+		expect(await p).toBe('stale');
+		expect(h.state().size).toBe(0);
+	});
+
+	it('a failure settling after sign-out neither rolls back nor alerts', async () => {
+		const h = harness([row({ book_id: 'b1', owned: true })]);
+		const p = h.toggle('b1', 'read', 'user-a');
+		h.signIn('user-b');
+		h.replace(new Map());
+
+		h.pending[0].resolve({ row: null, error: { message: 'x' } });
+		await p;
+		expect(h.state().size).toBe(0);
+		expect(h.deps.onError).not.toHaveBeenCalled();
 	});
 });
 
