@@ -1,0 +1,36 @@
+# Publishes an OTA update to the production channel on every push to main,
+# but only when a finished iOS store build has the same native fingerprint.
+# If main has a native change the live build doesn't have, nothing is
+# published and the change waits for the next store build. See
+# docs/agents/releases.md.
+name: OTA to production
+
+on:
+  push:
+    branches: ['main']
+
+jobs:
+  fingerprint:
+    name: Fingerprint
+    type: fingerprint
+    environment: production
+
+  get_build:
+    name: Find matching store build
+    needs: [fingerprint]
+    type: get-build
+    params:
+      platform: ios
+      profile: production
+      distribution: store
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+
+  publish:
+    name: Publish update
+    needs: [get_build]
+    if: ${{ needs.get_build.outputs.build_id }}
+    type: update
+    environment: production
+    params:
+      channel: production
+      platform: ios

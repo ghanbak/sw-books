@@ -19,6 +19,7 @@ Follow [README.md](README.md) shared rules first. Check backpressure before star
    - Bugs: a regression test that fails before the fix and passes after.
    - Perf: a before/after measurement in the PR body.
    - Design drift: cite the rule restored; screenshots if a simulator or browser is available.
+   - App changes: prefer JS-only. Compare the iOS fingerprint against the base (releases.md) and end the PR body with `OTA-safe: yes` or `OTA-safe: no (<what changed>)`. A fingerprint change on an issue that isn't under a release issue: open the PR into `main` anyway; the `fingerprint` check holds it for the owner.
    - Sub-issues: stay inside the parent's contract. If the contract is wrong, say so on the parent issue instead of quietly diverging.
    - Keep the diff to what the issue asks for. Unrelated problems found along the way become new issues (labels plus `source:scout`, added to the Roadmap with Status `Triage`).
 5. Verify per the README. Failing after two attempts → push nothing, assign the issue to the owner with a comment on what's blocking, set Status `Backlog`, move on.
