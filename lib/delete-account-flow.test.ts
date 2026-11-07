@@ -13,6 +13,8 @@ function steps(overrides: Partial<DeleteAccountSteps> = {}) {
 		reauthenticateWithApple: vi.fn(async (): Promise<string | undefined> => 'apple-code'),
 		onBusy: vi.fn(),
 		deleteAccount: vi.fn(async () => ({ appleRevoked: false })),
+		isAccountGone: vi.fn(async () => false),
+		signOutLocally: vi.fn(async () => {}),
 		...overrides,
 	};
 }
@@ -96,5 +98,77 @@ describe('runDeleteAccountFlow', () => {
 			message: DELETE_ACCOUNT_FALLBACK_ERROR,
 		});
 		expect(empty.deleteAccount).not.toHaveBeenCalled();
+	});
+
+	describe('when the delete request fails after the server already deleted the user', () => {
+		const lostResponse = () =>
+			vi.fn(async () => {
+				throw new Error('Your account could not be deleted. Check your connection and try again.');
+			});
+
+		it('reports deleted and signs out locally when the server says the user is gone', async () => {
+			const s = steps({
+				isAppleUser: true,
+				deleteAccount: lostResponse(),
+				isAccountGone: vi.fn(async () => true),
+			});
+			expect(await runDeleteAccountFlow(s)).toEqual({ status: 'deleted' });
+			expect(s.isAccountGone).toHaveBeenCalledTimes(1);
+			expect(s.signOutLocally).toHaveBeenCalledTimes(1);
+		});
+
+		it('still reports deleted if the local sign-out fails', async () => {
+			const s = steps({
+				deleteAccount: lostResponse(),
+				isAccountGone: vi.fn(async () => true),
+				signOutLocally: vi.fn(async () => {
+					throw new Error('storage');
+				}),
+			});
+			expect(await runDeleteAccountFlow(s)).toEqual({ status: 'deleted' });
+		});
+
+		it('keeps the error when the user still exists', async () => {
+			const s = steps({ deleteAccount: lostResponse(), isAccountGone: vi.fn(async () => false) });
+			expect(await runDeleteAccountFlow(s)).toEqual({
+				status: 'failed',
+				message: 'Your account could not be deleted. Check your connection and try again.',
+			});
+			expect(s.signOutLocally).not.toHaveBeenCalled();
+		});
+
+		it('keeps the error when the existence check itself fails (still offline)', async () => {
+			const s = steps({
+				deleteAccount: vi.fn(async () => {
+					throw new Error('Your session has expired. Sign in again, then delete your account.');
+				}),
+				isAccountGone: vi.fn(async () => {
+					throw new TypeError('Network request failed');
+				}),
+			});
+			expect(await runDeleteAccountFlow(s)).toEqual({
+				status: 'failed',
+				message: 'Your session has expired. Sign in again, then delete your account.',
+			});
+			expect(s.signOutLocally).not.toHaveBeenCalled();
+		});
+
+		it('does not check when the request succeeds or a prompt fails', async () => {
+			const ok = steps();
+			await runDeleteAccountFlow(ok);
+			expect(ok.isAccountGone).not.toHaveBeenCalled();
+			const apple = steps({
+				isAppleUser: true,
+				reauthenticateWithApple: vi.fn(async () => {
+					throw new Error('Sign in with Apple failed. Try again.');
+				}),
+				isAccountGone: vi.fn(async () => true),
+			});
+			expect(await runDeleteAccountFlow(apple)).toEqual({
+				status: 'failed',
+				message: 'Sign in with Apple failed. Try again.',
+			});
+			expect(apple.isAccountGone).not.toHaveBeenCalled();
+		});
 	});
 });
