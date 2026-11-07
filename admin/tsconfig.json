@@ -18,6 +18,7 @@
 		"paths": {
 			"@/*": ["./*"],
 			"isbn3": ["./node_modules/isbn3"],
+			"zod": ["./node_modules/zod"],
 			"csv-parse/sync": ["./node_modules/csv-parse/lib/sync"],
 			"csv-stringify/sync": ["./node_modules/csv-stringify/lib/sync"],
 			"@app/types": ["../lib/types.ts"],
@@ -29,6 +30,7 @@
 			"@app/result": ["../lib/result.ts"],
 			"@app/action-errors": ["../lib/action-errors.ts"],
 			"@app/stale-write": ["../lib/stale-write.ts"],
+			"@app/book-schema": ["../lib/book-schema.ts"],
 			"@app/slug": ["../lib/slug.ts"],
 			"@app/wookieepedia/*": ["../lib/wookieepedia/*"]
 		}
