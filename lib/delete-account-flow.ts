@@ -5,6 +5,11 @@
  *
  * Order: confirm → (Apple users) fresh Apple authorization → delete. Cancelling either
  * prompt aborts without touching the account.
+ *
+ * The server deletes the user before the slow Apple revoke, so a request can fail on the
+ * client (dropped connection, lost response) after the account is already gone. Any delete
+ * failure therefore asks the auth server whether the user still exists; only a definitive
+ * "gone" turns it into `deleted` (plus a local sign-out). An unanswered check keeps the error.
  */
 
 export type DeleteAccountSteps = {
@@ -17,6 +22,13 @@ export type DeleteAccountSteps = {
 	/** Called once the user has committed (both prompts passed), before the delete request. */
 	onBusy?: () => void;
 	deleteAccount: (opts?: { appleAuthorizationCode?: string }) => Promise<unknown>;
+	/**
+	 * After `deleteAccount` throws: resolve `true` only when the auth server definitively
+	 * reports the user no longer exists. Network failures must resolve `false` (or throw).
+	 */
+	isAccountGone: () => Promise<boolean>;
+	/** Clear the local session once the account is confirmed gone server-side. */
+	signOutLocally: () => Promise<void>;
 };
 
 export type DeleteAccountOutcome =
@@ -40,7 +52,12 @@ export async function runDeleteAccountFlow(
 		}
 
 		steps.onBusy?.();
-		await steps.deleteAccount(appleAuthorizationCode ? { appleAuthorizationCode } : undefined);
+		try {
+			await steps.deleteAccount(appleAuthorizationCode ? { appleAuthorizationCode } : undefined);
+		} catch (err) {
+			if (!(await steps.isAccountGone().catch(() => false))) throw err;
+			await steps.signOutLocally().catch(() => {});
+		}
 		return { status: 'deleted' };
 	} catch (err) {
 		return { status: 'failed', message: errorMessage(err) };
