@@ -1,606 +1,150 @@
 # External Services Setup Guide
 
-Step-by-step setup for all external services needed by the SW Books app. Organized by **when** each service becomes required during development.
+Setup for the services OssusArchives depends on, ordered by when each becomes required. [README.md](../../README.md) is the day-to-day reference; this guide covers first-time setup.
+
+**Identifiers** (from `app.json`):
+
+| Field | Value |
+|---|---|
+| App name | `OssusArchives` |
+| Expo slug | `ossus-archives` |
+| iOS bundle ID | `com.ghanbak.ossusarchives` |
+| Android package | `com.ghanbak.ossusarchives` _(Android deferred)_ |
+| URL scheme | `ossusarchives://` |
 
 ---
 
-## Prerequisites (Before You Start)
+## Prerequisites
 
-These must be installed on your machine before any development. **No accounts needed** — everything in Phase 1 runs locally without signing up for anything.
+No accounts needed for local development.
 
-### 1. Node.js + pnpm
+| Tool | Notes |
+|---|---|
+| Node.js (LTS) + npm | npm ships with Node. Install with `npm ci`, never `npm install` (see README). |
+| Docker Desktop | Runs the local Supabase stack. |
+| Supabase CLI | `brew install supabase/tap/supabase` |
+| Xcode + iOS Simulator | Required. The app runs only as a development build. |
+| Android Studio | Optional; Android is deferred. |
 
-```bash
-# Install Node.js 20+ (LTS)
-# https://nodejs.org or via nvm:
-nvm install 20
-nvm use 20
+Expo CLI comes with the project: always invoke it as `npx expo …`.
 
-# Install pnpm
-npm install -g pnpm
-```
-
-### 2. Docker Desktop
-
-Required for running Supabase locally.
-
-1. Download Docker Desktop from https://www.docker.com/products/docker-desktop
-2. Install and launch it
-3. Verify: `docker --version`
-
-### 3. Supabase CLI
-
-No Supabase account needed. The CLI runs a local stack via Docker — no cloud connection required.
-
-```bash
-# Install via Homebrew (macOS)
-brew install supabase/tap/supabase
-
-# Verify
-supabase --version
-```
-
-### 4. Expo CLI
-
-```bash
-# Comes with npx, no global install needed. Verify:
-npx expo --version
-```
-
-### 5. Physical Devices (Recommended)
-
-- **iOS testing:** iPhone with Expo Go app installed (no account needed — just install from App Store), or Xcode for simulator
-- **Android testing:** Android phone with Expo Go (no account needed — install from Play Store), or Android Studio for emulator
+> **Development builds only.** The app ships native modules (Google / Apple Sign-In, WebGPU), so it can't run in the stock Expo client. Use the iOS simulator; a physical device can't reach the dev server on this setup.
 
 ---
 
-## Phase 1: Local Development
-
-Everything in Phase 1 runs locally. No cloud accounts needed.
-
-### Supabase Local Stack
-
-The Supabase CLI runs a full Postgres + Auth + Storage stack via Docker containers on your machine.
-
-**Step 1: Initialize Supabase in the project**
+## Phase 1: Local development
 
 ```bash
-cd /path/to/sw-books
-supabase init
+npm ci                    # install exactly what package-lock.json pins (+ patches/)
+cp .env.example .env      # fill in the values below
+supabase start            # first run pulls Docker images (~2–3 min)
+npm run db:reset          # apply migrations + supabase/seed.sql
+npm run db:seed           # import the catalog from data/
+npx expo prebuild --clean
+npx expo run:ios          # build + install the dev build on the simulator
 ```
 
-This creates the `supabase/` directory with `config.toml`.
+After the first build, run `npm start` and open the **dev build** on the simulator.
 
-**Step 2: Start the local stack**
+### `.env`
 
-```bash
-supabase start
-```
+`supabase status` prints the local values:
 
-First run downloads Docker images (~2-3 minutes). Subsequent starts are fast.
+| Variable | Value |
+|---|---|
+| `EXPO_PUBLIC_SUPABASE_URL` | `http://127.0.0.1:54321` (Project URL) |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | The **Publishable** key |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Google Web client ID (Phase 2) |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | Google iOS client ID (Phase 2) |
 
-On success, it prints several sections:
+The **Secret** key bypasses RLS. Never put it in app code. `npm run db:seed` and the admin tool read it as `SUPABASE_SERVICE_ROLE_KEY`.
 
-```
-╭──────────────────────────────────────╮
-│ 🔧 Development Tools                 │
-├─────────┬────────────────────────────┤
-│ Studio  │ http://127.0.0.1:54323     │  ← Admin dashboard (browser)
-│ Mailpit │ http://127.0.0.1:54324     │  ← Email testing inbox
-│ MCP     │ http://127.0.0.1:54321/mcp │
-╰─────────┴────────────────────────────╯
+### Signing in locally
 
-╭──────────────────────────────────────────────────────╮
-│ 🌐 APIs                                              │
-├────────────────┬─────────────────────────────────────┤
-│ Project URL    │ http://127.0.0.1:54321              │  ← Use this for EXPO_PUBLIC_SUPABASE_URL
-│ REST           │ http://127.0.0.1:54321/rest/v1      │
-│ GraphQL        │ http://127.0.0.1:54321/graphql/v1   │
-│ Edge Functions │ http://127.0.0.1:54321/functions/v1 │
-╰────────────────┴─────────────────────────────────────╯
+`__DEV__` builds show **Continue as Dev User** on the login screen. It signs in a local test user against your local Supabase, so the catalog, shelves, scanner and covers work without OAuth.
 
-╭───────────────────────────────────────────────────────────────╮
-│ ⛁ Database                                                    │
-├─────┬─────────────────────────────────────────────────────────┤
-│ URL │ postgresql://postgres:postgres@127.0.0.1:54322/postgres │
-╰─────┴─────────────────────────────────────────────────────────╯
+### Supabase Studio
 
-╭──────────────────────────────────────────────────────────────╮
-│ 🔑 Authentication Keys                                       │
-├─────────────┬────────────────────────────────────────────────┤
-│ Publishable │ eyJ...                                         │  ← Use this for EXPO_PUBLIC_SUPABASE_ANON_KEY
-│ Secret      │ eyJ...                                         │  ← service_role key (NEVER put in app code)
-╰─────────────┴────────────────────────────────────────────────╯
+http://127.0.0.1:54323 browses tables, auth users and RLS. Edit the catalog with the admin tool (`npm run admin`, see [admin/README.md](../../admin/README.md)), not Studio.
 
-╭───────────────────────────────────────────────────────────────────╮
-│ 📦 Storage (S3)                                                   │
-├────────────┬──────────────────────────────────────────────────────┤
-│ URL        │ http://127.0.0.1:54321/storage/v1/s3                 │
-│ Access Key │ ...                                                  │  ← Not needed for the app
-│ Secret Key │ ...                                                  │  ← Not needed for the app
-│ Region     │ local                                                │
-╰────────────┴──────────────────────────────────────────────────────╯
-```
-
-The two keys you need for the app:
-- **Publishable** = the anon key (safe to use in client code)
-- **Secret** = the service_role key (admin access, never ship in the app — only for server-side scripts like the seed)
-
-The Storage S3 keys are for direct S3-compatible access and are not needed for this project.
-
-**Step 3: Save the local keys to your `.env`**
-
-Create a `.env` file at the project root (this is gitignored):
-
-```bash
-EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321          # Project URL from the APIs section
-EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJ...                      # Publishable key from Authentication Keys
-```
-
-**Step 4: Access Supabase Studio**
-
-Open http://127.0.0.1:54323 in your browser. This is the local admin dashboard — same UI as cloud Supabase. Use it to:
-- Browse tables and data
-- Edit rows (this is your admin interface for managing books)
-- View auth users
-- Test RLS policies
-
-**Step 5: Run migrations**
-
-```bash
-supabase db reset
-```
-
-This applies all migrations in `supabase/migrations/` and runs `supabase/seed.sql`.
-
-**Step 6: Generate TypeScript types**
-
-```bash
-supabase gen types typescript > lib/types.ts
-```
-
-Re-run this whenever you change the schema.
-
-**Useful commands:**
+### Commands
 
 | Command | Purpose |
 |---|---|
-| `supabase start` | Start local stack |
-| `supabase stop` | Stop local stack |
-| `supabase db reset` | Drop all tables, re-run migrations + seed |
-| `supabase db diff` | Generate migration from manual Studio changes |
-| `supabase gen types typescript` | Regenerate TS types |
-| `supabase status` | Show local URLs and keys |
-
-### Expo Dev Server
-
-```bash
-# Start the dev server
-npx expo start
-
-# Or start with cache cleared
-npx expo start --clear
-```
-
-Scan the QR code with Expo Go on your phone, or press `i` for iOS simulator / `a` for Android emulator.
-
-### Local Auth Bypass (for development without OAuth)
-
-During Phase 1 you don't have Google/Apple OAuth configured. To develop the app UI without a real login:
-
-**Option A: Disable auth gate temporarily**
-
-In your root layout, skip the auth check during development:
-
-```typescript
-// app/_layout.tsx — during development only
-const DEV_SKIP_AUTH = __DEV__; // true in development
-
-if (!session && !DEV_SKIP_AUTH) {
-  return <Redirect href="/(auth)/login" />;
-}
-```
-
-**Option B: Create a test user via Supabase Studio**
-
-1. Open http://127.0.0.1:54323
-2. Go to Authentication > Users
-3. Click "Add user" > "Create new user"
-4. Enter any email/password (e.g., `test@test.com` / `password`)
-5. Use `supabase.auth.signInWithPassword()` in development
-
-Either way, the catalog, shelves, scanner, and 3D covers can all be built and tested without OAuth.
+| `supabase start` / `supabase stop` | Start / stop the local stack |
+| `supabase status` | Local URLs and keys |
+| `npm run db:reset` | Drop and re-apply migrations + seed |
+| `npm run db:seed` | Re-import the catalog CSV (local only) |
+| `npm run db:types` | Regenerate `lib/types.ts` after schema changes |
+| `supabase db diff` | Generate a migration from Studio changes |
 
 ---
 
-## Phase 2: Google Sign-In Setup
+## Phase 2: Sign-in providers
 
-Required before testing Google authentication on a device. This involves the Google Cloud Console and the Supabase Auth dashboard.
+Sign-in is native (no OAuth web redirect). The step-by-step checklist, with progress, is [docs/plans/2026-04-29-auth-setup-checklist.md](../plans/2026-04-29-auth-setup-checklist.md). Summary:
 
-### Google Cloud Console
+### Google
 
-**Step 1: Create a Google Cloud project**
+In Google Cloud Console (OAuth consent screen with `email` and `profile` scopes), create:
 
-1. Go to https://console.cloud.google.com
-2. Click the project dropdown (top-left) > "New Project"
-3. Name: `SW Books` (or similar)
-4. Click "Create"
-5. Select the new project from the dropdown
-
-**Step 2: Configure the OAuth consent screen**
-
-1. Navigate to **APIs & Services > OAuth consent screen**
-2. Select **External** user type > click "Create"
-3. Fill in:
-   - App name: `SW Books`
-   - User support email: your email
-   - Developer contact: your email
-4. Scopes: click "Add or Remove Scopes" > add `email` and `profile` > Save
-5. Test users: add your own email (while app is in "Testing" status, only listed users can sign in)
-6. Click "Back to Dashboard"
-
-**Step 3: Create OAuth Client IDs**
-
-You need **three** client IDs: Web, iOS, and Android.
-
-**Web Client ID** (required — Supabase uses this to verify tokens):
-
-1. Go to **APIs & Services > Credentials**
-2. Click **"+ Create Credentials" > "OAuth client ID"**
-3. Application type: **Web application**
-4. Name: `SW Books Web`
-5. Authorized redirect URIs: add `https://<YOUR_SUPABASE_PROJECT>.supabase.co/auth/v1/callback` (add this later when you have a cloud Supabase project; for now just create the client)
-6. Click "Create"
-7. **Save the Client ID and Client Secret** — you'll need both for Supabase
-
-**iOS Client ID:**
-
-1. Click **"+ Create Credentials" > "OAuth client ID"**
-2. Application type: **iOS**
-3. Name: `SW Books iOS`
-4. Bundle ID: your iOS bundle identifier (e.g., `com.yourname.swbooks` — must match `app.json`)
-5. Click "Create"
-6. **Save the Client ID** — you'll need the reversed version for the URL scheme
-
-**Android Client ID:**
-
-1. Click **"+ Create Credentials" > "OAuth client ID"**
-2. Application type: **Android**
-3. Name: `SW Books Android`
-4. Package name: your Android package (e.g., `com.yourname.swbooks` — must match `app.json`)
-5. SHA-1 certificate fingerprint:
-   ```bash
-   # For debug keystore:
-   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep SHA1
-   
-   # For EAS Build, get it from:
-   eas credentials
-   ```
-6. Click "Create"
-7. **Save the Client ID**
-
-**Step 4: Note your credentials**
-
-You should now have:
-
-| Credential | Where it goes |
+| Client | Used by |
 |---|---|
-| Web Client ID | Supabase Auth dashboard + `app.json` (`webClientId` for Google Sign-In) |
-| Web Client Secret | Supabase Auth dashboard only (never in app code) |
-| iOS Client ID | `app.json` (for URL scheme) |
-| Android Client ID | `app.json` |
+| Web | Supabase Google provider (client ID + secret) and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`. The app passes it as `webClientId` so Supabase can verify the ID token. |
+| iOS (bundle ID `com.ghanbak.ossusarchives`) | `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, and its reversed form as `iosUrlScheme` in the `@react-native-google-signin/google-signin` plugin in `app.json`. |
 
-### Supabase Auth Dashboard (Google)
+Enable Google under Supabase **Authentication > Providers** with the Web client ID and secret. Locally, set `[auth.external.google]` in `supabase/config.toml` and restart the stack.
 
-This step requires a **cloud Supabase project** (see "Cloud Supabase" section below). If you're still on local-only, skip to configuring local auth.
+### Apple
 
-1. Go to https://supabase.com/dashboard > your project
-2. Navigate to **Authentication > Providers**
-3. Find **Google** and toggle it on
-4. Enter:
-   - Client ID: your **Web Client ID**
-   - Client Secret: your **Web Client Secret**
-5. Save
+Requires the Apple Developer Program.
 
-**For local Supabase:** Edit `supabase/config.toml`:
+1. App ID `com.ghanbak.ossusarchives` with **Sign in with Apple** enabled.
+2. A Services ID and a Sign in with Apple key (`.p8`, downloadable once).
+3. Enable Apple under Supabase **Authentication > Providers** (Services ID, key, Key ID, Team ID).
 
-```toml
-[auth.external.google]
-enabled = true
-client_id = "your-web-client-id"
-secret = "your-web-client-secret"
-```
-
-Then restart: `supabase stop && supabase start`
-
-### Configure the Expo App
-
-**`app.json` (or `app.config.ts`):**
-
-```json
-{
-  "expo": {
-    "plugins": [
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": "com.googleusercontent.apps.YOUR_IOS_CLIENT_ID"
-        }
-      ]
-    ]
-  }
-}
-```
-
-**In your Google Sign-In component:**
-
-```typescript
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
-
-GoogleSignin.configure({
-  webClientId: 'YOUR_WEB_CLIENT_ID',  // Always the WEB client ID, even on mobile
-});
-```
+`expo-apple-authentication` is already in `app.json` plugins. The Supabase Apple client secret JWT expires every 6 months; rotate it before then.
 
 ---
 
-## Phase 2: Apple Sign-In Setup
+## Phase 3: Hosted Supabase
 
-Required before testing Apple authentication on iOS.
+Owner steps. Agents never run hosted Supabase commands.
 
-### Apple Developer Account
+1. Create the project in the Supabase dashboard (Free tier is enough).
+2. `supabase link`, then `supabase db push --remote`. Since CLI v3, `db push` without `--remote` targets the local stack, and hosted changes ask for confirmation.
+3. `EXPO_PUBLIC_*` values are embedded at build time. Point preview/production builds at the hosted URL and publishable key, e.g. with EAS environment variables (`eas env:create`). The secret key never goes behind an `EXPO_PUBLIC_` prefix.
+4. The production database is the catalog's source of truth. Don't re-seed it from `data/books.csv` (`npm run db:seed:prod` refuses). Use the catalog scripts in README (`catalog:backup`, `catalog:changeset` / `catalog:apply`, `catalog:restore`). Prod scripts read credentials from the gitignored `.env.production` (copy `.env.production.example`).
 
-1. Go to https://developer.apple.com
-2. Click "Account" and sign in (or enroll — $99/year)
-3. You need the **Apple Developer Program** membership (not just a free account)
+### Account deletion
 
-### Register an App ID
-
-1. Go to **Certificates, Identifiers & Profiles > Identifiers**
-2. Click **"+"** to register a new identifier
-3. Select **App IDs** > Continue
-4. Select **App** > Continue
-5. Description: `SW Books`
-6. Bundle ID: **Explicit** > enter your bundle ID (e.g., `com.yourname.swbooks`)
-7. Scroll down to **Capabilities** > check **"Sign in with Apple"**
-8. Click Continue > Register
-
-### Create a Service ID (for Supabase)
-
-1. Go to **Identifiers** > click **"+"**
-2. Select **Services IDs** > Continue
-3. Description: `SW Books Auth`
-4. Identifier: `com.yourname.swbooks.auth` (must be different from the App ID)
-5. Click Continue > Register
-6. Click on the newly created Service ID
-7. Check **"Sign in with Apple"** > click **Configure**
-8. Primary App ID: select your app
-9. Domains: add your Supabase project domain (e.g., `yourproject.supabase.co`)
-10. Return URLs: add `https://yourproject.supabase.co/auth/v1/callback`
-11. Save
-
-### Create a Key
-
-1. Go to **Keys** > click **"+"**
-2. Key Name: `SW Books Auth Key`
-3. Check **"Sign in with Apple"** > click **Configure** > select your Primary App ID
-4. Click Continue > Register
-5. **Download the key file** (`.p8`) — you can only download it once
-6. Note the **Key ID** shown on screen
-
-### Supabase Auth Dashboard (Apple)
-
-1. Go to Supabase Dashboard > **Authentication > Providers**
-2. Find **Apple** and toggle it on
-3. Enter:
-   - Client ID: your **Service ID** identifier (e.g., `com.yourname.swbooks.auth`)
-   - Secret Key: paste the contents of the `.p8` key file
-   - Key ID: the Key ID from the previous step
-   - Team ID: your Apple Developer Team ID (find it at https://developer.apple.com/account > Membership Details)
-4. Save
-
-### Expo Configuration
-
-Apple Sign-In works via `expo-apple-authentication` with no additional config plugin — just install the package. The only requirement is that your app's bundle ID matches the App ID registered above.
-
-```bash
-npx expo install expo-apple-authentication
-```
+In-app deletion (App Store 5.1.1(v)) calls the `delete-account` Edge Function from `deleteAccount()` in `lib/account.ts` (Profile sheet). It deletes the user, cascades `user_books`, and revokes the Sign in with Apple token. Secrets, deploy and local-serve steps: [supabase/functions/delete-account/README.md](../../supabase/functions/delete-account/README.md).
 
 ---
 
-## Cloud Supabase Project
+## Phase 4: EAS Build and distribution
 
-Required before deploying to production or testing auth with real OAuth providers (instead of local).
+Requires an expo.dev account (`npm install -g eas-cli`, then `eas login`) and, for iOS, the Apple Developer Program. `eas.json` is already configured:
 
-### Create the Project
+| Profile | Distribution | Channel |
+|---|---|---|
+| `development` | Dev client, simulator | `development` |
+| `development-device` | Dev client, registered device | `development` |
+| `preview` | Ad-hoc Release build, registered devices | `preview` |
+| `production` | App Store / TestFlight | `production` |
 
-1. Go to https://supabase.com and sign up / sign in
-2. Click **"New project"**
-3. Organization: create one or select existing
-4. Project name: `sw-books`
-5. Database password: generate a strong password and **save it securely**
-6. Region: choose closest to your users
-7. Pricing plan: **Free** is sufficient for V1 (500MB database, 1GB storage, 50K monthly active users)
-8. Click "Create new project" — provisioning takes ~2 minutes
-
-### Get Your API Keys
-
-1. Go to **Project Settings > API**
-2. Note:
-   - **Project URL**: `https://yourproject.supabase.co`
-   - **anon public key**: safe to use in the app
-   - **service_role key**: never put this in the app — only for server-side / Edge Functions
-
-### Link Your Local Project
-
-```bash
-supabase link --project-ref YOUR_PROJECT_REF
-```
-
-The project ref is the subdomain of your Supabase URL (e.g., if URL is `https://abcdefgh.supabase.co`, ref is `abcdefgh`).
-
-### Push Migrations to Cloud
-
-```bash
-supabase db push --remote
-```
-
-This applies all local migrations to the linked cloud database. Since Supabase CLI v3, `db push` without `--remote` targets the local stack, and every hosted change asks for confirmation.
-
-### Seed the Cloud Database
-
-The seed script needs to target the cloud database:
-
-```bash
-# Set environment variables for the cloud project
-export SUPABASE_URL=https://yourproject.supabase.co
-export SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# Run the seed script
-npx tsx scripts/seed.ts
-```
-
-### Update App Environment
-
-Create `.env.production` (or update `.env`):
-
-```bash
-EXPO_PUBLIC_SUPABASE_URL=https://yourproject.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-```
-
-### Generate Types from Cloud
-
-```bash
-supabase gen types typescript --remote > lib/types.ts
-```
+`appVersionSource` is `remote` and `production` auto-increments the build number. The marketing version comes from `package.json` (`npm version`). Build, submit and OTA commands: README **Builds & distribution**. Releases: [docs/agents/releases.md](../agents/releases.md).
 
 ---
 
-## Phase 3: EAS Build + Distribution
+## What's needed when
 
-Required before building for App Store / Play Store distribution.
-
-### Expo Account
-
-1. Go to https://expo.dev and create an account
-2. Sign in via CLI:
-   ```bash
-   npx eas login
-   ```
-
-### EAS Build Setup
-
-**Step 1: Install EAS CLI**
-
-```bash
-npm install -g eas-cli
-```
-
-**Step 2: Configure EAS**
-
-```bash
-eas build:configure
-```
-
-This creates `eas.json` with build profiles. Customize:
-
-```json
-{
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal"
-    },
-    "production": {}
-  }
-}
-```
-
-**Step 3: Configure app identifiers**
-
-In `app.json`:
-
-```json
-{
-  "expo": {
-    "name": "SW Books",
-    "slug": "sw-books",
-    "version": "1.0.0",
-    "ios": {
-      "bundleIdentifier": "com.yourname.swbooks"
-    },
-    "android": {
-      "package": "com.yourname.swbooks"
-    }
-  }
-}
-```
-
-### Build for iOS (TestFlight)
-
-```bash
-# First build — EAS will prompt for Apple credentials
-eas build --platform ios --profile production
-```
-
-EAS will:
-1. Prompt for your Apple Developer credentials
-2. Auto-generate certificates and provisioning profiles
-3. Build in the cloud (~15-20 minutes)
-4. Provide a download link for the `.ipa`
-
-**Submit to TestFlight:**
-
-```bash
-eas submit --platform ios
-```
-
-### Build for Android (Internal Testing)
-
-```bash
-eas build --platform android --profile production
-```
-
-This produces an `.aab` file. For internal testing, use the `preview` profile which produces an `.apk`:
-
-```bash
-eas build --platform android --profile preview
-```
-
-### Account Deletion Edge Function
-
-Before App Store submission, deploy the account deletion Edge Function:
-
-```bash
-# Create the function
-supabase functions new delete-account
-
-# Deploy
-supabase functions deploy delete-account
-```
-
----
-
-## Quick Reference: What's Needed When
-
-| Phase | Service | Account Required? | Notes |
-|---|---|---|---|
-| **Phase 1** (local dev) | Docker Desktop | No | Just install |
-| | Supabase CLI | No | Runs locally via Docker, no cloud account |
-| | Node.js + pnpm | No | Just install |
-| | Expo Go (phone app) | No | Install from App/Play Store, no login |
-| | Xcode / Android Studio | No | Optional, for simulators |
-| | Supabase cloud account | No | Not needed until Phase 3 |
-| | expo.dev account | No | Not needed until Phase 3 |
-| **Phase 2** (auth) | Google Cloud Console | Yes (free) | Google account needed |
-| | Apple Developer Program | Yes ($99/yr) | For Apple Sign-In on iOS |
-| | Supabase cloud or local config | Local works | Configure OAuth in `config.toml` |
-| **Phase 3** (ship) | Supabase cloud account | Yes (free tier) | For production database |
-| | expo.dev account | Yes (free tier) | For EAS cloud builds |
-| | Apple Developer Program | Yes ($99/yr) | For App Store + TestFlight |
-| | Google Play Console | Yes ($25 one-time) | For Play Store |
+| Phase | Service | Account? |
+|---|---|---|
+| 1 Local | Node.js + npm, Docker, Supabase CLI, Xcode | No |
+| 2 Sign-in | Google Cloud Console | Yes (free) |
+| | Apple Developer Program | Yes ($99/yr) |
+| 3 Hosted | Supabase | Yes (free tier) |
+| 4 Ship | expo.dev | Yes (free tier) |
+| | App Store Connect | Apple Developer Program |
+| | Google Play Console (deferred) | Yes ($25 one-time) |
