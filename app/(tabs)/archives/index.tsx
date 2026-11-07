@@ -23,7 +23,7 @@ const CANON_OPTIONS: FilterPillOption<CanonFilter>[] = [
 export default function CatalogScreen() {
 	const { books, loading, error, refetch } = useBooks();
 	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
-	const { sort, openSortMenu } = useCatalogSort('@ossus/catalog_sort');
+	const { sort, selectSort } = useCatalogSort('@ossus/catalog_sort');
 
 	const filteredBooks = useMemo(() => {
 		const result = canonFilter === 'all' ? books : books.filter((b) => b.canon === canonFilter);
@@ -51,7 +51,7 @@ export default function CatalogScreen() {
 	// native large title collapses on scroll and the header/tab-bar insets are applied natively.
 	return (
 		<>
-			<TabHeaderActions showFilter onFilter={openSortMenu} />
+			<TabHeaderActions sort={sort} onSortChange={selectSort} />
 			<FlatList
 				style={styles.list}
 				contentContainerStyle={filteredBooks.length === 0 ? styles.emptyContent : undefined}
