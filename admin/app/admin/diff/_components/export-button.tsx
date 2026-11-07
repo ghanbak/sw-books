@@ -18,7 +18,9 @@ import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 import { toast } from 'sonner';
 
-export function ExportButton({ disabled, rows }: { disabled: boolean; rows: number }) {
+import type { DbTarget } from '@/lib/supabase-admin';
+
+export function ExportButton({ rows, target }: { rows: number; target: DbTarget }) {
 	const router = useRouter();
 	const [pending, startExport] = useTransition();
 
@@ -26,9 +28,7 @@ export function ExportButton({ disabled, rows }: { disabled: boolean; rows: numb
 		startExport(async () => {
 			const res = await exportToCsv();
 			if (res.ok) {
-				toast.success(
-					`Exported · ${res.data.csvRowsChanged} CSV rows, ${res.data.overrideEntriesChanged} overrides`,
-				);
+				toast.success(`Exported ${res.data.rows} rows to data/catalog-backup.csv`);
 				router.refresh();
 			} else {
 				toast.error(`Export failed: ${res.error.message}`);
@@ -39,18 +39,19 @@ export function ExportButton({ disabled, rows }: { disabled: boolean; rows: numb
 	return (
 		<AlertDialog>
 			<AlertDialogTrigger asChild>
-				<Button disabled={disabled || pending}>
+				<Button disabled={rows === 0 || target !== 'prod' || pending}>
 					{pending ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
 					Export to CSV
 				</Button>
 			</AlertDialogTrigger>
 			<AlertDialogContent>
 				<AlertDialogHeader>
-					<AlertDialogTitle>Export {rows} changed row(s) to data/?</AlertDialogTitle>
+					<AlertDialogTitle>Rewrite data/catalog-backup.csv from Prod?</AlertDialogTitle>
 					<AlertDialogDescription>
-						Writes scalar fields to <code>data/books.csv</code> and the four manual-override JSONs.
-						Recovery if anything looks wrong: <code>git checkout data/</code>. Then verify with{' '}
-						<code>npm run db:reset && npm run db:seed</code> — drift should return to 0.
+						Writes every production row ({rows} changed) to <code>data/catalog-backup.csv</code>,
+						the same file <code>npm run catalog:backup</code> produces. Review{' '}
+						<code>git diff data/catalog-backup.csv</code> and commit it. Recovery:{' '}
+						<code>git checkout data/catalog-backup.csv</code>.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter>
