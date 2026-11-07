@@ -17,7 +17,10 @@ import { slugify } from '../slug';
  *     still holds it, so the ISBN never leaves the catalog. An operator-approved
  *     invalid-ISBN removal (`InvalidIsbnRemoval`) drops a value that fails the
  *     ISBN-13 check digit (no scan can ever match it) and, when it was the
- *     primary_isbn, moves primary_isbn to a named, valid ISBN on the row.
+ *     primary_isbn, moves primary_isbn to a named, valid ISBN on the row. An
+ *     operator-approved misfiled-ISBN removal (`MisfiledIsbnRemoval`) drops a
+ *     valid ISBN that belongs to a different book (in the catalog or not) and,
+ *     when it was the primary_isbn, resets primary_isbn to a row ISBN.
  *   - covers: only null/blank `cover_image`, from Open Library then Google Books
  *     by the row's own ISBNs, HEAD-checked, never a cover another row uses and
  *     never a Wookieepedia image. When those find nothing for a released book,
@@ -85,13 +88,15 @@ export type IsbnMembershipFix = {
 	 * `add_approved_isbn`: only operator-approved additions (primary_isbn already fine).
 	 * `remove_approved_isbn`: only operator-approved collision removals (± additions).
 	 * `remove_invalid_isbn`: only operator-approved invalid-ISBN removals (± additions).
+	 * `remove_misfiled_isbn`: only operator-approved misfiled-ISBN removals (± additions).
 	 */
 	readonly action:
 		| 'add_primary_to_isbn'
 		| 'reset_primary'
 		| 'add_approved_isbn'
 		| 'remove_approved_isbn'
-		| 'remove_invalid_isbn';
+		| 'remove_invalid_isbn'
+		| 'remove_misfiled_isbn';
 	readonly before: IsbnState;
 	readonly after: IsbnState;
 	readonly reason: string;
@@ -102,6 +107,8 @@ export type IsbnMembershipFix = {
 	readonly approved_removals?: ApprovedIsbnRemoval[];
 	/** Operator-approved invalid-ISBN removals in this same write (absent on older changesets). */
 	readonly invalid_removals?: InvalidIsbnRemoval[];
+	/** Operator-approved misfiled-ISBN removals in this same write (absent on older changesets). */
+	readonly misfiled_removals?: MisfiledIsbnRemoval[];
 	/** Related observations that are NOT changed by this fix. */
 	readonly notes: string[];
 };
@@ -146,6 +153,28 @@ export type InvalidIsbnRemoval = {
 	/** The verified ISBN that becomes primary_isbn when `isbn` is the primary. */
 	readonly primary?: string;
 	/** Why it was approved (who/when, and the evidence for `primary`). */
+	readonly note: string;
+};
+
+/**
+ * A valid ISBN-13 the operator approved REMOVING from a row because it is a
+ * different book (#143: a comic edition on a novel row, another novel's ISBN).
+ * Unlike a collision removal, no other row needs to hold it. When it is the
+ * row's primary_isbn, primary_isbn is reset to `primary`, else to the row ISBN
+ * `pickResetPrimary` picks. Refused (flagged) when the value fails the check
+ * digit (use `InvalidIsbnRemoval`), when Open Library files it under the same
+ * work as an ISBN the row keeps, or when the primary would need a reset and no
+ * valid row ISBN is left. The guard is the OL work, not the title: a comic
+ * adaptation shares the novel's title (X-Wing: Rogue Squadron).
+ */
+export type MisfiledIsbnRemoval = {
+	readonly slug: string;
+	readonly isbn: string;
+	/** The book it actually is (title / edition / publisher). */
+	readonly belongs_to: string;
+	/** The ISBN that becomes primary_isbn when `isbn` is the primary (default: `pickResetPrimary`). */
+	readonly primary?: string;
+	/** Why it was approved (who/when, and the evidence it rests on). */
 	readonly note: string;
 };
 
@@ -292,7 +321,7 @@ export type CleanupChangeset = {
 };
 
 export const CLEANUP_POLICY: Record<string, string> = {
-	isbn: "primary_isbn ∉ isbn[]: add primary_isbn to isbn[] when Open Library titles it as this book AND (the wiki lists it OR it is the same OL work as a row ISBN); reset primary_isbn to a row ISBN when the evidence assigns it to another book; flag anything else. Operator-approved additions (listed in the builder, each in the row's wiki infobox and on no other row) are appended in the same write. The only removal: an operator-approved collision removal (listed in the builder) drops an ISBN two rows share from the row it does not belong to, only while the owner row still holds it, never the row's primary_isbn, and never when Open Library titles it as this row's book. An operator-approved invalid-ISBN removal (listed in the builder) drops a value that fails the ISBN-13 check digit; when it was primary_isbn, primary_isbn moves to the named valid ISBN, which must be on the row.",
+	isbn: "primary_isbn ∉ isbn[]: add primary_isbn to isbn[] when Open Library titles it as this book AND (the wiki lists it OR it is the same OL work as a row ISBN); reset primary_isbn to a row ISBN when the evidence assigns it to another book; flag anything else. Operator-approved additions (listed in the builder, each in the row's wiki infobox and on no other row) are appended in the same write. The only removal: an operator-approved collision removal (listed in the builder) drops an ISBN two rows share from the row it does not belong to, only while the owner row still holds it, never the row's primary_isbn, and never when Open Library titles it as this row's book. An operator-approved invalid-ISBN removal (listed in the builder) drops a value that fails the ISBN-13 check digit; when it was primary_isbn, primary_isbn moves to the named valid ISBN, which must be on the row. An operator-approved misfiled-ISBN removal (listed in the builder) drops a valid ISBN that is a different book, never when Open Library files it under the same work as an ISBN the row keeps; when it was primary_isbn, primary_isbn resets to the named or wiki-infobox row ISBN, which must be valid and on the row.",
 	covers:
 		'null/blank cover_image only: Open Library (every row ISBN), then Google Books (every row ISBN), then a Google Books title search accepted only when the hit lists a row ISBN; HEAD-checked against MIN_COVER_BYTES, never a cover another row uses, never a Wookieepedia image. Only when all of those find nothing for a released book: the cover of the Open Library work a row ISBN belongs to (openlibrary-work), else — only when no row ISBN is on Open Library — the single work an OL title + author search returns (openlibrary-search, "different edition: title+author match"; first published no later than the row, in English, Canon works 2014+). Both need the full normalized title + author-set match, the same HEAD/shared/wiki guards, and an operator visual review of that exact image; they may show a different printing. Unreleased books without one are listed, not forced.',
 	synopsis:
@@ -764,6 +793,8 @@ export type CleanupInput = {
 	readonly approvedIsbnRemovals?: readonly ApprovedIsbnRemoval[];
 	/** Operator-approved invalid-ISBN removals (evidence for their rows is in `isbnEvidence`). */
 	readonly invalidIsbnRemovals?: readonly InvalidIsbnRemoval[];
+	/** Operator-approved misfiled-ISBN removals (evidence for their rows is in `isbnEvidence`). */
+	readonly misfiledIsbnRemovals?: readonly MisfiledIsbnRemoval[];
 	/** Every catalog row holding each ISBN (isbn[] or primary_isbn). */
 	readonly isbnHolders: ReadonlyMap<string, readonly string[]>;
 	/** Work-level OL fallback evidence for rows without a cover, keyed by slug. */
@@ -965,6 +996,89 @@ export function applyInvalidIsbnRemovals(
 	};
 }
 
+/**
+ * Fold operator-approved misfiled-ISBN removals into the row's ISBN write
+ * (last, so additions and other removals in the same write count): onto that
+ * fix when there is one, else a new `remove_misfiled_isbn` fix. When a removed
+ * ISBN is the primary_isbn, primary_isbn is reset to the named `primary` or the
+ * `pickResetPrimary` choice, which must be a valid ISBN-13 left on the row. One
+ * no longer on the row is a no-op.
+ */
+export function applyMisfiledIsbnRemovals(
+	row: CleanupRow,
+	fix: IsbnMembershipFix | null,
+	removals: readonly MisfiledIsbnRemoval[],
+	ev: IsbnEvidence,
+): { fix: IsbnMembershipFix | null; flags: CleanupFlag[] } {
+	const flags: CleanupFlag[] = [];
+	const base: IsbnState = fix
+		? fix.after
+		: { isbn: [...(row.isbn ?? [])], primary_isbn: row.primary_isbn };
+	let isbn = [...base.isbn];
+	let primary = base.primary_isbn;
+	const accepted: MisfiledIsbnRemoval[] = [];
+	for (const r of removals) {
+		const refuse = (why: string) =>
+			flags.push({
+				slug: row.slug,
+				title: row.title,
+				reason: `misfiled-ISBN removal ${r.isbn} not applied — ${why}`,
+			});
+		if (!isbn.includes(r.isbn) && primary !== r.isbn) continue;
+		if (!isValidIsbn13(r.isbn)) {
+			refuse('it fails the ISBN-13 check digit — use an invalid-ISBN removal');
+			continue;
+		}
+		const rest = isbn.filter((i) => i !== r.isbn);
+		// Titles can't tell a same-named comic from the novel; the OL work can.
+		const work = ev.openlibrary[r.isbn]?.work ?? null;
+		const sibling = work ? rest.find((i) => ev.openlibrary[i]?.work === work) : undefined;
+		if (sibling) {
+			refuse(`Open Library files it under ${work}, the same work as the row's ${sibling}`);
+			continue;
+		}
+		let next = primary;
+		if (primary === r.isbn) {
+			next = r.primary ?? pickResetPrimary(rest, ev.wiki_infobox_isbns);
+			if (!next) {
+				refuse('it is the primary_isbn and no other ISBN is left on the row');
+				continue;
+			}
+			if (!isValidIsbn13(next)) {
+				refuse(`replacement primary ${next} is not a valid ISBN-13`);
+				continue;
+			}
+			if (!rest.includes(next)) {
+				refuse(`replacement primary ${next} is not on the row`);
+				continue;
+			}
+		}
+		isbn = rest;
+		primary = next;
+		accepted.push(r);
+	}
+	if (accepted.length === 0) return { fix, flags };
+	const why = `operator-approved: isbn[] -= ${accepted.map((r) => `${r.isbn} (is ${r.belongs_to})`).join(', ')}${primary !== base.primary_isbn ? `, primary_isbn → ${primary}` : ''} (${accepted.map((r) => r.note).join('; ')})`;
+	return {
+		fix: {
+			id: row.id,
+			slug: row.slug,
+			title: row.title,
+			action: fix?.action ?? 'remove_misfiled_isbn',
+			before: fix?.before ?? base,
+			after: { isbn, primary_isbn: primary },
+			reason: fix ? `${fix.reason}; ${why}` : why,
+			evidence: fix?.evidence ?? ev,
+			approved_additions: fix?.approved_additions ?? [],
+			...(fix?.approved_removals ? { approved_removals: fix.approved_removals } : {}),
+			...(fix?.invalid_removals ? { invalid_removals: fix.invalid_removals } : {}),
+			misfiled_removals: [...(fix?.misfiled_removals ?? []), ...accepted],
+			notes: fix?.notes ?? [],
+		},
+		flags,
+	};
+}
+
 function unreleased(row: CleanupRow, asOf: string): boolean {
 	return row.date_published != null && row.date_published > asOf;
 }
@@ -997,7 +1111,11 @@ export function buildCleanupChangeset(input: CleanupInput): CleanupChangeset {
 			});
 		}
 	}
-	for (const r of [...allRemovals, ...(input.invalidIsbnRemovals ?? [])]) {
+	for (const r of [
+		...allRemovals,
+		...(input.invalidIsbnRemovals ?? []),
+		...(input.misfiledIsbnRemovals ?? []),
+	]) {
 		if (!known.has(r.slug)) {
 			isbnFlags.push({
 				slug: r.slug,
@@ -1010,8 +1128,15 @@ export function buildCleanupChangeset(input: CleanupInput): CleanupChangeset {
 		const additions = input.approvedIsbnAdditions.filter((a) => a.slug === row.slug);
 		const removals = allRemovals.filter((r) => r.slug === row.slug);
 		const invalid = (input.invalidIsbnRemovals ?? []).filter((r) => r.slug === row.slug);
+		const wrongBook = (input.misfiledIsbnRemovals ?? []).filter((r) => r.slug === row.slug);
 		const misfiled = row.primary_isbn != null && !(row.isbn ?? []).includes(row.primary_isbn);
-		if (!misfiled && additions.length === 0 && removals.length === 0 && invalid.length === 0)
+		if (
+			!misfiled &&
+			additions.length === 0 &&
+			removals.length === 0 &&
+			invalid.length === 0 &&
+			wrongBook.length === 0
+		)
 			continue;
 		const ev = input.isbnEvidence.get(row.slug);
 		if (!ev) {
@@ -1035,6 +1160,11 @@ export function buildCleanupChangeset(input: CleanupInput): CleanupChangeset {
 		}
 		if (invalid.length && d?.kind !== 'flag') {
 			const r = applyInvalidIsbnRemovals(row, fix, invalid, ev);
+			fix = r.fix;
+			isbnFlags.push(...r.flags);
+		}
+		if (wrongBook.length && d?.kind !== 'flag') {
+			const r = applyMisfiledIsbnRemovals(row, fix, wrongBook, ev);
 			fix = r.fix;
 			isbnFlags.push(...r.flags);
 		}

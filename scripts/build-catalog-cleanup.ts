@@ -10,8 +10,8 @@
  * Three repairs (policy: lib/wookieepedia/cleanup.ts):
  *   1. primary_isbn ∉ isbn[] — add it (evidence: wiki infobox/page + Open Library),
  *      or reset primary_isbn when it belongs to another book; else flag. Plus the
- *      operator-approved isbn[] additions, collision removals and invalid-ISBN
- *      removals listed below.
+ *      operator-approved isbn[] additions, collision removals, invalid-ISBN
+ *      removals and misfiled-ISBN removals listed below.
  *   2. null/blank cover_image — Open Library then Google Books by every row ISBN,
  *      then a Google Books title search kept only when the hit lists a row ISBN;
  *      HEAD-checked, never a cover another row uses, never a wiki image. When all
@@ -53,6 +53,7 @@ import {
 	type CoverReview,
 	type InvalidIsbnRemoval,
 	type IsbnEvidence,
+	type MisfiledIsbnRemoval,
 	type OlEditionFacts,
 	type OlWorkFacts,
 	type SynopsisDraftFile,
@@ -265,6 +266,45 @@ const INVALID_ISBN_REMOVALS: readonly InvalidIsbnRemoval[] = [
 		slug: 'njo-final-prophecy',
 		isbn: '9780345428757',
 		note: '2026-11-07 (#86) — bad check digit (extra isbn[] entry); recomputed 9780345428752 (OL: "Star Wars: The Final Prophecy", Del Rey 2003) is already on the row',
+	},
+];
+
+/**
+ * Valid ISBN-13s on the wrong book the operator approved removing (#143): the
+ * check digit passes, so INVALID_ISBN_REMOVALS can't take them, and no other
+ * row holds them, so APPROVED_ISBN_REMOVALS can't either. Where the value is
+ * the primary, primary_isbn resets to `primary` (an ISBN on the row, or an
+ * approved addition in the same write). Re-verified on every build: the value
+ * must pass the check digit and must not share an Open Library work with an
+ * ISBN the row keeps.
+ */
+const MISFILED_ISBN_REMOVALS: readonly MisfiledIsbnRemoval[] = [
+	{
+		slug: 'x-wing-rogue-squadron',
+		isbn: '9781845764692',
+		belongs_to: 'the X-Wing: Rogue Squadron comic (Titan Books, 2007)',
+		primary: '9780553568011',
+		note: '2026-11-07 (#143) — Open Library: "X-Wing Rogue Squadron", Titan Books 2007 (work OL37923497W, not the novel\'s OL84533W). Primary → Bantam Spectra PB (OL: "Star Wars: Rogue Squadron", 400 pp)',
+	},
+	{
+		slug: 'x-wing-rogue-squadron',
+		isbn: '9781569713303',
+		belongs_to: 'the X-Wing: Rogue Squadron comic (Dark Horse Comics, 1998)',
+		note: '2026-11-07 (#143) — Open Library: "Star wars / X-Wing Rogue Squadron.", Dark Horse Comics 1998 (work OL15219983W, not the novel\'s OL84533W)',
+	},
+	{
+		slug: 'acolyte-wayseeker',
+		isbn: '9780593723456',
+		belongs_to: 'Mace Windu: The Glass Abyss (Random House Worlds paperback)',
+		primary: '9780593874431',
+		note: '2026-11-07 (#143, from #97) — penguinrandomhouse.com: Mace Windu: The Glass Abyss paperback; seeded on mace-windu-glass-abyss. Primary → the approved Random House Worlds HC',
+	},
+	{
+		slug: 'aftermath-life-debt',
+		isbn: '9780345511638',
+		belongs_to: '"Bubby\'s brunch cookbook" (Open Library)',
+		primary: '9781101966938',
+		note: '2026-11-07 (#143, from #97) — Open Library titles it "Bubby\'s brunch cookbook". Primary → the approved Del Rey US HC',
 	},
 ];
 
@@ -499,6 +539,7 @@ const ACTION_LABEL: Record<CleanupChangeset['isbn_fixes'][number]['action'], str
 	add_approved_isbn: 'operator-approved isbn[] addition',
 	remove_approved_isbn: 'operator-approved collision removal',
 	remove_invalid_isbn: 'operator-approved invalid-ISBN removal',
+	remove_misfiled_isbn: 'operator-approved misfiled-ISBN removal',
 };
 
 function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: string): string {
@@ -549,6 +590,10 @@ function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: strin
 		for (const r of f.invalid_removals ?? [])
 			L.push(
 				`- invalid-ISBN removal ${r.isbn}${r.primary ? ` (primary → ${r.primary})` : ''}: ${r.note}`,
+			);
+		for (const r of f.misfiled_removals ?? [])
+			L.push(
+				`- misfiled-ISBN removal ${r.isbn} (is ${r.belongs_to})${r.primary ? ` (primary → ${r.primary})` : ''}: ${r.note}`,
 			);
 		for (const n of f.notes) L.push(`- note: ${n}`);
 		L.push('');
@@ -638,9 +683,12 @@ async function main(): Promise<void> {
 		(r) => r.primary_isbn != null && !(r.isbn ?? []).includes(r.primary_isbn),
 	);
 	const approvedSlugs = new Set(
-		[...APPROVED_ISBN_ADDITIONS, ...APPROVED_ISBN_REMOVALS, ...INVALID_ISBN_REMOVALS].map(
-			(a) => a.slug,
-		),
+		[
+			...APPROVED_ISBN_ADDITIONS,
+			...APPROVED_ISBN_REMOVALS,
+			...INVALID_ISBN_REMOVALS,
+			...MISFILED_ISBN_REMOVALS,
+		].map((a) => a.slug),
 	);
 	const evidenceRows = catalog.filter((r) => isbnRows.includes(r) || approvedSlugs.has(r.slug));
 	const coverRows = catalog.filter((r) => blank(r.cover_image));
@@ -871,6 +919,7 @@ async function main(): Promise<void> {
 		approvedIsbnAdditions: APPROVED_ISBN_ADDITIONS,
 		approvedIsbnRemovals: APPROVED_ISBN_REMOVALS,
 		invalidIsbnRemovals: INVALID_ISBN_REMOVALS,
+		misfiledIsbnRemovals: MISFILED_ISBN_REMOVALS,
 		isbnHolders: holders,
 		workCovers,
 		fallbackHead: new Map(fallbackUrls.map((u) => [u, cache.head[u] === true] as const)),

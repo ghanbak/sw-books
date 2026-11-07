@@ -12,12 +12,14 @@ import {
 	type CoverCandidate,
 	type CoverReview,
 	type IsbnEvidence,
+	type MisfiledIsbnRemoval,
 	type OlWorkFacts,
 	type SynopsisFill,
 	type WorkCoverEvidence,
 	applyApprovedAdditions,
 	applyApprovedRemovals,
 	applyInvalidIsbnRemovals,
+	applyMisfiledIsbnRemovals,
 	buildCleanupChangeset,
 	coverIsbns,
 	coverKey,
@@ -418,6 +420,155 @@ describe('invalid-ISBN removals (#86)', () => {
 		expect(
 			cleanupBlockingProblems({ ...cs, isbn_fixes: [forged], cover_fills: [], synopsis_fills: [] }),
 		).toEqual(expect.arrayContaining([expect.stringMatching(/passes the check digit/)]));
+	});
+});
+
+describe('misfiled-ISBN removals (#143)', () => {
+	// Real ISBNs; works per Open Library.
+	const TITAN = '9781845764692'; // X-Wing Rogue Squadron comic, Titan 2007
+	const DARK_HORSE = '9781569713303'; // X-Wing Rogue Squadron comic, Dark Horse 1998
+	const PB = '9780553568011'; // Bantam Spectra PB (the novel)
+	const PB2 = '9780553409260'; // Bantam PB (the novel, same work)
+	const rogue = row({
+		id: 'id-rs',
+		slug: 'x-wing-rogue-squadron',
+		title: 'X-Wing: Rogue Squadron',
+		isbn: [TITAN, DARK_HORSE, PB, PB2],
+		primary_isbn: TITAN,
+	});
+	const ev = evidence({
+		wiki_title: 'X-wing: Rogue Squadron',
+		wiki_infobox_isbns: [PB],
+		openlibrary: {
+			// Same title as the novel — only the work tells them apart.
+			[TITAN]: { title: 'X-Wing Rogue Squadron', subtitle: null, work: '/works/OL37923497W' },
+			[DARK_HORSE]: {
+				title: 'Star wars',
+				subtitle: 'X-Wing Rogue Squadron.',
+				work: '/works/OL15219983W',
+			},
+			[PB]: { title: 'Star Wars: Rogue Squadron', subtitle: null, work: '/works/OL84533W' },
+			[PB2]: { title: 'Rogue Squadron', subtitle: null, work: '/works/OL84533W' },
+		},
+	});
+	const titan: MisfiledIsbnRemoval = {
+		slug: rogue.slug,
+		isbn: TITAN,
+		belongs_to: 'the Titan comic',
+		primary: PB,
+		note: 'comic',
+	};
+	const darkHorse: MisfiledIsbnRemoval = {
+		slug: rogue.slug,
+		isbn: DARK_HORSE,
+		belongs_to: 'the Dark Horse comic',
+		note: 'comic',
+	};
+	const build = (
+		rows: CleanupRow[],
+		removals: MisfiledIsbnRemoval[],
+		additions: { slug: string; isbn: string; note: string }[] = [],
+		e: IsbnEvidence = ev,
+	) =>
+		buildCleanupChangeset({
+			rows,
+			asOf: '2026-11-07',
+			isbnEvidence: new Map(rows.map((r) => [r.slug, e])),
+			coverCandidates: new Map(),
+			drafts: { drafts: {}, skipped: {} },
+			wikiText: new Map(),
+			approvedIsbnAdditions: additions,
+			misfiledIsbnRemovals: removals,
+			isbnHolders: new Map(),
+		});
+
+	it('drops valid wrong-book ISBNs and resets the primary they held', () => {
+		const cs = build([rogue], [titan, darkHorse]);
+		expect(cs.flagged.isbn).toEqual([]);
+		expect(cs.isbn_fixes).toHaveLength(1);
+		const f = cs.isbn_fixes[0];
+		expect(f?.action).toBe('remove_misfiled_isbn');
+		expect(f?.before).toEqual({ isbn: [TITAN, DARK_HORSE, PB, PB2], primary_isbn: TITAN });
+		expect(f?.after).toEqual({ isbn: [PB, PB2], primary_isbn: PB });
+		expect(f?.misfiled_removals).toEqual([titan, darkHorse]);
+		expect(cleanupBlockingProblems({ ...cs, cover_fills: [], synopsis_fills: [] })).toEqual([]);
+		expect(planIsbnMembershipFix(f as NonNullable<typeof f>, null).kind).toBe('isbn_fix');
+	});
+
+	it('resets an unnamed primary to the wiki-infobox row ISBN', () => {
+		const out = applyMisfiledIsbnRemovals(rogue, null, [{ ...titan, primary: undefined }], ev);
+		expect(out.flags).toEqual([]);
+		expect(out.fix?.after).toEqual({ isbn: [DARK_HORSE, PB, PB2], primary_isbn: PB });
+	});
+
+	it('swaps a wrong-book primary in isbn[] for an approved addition in one write', () => {
+		// #97: acolyte-wayseeker held Mace Windu: The Glass Abyss as its only ISBN + primary.
+		const MACE = '9780593723456';
+		const WAY = '9780593874431';
+		const way = row({
+			id: 'id-aw',
+			slug: 'acolyte-wayseeker',
+			title: 'The Acolyte: Wayseeker',
+			isbn: [MACE],
+			primary_isbn: MACE,
+		});
+		const wayEv = evidence({ wiki_title: 'The Acolyte: Wayseeker', wiki_infobox_isbns: [WAY] });
+		const cs = build(
+			[way],
+			[{ slug: way.slug, isbn: MACE, belongs_to: 'Mace Windu', primary: WAY, note: '' }],
+			[{ slug: way.slug, isbn: WAY, note: 'infobox HC' }],
+			wayEv,
+		);
+		expect(cs.flagged.isbn).toEqual([]);
+		const f = cs.isbn_fixes[0];
+		expect(f?.action).toBe('add_approved_isbn');
+		expect(f?.before).toEqual({ isbn: [MACE], primary_isbn: MACE });
+		expect(f?.after).toEqual({ isbn: [WAY], primary_isbn: WAY });
+		expect(cleanupBlockingProblems({ ...cs, cover_fills: [], synopsis_fills: [] })).toEqual([]);
+	});
+
+	it('refuses a bad check digit, the same OL work as a kept ISBN, or no valid primary left', () => {
+		const bad = applyMisfiledIsbnRemovals(
+			row({ isbn: [PB, '9780553570050'], primary_isbn: PB }),
+			null,
+			[{ ...darkHorse, isbn: '9780553570050' }],
+			ev,
+		);
+		expect(bad.fix).toBeNull();
+		expect(bad.flags[0]?.reason).toMatch(/fails the ISBN-13 check digit/);
+		const sameWork = applyMisfiledIsbnRemovals(rogue, null, [{ ...darkHorse, isbn: PB2 }], ev);
+		expect(sameWork.fix).toBeNull();
+		expect(sameWork.flags[0]?.reason).toMatch(/same work as the row's 9780553568011/);
+		const alone = applyMisfiledIsbnRemovals(
+			row({ isbn: [TITAN], primary_isbn: TITAN }),
+			null,
+			[{ ...titan, primary: undefined }],
+			ev,
+		);
+		expect(alone.flags[0]?.reason).toMatch(/no other ISBN is left/);
+		const offRow = applyMisfiledIsbnRemovals(rogue, null, [{ ...titan, primary: HOPE_HC }], ev);
+		expect(offRow.flags[0]?.reason).toMatch(/not on the row/);
+		const badPrimary = applyMisfiledIsbnRemovals(
+			rogue,
+			null,
+			[{ ...titan, primary: '9780553570050' }],
+			ev,
+		);
+		expect(badPrimary.flags[0]?.reason).toMatch(/not a valid ISBN-13/);
+	});
+
+	it('is a no-op once removed; blocks a changeset that drops an invalid ISBN as misfiled', () => {
+		const done = row({ ...rogue, isbn: [PB, PB2], primary_isbn: PB });
+		expect(applyMisfiledIsbnRemovals(done, null, [titan, darkHorse], ev)).toEqual({
+			fix: null,
+			flags: [],
+		});
+		const cs = build([rogue], [titan, darkHorse]);
+		const f = cs.isbn_fixes[0] as NonNullable<(typeof cs.isbn_fixes)[number]>;
+		const forged = { ...f, misfiled_removals: [{ ...darkHorse, isbn: '9780553570050' }] };
+		expect(
+			cleanupBlockingProblems({ ...cs, isbn_fixes: [forged], cover_fills: [], synopsis_fills: [] }),
+		).toEqual(expect.arrayContaining([expect.stringMatching(/fails the check digit/)]));
 	});
 });
 
