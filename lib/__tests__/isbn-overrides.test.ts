@@ -24,6 +24,14 @@ const primaryOverrides = {
 };
 const records = parseCsv(readFileSync(resolve(DATA, 'books.csv'), 'utf-8'));
 
+/** Each override file on its own — the merged maps hide pipeline entries a manual one shadows. */
+const OVERRIDE_FILES = [
+	'isbn-overrides.json',
+	'isbn-manual-overrides.json',
+	'primary-isbn.json',
+	'primary-isbn-manual-overrides.json',
+] as const;
+
 /** Every ISBN → the slugs holding it (isbn[] or primary_isbn), per the seed's resolution. */
 function holders(): Map<string, string[]> {
 	const out = new Map<string, string[]>();
@@ -85,5 +93,57 @@ describe('ISBN override files', () => {
 
 	it('resolve (as the seed does) to only ISBN-13s with a valid check digit', () => {
 		expect(invalid(holders())).toEqual({});
+	});
+
+	// #97: every value in every override file, including entries a manual
+	// override shadows. Stored ISBNs are ISBN-13, so an ISBN-10 here fails too.
+	it('hold, file by file, only ISBN-13s with a valid check digit', () => {
+		const bad: Record<string, string[]> = {};
+		for (const file of OVERRIDE_FILES) {
+			const data = load<Record<string, string | string[]>>(file);
+			for (const [slug, v] of Object.entries(data)) {
+				for (const i of Array.isArray(v) ? v : [v]) {
+					if (!isValidIsbn13(i)) bad[file] = [...(bad[file] ?? []), `${slug}: ${i}`];
+				}
+			}
+		}
+		expect(bad).toEqual({});
+	});
+
+	// merge_books raises when primary_isbn is not in isbn[].
+	it('back every pipeline [] (CSV ISBN rejected) with a manual override', () => {
+		// resolveIsbnList treats [] as "no override" and falls back to the CSV ISBN, which the
+		// pipeline's [] marked as wrong (path-of-deceit's CSV ISBN is Gamora and Nebula).
+		const pipeline = load<Record<string, string[]>>('isbn-overrides.json');
+		const manual = load<Record<string, string[]>>('isbn-manual-overrides.json');
+		const unbacked = Object.entries(pipeline)
+			.filter(([slug, list]) => list.length === 0 && !(manual[slug]?.length > 0))
+			.map(([slug]) => slug);
+		expect(unbacked).toEqual([]);
+	});
+
+	it('resolve (as the seed does) every primary_isbn into its own isbn[]', () => {
+		const stranded: Record<string, { primary: string; isbn: string[] }> = {};
+		for (const rec of records) {
+			const slug = rec.slug.trim();
+			const list = resolveIsbnList(rec, isbnOverrides);
+			const primary = primaryOverrides[slug] ?? list[0];
+			if (primary && !list.includes(primary)) stranded[slug] = { primary, isbn: list };
+		}
+		expect(stranded).toEqual({});
+	});
+
+	it('keep the #97 misfiled ISBNs off the wrong books', () => {
+		const h = holders();
+		// PRH: Mace Windu: The Glass Abyss (paperback), not The Acolyte: Wayseeker.
+		expect(h.get('9780593723456')).toEqual(['mace-windu-glass-abyss']);
+		expect(primaryOverrides['acolyte-wayseeker']).toBe('9780593874431');
+		// Open Library: "Bubby's brunch cookbook".
+		expect(h.get('9780345511638')).toBeUndefined();
+		expect(primaryOverrides['aftermath-life-debt']).toBe('9781101966938');
+		// Open Library: Rogue Squadron (Bantam Spectra paperback).
+		expect(h.get('9780553568011')).toEqual(['x-wing-rogue-squadron']);
+		// Open Library: "Gamora and Nebula" — path-of-deceit's CSV ISBN.
+		expect(h.get('9781368076869')).toBeUndefined();
 	});
 });

@@ -129,11 +129,17 @@ export function pickCoverImage(
 
 const cell = (value: string | undefined) => (value ?? '').trim();
 
-/** Resolve the isbn[] for a slug: override list, else the single CSV ISBN. */
+/**
+ * Resolve the isbn[] for a slug: a non-empty override list, else the single CSV
+ * ISBN. An empty override `[]` counts as no override (#97) — it would seed
+ * isbn = {} and strand primary_isbn outside it.
+ */
 export function resolveIsbnList(rec: CsvRecord, isbnOverrides: Record<string, string[]>): string[] {
 	const slug = cell(rec.slug);
+	const override = isbnOverrides[slug];
+	if (override?.length) return override;
 	const csvIsbn = cell(rec.isbn);
-	return isbnOverrides[slug] ?? (csvIsbn ? [csvIsbn] : []);
+	return csvIsbn ? [csvIsbn] : [];
 }
 
 /** Build the catalog row fields seed upserts for one CSV record. */
