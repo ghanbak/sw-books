@@ -1,13 +1,15 @@
 import { Stack } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
+import { ErrorState } from '@/components/error-state';
 import { TabHeaderActions } from '@/components/tab-header-actions';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
+import { selectListState } from '@/lib/list-state';
 import { searchBooks } from '@/lib/search';
 
 /**
@@ -17,13 +19,16 @@ import { searchBooks } from '@/lib/search';
  * lib/search.ts.
  */
 export default function SearchScreen() {
-	const { books } = useBooks();
+	const { books, loading, error, refetch } = useBooks();
 	const [query, setQuery] = useState('');
 	const trimmed = query.trim();
 	const results = useMemo(
 		() => (trimmed.length === 0 ? [] : searchBooks(books, query)),
 		[books, query, trimmed],
 	);
+
+	// Catalog state first: until it loads, an empty result is "not loaded yet", not "no match".
+	const catalogState = selectListState({ loading, error, count: books.length });
 
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
@@ -50,13 +55,21 @@ export default function SearchScreen() {
 				contentInsetAdjustmentBehavior="automatic"
 				keyboardDismissMode="on-drag"
 				ListEmptyComponent={
-					<View style={styles.center}>
-						<Text style={styles.hint}>
-							{trimmed.length === 0
-								? 'Search the archives by title, author, or series.'
-								: `No matches for “${trimmed}”.`}
-						</Text>
-					</View>
+					catalogState === 'loading' ? (
+						<View style={styles.center}>
+							<ActivityIndicator size="large" color={tokens.accent.primary} />
+						</View>
+					) : catalogState === 'error' ? (
+						<ErrorState title="Couldn't load the archive" message={error} onRetry={refetch} />
+					) : (
+						<View style={styles.center}>
+							<Text style={styles.hint}>
+								{trimmed.length === 0
+									? 'Search the archives by title, author, or series.'
+									: `No matches for “${trimmed}”.`}
+							</Text>
+						</View>
+					)
 				}
 			/>
 		</>

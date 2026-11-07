@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
+	ActivityIndicator,
 	type NativeScrollEvent,
 	type NativeSyntheticEvent,
 	Pressable,
@@ -14,6 +15,7 @@ import {
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ErrorState } from '@/components/error-state';
 import { HoloFace, NoCoverText } from '@/components/holo-cover';
 import { HoloStage, type StageBook, type StageFace } from '@/components/holo-stage';
 import { TabHeaderActions } from '@/components/tab-header-actions';
@@ -27,6 +29,7 @@ import { cardRect } from '@/lib/holo3d/pager';
 import { useHoloStatus } from '@/lib/holo3d/status';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
+import { selectListState } from '@/lib/list-state';
 import { groupBooksByYear } from '@/lib/timeline';
 
 const VIEW_CONFIG = { itemVisiblePercentThreshold: 60 } as const;
@@ -52,7 +55,7 @@ export default function TimelineScreen() {
 	// full header height (not just insets.top) — matching Archives/Library. insets.top alone
 	// leaves the content up in the nav-bar row.
 	const headerHeight = useHeaderHeight();
-	const { books } = useBooks();
+	const { books, loading, error, refetch } = useBooks();
 	const [activePage, setActivePage] = useState(0);
 	const [listHeight, setListHeight] = useState(0);
 	const [stageReady, setStageReady] = useState(false);
@@ -81,6 +84,8 @@ export default function TimelineScreen() {
 			})),
 		[data.books],
 	);
+
+	const listState = selectListState({ loading, error, count: data.books.length });
 
 	const activeGroup = data.pageToGroup[activePage] ?? 0;
 
@@ -177,7 +182,13 @@ export default function TimelineScreen() {
 		<View style={[styles.container, { paddingTop: headerHeight, paddingBottom: insets.bottom }]}>
 			<TabHeaderActions />
 
-			{data.books.length === 0 ? (
+			{listState === 'loading' ? (
+				<View style={styles.empty}>
+					<ActivityIndicator size="large" color={tokens.accent.primary} />
+				</View>
+			) : listState === 'error' ? (
+				<ErrorState title="Couldn't load the timeline" message={error} onRetry={refetch} />
+			) : listState === 'empty' ? (
 				<View style={styles.empty}>
 					<Text style={styles.emptyText}>No books with a known place on the timeline yet.</Text>
 				</View>
