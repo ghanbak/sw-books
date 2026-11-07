@@ -138,3 +138,93 @@ begin
 end $$;
 
 rollback;
+
+-- ── Regression (#159): bad survivor/loser input must raise, never silently no-op.
+--    A NULL loser (mistyped slug in a subquery) or a nonexistent loser used to return
+--    the survivor unchanged. Each case must raise the expected error AND leave the
+--    catalog + shelves untouched (no partial merge when a valid loser is mixed in). ──
+begin;
+
+insert into auth.users (id, instance_id, aud, role, email) values
+	('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', '00000000-0000-0000-0000-000000000000',
+		'authenticated', 'authenticated', 'merge-test-e@example.com')
+on conflict (id) do nothing;
+
+insert into public.books (id, slug, title, author, canon, type, isbn) values
+	('11111111-1111-1111-1111-111111111111', 'm3-survivor', 'S', array['A'], 'Canon', 'Adult Novel', array['9780000000030']),
+	('22222222-2222-2222-2222-222222222222', 'm3-loser', 'L', array['A'], 'Canon', 'Adult Novel', array['9780000000031']);
+
+insert into public.user_books (user_id, book_id, owned) values
+	('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', '22222222-2222-2222-2222-222222222222', true);
+
+do $$
+declare
+	s constant uuid := '11111111-1111-1111-1111-111111111111';
+	l constant uuid := '22222222-2222-2222-2222-222222222222';
+	ghost constant uuid := '99999999-9999-9999-9999-999999999999';
+	cases jsonb := jsonb_build_array(
+		jsonb_build_object('name', 'NULL loser', 'survivor', s,
+			'losers', array[null]::uuid[], 'err', 'losers contains NULL%'),
+		jsonb_build_object('name', 'NULL loser mixed with valid loser', 'survivor', s,
+			'losers', array[l, null]::uuid[], 'err', 'losers contains NULL%'),
+		jsonb_build_object('name', 'NULL via mistyped slug subquery', 'survivor', s,
+			'losers', array[(select id from public.books where slug = 'm3-losr')]::uuid[],
+			'err', 'losers contains NULL%'),
+		jsonb_build_object('name', 'missing loser', 'survivor', s,
+			'losers', array[ghost]::uuid[], 'err', 'loser(s) not found%'),
+		jsonb_build_object('name', 'missing loser mixed with valid loser', 'survivor', s,
+			'losers', array[l, ghost]::uuid[], 'err', 'loser(s) not found%'),
+		jsonb_build_object('name', 'loser equals survivor', 'survivor', s,
+			'losers', array[s]::uuid[], 'err', '%cannot also be a loser%'),
+		jsonb_build_object('name', 'NULL survivor', 'survivor', null,
+			'losers', array[l]::uuid[], 'err', 'survivor is required%'),
+		jsonb_build_object('name', 'missing survivor', 'survivor', ghost,
+			'losers', array[l]::uuid[], 'err', 'survivor % not found%'),
+		jsonb_build_object('name', 'empty losers', 'survivor', s,
+			'losers', array[]::uuid[], 'err', 'at least one loser is required%'),
+		jsonb_build_object('name', 'NULL losers', 'survivor', s,
+			'losers', null, 'err', 'at least one loser is required%')
+	);
+	c jsonb;
+	failures text[] := '{}';
+	raised boolean;
+	msg text;
+begin
+	for c in select * from jsonb_array_elements(cases) loop
+		raised := false;
+		begin
+			perform public.merge_books(
+				(c->>'survivor')::uuid,
+				case when jsonb_typeof(c->'losers') = 'null' then null
+					else array(select nullif(x, 'null')::uuid
+						from jsonb_array_elements_text(c->'losers') x) end,
+				'{}'::jsonb);
+		exception when others then
+			raised := true;
+			msg := sqlerrm;
+		end;
+
+		if not raised then
+			failures := failures || format('%s: did not raise', c->>'name');
+		elsif msg not like c->>'err' then
+			failures := failures || format('%s: wrong error %L', c->>'name', msg);
+		end if;
+
+		-- Untouched: loser book + its shelf row still in place, survivor isbn unchanged.
+		if not exists (select 1 from public.books where id = l)
+			or not exists (select 1 from public.user_books
+				where user_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee' and book_id = l and owned)
+			or (select isbn from public.books where id = s) <> array['9780000000030'] then
+			failures := failures || format('%s: data changed', c->>'name');
+		end if;
+	end loop;
+
+	if cardinality(failures) > 0 then
+		raise exception 'merge_books bad-input test: % failure(s): %',
+			cardinality(failures), array_to_string(failures, '; ');
+	end if;
+
+	raise notice 'merge_books bad-input test: PASS';
+end $$;
+
+rollback;
