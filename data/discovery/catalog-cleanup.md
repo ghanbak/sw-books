@@ -275,8 +275,8 @@ Apply (dry-run first): `npx tsx scripts/apply-catalog-changeset.ts --production 
 ### `x-wing-rogue-squadron` — operator-approved misfiled-ISBN removal
 
 - before: isbn [9781845764692, 9781569713303, 9780553568011, 9781101968758, 9780553409260] · primary 9781845764692
-- after: isbn [9780553568011, 9781101968758, 9780553409260] · primary 9780553568011
-- why: operator-approved: isbn[] -= 9781845764692 (is the X-Wing: Rogue Squadron comic (Titan Books, 2007)), 9781569713303 (is the X-Wing: Rogue Squadron comic (Dark Horse Comics, 1998)), primary_isbn → 9780553568011 (2026-11-07 (#143) — Open Library: "X-Wing Rogue Squadron", Titan Books 2007 (work OL37923497W, not the novel's OL84533W). Primary → Bantam Spectra PB (OL: "Star Wars: Rogue Squadron", 400 pp); 2026-11-07 (#143) — Open Library: "Star wars / X-Wing Rogue Squadron.", Dark Horse Comics 1998 (work OL15219983W, not the novel's OL84533W))
+- after: isbn [9780553568011, 9780553409260] · primary 9780553568011
+- why: operator-approved: isbn[] -= 9781845764692 (is the X-Wing: Rogue Squadron comic (Titan Books, 2007)), 9781569713303 (is the X-Wing: Rogue Squadron comic (Dark Horse Comics, 1998)), 9781101968758 (is The X-Wing Series: Star Wars Legends 10-Book Bundle (ebook, Random House 2016)), primary_isbn → 9780553568011 (2026-11-07 (#143) — Open Library: "X-Wing Rogue Squadron", Titan Books 2007 (work OL37923497W, not the novel's OL84533W). Primary → Bantam Spectra PB (OL: "Star Wars: Rogue Squadron", 400 pp); 2026-11-07 (#143) — Open Library: "Star wars / X-Wing Rogue Squadron.", Dark Horse Comics 1998 (work OL15219983W, not the novel's OL84533W); 2026-11-07 (#154) — penguinrandomhouse.com + Open Library: "X-Wing Series : Star Wars Legends 10-Book Bundle" (work OL28042739W, not the novel's OL84533W). Multi-book bundle; no single row owns it)
 - wiki: *X-Wing: Rogue Squadron* — infobox [9780553568011]; page lists [9780553568011, 9780593359792, 9788025221716]
 - Open Library 9781845764692: "X-Wing Rogue Squadron" (/works/OL37923497W)
 - Open Library 9781569713303: "Star wars / X-Wing Rogue Squadron." (/works/OL15219983W)
@@ -286,6 +286,7 @@ Apply (dry-run first): `npx tsx scripts/apply-catalog-changeset.ts --production 
 - other rows holding 9781845764692: none
 - misfiled-ISBN removal 9781845764692 (is the X-Wing: Rogue Squadron comic (Titan Books, 2007)) (primary → 9780553568011): 2026-11-07 (#143) — Open Library: "X-Wing Rogue Squadron", Titan Books 2007 (work OL37923497W, not the novel's OL84533W). Primary → Bantam Spectra PB (OL: "Star Wars: Rogue Squadron", 400 pp)
 - misfiled-ISBN removal 9781569713303 (is the X-Wing: Rogue Squadron comic (Dark Horse Comics, 1998)): 2026-11-07 (#143) — Open Library: "Star wars / X-Wing Rogue Squadron.", Dark Horse Comics 1998 (work OL15219983W, not the novel's OL84533W)
+- misfiled-ISBN removal 9781101968758 (is The X-Wing Series: Star Wars Legends 10-Book Bundle (ebook, Random House 2016)): 2026-11-07 (#154) — penguinrandomhouse.com + Open Library: "X-Wing Series : Star Wars Legends 10-Book Bundle" (work OL28042739W, not the novel's OL84533W). Multi-book bundle; no single row owns it
 
 ### `x-wing-solo-command` — operator-approved isbn[] addition
 
