@@ -32,6 +32,7 @@ For each issue:
   - Write the shared contract into the parent issue body under "Contract": data shape or API, screens and states, and which sub-issue owns what.
   - Create one sub-issue per piece of work, usually one per agent, each with its own labels, acceptance criteria and Effort S or M, and attach it to the parent (`gh api repos/ghanbak/sw-books/issues/<parent>/sub_issues -F sub_issue_id=<child issue id>`, where the id comes from `gh api repos/ghanbak/sw-books/issues/<child> --jq .id`). Add `Blocked by #<n>` only where parallel work truly isn't possible.
   - Sub-issues go to `Todo` (unless blocked); the parent goes to `Backlog` and stays there until the feature PR merges. Comment on the parent with the breakdown.
+- **Native work** (a new native module or config plugin, native `app.json` fields, icons or splash, an Expo SDK upgrade): make it a sub-issue of the open release issue and give it that milestone (releases.md). No open release issue: create the next milestone `iOS <version>` and a `Release iOS <version>` issue (label `release`, assigned to `ghanbak`, the releases.md body sections), then attach it. Release issues themselves never go to `Todo`.
 - Otherwise Status `Todo` if Effort is S or M, else `Backlog` with a comment proposing how to split it.
 
 Keep at most 9 items in `Todo`; extra eligible items stay in `Backlog`, highest priority first.

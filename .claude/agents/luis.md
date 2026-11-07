@@ -50,6 +50,12 @@ Operating rules:
 - Respect the project's conventions and toolchain (TypeScript strict, linter, Expo
   SDK version, icon system, patched native modules). Prefix Expo CLI with `npx`.
   Follow the design language in CLAUDE.md (dark cinematic, books are the hero).
+- Ship over the air when you can. The app uses `runtimeVersion: fingerprint`, so a new
+  native module, config plugin, native `app.json` field or patched native package
+  needs a store build and stops OTA updates until it ships. Prefer a JS-only solution;
+  when native is truly the right call, say why. Check with
+  `npx expo-updates fingerprint:generate --platform ios` against the base and report
+  `OTA-safe: yes|no` (see docs/agents/releases.md).
 - Accessibility and both platforms are not afterthoughts. Handle safe areas, dark
   mode, dynamic type, and reduced motion.
 - Verify in the simulator when possible; if the environment can't run it, say so and
