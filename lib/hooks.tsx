@@ -10,15 +10,14 @@ import {
 } from 'react';
 import { Alert } from 'react-native';
 import { useAuth } from './auth';
-import { type Result, err, ok } from './result';
+import { type Result, err } from './result';
 import {
 	type ShelfField,
-	applyOwnedOptimistic,
+	createOwnedAdder,
 	createShelfToggler,
-	createShelfWriteTracker,
+	createShelfWriteScope,
 	isFetchCurrent,
 	mergeFetchedShelf,
-	mergeServerRows,
 	setShelfRow,
 } from './shelf';
 import { supabase } from './supabase';
@@ -121,8 +120,10 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 	userIdRef.current = userId;
 
 	// Pending writes (toggles + addOwned), shared so they guard each other and so a
-	// refetch knows which books changed locally while it was in flight.
-	const [writes] = useState(createShelfWriteTracker);
+	// refetch knows which books changed locally while it was in flight. One tracker
+	// per user: a write still pending for the previous user can't shadow this one's rows.
+	const [writesFor] = useState(createShelfWriteScope);
+	const writes = writesFor(userId);
 	const latestFetchRef = useRef(0);
 
 	const fetchUserBooks = useCallback(async () => {
@@ -207,12 +208,31 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 		[userId, toggler],
 	);
 
+	const adder = useMemo(
+		() =>
+			createOwnedAdder({
+				current: () => userBooksRef.current,
+				update: (fn) => {
+					userBooksRef.current = fn(userBooksRef.current);
+					setUserBooks((prev) => fn(prev));
+				},
+				rpc: async (ids) => {
+					const { data, error } = await supabase.rpc('add_owned_books', { book_ids: ids });
+					if (error) console.warn('[user_books] addOwned failed, reverting:', error.message);
+					return { rows: data, error };
+				},
+				writes,
+				isCurrentUser: (id) => userIdRef.current === id,
+			}),
+		[writes],
+	);
+
 	/**
 	 * Batch-adds books to the owned shelf via the `add_owned_books` RPC (one round-trip,
 	 * atomic). The flag-merge is server-side — the RPC sets only `owned`, so a stale
 	 * local Map can never clobber `read`/`want_to_read` toggled elsewhere. Optimistic:
 	 * flips the Map immediately, replaces affected entries with the returned rows, and
-	 * restores the pre-call snapshot if the RPC fails.
+	 * reverts only the batch's own books if the RPC fails (see createOwnedAdder).
 	 *
 	 * Callers in the signed-out→sign-in-at-Add flow must wait until the post-sign-in
 	 * `fetchUserBooks` has completed (not just the sign-in promise) — `addOwned` no-ops
@@ -223,38 +243,9 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 			if (!userId) {
 				return err({ code: 'not_signed_in', message: 'Sign in to add books to your shelf.' });
 			}
-			// Dedupe defensively: duplicate ids inside ONE statement make Postgres reject
-			// the whole insert ("ON CONFLICT DO UPDATE command cannot affect row a second
-			// time") — idempotency only protects across calls, not within one.
-			const ids = [...new Set(bookIds)];
-			if (ids.length === 0) return ok({ rows: [] });
-
-			// Snapshot BEFORE the optimistic flip — the whole-batch revert target.
-			const snapshot = userBooksRef.current;
-			userBooksRef.current = applyOwnedOptimistic(snapshot, ids, userId);
-			setUserBooks(userBooksRef.current);
-			// Toggles on these books are ignored until the RPC settles — otherwise one
-			// could write with a placeholder id or race the batch's rows.
-			writes.claim(ids);
-
-			try {
-				const { data, error } = await supabase.rpc('add_owned_books', { book_ids: ids });
-				const stale = userIdRef.current !== userId; // signed out / switched meanwhile
-
-				if (error) {
-					console.warn('[user_books] addOwned failed, reverting:', error.message);
-					if (!stale) setUserBooks(snapshot);
-					return err({ code: 'add_failed', message: error.message });
-				}
-
-				const rows = data ?? [];
-				if (!stale) setUserBooks((prev) => mergeServerRows(prev, rows));
-				return ok({ rows });
-			} finally {
-				writes.release(ids);
-			}
+			return adder(bookIds, userId);
 		},
-		[userId, writes],
+		[userId, adder],
 	);
 
 	return (
