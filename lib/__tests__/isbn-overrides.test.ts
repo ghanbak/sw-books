@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { resolveIsbnList } from '../catalog';
+import { type CatalogOverrides, buildBookFields, resolveIsbnList } from '../catalog';
 import { parseCsv } from '../csv/read';
 import { isValidIsbn13 } from '../isbn';
 
@@ -23,6 +23,22 @@ const primaryOverrides = {
 	...load<Record<string, string>>('primary-isbn-manual-overrides.json'),
 };
 const records = parseCsv(readFileSync(resolve(DATA, 'books.csv'), 'utf-8'));
+
+/** The seed's full override set (scripts/seed.ts), for buildBookFields. */
+const seedOverrides: CatalogOverrides = {
+	isbn: isbnOverrides,
+	primaryIsbn: primaryOverrides,
+	pipelineCovers: load<Record<string, string>>('cover-overrides.json'),
+	manualCovers: load<Record<string, string>>('cover-manual-overrides.json'),
+	rejectedSlugs: new Set(load<string[]>('csv-isbn-rejected.json')),
+	manualFormats: load<Record<string, string[]>>('format-manual-overrides.json'),
+};
+/** The row the seed would upsert for a slug. */
+function seeded(slug: string) {
+	const rec = records.find((r) => r.slug.trim() === slug);
+	if (!rec) throw new Error(`no CSV row ${slug}`);
+	return buildBookFields(rec, seedOverrides);
+}
 
 /** Each override file on its own — the merged maps hide pipeline entries a manual one shadows. */
 const OVERRIDE_FILES = [
@@ -145,5 +161,36 @@ describe('ISBN override files', () => {
 		expect(h.get('9780553568011')).toEqual(['x-wing-rogue-squadron']);
 		// Open Library: "Gamora and Nebula" — path-of-deceit's CSV ISBN.
 		expect(h.get('9781368076869')).toBeUndefined();
+	});
+
+	// #143: each row as the seed builds it (buildBookFields), not a db:reset.
+	it('keep the #143 misfiled ISBNs off the wrong books', () => {
+		const h = holders();
+		// Open Library: "Star Wars / Shadow of the Sith", Random House 2022 — not Brotherhood.
+		expect(h.get('9780593358603')).toEqual(['shadow-of-the-sith']);
+		expect(seeded('brotherhood').isbn).not.toContain('9780593358603');
+		expect(seeded('shadow-of-the-sith').isbn).toContain('9780593358603');
+		// Open Library: X-Wing Rogue Squadron comics — Titan 2007, Dark Horse 1998.
+		const rogue = seeded('x-wing-rogue-squadron');
+		for (const comic of ['9781845764692', '9781569713303']) {
+			expect(rogue.isbn).not.toContain(comic);
+			expect(h.get(comic)).toBeUndefined();
+		}
+		expect(rogue.primary_isbn).toBe('9780553568011');
+		expect(rogue.cover_image).toBe('https://covers.openlibrary.org/b/id/372165-L.jpg');
+		// Reunion's cover is the 9780345428721 Del Rey paperback.
+		const reunion = seeded('njo-force-heretic-reunion');
+		expect(reunion.cover_image).toContain('9780345428721');
+		expect(reunion.isbn).toContain('9780345428721');
+	});
+
+	it('seed every ISBN-anchored manual cover with that ISBN in the row isbn[]', () => {
+		const unanchored: Record<string, string> = {};
+		for (const [slug, url] of Object.entries(seedOverrides.manualCovers)) {
+			if (slug.startsWith('_')) continue;
+			const anchor = url.match(/(?:\/cover\/|\/b\/isbn\/)(97[89]\d{10})/)?.[1];
+			if (anchor && !(seeded(slug).isbn ?? []).includes(anchor)) unanchored[slug] = anchor;
+		}
+		expect(unanchored).toEqual({});
 	});
 });

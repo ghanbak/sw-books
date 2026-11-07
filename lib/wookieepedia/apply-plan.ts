@@ -304,9 +304,13 @@ export function cleanupBlockingProblems(cs: CleanupChangeset): string[] {
 		if (p != null && !f.after.isbn.includes(p)) {
 			out.push(`isbn_fix "${f.slug}" leaves primary_isbn ∉ isbn[]`);
 		}
-		// Only an operator-approved collision or invalid-ISBN removal may drop an ISBN.
+		// Only an operator-approved collision, invalid- or misfiled-ISBN removal may drop an ISBN.
 		const approved = new Set(
-			[...(f.approved_removals ?? []), ...(f.invalid_removals ?? [])].map((r) => r.isbn),
+			[
+				...(f.approved_removals ?? []),
+				...(f.invalid_removals ?? []),
+				...(f.misfiled_removals ?? []),
+			].map((r) => r.isbn),
 		);
 		const dropped = f.before.isbn.filter((i) => !f.after.isbn.includes(i) && !approved.has(i));
 		if (dropped.length)
@@ -315,6 +319,11 @@ export function cleanupBlockingProblems(cs: CleanupChangeset): string[] {
 		if (valid.length)
 			out.push(
 				`isbn_fix "${f.slug}" drops ${valid.map((r) => r.isbn).join(', ')} as invalid, but it passes the check digit`,
+			);
+		const invalid = (f.misfiled_removals ?? []).filter((r) => !isValidIsbn13(r.isbn));
+		if (invalid.length)
+			out.push(
+				`isbn_fix "${f.slug}" drops ${invalid.map((r) => r.isbn).join(', ')} as misfiled, but it fails the check digit`,
 			);
 	}
 	const covers = new Map<string, string>();
