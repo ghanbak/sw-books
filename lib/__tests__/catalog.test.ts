@@ -4,6 +4,7 @@ import {
 	buildBookFields,
 	parseDate,
 	pickCoverImage,
+	resolveIsbnList,
 	splitMultiValue,
 } from '../catalog';
 
@@ -118,6 +119,16 @@ describe('buildBookFields', () => {
 		expect(f.primary_isbn).toBe('222');
 		expect(f.cover_image).toBe('https://manual/cover.jpg');
 		expect(f.format).toEqual(['eBook']);
+	});
+
+	// #97: path-of-deceit's `[]` override seeded isbn = {} with a primary_isbn
+	// outside it, which merge_books rejects. An empty list is "no override".
+	it('treats an empty isbn override as no override', () => {
+		const slug = 'light-of-the-jedi';
+		expect(resolveIsbnList(baseRecord, { [slug]: [] })).toEqual(['9780593157718']);
+		const f = buildBookFields(baseRecord, { ...emptyOverrides, isbn: { [slug]: [] } });
+		expect(f.isbn).toEqual(['9780593157718']);
+		expect(f.primary_isbn).toBe('9780593157718');
 	});
 
 	it('distrusts the CSV cover for a rejected slug', () => {
