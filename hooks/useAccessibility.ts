@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 
 /**
  * Accessibility primitives for the shelf scanner (plan Phase 6). Kept in `hooks/`
@@ -11,15 +12,31 @@ import { AccessibilityInfo } from 'react-native';
  * down without sprinkling listener boilerplate through the components.
  */
 
-/** True while the OS "Reduce Motion" setting is on; live-updates on change. */
+/**
+ * Last Reduce Motion value seen from `AccessibilityInfo`, shared app-wide so screens
+ * mounted after the first resolve start with the live value (the setting can change
+ * after launch, which Reanimated's launch-time snapshot doesn't track).
+ */
+let lastKnownReduceMotion: boolean | null = null;
+
+/**
+ * True while the OS "Reduce Motion" setting is on; live-updates on change.
+ *
+ * Correct on the first render: seeded synchronously from the app-wide cache, else from
+ * Reanimated's `useReducedMotion()` (a launch-time read of the system setting), so
+ * consumers never play a frame of motion before `AccessibilityInfo` resolves.
+ */
 export function useReduceMotion(): boolean {
-	const [reduceMotion, setReduceMotion] = useState(false);
+	const systemAtLaunch = useReducedMotion();
+	const [reduceMotion, setReduceMotion] = useState(() => lastKnownReduceMotion ?? systemAtLaunch);
 	useEffect(() => {
 		let alive = true;
-		AccessibilityInfo.isReduceMotionEnabled().then((value) => {
+		const update = (value: boolean) => {
+			lastKnownReduceMotion = value;
 			if (alive) setReduceMotion(value);
-		});
-		const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+		};
+		AccessibilityInfo.isReduceMotionEnabled().then(update);
+		const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', update);
 		return () => {
 			alive = false;
 			sub.remove();
