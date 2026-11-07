@@ -5,10 +5,12 @@
  *   npm run catalog:cleanup                                   # vs the PROD catalog (read-only)
  *   npx tsx scripts/build-catalog-cleanup.ts                  # vs the LOCAL catalog
  *   …  --refresh-lookups                                      # ignore the lookup cache
+ *   …  --from-backup                                          # rows from data/catalog-backup.csv (no DB)
  *
  * Three repairs (policy: lib/wookieepedia/cleanup.ts):
  *   1. primary_isbn ∉ isbn[] — add it (evidence: wiki infobox/page + Open Library),
- *      or reset primary_isbn when it belongs to another book; else flag.
+ *      or reset primary_isbn when it belongs to another book; else flag. Plus the
+ *      operator-approved isbn[] additions and collision removals listed below.
  *   2. null/blank cover_image — Open Library then Google Books by every row ISBN,
  *      then a Google Books title search kept only when the hit lists a row ISBN;
  *      HEAD-checked, never a cover another row uses, never a wiki image. When all
@@ -30,6 +32,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import pLimit from 'p-limit';
+import { parseBackup } from '../lib/csv/backup';
 import { MIN_COVER_BYTES, headCheckCover } from '../lib/sources/covers';
 import { findGbVolumeByTitleWithIsbn, lookupCandidatesFor } from '../lib/sources/lookup';
 import {
@@ -41,6 +44,7 @@ import {
 import { normalizeIsbnList } from '../lib/wookieepedia/changeset';
 import {
 	type ApprovedIsbnAddition,
+	type ApprovedIsbnRemoval,
 	type CleanupChangeset,
 	type CleanupFlag,
 	type CleanupRow,
@@ -80,6 +84,116 @@ const APPROVED_ISBN_ADDITIONS: readonly ApprovedIsbnAddition[] = [
 		isbn: '9780593358603',
 		note: 'approved 2026-10-21 — the Wookieepedia infobox ISBN for "Shadow of the Sith" (Del Rey US hardcover; Open Library: same work); removed from brotherhood by the 2026-10-20 changeset and on no row since',
 	},
+	{
+		slug: 'aftermath-life-debt',
+		isbn: '9781101966938',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey US hardcover, July 12 2016); Open Library: "Star Wars: Aftermath: Life debt", Chuck Wendig, Del Rey',
+	},
+	{
+		slug: 'acolyte-crystal-crown',
+		isbn: '9781368070126',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Disney–Lucasfilm Press hardcover, July 29 2025); Open Library: "Star Wars: the Acolyte: the Crystal Crown", Tessa Gratton',
+	},
+	{
+		slug: 'acolyte-wayseeker',
+		isbn: '9780593874431',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, May 6 2025); penguinrandomhouse.com lists it as "The Acolyte: Wayseeker" by Justina Ireland; not on Open Library',
+	},
+	{
+		slug: 'corellian-trilogy-ambush',
+		isbn: '9780553298031',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US paperback, Feb 2 1995); Open Library: "Star Wars: Ambush at Corellia", Roger MacBride Allen, Spectra',
+	},
+	{
+		slug: 'defy-the-storm',
+		isbn: '9781368093811',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Disney–Lucasfilm Press US hardcover, Mar 5 2024); Open Library: "Defy the Storm: Star Wars: The High Republic", Tessa Gratton + Justina Ireland',
+	},
+	{
+		slug: 'hand-of-thrawn-vision',
+		isbn: '9780553100358',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US hardcover, Sep 1998); Open Library: "Star Wars: Vision of the Future", Timothy Zahn, Bantam',
+	},
+	{
+		slug: 'mace-windu-glass-abyss',
+		isbn: '9780593723432',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, Oct 15 2024); Open Library: "Mace Windu: The Glass Abyss: Star Wars", Steven Barnes',
+	},
+	{
+		slug: 'njo-force-heretic-reunion',
+		isbn: '9780345428721',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey paperback, July 2003); Open Library: "Reunion", Ballantine Books 2003',
+	},
+	{
+		slug: 'reign-of-the-empire-mask-of-fear',
+		isbn: '9780593723463',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, Feb 25 2025); Open Library: "Reign of the Empire: The Mask of Fear", Alexander Freed',
+	},
+	{
+		slug: 'temptation-of-the-force',
+		isbn: '9780593723098',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, June 11 2024); Open Library: "Temptation of the Force: Star Wars: The High Republic", Tessa Gratton',
+	},
+	{
+		slug: 'the-living-force',
+		isbn: '9780593597958',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, Apr 9 2024); Open Library: "The Living Force: Star Wars", John Jackson Miller',
+	},
+	{
+		slug: 'thrawn-ascendancy-chaos-rising',
+		isbn: '9780593157688',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey US hardcover, Sep 1 2020); Open Library: "Chaos Rising: Star Wars: Thrawn Ascendancy, Book 1", Timothy Zahn, hardcover',
+	},
+	{
+		slug: 'thrawn-ascendancy-greater-good',
+		isbn: '9780593158296',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey US hardcover, Apr 27 2021); Open Library: "Greater Good: Star Wars: Thrawn Ascendancy, Book 2", Timothy Zahn, hardcover',
+	},
+	{
+		slug: 'trials-of-the-jedi',
+		isbn: '9780593723524',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, June 17 2025); penguinrandomhouse.com resolves it to "Trials of the Jedi" by Charles Soule; not on Open Library',
+	},
+	{
+		slug: 'x-wing-bacta-war',
+		isbn: '9780553568042',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, Feb 1997); Open Library: "Star Wars: The Bacta War: X-Wing Book 4", Michael A. Stackpole',
+	},
+	{
+		slug: 'x-wing-iron-fist',
+		isbn: '9780553578973',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox ISBN-10 0553578979 (Bantam Spectra paperback, July 1998); Open Library: "Star Wars: Iron Fist: X-Wing Book 6", Aaron Allston',
+	},
+	{
+		slug: 'x-wing-krytos-trap',
+		isbn: '9780553568035',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, Oct 1996); Open Library: "Star Wars: The Krytos Trap: X-Wing - Book 3", Michael A. Stackpole',
+	},
+	{
+		slug: 'x-wing-solo-command',
+		isbn: '9780553579000',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US paperback, Feb 2 1999); Open Library: "Star Wars: Solo Command: X-Wing - Book 7", Aaron Allston',
+	},
+	{
+		slug: 'x-wing-wedges-gamble',
+		isbn: '9780553568028',
+		note: '2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, May 1996); Open Library: "Star Wars: Wedge\'s Gamble: X-Wing - Book 2", Michael A. Stackpole',
+	},
+];
+
+/**
+ * Collision removals the operator reviewed and approved: an ISBN two rows share
+ * is dropped from the row it does not belong to. Re-verified on every build —
+ * the owner must still hold it, it must not be the row's primary_isbn, and
+ * Open Library must not title it as this row's book — else flagged.
+ */
+const APPROVED_ISBN_REMOVALS: readonly ApprovedIsbnRemoval[] = [
+	{
+		slug: 'queens-peril',
+		isbn: '9781368057943',
+		owner: 'queens-shadow',
+		note: "2026-11-06 (#78, approved on merge) — Open Library titles 9781368057943 \"Queen's Shadow\" (Disney Lucasfilm Press, 2020 paperback); it is queens-shadow's primary_isbn, so a scan could return Queen's Peril",
+	},
 ];
 
 /**
@@ -105,6 +219,9 @@ const COVER_FALLBACK_REVIEWS: readonly CoverReview[] = [
 ];
 
 const PROD = process.argv.includes('--production');
+/** Build from the committed prod snapshot instead of a live read (offline, no credentials). */
+const FROM_BACKUP = process.argv.includes('--from-backup');
+const BACKUP = resolve(ROOT, 'data', 'catalog-backup.csv');
 const REFRESH = process.argv.includes('--refresh-lookups');
 
 // --- Cache -----------------------------------------------------------------------
@@ -308,6 +425,7 @@ const ACTION_LABEL: Record<CleanupChangeset['isbn_fixes'][number]['action'], str
 	add_primary_to_isbn: 'add primary_isbn to isbn[]',
 	reset_primary: 'reset primary_isbn',
 	add_approved_isbn: 'operator-approved isbn[] addition',
+	remove_approved_isbn: 'operator-approved collision removal',
 };
 
 function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: string): string {
@@ -353,6 +471,8 @@ function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: strin
 		);
 		for (const a of f.approved_additions)
 			L.push(`- operator-approved addition ${a.isbn}: ${a.note}`);
+		for (const r of f.approved_removals ?? [])
+			L.push(`- operator-approved removal ${r.isbn} (owner \`${r.owner}\`): ${r.note}`);
 		for (const n of f.notes) L.push(`- note: ${n}`);
 		L.push('');
 	}
@@ -413,11 +533,23 @@ async function main(): Promise<void> {
 		const key = productionEnv().GOOGLE_BOOKS_API_KEY;
 		if (key) process.env.GOOGLE_BOOKS_API_KEY = key;
 	}
-	const supabase = makeClient(PROD);
-	const { data, error } = await supabase.from('books').select('*').order('slug');
-	if (error) throw new Error(`catalog read failed: ${error.message}`);
-	const catalog = (data ?? []) as unknown as Array<CatalogBook & CleanupRow>;
-	const label = PROD ? 'PRODUCTION' : 'LOCAL';
+	let data: unknown[];
+	if (FROM_BACKUP) {
+		data = parseBackup(readFileSync(BACKUP, 'utf-8')).sort((a, b) =>
+			a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0,
+		);
+	} else {
+		const supabase = makeClient(PROD);
+		const res = await supabase.from('books').select('*').order('slug');
+		if (res.error) throw new Error(`catalog read failed: ${res.error.message}`);
+		data = res.data ?? [];
+	}
+	const catalog = data as unknown as Array<CatalogBook & CleanupRow>;
+	const label = FROM_BACKUP
+		? 'PRODUCTION-snapshot (data/catalog-backup.csv)'
+		: PROD
+			? 'PRODUCTION'
+			: 'LOCAL';
 	console.log(`Catalog: ${label}, ${catalog.length} rows (read-only).`);
 
 	const drafts = JSON.parse(readFileSync(DRAFTS, 'utf-8')) as SynopsisDraftFile;
@@ -428,7 +560,9 @@ async function main(): Promise<void> {
 	const isbnRows = catalog.filter(
 		(r) => r.primary_isbn != null && !(r.isbn ?? []).includes(r.primary_isbn),
 	);
-	const approvedSlugs = new Set(APPROVED_ISBN_ADDITIONS.map((a) => a.slug));
+	const approvedSlugs = new Set(
+		[...APPROVED_ISBN_ADDITIONS, ...APPROVED_ISBN_REMOVALS].map((a) => a.slug),
+	);
 	const evidenceRows = catalog.filter((r) => isbnRows.includes(r) || approvedSlugs.has(r.slug));
 	const coverRows = catalog.filter((r) => blank(r.cover_image));
 	const synopsisRows = catalog.filter((r) => blank(r.synopsis));
@@ -656,6 +790,7 @@ async function main(): Promise<void> {
 		drafts,
 		wikiText,
 		approvedIsbnAdditions: APPROVED_ISBN_ADDITIONS,
+		approvedIsbnRemovals: APPROVED_ISBN_REMOVALS,
 		isbnHolders: holders,
 		workCovers,
 		fallbackHead: new Map(fallbackUrls.map((u) => [u, cache.head[u] === true] as const)),

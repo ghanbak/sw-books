@@ -16,6 +16,7 @@ import {
 	type SynopsisFill,
 	type WorkCoverEvidence,
 	applyApprovedAdditions,
+	applyApprovedRemovals,
 	buildCleanupChangeset,
 	coverIsbns,
 	coverKey,
@@ -247,6 +248,88 @@ describe('approved isbn[] additions', () => {
 		expect(r.fix?.after).toEqual({ isbn: [SITH_US, SITH_WIKI], primary_isbn: SITH_US });
 		const present = row({ isbn: [SITH_US, SITH_WIKI], primary_isbn: SITH_US });
 		expect(applyApprovedAdditions(present, null, [approval], ev, new Map()).fix).toBeNull();
+	});
+});
+
+describe('approved collision removals (#78)', () => {
+	const PERIL_HC = '9781368057141';
+	const PERIL_PB = '9781368063258';
+	const SHADOW_PB = '9781368057943';
+	const peril = row({
+		id: 'id-qp',
+		slug: 'queens-peril',
+		title: "Queen's Peril",
+		isbn: [PERIL_HC, PERIL_PB, SHADOW_PB],
+		primary_isbn: PERIL_HC,
+	});
+	const ev = evidence({
+		wiki_title: "Queen's Peril",
+		wiki_infobox_isbns: [PERIL_HC],
+		openlibrary: {
+			[PERIL_HC]: { title: "Queen's Peril", subtitle: null, work: '/works/W1' },
+			[SHADOW_PB]: { title: "Queen's Shadow", subtitle: null, work: '/works/W2' },
+		},
+	});
+	const removal = {
+		slug: 'queens-peril',
+		isbn: SHADOW_PB,
+		owner: 'queens-shadow',
+		note: 'OL titles it Queen’s Shadow',
+	};
+	const shared = new Map([[SHADOW_PB, ['queens-peril', 'queens-shadow']]]);
+	const build = (holders: Map<string, string[]>, removals = [removal]) =>
+		buildCleanupChangeset({
+			rows: [peril],
+			asOf: '2026-11-06',
+			isbnEvidence: new Map([['queens-peril', ev]]),
+			coverCandidates: new Map(),
+			drafts: { drafts: {}, skipped: {} },
+			wikiText: new Map(),
+			approvedIsbnAdditions: [],
+			approvedIsbnRemovals: removals,
+			isbnHolders: holders,
+		});
+
+	it('drops the shared ISBN from the row it does not belong to, primary unchanged', () => {
+		const cs = build(shared);
+		expect(cs.isbn_fixes).toHaveLength(1);
+		const f = cs.isbn_fixes[0];
+		expect(f?.action).toBe('remove_approved_isbn');
+		expect(f?.before).toEqual({ isbn: [PERIL_HC, PERIL_PB, SHADOW_PB], primary_isbn: PERIL_HC });
+		expect(f?.after).toEqual({ isbn: [PERIL_HC, PERIL_PB], primary_isbn: PERIL_HC });
+		expect(f?.approved_removals).toEqual([removal]);
+		expect(cs.flagged.isbn).toEqual([]);
+		expect(cleanupBlockingProblems({ ...cs, cover_fills: [], synopsis_fills: [] })).toEqual([]);
+	});
+
+	it('refuses when the owner does not hold it, it is the primary, or OL names this book', () => {
+		const orphan = build(new Map([[SHADOW_PB, ['queens-peril']]]));
+		expect(orphan.isbn_fixes).toEqual([]);
+		expect(orphan.flagged.isbn[0]?.reason).toMatch(/would drop it from the catalog/);
+		const asPrimary = row({ ...peril, primary_isbn: SHADOW_PB });
+		expect(applyApprovedRemovals(asPrimary, null, [removal], ev, shared).flags[0]?.reason).toMatch(
+			/primary_isbn/,
+		);
+		const ownBook = evidence({
+			...ev,
+			openlibrary: { [SHADOW_PB]: { title: "Queen's Peril", subtitle: null, work: '/works/W1' } },
+		});
+		expect(applyApprovedRemovals(peril, null, [removal], ownBook, shared).fix).toBeNull();
+		expect(build(shared, [{ ...removal, slug: 'nope' }]).flagged.isbn[0]?.reason).toMatch(
+			/no such row/,
+		);
+	});
+
+	it('refuses mutual removals (both rows would lose it); no-op once removed', () => {
+		const mutual = build(shared, [
+			removal,
+			{ ...removal, slug: 'queens-shadow', owner: 'queens-peril' },
+		]);
+		expect(mutual.isbn_fixes).toEqual([]);
+		expect(mutual.flagged.isbn.map((f) => f.reason).join()).toMatch(/also approved to lose it/);
+		const done = row({ ...peril, isbn: [PERIL_HC, PERIL_PB] });
+		const r = applyApprovedRemovals(done, null, [removal], ev, shared);
+		expect(r).toEqual({ fix: null, flags: [] });
 	});
 });
 
@@ -803,6 +886,22 @@ describe('cleanup apply plan', () => {
 		const drop = { ...isbnFix, after: { isbn: [HOPE_PB], primary_isbn: HOPE_PB } };
 		expect(cleanupBlockingProblems(cleanup({ isbn_fixes: [drop] })).join()).toMatch(
 			/remove curated/,
+		);
+		// An approved removal covers only the ISBN it names.
+		const otherApproved = {
+			...drop,
+			approved_removals: [{ slug: 'queens-hope', isbn: '9780000000002', owner: 'y', note: '' }],
+		};
+		expect(cleanupBlockingProblems(cleanup({ isbn_fixes: [otherApproved] })).join()).toMatch(
+			/remove curated/,
+		);
+		const approved = {
+			...drop,
+			approved_removals: [{ slug: 'queens-hope', isbn: HOPE_HC, owner: 'y', note: '' }],
+		};
+		expect(cleanupBlockingProblems(cleanup({ isbn_fixes: [approved] }))).toEqual([]);
+		expect(planIsbnMembershipFix(approved, live()).reason).toBe(
+			`isbn[] += ${HOPE_PB}; isbn[] -= ${HOPE_HC}`,
 		);
 		const overwrite = { ...synopsis, before: 'Existing.' };
 		expect(cleanupBlockingProblems(cleanup({ synopsis_fills: [overwrite] })).join()).toMatch(
