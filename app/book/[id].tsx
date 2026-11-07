@@ -119,7 +119,9 @@ export default function BookDetailScreen() {
 				contentInsetAdjustmentBehavior="automatic"
 			>
 				{/* Title + author byline */}
-				<Text style={styles.title}>{book.title}</Text>
+				<Text style={styles.title} accessibilityRole="header">
+					{book.title}
+				</Text>
 				<Text style={styles.author}>{book.author.join(', ')}</Text>
 
 				{/* Hologram cover (3D WebGPU stage; static HoloFace until its first frame / fallback) */}
