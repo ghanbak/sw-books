@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { CanonBadge } from '@/components/ui/canon-badge';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { showsCoverFallback } from '@/lib/cover-fallback';
 import { MIN_STAR_RADIUS_PT, noCoverType, starfield } from '@/lib/starfield';
 
 type HoloCoverProps = {
@@ -65,8 +66,9 @@ function CoverFace({
 	width: number;
 	height: number;
 }) {
-	const [errored, setErrored] = useState(false);
-	if (!coverUri || errored) {
+	// Remember the URI that failed, not a boolean — rows are recycled (lib/cover-fallback.ts).
+	const [failedUri, setFailedUri] = useState<string | null>(null);
+	if (!coverUri || showsCoverFallback(coverUri, failedUri)) {
 		return (
 			<View style={[styles.face, styles.sky, { width, height }]}>
 				<Starfield seed={title} width={width} height={height} />
@@ -81,7 +83,7 @@ function CoverFace({
 			contentFit="cover"
 			recyclingKey={coverUri}
 			cachePolicy="memory-disk"
-			onError={() => setErrored(true)}
+			onError={() => setFailedUri(coverUri)}
 		/>
 	);
 }
