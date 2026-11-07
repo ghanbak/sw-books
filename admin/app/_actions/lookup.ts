@@ -2,6 +2,7 @@
 
 import { getAdmin } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { dbError } from '@app/action-errors';
 import { toIsbn13 } from '@app/isbn';
 import { lookupCandidatesFor } from '@app/sources/lookup';
 import type { LookupResult } from '@app/sources/types';
@@ -26,11 +27,11 @@ export async function lookupCandidates(slug: string): Promise<Result<LookupResul
 		.select('isbn, primary_isbn, title, author')
 		.eq('slug', slug)
 		.single();
-	if (error || !book) {
-		return {
-			ok: false,
-			error: { code: 'NOT_FOUND', message: error?.message ?? `no book for slug "${slug}"` },
-		};
+	if (error && error.code !== 'PGRST116') {
+		return { ok: false, error: dbError('lookupCandidates', error) };
+	}
+	if (!book) {
+		return { ok: false, error: { code: 'NOT_FOUND', message: `no book for slug "${slug}"` } };
 	}
 
 	const probeIsbn = book.primary_isbn ?? book.isbn?.[0] ?? null;

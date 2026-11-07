@@ -160,13 +160,17 @@ export function DiffView({ book }: { book: BookRow }) {
 			return;
 		}
 		startApply(async () => {
-			const res = await patchBook(book.id, p);
+			const res = await patchBook(book.id, book.updated_at, p);
 			if (res.ok) {
 				toast.success(`Applied ${Object.keys(p).length} field(s)`);
 				setSelection({});
 				setReplaceIsbn(false);
 				setConfirmSlug('');
 				startTransition(() => router.refresh());
+			} else if (res.error.code === 'CONFLICT') {
+				toast.error(res.error.message, {
+					action: { label: 'Reload', onClick: () => router.refresh() },
+				});
 			} else {
 				toast.error(`Apply failed: ${res.error.message}`);
 			}

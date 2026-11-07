@@ -2,6 +2,7 @@
 
 import { getAdmin } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { dbError } from '@app/action-errors';
 import { headCheckCover } from '@app/sources/covers';
 import { fetchVolumes } from '@app/sources/google-books';
 import { coverByIsbnUrl } from '@app/sources/open-library';
@@ -61,7 +62,7 @@ export async function refetchCover(slug: string): Promise<CoverResult> {
 		.from('books')
 		.update({ cover_image: url })
 		.eq('id', book.id);
-	if (error) return { slug, status: 'error', message: error.message };
+	if (error) return { slug, status: 'error', message: dbError('refetchCover', error).message };
 	return { slug, status: 'updated', url };
 }
 
@@ -75,7 +76,7 @@ export async function fillEmpty(slug: string): Promise<FillResult> {
 	const { data: book } = await supabaseAdmin
 		.from('books')
 		.select(
-			'id, cover_image, publisher, date_published, language, synopsis, format, isbn, primary_isbn',
+			'id, updated_at, cover_image, publisher, date_published, language, synopsis, format, isbn, primary_isbn',
 		)
 		.eq('slug', slug)
 		.single();
@@ -104,7 +105,9 @@ export async function fillEmpty(slug: string): Promise<FillResult> {
 	}
 
 	if (Object.keys(patch).length === 0) return { slug, status: 'unchanged' };
-	const res = await patchBook(book.id, patch);
+	// Guarded on the updated_at read above: an edit that lands during the
+	// (slow) lookup is not overwritten.
+	const res = await patchBook(book.id, book.updated_at, patch);
 	if (!res.ok) return { slug, status: 'error', message: res.error.message };
 	return { slug, status: 'updated', fields: Object.keys(patch) };
 }
@@ -115,19 +118,21 @@ export async function fillEmpty(slug: string): Promise<FillResult> {
  * `keyed` reports whether GOOGLE_BOOKS_API_KEY is configured.
  */
 export async function googleBooksStatus(): Promise<{ available: boolean; keyed: boolean }> {
+	if (!(await getAdmin())) return { available: false, keyed: false };
 	const keyed = !!process.env.GOOGLE_BOOKS_API_KEY;
 	const probe = await fetchVolumes('isbn:9780593157718', { maxResults: 1 });
 	return { available: probe !== null, keyed };
 }
 
 /** Apply a set of patches sequentially. (Deviation from the plan's single
- * UPDATE…FROM VALUES — avoids a Postgres function/migration; fine at this scale.) */
+ * UPDATE…FROM VALUES — avoids a Postgres function/migration; fine at this scale.)
+ * Each update carries the `updated_at` it was built from (stale-write guard). */
 export async function batchPatch(
-	updates: Array<{ id: string; patch: Record<string, unknown> }>,
+	updates: Array<{ id: string; updated_at: string | null; patch: Record<string, unknown> }>,
 ): Promise<Array<{ id: string; ok: boolean; message?: string }>> {
 	const results: Array<{ id: string; ok: boolean; message?: string }> = [];
 	for (const u of updates) {
-		const res = await patchBook(u.id, u.patch);
+		const res = await patchBook(u.id, u.updated_at, u.patch);
 		results.push(
 			res.ok ? { id: u.id, ok: true } : { id: u.id, ok: false, message: res.error.message },
 		);

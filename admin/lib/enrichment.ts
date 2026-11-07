@@ -1,4 +1,5 @@
 import 'server-only';
+import { dbError } from '@app/action-errors';
 import type { Database } from '@app/types';
 import { type PageInfo, fetchPageInfo } from '@app/wookieepedia/client';
 import type { MapBook } from '@app/wookieepedia/enrich-sync';
@@ -9,7 +10,7 @@ import {
 import { type EnrichmentPin, PINS_FILE, parsePins, serializePins } from '@app/wookieepedia/pins';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { unstable_cache } from 'next/cache';
-import { ADMIN_ENFORCED } from './admin-allowlist';
+import { IS_HOSTED } from './admin-allowlist';
 import { DataDirUnavailableError, safeRead, safeWrite } from './safe-fs';
 
 /**
@@ -20,7 +21,7 @@ import { DataDirUnavailableError, safeRead, safeWrite } from './safe-fs';
  */
 
 /** Pins are editable only in local `next dev` (data/ isn't on the hosted deploy). */
-export const PINS_WRITABLE = !ADMIN_ENFORCED;
+export const PINS_WRITABLE = !IS_HOSTED;
 
 export const WIKI_INFO_TAG = 'wiki-info';
 const WIKI_INFO_TTL_S = 6 * 60 * 60;
@@ -112,8 +113,10 @@ export async function loadEnrichmentContext(
 		supabase.from('book_enrichment').select('book_id, source_pageid'),
 		loadPins(),
 	]);
-	if (books.error) return { ok: false, message: books.error.message };
-	if (rows.error) return { ok: false, message: `book_enrichment: ${rows.error.message}` };
+	if (books.error) return { ok: false, message: dbError('enrichment:books', books.error).message };
+	if (rows.error) {
+		return { ok: false, message: dbError('enrichment:book_enrichment', rows.error).message };
+	}
 	return { ok: true, data: { catalog: books.data ?? [], existing: rows.data ?? [], pins } };
 }
 

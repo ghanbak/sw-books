@@ -3,6 +3,7 @@
 import { getAdmin } from '@/lib/auth';
 import { PINS_WRITABLE, WIKI_INFO_TAG, loadPins, writePins } from '@/lib/enrichment';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { dbError } from '@app/action-errors';
 import { parsePageEnrichment } from '@app/wookieepedia/appearances';
 import { fetchPageInfo, fetchPagesByIds, searchPages } from '@app/wookieepedia/client';
 import type { EnrichmentPin } from '@app/wookieepedia/pins';
@@ -85,7 +86,10 @@ async function owners(pageids: number[], slug: string): Promise<Map<number, stri
 		.from('book_enrichment')
 		.select('source_pageid, books!inner(slug)')
 		.in('source_pageid', pageids);
-	if (error) throw new Error(`book_enrichment: ${error.message}`);
+	if (error) {
+		dbError('owners', error);
+		throw new Error('book_enrichment lookup failed (see server log)');
+	}
 	for (const r of data ?? []) {
 		if (r.books.slug !== slug) out.set(r.source_pageid, r.books.slug);
 	}
@@ -155,7 +159,7 @@ export async function savePin(
 		.select('id, slug, book_enrichment(source_pageid)')
 		.eq('slug', slug)
 		.maybeSingle();
-	if (error) return fail('DB', error.message);
+	if (error) return { ok: false, error: dbError('savePin', error) };
 	if (!book) return fail('NOT_FOUND', `no book "${slug}" on this database`);
 
 	let page: Omit<PinCandidate, 'claimedBy'> | undefined;

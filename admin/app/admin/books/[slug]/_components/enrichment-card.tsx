@@ -2,6 +2,7 @@ import { EnrichmentStatusBadge } from '@/components/enrichment-status-badge';
 import { Badge } from '@/components/ui/badge';
 import { PINS_WRITABLE, deriveStates, getWikiInfo, loadEnrichmentContext } from '@/lib/enrichment';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { dbError } from '@app/action-errors';
 import { APPEARANCE_CATEGORIES, APPEARANCE_CATEGORY_LABELS } from '@app/wookieepedia/enrichment';
 import { ExternalLink } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -61,7 +62,8 @@ export async function EnrichmentCard({
 		return (
 			<EnrichmentShell>
 				<p className="text-destructive text-sm">
-					Couldn’t read enrichment: {ctx.ok ? rowRes.error?.message : ctx.message}
+					Couldn’t read enrichment:{' '}
+					{ctx.ok ? dbError('EnrichmentCard', rowRes.error).message : ctx.message}
 				</p>
 			</EnrichmentShell>
 		);

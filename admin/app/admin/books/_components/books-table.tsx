@@ -86,6 +86,7 @@ export type BookListRow = Pick<
 	| 'publisher'
 	| 'date_published'
 	| 'cover_image'
+	| 'updated_at'
 >;
 
 type RowWithIssues = BookListRow & {
@@ -473,6 +474,14 @@ export function BooksTable({
 }) {
 	const router = useRouter();
 	const [data, setData] = useState<RowWithIssues[]>(rows);
+	// Resync local rows when the server sends fresh ones (router.refresh after a
+	// bulk op or a conflict). Without this the table keeps stale `updated_at`s
+	// and every later inline edit is rejected as a stale write.
+	const [prevRows, setPrevRows] = useState(rows);
+	if (rows !== prevRows) {
+		setPrevRows(rows);
+		setData(rows);
+	}
 	const [optimisticData, applyOptimistic] = useOptimistic(
 		data,
 		(state, update: { id: string; field: EditableField; value: string | null }) =>
@@ -517,12 +526,20 @@ export function BooksTable({
 	}
 
 	const updateField = (id: string, field: EditableField, value: string | null) => {
+		const loadedAt = data.find((r) => r.id === id)?.updated_at ?? null;
 		startTransition(async () => {
 			applyOptimistic({ id, field, value });
-			const res = await patchBook(id, { [field]: value });
+			const res = await patchBook(id, loadedAt, { [field]: value });
 			if (res.ok) {
-				setData((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+				const { updated_at } = res.data;
+				setData((prev) =>
+					prev.map((r) => (r.id === id ? { ...r, [field]: value, updated_at } : r)),
+				);
 				toast.success(`Saved ${field}`);
+			} else if (res.error.code === 'CONFLICT') {
+				toast.error(res.error.message, {
+					action: { label: 'Reload', onClick: () => router.refresh() },
+				});
 			} else {
 				toast.error(`Update failed: ${res.error.message}`);
 			}

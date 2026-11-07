@@ -2,9 +2,11 @@
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { IS_HOSTED } from '@/lib/admin-allowlist';
 import { getAdmin } from '@/lib/auth';
 import { safeWrite } from '@/lib/safe-fs';
 import { getDbTarget, getSupabaseAdmin } from '@/lib/supabase-admin';
+import { dbError } from '@app/action-errors';
 import { type BookFields, type CatalogOverrides, buildBookFields } from '@app/catalog';
 import { type CsvRecord, parseCsv } from '@app/csv/read';
 import { CSV_COLUMNS, stringifyCsv } from '@app/csv/write';
@@ -136,7 +138,7 @@ export async function getDriftReport(): Promise<Result<DriftReport>> {
 
 	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: rows, error } = await supabaseAdmin.from('books').select('*');
-	if (error) return { ok: false, error: { code: 'DB', message: error.message } };
+	if (error) return { ok: false, error: dbError('getDriftReport', error) };
 
 	const { current } = loadOverrides();
 	const recBySlug = new Map(records.map((r) => [r.slug?.trim() ?? '', r]));
@@ -179,6 +181,12 @@ export async function exportToCsv(): Promise<
 	Result<{ csvRowsChanged: number; overrideEntriesChanged: number }>
 > {
 	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
+	if (IS_HOSTED) {
+		return {
+			ok: false,
+			error: { code: 'READ_ONLY', message: 'Export to CSV runs in the local admin only.' },
+		};
+	}
 	// Export writes the repo's local data/ files; serializing the prod DB over them
 	// would clobber the seed source. Only allow it against the local target.
 	if ((await getDbTarget()) === 'prod') {
@@ -189,7 +197,7 @@ export async function exportToCsv(): Promise<
 	}
 	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: rows, error } = await supabaseAdmin.from('books').select('*');
-	if (error) return { ok: false, error: { code: 'DB', message: error.message } };
+	if (error) return { ok: false, error: dbError('exportToCsv', error) };
 
 	const { current, baseline, manual } = loadOverrides();
 	const records = readCsvRecords();

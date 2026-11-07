@@ -2,7 +2,7 @@ import 'server-only';
 import type { Database } from '@app/types';
 import { type SupabaseClient, createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
-import { ADMIN_ENFORCED } from './admin-allowlist';
+import { IS_HOSTED } from './admin-allowlist';
 import { env } from './env';
 
 /**
@@ -28,16 +28,17 @@ function clientFor(target: DbTarget): SupabaseClient<Database> {
 }
 
 /**
- * The database the admin is currently pointed at (cookie-driven). With no cookie
- * yet, a hosted/production deploy defaults to `prod` (the local stack at
- * 127.0.0.1 is unreachable from Vercel — querying it throws "fetch failed");
- * local `next dev` defaults to `local`.
+ * The database the admin is currently pointed at. A hosted deploy is always
+ * `prod` (the local stack at 127.0.0.1 is unreachable from Vercel — querying it
+ * throws "fetch failed"), whatever the cookie says. Local `next dev` follows the
+ * cookie and defaults to `local`.
  */
 export async function getDbTarget(): Promise<DbTarget> {
+	if (IS_HOSTED) return 'prod';
 	const value = (await cookies()).get(DB_TARGET_COOKIE)?.value;
 	if (value === 'prod') return 'prod';
 	if (value === 'local') return 'local';
-	return ADMIN_ENFORCED ? 'prod' : 'local';
+	return 'local';
 }
 
 /** Service-role client for the currently-selected target. */

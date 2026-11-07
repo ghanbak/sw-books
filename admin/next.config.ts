@@ -6,6 +6,29 @@ import type { NextConfig } from 'next';
 // same-origin and needs nothing.
 const allowedOrigin = process.env.ADMIN_ALLOWED_ORIGIN;
 
+// Minimal CSP: only directives that restrict framing, <base>, plugins and form
+// targets. No script-src/style-src/img-src/connect-src on purpose: Next's App
+// Router inlines RSC bootstrap scripts (so script-src would need 'unsafe-inline'
+// or per-request nonces, which force dynamic rendering), covers load from
+// arbitrary third-party hosts, and Vercel Analytics / the preview toolbar load
+// their own scripts. A fetch allowlist there would break the app for little gain.
+const CSP = [
+	"frame-ancestors 'none'",
+	"base-uri 'self'",
+	"object-src 'none'",
+	"form-action 'self'",
+].join('; ');
+
+const SECURITY_HEADERS = [
+	{ key: 'Content-Security-Policy', value: CSP },
+	// Browsers ignore HSTS over plain http, so local `next start` is unaffected.
+	// No includeSubDomains/preload: the admin shouldn't commit sibling hosts to HTTPS.
+	{ key: 'Strict-Transport-Security', value: 'max-age=63072000' },
+	{ key: 'X-Frame-Options', value: 'DENY' },
+	{ key: 'X-Content-Type-Options', value: 'nosniff' },
+	{ key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+];
+
 const nextConfig: NextConfig = {
 	// The admin app shares the repo with the Expo app (and imports ../lib), so
 	// pin the file-tracing root to the repo root instead of letting Next guess
@@ -36,6 +59,7 @@ const nextConfig: NextConfig = {
 	// immutable, so a re-encode MUST ship under a new filename (…-1080.v2.mp4).
 	async headers() {
 		return [
+			{ source: '/:path*', headers: SECURITY_HEADERS },
 			{
 				source: '/hero/:path*',
 				headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],

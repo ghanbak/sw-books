@@ -5,6 +5,13 @@
 /** The gate enforces only in production builds (Vercel); local `next dev` is ungated. */
 export const ADMIN_ENFORCED = process.env.NODE_ENV === 'production';
 
+/**
+ * Hosted deploy (same signal as the gate): production DB only, no repo `data/`
+ * on the filesystem. Local-only tools (DB switch, Export to CSV, pin edits) are
+ * hidden and their actions refuse.
+ */
+export const IS_HOSTED = ADMIN_ENFORCED;
+
 function allowlist(): string[] {
 	return (process.env.ADMIN_USER_IDS ?? '')
 		.split(',')
