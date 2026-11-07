@@ -8,6 +8,7 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { AddedBooksSheet } from '@/components/added-books-sheet';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { type BarcodeLookupResult, selectBarcodeLookupResult } from '@/lib/barcode-lookup';
 import { type Book, useUserBooks } from '@/lib/hooks';
 import { normalizeIsbn } from '@/lib/isbn';
 import { supabase } from '@/lib/supabase';
@@ -24,12 +25,7 @@ import { supabase } from '@/lib/supabase';
  * surfaces the AddedBooksSheet confirmation (add to library / view / scan another).
  */
 
-type ScanResult =
-	| { type: 'found'; book: Book }
-	| { type: 'not_found'; isbn: string }
-	| { type: 'invalid' }
-	| { type: 'error' }
-	| null;
+type ScanResult = BarcodeLookupResult | { type: 'invalid' } | null;
 
 const SCAN_COOLDOWN_MS = 2000;
 
@@ -84,11 +80,9 @@ export function BarcodeScanPanel() {
 				}
 
 				if (!aliveRef.current) return;
-				if (books && books.length > 0) {
-					setResult({ type: 'found', book: books[0] });
-				} else {
-					setResult({ type: 'not_found', isbn });
-				}
+				// postgrest resolves (not throws) on network/server failures, so the
+				// error must be checked here or it falls through to "not found".
+				setResult(selectBarcodeLookupResult(isbn, { data: books, error }));
 			} catch (cause) {
 				// A thrown lookup (network error) must surface a result and release the
 				// scanner — otherwise `scanning` stays true and every later scan is blocked.
