@@ -35,10 +35,13 @@ export function AddedBooksSheet({
 					onPress={onDismiss}
 					accessibilityRole="button"
 					accessibilityLabel="Dismiss"
+					accessibilityHint="Returns to the scanner without adding"
 				>
 					<SymbolView name="xmark" size={18} tintColor={tokens.text.primary} weight="medium" />
 				</Pressable>
-				<Text style={styles.title}>{title}</Text>
+				<Text style={styles.title} accessibilityRole="header">
+					{title}
+				</Text>
 				<Pressable
 					style={[styles.iconBtn, styles.confirm]}
 					onPress={onConfirm}
