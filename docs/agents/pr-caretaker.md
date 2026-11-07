@@ -21,6 +21,7 @@ Follow [README.md](README.md) shared rules first (lock, worktrees, never-list, a
 - Merge conflict: rebase the branch on `origin/main` in a worktree, re-run verify, push.
 - CI failing: fix in a worktree on the branch, verify, push. After two failed fix attempts, assign the owner, comment what's failing, and stop.
 - Owner review comments: address each one in a commit, verify, push, and reply to the comment with the commit SHA. If a comment asks for something out of scope, reply with a new issue number instead of growing the PR. Once all of them are addressed, comment once: "Ready for another look."
+- Draft labeled `needs-proof`: produce the missing proof (`scripts/verify-db.sh`, simulator, browser; README "Verify like CI"). Passes → add it to the PR body, remove the label, `gh pr ready <n>` (auto-merge turns on). Fails → comment what failed (`needs-proof attempt <k>/3`); on the 3rd failure, assign the owner.
 - Unassigned PR whose diff turns out to need review (see README "When to assign the owner"): assign the owner with a one-line reason.
 - Merged: set the linked issue's Roadmap Status to `Done`.
 
