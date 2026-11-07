@@ -1,4 +1,5 @@
 import type { Book, UserBook } from '@/lib/hooks';
+import { type Result, err, ok } from '@/lib/result';
 import type { SpineMatch } from '@/lib/spine-match';
 import type { Database } from '@/lib/types';
 
@@ -118,16 +119,19 @@ export function isOptimisticRow(row: UserBook | undefined): boolean {
  *   * fetch staleness — `touchedSince` tells a refetch which books changed locally
  *     after it started (or are still pending), so it keeps those rows.
  * Claims are ref-counted: `addOwned` claims unconditionally (a batch can't be
- * half-ignored), toggles use `tryClaim`.
+ * half-ignored), toggles use `tryClaim`. A write that failed and was rolled back
+ * releases with `applied: false`: it left nothing local worth keeping over the
+ * server (#133), so it doesn't count as activity once it settles.
  */
 export type ShelfWriteTracker = {
 	/** Claim one book unless any write on it is pending. */
 	tryClaim: (bookId: string) => boolean;
 	claim: (bookIds: readonly string[]) => void;
-	release: (bookIds: readonly string[]) => void;
-	/** Monotonic; bumped on every claim and release. Capture it when a fetch starts. */
+	/** `applied: false` = the write failed and its optimistic change was reverted. */
+	release: (bookIds: readonly string[], applied?: boolean) => void;
+	/** Monotonic; bumped whenever an applied write settles. Capture it when a fetch starts. */
 	seq: () => number;
-	/** A write on the book is pending, or began/settled after `since`. */
+	/** A write on the book is pending, or an applied write settled after `since`. */
 	touchedSince: (bookId: string, since: number) => boolean;
 };
 
@@ -135,15 +139,8 @@ export function createShelfWriteTracker(): ShelfWriteTracker {
 	const pending = new Map<string, number>();
 	const lastActivity = new Map<string, number>();
 	let seq = 0;
-	const touch = (bookId: string) => {
-		seq += 1;
-		lastActivity.set(bookId, seq);
-	};
 	const claim = (bookIds: readonly string[]) => {
-		for (const id of bookIds) {
-			pending.set(id, (pending.get(id) ?? 0) + 1);
-			touch(id);
-		}
+		for (const id of bookIds) pending.set(id, (pending.get(id) ?? 0) + 1);
 	};
 	return {
 		tryClaim: (bookId) => {
@@ -152,16 +149,32 @@ export function createShelfWriteTracker(): ShelfWriteTracker {
 			return true;
 		},
 		claim,
-		release: (bookIds) => {
+		release: (bookIds, applied = true) => {
 			for (const id of bookIds) {
 				const n = (pending.get(id) ?? 0) - 1;
 				if (n > 0) pending.set(id, n);
 				else pending.delete(id);
-				touch(id);
+				if (applied) {
+					seq += 1;
+					lastActivity.set(id, seq);
+				}
 			}
 		},
 		seq: () => seq,
 		touchedSince: (bookId, since) => pending.has(bookId) || (lastActivity.get(bookId) ?? 0) > since,
+	};
+}
+
+/**
+ * One write tracker per signed-in user (#133). Returns the same tracker while the
+ * user id is unchanged and a fresh one when it changes, so writes still pending
+ * for user A can't make user B's first fetch keep A's local rows.
+ */
+export function createShelfWriteScope(): (userId: string | null) => ShelfWriteTracker {
+	let scope: { userId: string | null; writes: ShelfWriteTracker } | null = null;
+	return (userId) => {
+		if (scope?.userId !== userId) scope = { userId, writes: createShelfWriteTracker() };
+		return scope.writes;
 	};
 }
 
@@ -231,6 +244,7 @@ export function createShelfToggler(deps: ShelfToggleDeps) {
 	): Promise<ToggleOutcome> {
 		if (isOptimisticRow(deps.get(bookId))) return 'ignored';
 		if (!deps.writes.tryClaim(bookId)) return 'ignored';
+		let applied = true;
 		try {
 			const existing = deps.get(bookId);
 			const { optimistic, write } = planToggle(existing, bookId, field, userId);
@@ -238,6 +252,7 @@ export function createShelfToggler(deps: ShelfToggleDeps) {
 			const { row, error } = await deps.write(write);
 			if (!deps.isCurrentUser(userId)) return 'stale';
 			if (error) {
+				applied = false;
 				deps.set(bookId, revertToggle(deps.get(bookId), existing, optimistic, field));
 				deps.onError(error);
 				return 'failed';
@@ -247,7 +262,83 @@ export function createShelfToggler(deps: ShelfToggleDeps) {
 			}
 			return 'ok';
 		} finally {
-			deps.writes.release([bookId]);
+			deps.writes.release([bookId], applied);
+		}
+	};
+}
+
+export type AddOwnedDeps = {
+	/** Latest local Map (must reflect `update` immediately, not after a render). */
+	current: () => ReadonlyMap<string, UserBook>;
+	/** Apply `fn` to the local Map (and to React state, functionally). */
+	update: (fn: (prev: ReadonlyMap<string, UserBook>) => Map<string, UserBook>) => void;
+	/** The `add_owned_books` RPC. */
+	rpc: (
+		bookIds: string[],
+	) => Promise<{ rows: UserBook[] | null; error: { message: string } | null }>;
+	/** Pending-write registry shared with the toggler. */
+	writes: ShelfWriteTracker;
+	/** False once the user the batch ran for is no longer signed in. */
+	isCurrentUser: (userId: string) => boolean;
+};
+
+/**
+ * Optimistic batch add to the owned shelf. Flips every book immediately, replaces
+ * them with the RPC's rows on success. On failure only the batch's own books are
+ * reverted, per book (see `revertToggle` on `owned`), so toggles on other books
+ * made while the RPC was pending survive (#133).
+ */
+export function createOwnedAdder(deps: AddOwnedDeps) {
+	return async function addOwned(
+		bookIds: string[],
+		userId: string,
+	): Promise<Result<{ rows: UserBook[] }>> {
+		// Dedupe defensively: duplicate ids inside ONE statement make Postgres reject
+		// the whole insert ("ON CONFLICT DO UPDATE command cannot affect row a second
+		// time") — idempotency only protects across calls, not within one.
+		const ids = [...new Set(bookIds)];
+		if (ids.length === 0) return ok({ rows: [] });
+
+		const before = deps.current();
+		const flipped = applyOwnedOptimistic(before, ids, userId);
+		const optimistic = new Map(ids.map((id) => [id, flipped.get(id) ?? null]));
+		deps.update((prev) => {
+			const next = new Map(prev);
+			for (const [id, row] of optimistic) if (row) next.set(id, row);
+			return next;
+		});
+		// Toggles on these books are ignored until the RPC settles — otherwise one
+		// could write with a placeholder id or race the batch's rows.
+		deps.writes.claim(ids);
+
+		let applied = true;
+		try {
+			const { rows, error } = await deps.rpc(ids);
+			const stale = !deps.isCurrentUser(userId); // signed out / switched meanwhile
+			if (error) {
+				applied = false;
+				if (!stale) {
+					deps.update((prev) => {
+						let next = new Map(prev);
+						for (const id of ids) {
+							const reverted = revertToggle(
+								prev.get(id),
+								before.get(id),
+								optimistic.get(id) ?? null,
+								'owned',
+							);
+							next = setShelfRow(next, id, reverted);
+						}
+						return next;
+					});
+				}
+				return err({ code: 'add_failed', message: error.message });
+			}
+			const result = rows ?? [];
+			if (!stale) deps.update((prev) => mergeServerRows(prev, result));
+			return ok({ rows: result });
+		} finally {
+			deps.writes.release(ids, applied);
 		}
 	};
 }

@@ -1,10 +1,15 @@
 import type { UserBook } from '@/lib/hooks';
 import {
+	type AddOwnedDeps,
 	type ShelfToggleDeps,
 	type ShelfWrite,
+	type ShelfWriteTracker,
 	applyOwnedOptimistic,
+	createOwnedAdder,
 	createShelfToggler,
+	createShelfWriteScope,
 	createShelfWriteTracker,
+	mergeFetchedShelf,
 	planToggle,
 	setShelfRow,
 } from '@/lib/shelf';
@@ -241,6 +246,205 @@ describe('createShelfToggler — user change (#102)', () => {
 		await p;
 		expect(h.state().size).toBe(0);
 		expect(h.deps.onError).not.toHaveBeenCalled();
+	});
+});
+
+type RpcResult = Awaited<ReturnType<AddOwnedDeps['rpc']>>;
+
+/**
+ * Mirrors UserBooksProvider's wiring: a ref (read synchronously by writers) and React
+ * state (updated functionally), one write tracker per user, a toggler and an adder per
+ * tracker, and a fetch that merges with `mergeFetchedShelf`. Writes resolve on demand.
+ */
+function provider(initial: UserBook[] = []) {
+	let ref = new Map(initial.map((r) => [r.book_id, r]));
+	let state = ref;
+	let userId = 'user-a';
+	const writesFor = createShelfWriteScope();
+	const toggleWrites: { write: ShelfWrite; resolve: (r: WriteResult) => void }[] = [];
+	const rpcs: { ids: string[]; resolve: (r: RpcResult) => void }[] = [];
+	const onError = vi.fn();
+	const build = (writes: ShelfWriteTracker) => ({
+		toggle: createShelfToggler({
+			get: (bookId) => ref.get(bookId),
+			set: (bookId, r) => {
+				ref = setShelfRow(ref, bookId, r);
+				state = setShelfRow(state, bookId, r);
+			},
+			write: (write) =>
+				new Promise<WriteResult>((resolve) => {
+					toggleWrites.push({ write, resolve });
+				}),
+			onError,
+			writes,
+			isCurrentUser: (id) => id === userId,
+		}),
+		addOwned: createOwnedAdder({
+			current: () => ref,
+			update: (fn) => {
+				ref = fn(ref);
+				state = fn(state);
+			},
+			rpc: (ids) =>
+				new Promise<RpcResult>((resolve) => {
+					rpcs.push({ ids, resolve });
+				}),
+			writes,
+			isCurrentUser: (id) => id === userId,
+		}),
+	});
+	const writers = () => build(writesFor(userId));
+	let current = writers();
+	return {
+		toggleWrites,
+		rpcs,
+		onError,
+		ref: () => ref,
+		state: () => state,
+		toggle: (bookId: string, field: Parameters<typeof current.toggle>[1]) =>
+			current.toggle(bookId, field, userId),
+		addOwned: (ids: string[]) => current.addOwned(ids, userId),
+		/** Account switch: new user id, writers rebuilt (the provider's useMemo on `writes`). */
+		switchUser: (id: string) => {
+			userId = id;
+			current = writers();
+		},
+		/** Start a user_books fetch; call the result with the server rows to land it. */
+		startFetch: () => {
+			const writes = writesFor(userId);
+			const startSeq = writes.seq();
+			return (rows: UserBook[]) => {
+				const keep = (bookId: string) => writes.touchedSince(bookId, startSeq);
+				ref = mergeFetchedShelf(rows, ref, keep);
+				state = mergeFetchedShelf(rows, state, keep);
+			};
+		},
+	};
+}
+
+describe('shelf provider — write tracker per user (#133)', () => {
+	it("user B's first fetch wins over user A's pending toggle", async () => {
+		const p = provider();
+		const pendingToggle = p.toggle('b1', 'owned');
+		expect(p.state().get('b1')?.id).toMatch(/^optimistic:/);
+
+		p.switchUser('user-b');
+		const land = p.startFetch();
+		const bRow = row({ id: 'srv-b1', user_id: 'user-b', book_id: 'b1', read: true });
+		land([bRow]);
+
+		expect(p.state().get('b1')).toEqual(bRow);
+		expect([...p.state().values()].some((r) => r.user_id === 'user-a')).toBe(false);
+
+		p.toggleWrites[0].resolve({
+			row: row({ id: 'srv-a1', book_id: 'b1', owned: true }),
+			error: null,
+		});
+		expect(await pendingToggle).toBe('stale');
+		expect(p.state().get('b1')).toEqual(bRow);
+	});
+
+	it("user A's write settling during user B's fetch doesn't shadow B's rows", async () => {
+		const p = provider();
+		const pendingToggle = p.toggle('b1', 'owned');
+		p.switchUser('user-b');
+		const land = p.startFetch();
+		p.toggleWrites[0].resolve({
+			row: row({ id: 'srv-a1', book_id: 'b1', owned: true }),
+			error: null,
+		});
+		await pendingToggle;
+
+		const bRow = row({ id: 'srv-b1', user_id: 'user-b', book_id: 'b1', favorite: true });
+		land([bRow]);
+		expect(p.state().get('b1')).toEqual(bRow);
+	});
+});
+
+describe('shelf provider — addOwned rollback (#133)', () => {
+	it('a failed addOwned reverts only its own books; a toggle on another book survives', async () => {
+		const p = provider([row({ book_id: 'b2', owned: true })]);
+		const add = p.addOwned(['b1']);
+		const toggle = p.toggle('b2', 'read');
+		expect(p.state().get('b1')).toMatchObject({ owned: true });
+		expect(p.state().get('b2')).toMatchObject({ owned: true, read: true });
+
+		p.toggleWrites[0].resolve({ row: null, error: null });
+		expect(await toggle).toBe('ok');
+		p.rpcs[0].resolve({ rows: null, error: { message: 'rpc failed' } });
+		expect(await add).toMatchObject({ ok: false, error: { code: 'add_failed' } });
+
+		expect(p.state().has('b1')).toBe(false);
+		expect(p.state().get('b2')).toMatchObject({ owned: true, read: true });
+		expect(p.ref()).toEqual(p.state());
+	});
+
+	it('a failed addOwned restores an already-shelved book to its pre-call row', async () => {
+		const before = row({ book_id: 'b1', want_to_read: true });
+		const p = provider([before]);
+		const add = p.addOwned(['b1', 'b1']);
+		expect(p.rpcs[0].ids).toEqual(['b1']);
+		p.rpcs[0].resolve({ rows: null, error: { message: 'x' } });
+		await add;
+		expect(p.state().get('b1')).toEqual(before);
+		expect(p.ref()).toEqual(p.state());
+	});
+
+	it('a successful addOwned replaces placeholders with the returned rows', async () => {
+		const p = provider();
+		const add = p.addOwned(['b1']);
+		const srv = row({ id: 'srv-1', book_id: 'b1', owned: true });
+		p.rpcs[0].resolve({ rows: [srv], error: null });
+		expect(await add).toEqual({ ok: true, data: { rows: [srv] } });
+		expect(p.state().get('b1')).toEqual(srv);
+		expect(p.ref()).toEqual(p.state());
+	});
+});
+
+describe('shelf provider — failed write during the first fetch (#133)', () => {
+	it('a toggle that fails and reverts during the first fetch lets the fetched row win', async () => {
+		const p = provider(); // cold launch: nothing local yet
+		const land = p.startFetch();
+		// The book is already shelved server-side; the insert hits UNIQUE and reverts.
+		const toggle = p.toggle('b1', 'owned');
+		p.toggleWrites[0].resolve({ row: null, error: { message: 'duplicate key' } });
+		expect(await toggle).toBe('failed');
+		expect(p.state().has('b1')).toBe(false);
+
+		const srv = row({ id: 'srv-1', book_id: 'b1', read: true });
+		land([srv]);
+		expect(p.state().get('b1')).toEqual(srv);
+
+		// The next tap updates the real row instead of re-inserting.
+		p.toggle('b1', 'owned');
+		expect(p.toggleWrites[1].write).toEqual({
+			kind: 'update',
+			id: 'srv-1',
+			patch: { owned: true },
+		});
+	});
+
+	it('a failed addOwned during the first fetch lets the fetched rows win', async () => {
+		const p = provider();
+		const land = p.startFetch();
+		const add = p.addOwned(['b1']);
+		p.rpcs[0].resolve({ rows: null, error: { message: 'x' } });
+		await add;
+
+		const srv = row({ id: 'srv-1', book_id: 'b1', owned: true });
+		land([srv]);
+		expect(p.state().get('b1')).toEqual(srv);
+	});
+
+	it('a successful toggle during the fetch still keeps the local row', async () => {
+		const p = provider();
+		const land = p.startFetch();
+		const toggle = p.toggle('b1', 'read');
+		const inserted = row({ id: 'srv-1', book_id: 'b1', read: true });
+		p.toggleWrites[0].resolve({ row: inserted, error: null });
+		await toggle;
+		land([]);
+		expect(p.state().get('b1')).toEqual(inserted);
 	});
 });
 
