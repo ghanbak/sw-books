@@ -2,6 +2,8 @@ import ContentLoader, { Rect } from 'react-content-loader/native';
 import { Platform, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { tokens } from '@/constants/tokens';
+import { useReduceMotion } from '@/hooks/useAccessibility';
+import { skeletonMotionProps } from '@/lib/skeleton-motion';
 
 /**
  * Skeleton placeholder for the book detail screen during fetch.
@@ -10,6 +12,7 @@ import { tokens } from '@/constants/tokens';
  *
  * Single ContentLoader (one animated gradient) — multiple shimmers would
  * create per-frame work on top of FlatList virtualization upstream.
+ * Reduce Motion: static `surface.card` placeholder, no sweep.
  */
 export function BookDetailSkeleton() {
 	const { width: screenWidth } = useWindowDimensions();
@@ -17,6 +20,7 @@ export function BookDetailSkeleton() {
 	const innerWidth = screenWidth - 40;
 	// Total skeleton height roughly matches book detail at fold
 	const height = 720;
+	const { key: motionKey, ...motion } = skeletonMotionProps(useReduceMotion());
 
 	return (
 		<ScrollView
@@ -26,12 +30,13 @@ export function BookDetailSkeleton() {
 		>
 			<View style={{ width: innerWidth, height }}>
 				<ContentLoader
-					speed={1.4}
+					key={motionKey}
+					{...motion}
 					width={innerWidth}
 					height={height}
 					viewBox={`0 0 ${innerWidth} ${height}`}
 					backgroundColor={tokens.surface.card}
-					foregroundColor="rgba(255,255,255,0.06)"
+					foregroundColor={tokens.surface.skeletonHighlight}
 				>
 					{/* Cover: 200x300 centered with 8px top padding */}
 					<Rect x={(innerWidth - 200) / 2} y={8} rx={3} ry={3} width={200} height={300} />
