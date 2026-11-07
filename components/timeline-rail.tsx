@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { type AccessibilityActionEvent, Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
 	runOnJS,
@@ -25,6 +25,7 @@ import {
 	layoutAnchorPills,
 	truncateAnchorTitle,
 } from '@/lib/timeline-anchors';
+import { RAIL_A11Y_ACTIONS, RAIL_A11Y_LABEL, railA11yStep } from '@/lib/timeline-rail-a11y';
 
 // Wide enough for the longest (24-char) pill label.
 const PILL_SLOT_W = 180;
@@ -164,6 +165,15 @@ export function TimelineRail({
 		runOnJS(driveTo)(g);
 	});
 
+	// VoiceOver / TalkBack swipe up/down: step one date, moving the rail like a scrub would.
+	const onAccessibilityAction = (e: AccessibilityActionEvent) => {
+		const next = railA11yStep(e.nativeEvent.actionName, shownIndex, count);
+		if (next === null) return;
+		translateX.value = withTiming(railTranslateX(width, next), { duration: 160 });
+		lastGroup.value = next;
+		driveTo(next);
+	};
+
 	const rowStyle = useAnimatedStyle(() => ({
 		transform: [{ translateX: translateX.value }],
 	}));
@@ -234,8 +244,20 @@ export function TimelineRail({
 					</Animated.View>
 				</View>
 				<GestureDetector gesture={Gesture.Race(pan, tap)}>
-					<View style={styles.ticksWindow}>
-						<Animated.View style={[styles.row, rowStyle]}>
+					<View
+						style={styles.ticksWindow}
+						accessible
+						accessibilityRole="adjustable"
+						accessibilityLabel={RAIL_A11Y_LABEL}
+						accessibilityValue={active ? { text: active.label } : undefined}
+						accessibilityActions={RAIL_A11Y_ACTIONS}
+						onAccessibilityAction={onAccessibilityAction}
+					>
+						<Animated.View
+							style={[styles.row, rowStyle]}
+							accessibilityElementsHidden
+							importantForAccessibility="no-hide-descendants"
+						>
 							{groups.map((g, i) => (
 								<View key={g.order} style={styles.slot}>
 									<View style={i === shownIndex ? styles.tickActive : styles.tick} />
