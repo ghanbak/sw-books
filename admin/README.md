@@ -1,8 +1,9 @@
 # Ossus Archives — Admin
 
-Local-only Next.js tool for editing the book catalog. Reads/writes the local
-Supabase `books` table directly with the service-role key (server-side only),
-then exports changes back to `data/books.csv` + the manual-override JSONs.
+Next.js tool for editing the book catalog. Reads/writes the `books` table of the
+selected database (Local or Prod switch, service-role key, server-side only).
+The production DB is the catalog source of truth; `data/catalog-backup.csv` is
+its committed mirror. `data/books.csv` + the override JSONs are frozen.
 
 Runs on `http://127.0.0.1:3100` — loopback only, no auth.
 
@@ -21,13 +22,22 @@ SUPABASE_URL=http://127.0.0.1:54321
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_…   # the "secret" key (RLS-bypassing)
 ```
 
-The DB must be seeded first:
+Load the local DB from the backup (the full catalog):
 
 ```sh
 supabase start
 npm run db:reset
-SUPABASE_SERVICE_ROLE_KEY=<secret> npm run db:seed
+SUPABASE_SERVICE_ROLE_KEY=<secret> npm run catalog:restore
 ```
+
+| Command | Source | Rows |
+| --- | --- | --- |
+| `npm run catalog:restore` | `data/catalog-backup.csv` (prod mirror, upsert on `id`) | 276 |
+| `npm run db:seed` | frozen `data/books.csv` + override JSONs (upsert on `slug`, local only) | 185 |
+
+`db:seed` predates the DB-as-source-of-truth switch and lacks every row added
+since, so `/admin/diff` against a seeded DB lists those rows as "in backup → not in
+DB". Use `catalog:restore` unless you need the legacy seed.
 
 ## Run
 
@@ -45,33 +55,33 @@ npm run admin            # → http://127.0.0.1:3100/books
 - **`/admin/books/[slug]`** — run an OL + GB lookup and apply fields from a 3-column
   diff. ISBNs merge additively by default; destructive replace needs a typed
   confirmation.
-- **`/admin/diff`** — review every field that differs from `data/`, then **Export to
-  CSV**.
+- **`/admin/diff`** — review every field where the selected DB differs from
+  `data/catalog-backup.csv`, then **Export to CSV** (Prod only).
 - **Wookieepedia enrichment** — a **Wiki** status column + left-rail filter on
   `/admin/books` (Enriched / Pinned / Flagged / No page), and a Wookieepedia card
   on `/admin/books/[slug]` (mapped page, pageid, revision, `fetched_at`, counts,
   timeline) with a **manual page pin** editor. See below.
 
-## Export & verify
+## Drift & export
 
-Edits live only in the local DB until you export. The drift chip on `/admin/books`
-shows the unsaved count; `/admin/diff` lists the changes.
+`/admin/diff` and the drift chip on `/admin/books` compare the selected DB with
+`data/catalog-backup.csv` (all catalog columns except `id` and `created_at`). Rows
+only in the DB show as "not in backup → in DB"; rows only in the backup as "in
+backup → not in DB".
 
-**Export** writes scalar fields to `data/books.csv` and routes
-`isbn` / `primary_isbn` / `cover_image` / `format` to the four
-`*-manual-overrides.json` files (so they survive a pipeline regen).
+- **Prod target** — drift = production edits not yet backed up. **Export to CSV**
+  rewrites `data/catalog-backup.csv` from prod, the same bytes as
+  `npm run catalog:export:prod`. Review `git diff data/catalog-backup.csv` and
+  commit (or run `npm run catalog:backup`, which exports and commits in one
+  step). Recover with `git checkout data/catalog-backup.csv`.
+- **Local target** — drift = how the local DB differs from the backup. Export is
+  disabled: the backup mirrors prod, so local-only state must not land in it.
+  Reset with `npm run db:reset && SUPABASE_SERVICE_ROLE_KEY=<secret> npm run catalog:restore`;
+  drift should then be **0**.
 
-Verify a round-trip after exporting:
-
-```sh
-npm run db:reset && SUPABASE_SERVICE_ROLE_KEY=<secret> npm run db:seed
-```
-
-The drift count on `/admin/books` should return to **0** — the seed reproduced your
-edits from disk. If an export looks wrong, recover with `git checkout data/`.
-
-> Don't hand-edit `data/books.csv` except for slug renames (slugs are read-only
-> in the tool). Everything else flows through the admin → export loop.
+> Don't hand-edit `data/books.csv` or `data/catalog-backup.csv`. Catalog changes
+> go into the prod DB (admin on Prod, or `catalog:changeset` / `catalog:apply`),
+> then into the backup via export.
 
 ## Wookieepedia pins
 
@@ -99,7 +109,7 @@ read-only on the hosted deploy (no `data/` there).
 - **`npm error Missing script: "dev"`** — run `npm run admin` from the repo
   root, not `npm run dev` (the root has no `dev` script).
 - **Catalog is empty / fetch fails** — the local Supabase stack isn't running or
-  isn't seeded. `supabase start`, then `npm run db:reset && npm run db:seed`.
+  isn't loaded. `supabase start`, then `npm run db:reset && npm run catalog:restore`.
 - **Port 3100 in use** — stop the other listener, or change the port in
   `admin/package.json` (`dev`/`start` scripts) and the root `admin` note.
 - **Edited the schema** — regenerate types with `npm run db:types` so the admin

@@ -47,7 +47,7 @@ export class DataDirUnavailableError extends Error {
 /**
  * Write `contents` to a path relative to data/, atomically (temp file +
  * rename). Rejects absolute paths and any target that escapes data/ via a
- * symlink. Used by the export action to write books.csv + override JSONs.
+ * symlink. Used by the export action to write catalog-backup.csv.
  */
 export async function safeWrite(rel: string, contents: string): Promise<void> {
 	if (path.isAbsolute(rel)) throw new Error('absolute path rejected');

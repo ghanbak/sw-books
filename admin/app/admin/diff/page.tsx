@@ -1,6 +1,7 @@
 import { getDriftReport } from '@/app/_actions/export';
 import { Badge } from '@/components/ui/badge';
 import { IS_HOSTED } from '@/lib/admin-allowlist';
+import { getDbTarget } from '@/lib/supabase-admin';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { ExportButton } from './_components/export-button';
@@ -19,14 +20,15 @@ export default async function DiffPage() {
 				</Link>
 				<h1 className="font-semibold text-2xl tracking-tight">Unsaved changes</h1>
 				<p className="mt-2 text-muted-foreground text-sm">
-					Drift review and Export to CSV run in the local admin (
+					Drift review against <code className="text-saber-blue">data/catalog-backup.csv</code> and
+					Export to CSV run in the local admin (
 					<code className="text-saber-blue">npm run admin</code>). This deploy has no{' '}
 					<code className="text-saber-blue">data/</code> to compare against or write to.
 				</p>
 			</main>
 		);
 	}
-	const res = await getDriftReport();
+	const [res, target] = await Promise.all([getDriftReport(), getDbTarget()]);
 
 	return (
 		<main className="mx-auto max-w-5xl p-6">
@@ -45,17 +47,24 @@ export default async function DiffPage() {
 						<div>
 							<h1 className="font-semibold text-2xl tracking-tight">Unsaved changes</h1>
 							<p className="text-muted-foreground text-sm tabular-nums">
-								{res.data.summary.rows} row(s) · {res.data.summary.fields} field(s) differ from{' '}
-								<code className="text-saber-blue">data/</code>
+								{res.data.summary.rows} row(s) · {res.data.summary.fields} field(s) in the{' '}
+								{target === 'prod' ? 'Prod' : 'Local'} DB differ from{' '}
+								<code className="text-saber-blue">data/catalog-backup.csv</code>
 							</p>
+							{target === 'prod' ? null : (
+								<p className="mt-1 text-muted-foreground text-xs">
+									The backup mirrors production. Switch to Prod to export, or reset Local with{' '}
+									<code className="text-saber-blue">npm run catalog:restore</code>.
+								</p>
+							)}
 						</div>
-						<ExportButton disabled={res.data.summary.rows === 0} rows={res.data.summary.rows} />
+						<ExportButton rows={res.data.summary.rows} target={target} />
 					</div>
 
 					{res.data.changedRows.length === 0 ? (
 						<p className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
 							All systems nominal — the database matches{' '}
-							<code className="text-saber-blue">data/books.csv</code>.
+							<code className="text-saber-blue">data/catalog-backup.csv</code>.
 						</p>
 					) : (
 						<div className="space-y-4">

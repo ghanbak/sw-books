@@ -99,31 +99,33 @@ export function serializeBackup(rows: BookRow[]): string {
 
 /** One backup record → `books` insert payload (arrays split on `;`, '' → null). */
 export function backupRecordToInsert(rec: CsvRecord): BookInsert {
+	// A missing column reads as an empty cell (typed for noUncheckedIndexedAccess).
+	const c = (key: string): string => rec[key] ?? '';
 	const orNull = (s: string): string | null => (s.length > 0 ? s : null);
 	const arrOrNull = (s: string): string[] | null => {
 		const a = splitArray(s);
 		return a.length > 0 ? a : null;
 	};
 	return {
-		id: rec.id || undefined,
-		slug: rec.slug,
-		title: rec.title,
-		author: splitArray(rec.author),
-		canon: rec.canon,
-		type: rec.type,
-		era: orNull(rec.era),
-		series_name: orNull(rec.series_name),
-		series_order: rec.series_order ? Number.parseInt(rec.series_order, 10) : null,
-		timeline_order: rec.timeline_order ? Number.parseFloat(rec.timeline_order) : null,
-		date_published: orNull(rec.date_published),
-		publisher: orNull(rec.publisher),
-		language: orNull(rec.language),
-		isbn: arrOrNull(rec.isbn),
-		primary_isbn: orNull(rec.primary_isbn),
-		format: arrOrNull(rec.format),
-		cover_image: orNull(rec.cover_image),
-		synopsis: orNull(rec.synopsis),
-		created_at: orNull(rec.created_at),
+		id: c('id') || undefined,
+		slug: c('slug'),
+		title: c('title'),
+		author: splitArray(c('author')),
+		canon: c('canon'),
+		type: c('type'),
+		era: orNull(c('era')),
+		series_name: orNull(c('series_name')),
+		series_order: c('series_order') ? Number.parseInt(c('series_order'), 10) : null,
+		timeline_order: c('timeline_order') ? Number.parseFloat(c('timeline_order')) : null,
+		date_published: orNull(c('date_published')),
+		publisher: orNull(c('publisher')),
+		language: orNull(c('language')),
+		isbn: arrOrNull(c('isbn')),
+		primary_isbn: orNull(c('primary_isbn')),
+		format: arrOrNull(c('format')),
+		cover_image: orNull(c('cover_image')),
+		synopsis: orNull(c('synopsis')),
+		created_at: orNull(c('created_at')),
 	};
 }
 
