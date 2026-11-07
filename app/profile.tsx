@@ -8,7 +8,13 @@ import { Alert } from 'react-native';
 
 import { tokens } from '@/constants/tokens';
 
-import { deleteAccount, isAppleUser, reauthenticateWithAppleForDeletion } from '@/lib/account';
+import {
+	deleteAccount,
+	isAccountGone,
+	isAppleUser,
+	reauthenticateWithAppleForDeletion,
+	signOutLocally,
+} from '@/lib/account';
 import { useAuth } from '@/lib/auth';
 import { runDeleteAccountFlow } from '@/lib/delete-account-flow';
 import { PRIVACY_POLICY_URL, openInAppBrowser } from '@/lib/external-link';
@@ -57,9 +63,12 @@ export default function ProfileScreen() {
 				reauthenticateWithApple: reauthenticateWithAppleForDeletion,
 				onBusy: () => setIsDeleting(true),
 				deleteAccount,
+				isAccountGone,
+				signOutLocally,
 			});
 			if (outcome.status === 'deleted') {
-				// deleteAccount signs out locally; the root layout's auth guard then replaces this
+				// Signed out locally (also when a lost response hid a server-side delete); the
+				// root layout's auth guard then replaces this
 				// sheet with the login screen (same path as Logout), so no manual navigation here.
 				Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 				Alert.alert('Account deleted', 'Your account and shelves have been removed.');

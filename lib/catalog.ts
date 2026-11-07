@@ -30,11 +30,77 @@ const PIPELINE_HOSTS = [
 	'books.googleusercontent.com',
 ];
 
+const MONTHS = [
+	'january',
+	'february',
+	'march',
+	'april',
+	'may',
+	'june',
+	'july',
+	'august',
+	'september',
+	'october',
+	'november',
+	'december',
+];
+
+const pad = (n: number, width = 2) => String(n).padStart(width, '0');
+
+/** Y/M/D → `YYYY-MM-DD`, or null when the day doesn't exist (e.g. Feb 30). */
+function isoDate(year: number, month: number, day: number): string | null {
+	const d = new Date(Date.UTC(year, month - 1, day));
+	if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) {
+		return null;
+	}
+	return `${pad(year, 4)}-${pad(month)}-${pad(day)}`;
+}
+
+/**
+ * Normalize a release date to `YYYY-MM-DD` without any timezone conversion.
+ * Explicitly parses the shapes the CSV and wiki use — "January 5, 2021",
+ * "May 2006" (padded to the 1st), "2006", "2021-01-05", "2021-01". Anything else falls
+ * back to the JS parser, read back via local components so the host TZ can't
+ * shift the day.
+ */
 export function parseDate(dateStr: string): string | null {
-	if (!dateStr) return null;
-	const d = new Date(dateStr);
+	const s = dateStr.trim();
+	if (!s) return null;
+
+	let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+	if (m) return isoDate(Number(m[1]), Number(m[2]), Number(m[3]));
+
+	// Google Books month precision. Not left to the fallback: `new Date('2015-05')`
+	// is UTC midnight, so its local components land on Apr 30 in UTC- zones.
+	m = /^(\d{4})-(\d{2})$/.exec(s);
+	if (m) return isoDate(Number(m[1]), Number(m[2]), 1);
+
+	m = /^([A-Za-z]+)\.?\s+(\d{1,2}),?\s+(\d{4})$/.exec(s);
+	if (m) {
+		const month = monthIndex(m[1] ?? '');
+		if (month) return isoDate(Number(m[3]), month, Number(m[2]));
+	}
+
+	m = /^([A-Za-z]+)\.?,?\s+(\d{4})$/.exec(s);
+	if (m) {
+		const month = monthIndex(m[1] ?? '');
+		if (month) return isoDate(Number(m[2]), month, 1);
+	}
+
+	m = /^(\d{4})$/.exec(s);
+	if (m) return isoDate(Number(m[1]), 1, 1);
+
+	const d = new Date(s);
 	if (Number.isNaN(d.getTime())) return null;
-	return d.toISOString().split('T')[0] ?? null;
+	return isoDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+}
+
+/** 1-based month for a full or 3+ letter abbreviated English month name. */
+function monthIndex(name: string): number | null {
+	const n = name.toLowerCase();
+	if (n.length < 3) return null;
+	const i = MONTHS.findIndex((full) => full.startsWith(n));
+	return i === -1 ? null : i + 1;
 }
 
 export function splitMultiValue(val: string): string[] {
@@ -63,11 +129,17 @@ export function pickCoverImage(
 
 const cell = (value: string | undefined) => (value ?? '').trim();
 
-/** Resolve the isbn[] for a slug: override list, else the single CSV ISBN. */
+/**
+ * Resolve the isbn[] for a slug: a non-empty override list, else the single CSV
+ * ISBN. An empty override `[]` counts as no override (#97) — it would seed
+ * isbn = {} and strand primary_isbn outside it.
+ */
 export function resolveIsbnList(rec: CsvRecord, isbnOverrides: Record<string, string[]>): string[] {
 	const slug = cell(rec.slug);
+	const override = isbnOverrides[slug];
+	if (override?.length) return override;
 	const csvIsbn = cell(rec.isbn);
-	return isbnOverrides[slug] ?? (csvIsbn ? [csvIsbn] : []);
+	return csvIsbn ? [csvIsbn] : [];
 }
 
 /** Build the catalog row fields seed upserts for one CSV record. */

@@ -316,13 +316,30 @@ export function matchFragments(
 
 	scored.sort((a, b) => b.score - a.score);
 
+	// Inverted index over the ranked list, built once: title token → ascending positions
+	// in `scored`. Lets each candidate gather its related set from its own tokens' postings
+	// instead of rescanning every scored candidate.
+	const byTitleToken = new Map<string, number[]>();
+	for (let i = 0; i < scored.length; i++) {
+		for (const t of scored[i].entry.titleTokens) {
+			const postings = byTitleToken.get(t);
+			if (postings) postings.push(i);
+			else byTitleToken.set(t, [i]);
+		}
+	}
+
 	const matches: SpineMatch[] = [];
 	for (let i = 0; i < scored.length; i++) {
 		const current = scored[i];
-		// Related candidates (any shared title token) are plausible swap alternates.
-		const related = scored.filter(
-			(other, j) => j !== i && shareTitleToken(current.entry, other.entry),
-		);
+		// Related candidates (any shared title token) are plausible swap alternates. Sorted
+		// by position so they keep rank order (and the sort's tie order).
+		const relatedIdx = new Set<number>();
+		for (const t of current.entry.titleTokens) {
+			for (const j of byTitleToken.get(t) ?? []) {
+				if (j !== i) relatedIdx.add(j);
+			}
+		}
+		const related = [...relatedIdx].sort((a, b) => a - b).map((j) => scored[j]);
 		// But only SUPERSET-EVIDENCE candidates compete for confidence: a competitor must
 		// explain everything this work's observed title evidence explains (it could be
 		// the same spine misread). Series siblings with their own distinct evidence
@@ -372,11 +389,4 @@ function isSubset(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
 		if (!b.has(t)) return false;
 	}
 	return true;
-}
-
-function shareTitleToken(a: WorkEntry, b: WorkEntry): boolean {
-	for (const t of a.titleTokens) {
-		if (b.titleTokens.has(t)) return true;
-	}
-	return false;
 }

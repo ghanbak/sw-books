@@ -1,3 +1,4 @@
+import { assertNever } from '@/lib/assert-never';
 import type { OcrFragment } from '@/lib/spine-match';
 
 /**
@@ -130,6 +131,8 @@ export function shelfScanReducer(state: ShelfScanState, action: ShelfScanAction)
 			return state.phase === 'adding' ? { ...state, phase: 'done' } : state;
 		case 'reset':
 			return initialShelfScanState;
+		default:
+			return assertNever(action);
 	}
 }
 

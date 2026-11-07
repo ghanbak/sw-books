@@ -14,7 +14,7 @@
  * Real writes require BOTH --apply and --production, then:
  *   1. no blocking problems (any insert with needs_type / invalid type refuses the run);
  *   2. a clean pre-flight plan (any conflict — a row changed since the build — refuses);
- *   3. typing the prod project ref (same guard as scripts/seed.ts);
+ *   3. typing the prod project ref (confirmTarget; skipped only for an exact local hostname);
  *   4. a fresh `npm run catalog:backup` (run here; refuses if it fails, or the
  *      backup file isn't fresh / doesn't hold every live row).
  *
@@ -92,7 +92,7 @@ function describe(step: Step, i: number, total: number): string {
 	return `  ${mark} [${String(i + 1).padStart(3)}/${total}] ${step.kind.padEnd(13)} ${step.slug}: ${step.action.toUpperCase()} — ${step.reason}`;
 }
 
-/** Same project-ref prompt as scripts/seed.ts. Required for any non-local write. */
+/** Project-ref prompt, required for any non-local write (isLocal: exact-hostname match). */
 async function confirmTarget(url: string): Promise<void> {
 	if (isLocal(url)) return;
 	const ref = url.match(/https?:\/\/([^.]+)\./)?.[1] ?? url;

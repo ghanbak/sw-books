@@ -1,7 +1,10 @@
 import type { Book, UserBook } from '@/lib/hooks';
 import {
 	applyOwnedOptimistic,
+	createShelfWriteTracker,
 	defaultSelection,
+	isFetchCurrent,
+	mergeFetchedShelf,
 	mergeServerRows,
 	pruneOwned,
 	shouldClearScanDraft,
@@ -208,5 +211,96 @@ describe('shouldClearScanDraft', () => {
 	it('clears across an A → signed-out → B sequence (checked at each step)', () => {
 		expect(shouldClearScanDraft('user-a', null)).toBe(false); // A signs out: keep
 		expect(shouldClearScanDraft('user-a', 'user-b')).toBe(true); // B signs in: clear
+	});
+});
+
+describe('isFetchCurrent (#108)', () => {
+	const base = {
+		requestId: 2,
+		latestRequestId: 2,
+		requestUserId: 'user-a',
+		currentUserId: 'user-a',
+	};
+
+	it('applies the newest fetch for the signed-in user', () => {
+		expect(isFetchCurrent(base)).toBe(true);
+	});
+
+	it('drops a fetch that finishes after a newer one started', () => {
+		expect(isFetchCurrent({ ...base, requestId: 1 })).toBe(false);
+	});
+
+	it('drops a fetch for a different user (account switch)', () => {
+		expect(isFetchCurrent({ ...base, currentUserId: 'user-b' })).toBe(false);
+	});
+
+	it('drops a fetch that finishes after sign-out', () => {
+		expect(isFetchCurrent({ ...base, currentUserId: null })).toBe(false);
+	});
+});
+
+describe('mergeFetchedShelf + write tracker (#108)', () => {
+	const server = (bookId: string, flags: Partial<UserBook>) =>
+		row({ id: `srv-${bookId}`, book_id: bookId, ...flags });
+
+	it('keeps a toggle made after the fetch started; other books take server rows', () => {
+		const writes = createShelfWriteTracker();
+		const local = asMap(server('b1', { owned: true }), server('b2', { read: true }));
+		const startSeq = writes.seq(); // fetch starts
+
+		// Toggle b1.read while the fetch is in flight, and it settles before the fetch.
+		writes.claim(['b1']);
+		const toggled = { ...server('b1', { owned: true }), read: true };
+		const afterToggle = new Map(local).set('b1', toggled);
+		writes.release(['b1']);
+
+		const fetched = [server('b1', { owned: true }), server('b2', { read: true, owned: true })];
+		const next = mergeFetchedShelf(fetched, afterToggle, (id) => writes.touchedSince(id, startSeq));
+		expect(next.get('b1')).toBe(toggled);
+		expect(next.get('b2')).toMatchObject({ read: true, owned: true });
+	});
+
+	it('keeps a book removed locally after the fetch started', () => {
+		const writes = createShelfWriteTracker();
+		const startSeq = writes.seq();
+		writes.claim(['b1']); // clearing the last flag, still pending
+		const next = mergeFetchedShelf([server('b1', { read: true })], new Map(), (id) =>
+			writes.touchedSince(id, startSeq),
+		);
+		expect(next.has('b1')).toBe(false);
+	});
+
+	it('keeps a write that was pending when the fetch started and settled after', () => {
+		const writes = createShelfWriteTracker();
+		writes.claim(['b1']);
+		const startSeq = writes.seq();
+		writes.release(['b1']);
+		expect(writes.touchedSince('b1', startSeq)).toBe(true);
+	});
+
+	it('applies server rows (incl. removals) for books not written since the fetch started', () => {
+		const writes = createShelfWriteTracker();
+		writes.claim(['b1']);
+		writes.release(['b1']); // settled before the fetch
+		const startSeq = writes.seq();
+		const local = asMap(server('b1', { owned: true }), server('gone', { read: true }));
+		const next = mergeFetchedShelf([server('b1', { owned: true, read: true })], local, (id) =>
+			writes.touchedSince(id, startSeq),
+		);
+		expect(next.get('b1')).toMatchObject({ owned: true, read: true });
+		expect(next.has('gone')).toBe(false);
+	});
+});
+
+describe('createShelfWriteTracker', () => {
+	it('refuses tryClaim while any claim on the book is pending (ref-counted)', () => {
+		const writes = createShelfWriteTracker();
+		writes.claim(['b1']);
+		writes.claim(['b1']);
+		writes.release(['b1']);
+		expect(writes.tryClaim('b1')).toBe(false);
+		writes.release(['b1']);
+		expect(writes.tryClaim('b1')).toBe(true);
+		expect(writes.tryClaim('b2')).toBe(true);
 	});
 });

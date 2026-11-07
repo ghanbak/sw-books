@@ -10,7 +10,8 @@
  * Three repairs (policy: lib/wookieepedia/cleanup.ts):
  *   1. primary_isbn ∉ isbn[] — add it (evidence: wiki infobox/page + Open Library),
  *      or reset primary_isbn when it belongs to another book; else flag. Plus the
- *      operator-approved isbn[] additions and collision removals listed below.
+ *      operator-approved isbn[] additions, collision removals and invalid-ISBN
+ *      removals listed below.
  *   2. null/blank cover_image — Open Library then Google Books by every row ISBN,
  *      then a Google Books title search kept only when the hit lists a row ISBN;
  *      HEAD-checked, never a cover another row uses, never a wiki image. When all
@@ -50,6 +51,7 @@ import {
 	type CleanupRow,
 	type CoverCandidate,
 	type CoverReview,
+	type InvalidIsbnRemoval,
 	type IsbnEvidence,
 	type OlEditionFacts,
 	type OlWorkFacts,
@@ -193,6 +195,76 @@ const APPROVED_ISBN_REMOVALS: readonly ApprovedIsbnRemoval[] = [
 		isbn: '9781368057943',
 		owner: 'queens-shadow',
 		note: "2026-11-06 (#78, approved on merge) — Open Library titles 9781368057943 \"Queen's Shadow\" (Disney Lucasfilm Press, 2020 paperback); it is queens-shadow's primary_isbn, so a scan could return Queen's Peril",
+	},
+];
+
+/**
+ * Invalid ISBN-13s (bad check digit) the operator approved removing (#86):
+ * `normalizeIsbn` rejects them, so a scan never matches. Recomputing the check
+ * digit is not a fix — each recomputed value is a different book on Open
+ * Library (e.g. 9780553570052 = Sweet Valley "Elizabeth's Secret Diary"). Where
+ * the bad value is the primary, primary_isbn moves to the row's verified
+ * edition ISBN (an approved addition above, so it lands in the same write).
+ * Re-verified on every build: the value must fail the check digit, and the
+ * replacement must be valid and on the row.
+ */
+const INVALID_ISBN_REMOVALS: readonly InvalidIsbnRemoval[] = [
+	{
+		slug: 'x-wing-wedges-gamble',
+		isbn: '9780553570050',
+		primary: '9780553568028',
+		note: '2026-11-07 (#86) — bad check digit; recomputed 9780553570052 is Sweet Valley "Elizabeth\'s Secret Diary" on Open Library. Primary → Bantam Spectra PB (OL: "Star Wars: Wedge\'s Gamble")',
+	},
+	{
+		slug: 'x-wing-krytos-trap',
+		isbn: '9780553570067',
+		primary: '9780553568035',
+		note: '2026-11-07 (#86) — bad check digit; recomputed 9780553570069 is Sweet Valley "Busted!" on Open Library. Primary → Bantam Spectra PB (OL: "Star Wars: The Krytos Trap")',
+	},
+	{
+		slug: 'x-wing-bacta-war',
+		isbn: '9780553570074',
+		primary: '9780553568042',
+		note: '2026-11-07 (#86) — bad check digit; recomputed 9780553570076 is Sweet Valley "The Trial of Jessica Wakefield" on Open Library. Primary → Bantam Spectra PB (OL: "Star Wars: The Bacta War")',
+	},
+	{
+		slug: 'x-wing-iron-fist',
+		isbn: '9780553570098',
+		primary: '9780553578973',
+		note: '2026-11-07 (#86) — bad check digit; recomputed 9780553570090 is "Running for Her Life" on Open Library. Primary → Bantam Spectra PB (OL: "Star Wars: Iron Fist")',
+	},
+	{
+		slug: 'x-wing-solo-command',
+		isbn: '9780553570104',
+		primary: '9780553579000',
+		note: '2026-11-07 (#86) — bad check digit; recomputed 9780553570106 is Sweet Valley "The Roommate" on Open Library. Primary → Spectra PB (OL: "Star Wars: Solo Command")',
+	},
+	{
+		slug: 'corellian-trilogy-ambush',
+		isbn: '9780553572832',
+		primary: '9780553298031',
+		note: '2026-11-07 (#86) — bad check digit; recomputed 9780553572834 is "Buffalo Palace" on Open Library. Primary → Spectra PB (OL: "Star Wars: Ambush at Corellia")',
+	},
+	{
+		slug: 'hand-of-thrawn-vision',
+		isbn: '9780553572993',
+		primary: '9780553100358',
+		note: '2026-11-07 (#86) — bad check digit; recomputed 9780553572995 is "The Alienist" on Open Library. Primary → Bantam US HC (OL: "Star Wars: Vision of the Future")',
+	},
+	{
+		slug: 'acolyte-crystal-crown',
+		isbn: '9781368099123',
+		note: '2026-11-07 (#86) — bad check digit (extra isbn[] entry); recomputed 9781368099127 has no Open Library record, so nothing is added',
+	},
+	{
+		slug: 'heir-to-the-empire',
+		isbn: '9780345528295',
+		note: '2026-11-07 (#86) — bad check digit (extra isbn[] entry); recomputed 9780345528292 (OL: "Heir to the Empire", Lucas Books 2011) is already on the row',
+	},
+	{
+		slug: 'njo-final-prophecy',
+		isbn: '9780345428757',
+		note: '2026-11-07 (#86) — bad check digit (extra isbn[] entry); recomputed 9780345428752 (OL: "Star Wars: The Final Prophecy", Del Rey 2003) is already on the row',
 	},
 ];
 
@@ -426,6 +498,7 @@ const ACTION_LABEL: Record<CleanupChangeset['isbn_fixes'][number]['action'], str
 	reset_primary: 'reset primary_isbn',
 	add_approved_isbn: 'operator-approved isbn[] addition',
 	remove_approved_isbn: 'operator-approved collision removal',
+	remove_invalid_isbn: 'operator-approved invalid-ISBN removal',
 };
 
 function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: string): string {
@@ -473,6 +546,10 @@ function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: strin
 			L.push(`- operator-approved addition ${a.isbn}: ${a.note}`);
 		for (const r of f.approved_removals ?? [])
 			L.push(`- operator-approved removal ${r.isbn} (owner \`${r.owner}\`): ${r.note}`);
+		for (const r of f.invalid_removals ?? [])
+			L.push(
+				`- invalid-ISBN removal ${r.isbn}${r.primary ? ` (primary → ${r.primary})` : ''}: ${r.note}`,
+			);
 		for (const n of f.notes) L.push(`- note: ${n}`);
 		L.push('');
 	}
@@ -561,7 +638,9 @@ async function main(): Promise<void> {
 		(r) => r.primary_isbn != null && !(r.isbn ?? []).includes(r.primary_isbn),
 	);
 	const approvedSlugs = new Set(
-		[...APPROVED_ISBN_ADDITIONS, ...APPROVED_ISBN_REMOVALS].map((a) => a.slug),
+		[...APPROVED_ISBN_ADDITIONS, ...APPROVED_ISBN_REMOVALS, ...INVALID_ISBN_REMOVALS].map(
+			(a) => a.slug,
+		),
 	);
 	const evidenceRows = catalog.filter((r) => isbnRows.includes(r) || approvedSlugs.has(r.slug));
 	const coverRows = catalog.filter((r) => blank(r.cover_image));
@@ -791,6 +870,7 @@ async function main(): Promise<void> {
 		wikiText,
 		approvedIsbnAdditions: APPROVED_ISBN_ADDITIONS,
 		approvedIsbnRemovals: APPROVED_ISBN_REMOVALS,
+		invalidIsbnRemovals: INVALID_ISBN_REMOVALS,
 		isbnHolders: holders,
 		workCovers,
 		fallbackHead: new Map(fallbackUrls.map((u) => [u, cache.head[u] === true] as const)),

@@ -106,6 +106,95 @@ export function planToggle(
 	};
 }
 
+/** True for a display-only placeholder row (`applyOwnedOptimistic` / `planToggle`). */
+export function isOptimisticRow(row: UserBook | undefined): boolean {
+	return row?.id.startsWith(OPTIMISTIC_ID_PREFIX) ?? false;
+}
+
+/**
+ * Per-book record of pending shelf writes, shared by every writer in one provider
+ * (toggles and `addOwned`). Two jobs:
+ *   * in-flight guard — a toggle can't start on a book another write still owns;
+ *   * fetch staleness — `touchedSince` tells a refetch which books changed locally
+ *     after it started (or are still pending), so it keeps those rows.
+ * Claims are ref-counted: `addOwned` claims unconditionally (a batch can't be
+ * half-ignored), toggles use `tryClaim`.
+ */
+export type ShelfWriteTracker = {
+	/** Claim one book unless any write on it is pending. */
+	tryClaim: (bookId: string) => boolean;
+	claim: (bookIds: readonly string[]) => void;
+	release: (bookIds: readonly string[]) => void;
+	/** Monotonic; bumped on every claim and release. Capture it when a fetch starts. */
+	seq: () => number;
+	/** A write on the book is pending, or began/settled after `since`. */
+	touchedSince: (bookId: string, since: number) => boolean;
+};
+
+export function createShelfWriteTracker(): ShelfWriteTracker {
+	const pending = new Map<string, number>();
+	const lastActivity = new Map<string, number>();
+	let seq = 0;
+	const touch = (bookId: string) => {
+		seq += 1;
+		lastActivity.set(bookId, seq);
+	};
+	const claim = (bookIds: readonly string[]) => {
+		for (const id of bookIds) {
+			pending.set(id, (pending.get(id) ?? 0) + 1);
+			touch(id);
+		}
+	};
+	return {
+		tryClaim: (bookId) => {
+			if (pending.has(bookId)) return false;
+			claim([bookId]);
+			return true;
+		},
+		claim,
+		release: (bookIds) => {
+			for (const id of bookIds) {
+				const n = (pending.get(id) ?? 0) - 1;
+				if (n > 0) pending.set(id, n);
+				else pending.delete(id);
+				touch(id);
+			}
+		},
+		seq: () => seq,
+		touchedSince: (bookId, since) => pending.has(bookId) || (lastActivity.get(bookId) ?? 0) > since,
+	};
+}
+
+/**
+ * Rollback target for a failed toggle. If nothing else touched the row since the
+ * optimistic write, restore the pre-tap row exactly. If another writer changed it
+ * meanwhile (a concurrent `addOwned` setting `owned`), revert only the tapped flag
+ * so that change survives.
+ */
+export function revertToggle(
+	current: UserBook | undefined,
+	existing: UserBook | undefined,
+	optimistic: UserBook | null,
+	field: ShelfField,
+): UserBook | null {
+	if ((current ?? null) === optimistic) return existing ?? null;
+	if (!current) return null;
+	const reverted = { ...current, [field]: existing?.[field] ?? false };
+	return reverted.owned || reverted.read || reverted.want_to_read || reverted.favorite
+		? reverted
+		: null;
+}
+
+/** Row to show after a successful insert; keeps an `owned` a concurrent `addOwned` set. */
+export function settleInsert(
+	current: UserBook | undefined,
+	optimistic: UserBook | null,
+	inserted: UserBook,
+): UserBook {
+	if (!current || current === optimistic) return inserted;
+	return { ...inserted, owned: inserted.owned || current.owned };
+}
+
 export type ShelfToggleDeps = {
 	/** Latest local row for a book (must reflect `set` immediately, not after a render). */
 	get: (bookId: string) => UserBook | undefined;
@@ -117,42 +206,83 @@ export type ShelfToggleDeps = {
 	) => Promise<{ row: UserBook | null; error: { message: string } | null }>;
 	/** Called once per failed write, after the rollback. */
 	onError: (error: { message: string }) => void;
+	/** Pending-write registry shared with the provider's other writers (`addOwned`). */
+	writes: ShelfWriteTracker;
+	/** False once the user the toggle ran for is no longer signed in. */
+	isCurrentUser: (userId: string) => boolean;
 };
 
-export type ToggleOutcome = 'ok' | 'failed' | 'ignored';
+export type ToggleOutcome = 'ok' | 'failed' | 'ignored' | 'stale';
 
 /**
- * Optimistic shelf toggle with a per-book in-flight guard. A tap on a book whose
- * write is still pending is IGNORED (not queued): the first tap's optimistic state
- * is already on screen, and a rapid double-tap is almost always accidental — queueing
- * it would undo the user's change and double the round-trips. On failure the book's
- * row is restored to its pre-tap value (removed, for a first flag) and `onError` fires.
+ * Optimistic shelf toggle with a per-book in-flight guard. A tap on a book with any
+ * pending write (another toggle, or an `addOwned` batch) is IGNORED (not queued): that
+ * write's optimistic state is already on screen, and a rapid double-tap is almost
+ * always accidental — queueing it would undo the user's change and double the
+ * round-trips. Placeholder rows are never written back (their id isn't a uuid).
+ * On failure the tapped flag is rolled back (see `revertToggle`) and `onError` fires.
+ * A write that settles after the user changed touches nothing (`'stale'`).
  */
 export function createShelfToggler(deps: ShelfToggleDeps) {
-	const inFlight = new Set<string>();
 	return async function toggle(
 		bookId: string,
 		field: ShelfField,
 		userId: string,
 	): Promise<ToggleOutcome> {
-		if (inFlight.has(bookId)) return 'ignored';
-		inFlight.add(bookId);
+		if (isOptimisticRow(deps.get(bookId))) return 'ignored';
+		if (!deps.writes.tryClaim(bookId)) return 'ignored';
 		try {
 			const existing = deps.get(bookId);
 			const { optimistic, write } = planToggle(existing, bookId, field, userId);
 			deps.set(bookId, optimistic);
 			const { row, error } = await deps.write(write);
+			if (!deps.isCurrentUser(userId)) return 'stale';
 			if (error) {
-				deps.set(bookId, existing ?? null);
+				deps.set(bookId, revertToggle(deps.get(bookId), existing, optimistic, field));
 				deps.onError(error);
 				return 'failed';
 			}
-			if (write.kind === 'insert' && row) deps.set(bookId, row);
+			if (write.kind === 'insert' && row) {
+				deps.set(bookId, settleInsert(deps.get(bookId), optimistic, row));
+			}
 			return 'ok';
 		} finally {
-			inFlight.delete(bookId);
+			deps.writes.release([bookId]);
 		}
 	};
+}
+
+/**
+ * Whether a `user_books` fetch result may be applied: it must be the newest fetch
+ * started, and the user it was fetched for must still be the signed-in user.
+ */
+export function isFetchCurrent(f: {
+	requestId: number;
+	latestRequestId: number;
+	requestUserId: string;
+	currentUserId: string | null;
+}): boolean {
+	return f.requestId === f.latestRequestId && f.requestUserId === f.currentUserId;
+}
+
+/**
+ * Applies a fetched shelf snapshot without clobbering local writes: books for which
+ * `keepLocal` is true (a write pending or settled since the fetch started) keep their
+ * local row (or absence); every other book takes the server's row.
+ */
+export function mergeFetchedShelf(
+	fetched: readonly UserBook[],
+	local: ReadonlyMap<string, UserBook>,
+	keepLocal: (bookId: string) => boolean,
+): Map<string, UserBook> {
+	const next = new Map<string, UserBook>();
+	for (const row of fetched) {
+		if (!keepLocal(row.book_id)) next.set(row.book_id, row);
+	}
+	for (const [bookId, row] of local) {
+		if (keepLocal(bookId)) next.set(bookId, row);
+	}
+	return next;
 }
 
 /** Per-book Map update for `ShelfToggleDeps.set`. */

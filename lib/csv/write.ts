@@ -95,6 +95,10 @@ export function stringifyBooksCsv<T extends object>(
 				if (Array.isArray(value)) return value.join(';');
 				throw new Error('non-array object cell — coerce upstream');
 			},
+			// Safe as UTC: callers pass `date_published` as a `YYYY-MM-DD` string
+			// (supabase-js / parseDate), so this only fires for Dates built as UTC
+			// midnight (`new Date('YYYY-MM-DD')`, `Date.UTC`). Don't pass local-midnight
+			// Dates (`new Date(y, m, d)`); they'd shift a day in UTC+ zones.
 			date: (value) => value.toISOString().slice(0, 10),
 		},
 	});

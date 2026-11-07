@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
 	type CatalogOverrides,
 	buildBookFields,
 	parseDate,
 	pickCoverImage,
+	resolveIsbnList,
 	splitMultiValue,
 } from '../catalog';
 
@@ -45,6 +46,34 @@ describe('catalog helpers', () => {
 		expect(parseDate('January 5, 2021')).toBe('2021-01-05');
 		expect(parseDate('')).toBe(null);
 		expect(parseDate('not a date')).toBe(null);
+	});
+
+	describe('parseDate is timezone-independent', () => {
+		const zones = ['UTC', 'Asia/Tokyo', 'Pacific/Kiritimati', 'America/Los_Angeles'];
+		const originalTz = process.env.TZ;
+		afterEach(() => {
+			// `process.env.TZ = undefined` would store the string "undefined".
+			if (originalTz === undefined) Reflect.deleteProperty(process.env, 'TZ');
+			else process.env.TZ = originalTz;
+		});
+
+		for (const tz of zones) {
+			it(`keeps the calendar day in ${tz}`, () => {
+				process.env.TZ = tz;
+				expect(parseDate('January 1, 2015')).toBe('2015-01-01');
+				expect(parseDate('May 2006')).toBe('2006-05-01');
+				expect(parseDate('December 31, 1999')).toBe('1999-12-31');
+				expect(parseDate('June 29, 2021')).toBe('2021-06-29');
+				expect(parseDate('1996')).toBe('1996-01-01');
+				expect(parseDate('2021-01-05')).toBe('2021-01-05');
+				expect(parseDate('2021-01')).toBe('2021-01-01');
+			});
+		}
+	});
+
+	it('parseDate rejects impossible days', () => {
+		expect(parseDate('February 30, 2021')).toBe(null);
+		expect(parseDate('2021-13-01')).toBe(null);
 	});
 
 	it('splitMultiValue splits, trims, dedupes', () => {
@@ -91,6 +120,16 @@ describe('buildBookFields', () => {
 		expect(f.primary_isbn).toBe('222');
 		expect(f.cover_image).toBe('https://manual/cover.jpg');
 		expect(f.format).toEqual(['eBook']);
+	});
+
+	// #97: path-of-deceit's `[]` override seeded isbn = {} with a primary_isbn
+	// outside it, which merge_books rejects. An empty list is "no override".
+	it('treats an empty isbn override as no override', () => {
+		const slug = 'light-of-the-jedi';
+		expect(resolveIsbnList(baseRecord, { [slug]: [] })).toEqual(['9780593157718']);
+		const f = buildBookFields(baseRecord, { ...emptyOverrides, isbn: { [slug]: [] } });
+		expect(f.isbn).toEqual(['9780593157718']);
+		expect(f.primary_isbn).toBe('9780593157718');
 	});
 
 	it('distrusts the CSV cover for a rejected slug', () => {

@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
+import { displayIsbn } from '@/lib/isbn';
 import { eraLabel } from '@/lib/timeline';
 
 type DataPoint = { label: string; value: string };
@@ -22,7 +23,8 @@ export const BookCard = memo(function BookCard({ book }: { book: Book }) {
 
 	const dataPoints: DataPoint[] = [];
 	if (book.series_name) dataPoints.push({ label: 'SERIES', value: book.series_name });
-	if (book.isbn?.[0]) dataPoints.push({ label: 'ISBN', value: book.isbn[0] });
+	const isbn = displayIsbn(book);
+	if (isbn) dataPoints.push({ label: 'ISBN', value: isbn });
 	if (book.timeline_order != null)
 		dataPoints.push({ label: 'TIMELINE', value: eraLabel(book.timeline_order) });
 	if (book.format?.[0]) dataPoints.push({ label: 'FORMAT', value: book.format[0].toUpperCase() });
