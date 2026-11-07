@@ -9,6 +9,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { resolveIsbnList } from '../catalog';
 import { parseCsv } from '../csv/read';
+import { isValidIsbn13 } from '../isbn';
 
 const DATA = resolve(__dirname, '..', '..', 'data');
 const load = <T>(file: string): T => JSON.parse(readFileSync(resolve(DATA, file), 'utf-8')) as T;
@@ -49,6 +50,9 @@ function overrideHolders(): Map<string, string[]> {
 	return out;
 }
 
+const invalid = (m: Map<string, string[]>) =>
+	Object.fromEntries([...m].filter(([isbn]) => !isValidIsbn13(isbn)));
+
 const shared = (m: Map<string, string[]>) =>
 	Object.fromEntries([...m].filter(([, slugs]) => slugs.length > 1));
 
@@ -70,5 +74,16 @@ describe('ISBN override files', () => {
 		for (const slug of ['queens-peril', 'queens-shadow', 'queens-hope']) {
 			expect(isbnOverrides[slug]).toContain(primaryOverrides[slug]);
 		}
+	});
+
+	// #86: normalizeIsbn rejects a bad ISBN-13 check digit, so a scan can never
+	// match it. Runs over the seed resolution (books.csv + overrides), not the
+	// prod snapshot in data/catalog-backup.csv (catalog:health covers that).
+	it('hold only ISBN-13s with a valid check digit', () => {
+		expect(invalid(overrideHolders())).toEqual({});
+	});
+
+	it('resolve (as the seed does) to only ISBN-13s with a valid check digit', () => {
+		expect(invalid(holders())).toEqual({});
 	});
 });

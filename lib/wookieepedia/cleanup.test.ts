@@ -17,6 +17,7 @@ import {
 	type WorkCoverEvidence,
 	applyApprovedAdditions,
 	applyApprovedRemovals,
+	applyInvalidIsbnRemovals,
 	buildCleanupChangeset,
 	coverIsbns,
 	coverKey,
@@ -330,6 +331,93 @@ describe('approved collision removals (#78)', () => {
 		const done = row({ ...peril, isbn: [PERIL_HC, PERIL_PB] });
 		const r = applyApprovedRemovals(done, null, [removal], ev, shared);
 		expect(r).toEqual({ fix: null, flags: [] });
+	});
+});
+
+describe('invalid-ISBN removals (#86)', () => {
+	const BAD = '9780553570050'; // stored for Wedge's Gamble; bad check digit
+	const PB = '9780553568028'; // Bantam Spectra PB, OL-verified
+	const wedge = row({
+		id: 'id-wg',
+		slug: 'x-wing-wedges-gamble',
+		title: "Wedge's Gamble",
+		isbn: [BAD],
+		primary_isbn: BAD,
+	});
+	const ev = evidence({ wiki_title: "X-wing: Wedge's Gamble", wiki_infobox_isbns: [PB] });
+	const addition = { slug: wedge.slug, isbn: PB, note: 'infobox PB' };
+	const removal = { slug: wedge.slug, isbn: BAD, primary: PB, note: 'bad check digit' };
+	const build = (removals: { slug: string; isbn: string; primary?: string; note: string }[]) =>
+		buildCleanupChangeset({
+			rows: [wedge],
+			asOf: '2026-11-07',
+			isbnEvidence: new Map([[wedge.slug, ev]]),
+			coverCandidates: new Map(),
+			drafts: { drafts: {}, skipped: {} },
+			wikiText: new Map(),
+			approvedIsbnAdditions: [addition],
+			invalidIsbnRemovals: removals,
+			isbnHolders: new Map([[BAD, [wedge.slug]]]),
+		});
+
+	it('swaps a bad primary for the approved addition in one write', () => {
+		const cs = build([removal]);
+		expect(cs.flagged.isbn).toEqual([]);
+		expect(cs.isbn_fixes).toHaveLength(1);
+		const f = cs.isbn_fixes[0];
+		expect(f?.action).toBe('add_approved_isbn');
+		expect(f?.before).toEqual({ isbn: [BAD], primary_isbn: BAD });
+		expect(f?.after).toEqual({ isbn: [PB], primary_isbn: PB });
+		expect(f?.invalid_removals).toEqual([removal]);
+		expect(cleanupBlockingProblems({ ...cs, cover_fills: [], synopsis_fills: [] })).toEqual([]);
+		expect(planIsbnMembershipFix(f as NonNullable<typeof f>, null).kind).toBe('isbn_fix');
+	});
+
+	it('drops a bad extra entry with no primary change', () => {
+		const r = row({ isbn: [PB, BAD], primary_isbn: PB });
+		const out = applyInvalidIsbnRemovals(r, null, [{ slug: 'x', isbn: BAD, note: '' }], ev);
+		expect(out.fix?.action).toBe('remove_invalid_isbn');
+		expect(out.fix?.after).toEqual({ isbn: [PB], primary_isbn: PB });
+		expect(out.flags).toEqual([]);
+	});
+
+	it('refuses a valid ISBN, or a primary with no valid on-row replacement', () => {
+		const valid = applyInvalidIsbnRemovals(
+			row({ isbn: [PB], primary_isbn: PB }),
+			null,
+			[{ slug: 'x', isbn: PB, note: '' }],
+			ev,
+		);
+		expect(valid.fix).toBeNull();
+		expect(valid.flags[0]?.reason).toMatch(/passes the ISBN-13 check digit/);
+		const noReplacement = applyInvalidIsbnRemovals(
+			wedge,
+			null,
+			[{ ...removal, primary: undefined }],
+			ev,
+		);
+		expect(noReplacement.flags[0]?.reason).toMatch(/no replacement primary/);
+		const offRow = applyInvalidIsbnRemovals(wedge, null, [removal], ev);
+		expect(offRow.fix).toBeNull();
+		expect(offRow.flags[0]?.reason).toMatch(/not on the row/);
+		const badReplacement = applyInvalidIsbnRemovals(
+			row({ isbn: [BAD, '9780553570052'], primary_isbn: BAD }),
+			null,
+			[{ ...removal, primary: '9780553570051' }],
+			ev,
+		);
+		expect(badReplacement.flags[0]?.reason).toMatch(/not a valid ISBN-13/);
+	});
+
+	it('is a no-op once removed; blocks a changeset that drops a valid ISBN as invalid', () => {
+		const done = row({ isbn: [PB], primary_isbn: PB });
+		expect(applyInvalidIsbnRemovals(done, null, [removal], ev)).toEqual({ fix: null, flags: [] });
+		const f = build([removal]).isbn_fixes[0];
+		const forged = { ...f, invalid_removals: [{ ...removal, isbn: PB }] } as NonNullable<typeof f>;
+		const cs = build([removal]);
+		expect(
+			cleanupBlockingProblems({ ...cs, isbn_fixes: [forged], cover_fills: [], synopsis_fills: [] }),
+		).toEqual(expect.arrayContaining([expect.stringMatching(/passes the check digit/)]));
 	});
 });
 
