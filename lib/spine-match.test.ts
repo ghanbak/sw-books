@@ -210,6 +210,26 @@ describe('matchFragments — confidence & alternates', () => {
 		expect(matches[0].bucket).toBe('high');
 		expect(matches[0].alternates.map((a) => a.book.id)).toContain('i-jedi');
 	});
+
+	it('ranks multi-token titles and their shared-token alternates in score order', () => {
+		// Three spines whose titles overlap on 'thrawn' / 'ascendancy' / 'rising'. Pins the
+		// exact match order and each match's alternates order (rank order, ties stable).
+		const matches = matchFragments(
+			frags(
+				'THRAWN ASCENDANCY CHAOS RISING',
+				'Timothy Zahn',
+				'DARK FORCE RISING',
+				'Thrawn Ascendancy Greater Good',
+			),
+			index,
+		);
+
+		expect(matches.map((m) => [m.book.id, m.bucket, m.alternates.map((a) => a.book.id)])).toEqual([
+			['dfr', 'high', ['asc-chaos']],
+			['asc-chaos', 'high', ['dfr', 'thrawn', 'asc-greater']],
+			['asc-greater', 'high', ['thrawn', 'asc-chaos']],
+		]);
+	});
 });
 
 describe('matchFragments — evidence-quality gate', () => {
