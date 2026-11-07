@@ -83,6 +83,7 @@ export function useBooks() {
 type UserBooksContextValue = {
 	userBooks: Map<string, UserBook>;
 	loading: boolean;
+	error: string | null;
 	refetch: () => Promise<void>;
 	toggleShelf: (bookId: string, field: ShelfField) => Promise<void>;
 	addOwned: (bookIds: string[]) => Promise<Result<{ rows: UserBook[] }>>;
@@ -91,6 +92,7 @@ type UserBooksContextValue = {
 const UserBooksContext = createContext<UserBooksContextValue>({
 	userBooks: new Map(),
 	loading: true,
+	error: null,
 	refetch: async () => {},
 	toggleShelf: async () => {},
 	addOwned: async () => err({ code: 'no_provider', message: 'UserBooksProvider missing' }),
@@ -106,6 +108,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 	const { user } = useAuth();
 	const [userBooks, setUserBooks] = useState<Map<string, UserBook>>(new Map());
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
 	// Mirror of userBooks for reads inside toggleShelf without re-creating the
 	// callback on every shelf change (which would invalidate every memoized consumer).
@@ -114,9 +117,10 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 
 	const fetchUserBooks = useCallback(async () => {
 		setLoading(true);
-		const { data, error } = await supabase.from('user_books').select('*');
-		if (error) {
-			console.warn('[user_books] fetch failed:', error.message);
+		setError(null);
+		const { data, error: fetchError } = await supabase.from('user_books').select('*');
+		if (fetchError) {
+			setError(fetchError.message);
 			setLoading(false);
 			return;
 		}
@@ -133,6 +137,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 			fetchUserBooks();
 		} else {
 			setUserBooks(new Map());
+			setError(null);
 			setLoading(false);
 		}
 	}, [user, fetchUserBooks]);
@@ -222,7 +227,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 
 	return (
 		<UserBooksContext.Provider
-			value={{ userBooks, loading, refetch: fetchUserBooks, toggleShelf, addOwned }}
+			value={{ userBooks, loading, error, refetch: fetchUserBooks, toggleShelf, addOwned }}
 		>
 			{children}
 		</UserBooksContext.Provider>

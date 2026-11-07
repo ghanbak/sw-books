@@ -29,7 +29,7 @@ export default function LibraryScreen() {
 		error: catalogError,
 		refetch: refetchCatalog,
 	} = useBooks();
-	const { userBooks, loading, refetch } = useUserBooks();
+	const { userBooks, loading, error: shelfError, refetch } = useUserBooks();
 	const [filter, setFilter] = useState<LibraryFilter>('all');
 	const { sort, openSortMenu } = useCatalogSort('@ossus/library_sort');
 	const router = useRouter();
@@ -50,11 +50,20 @@ export default function LibraryScreen() {
 		() =>
 			selectLibraryView({
 				catalog: { loading: catalogLoading, error: catalogError, count: books.length },
-				shelf: { loading, rows: userBooks.values() },
+				shelf: { loading, error: shelfError, rows: userBooks.values() },
 				visibleCount: shelvedBooks.length,
 				filter,
 			}),
-		[catalogLoading, catalogError, books.length, loading, userBooks, shelvedBooks.length, filter],
+		[
+			catalogLoading,
+			catalogError,
+			books.length,
+			loading,
+			shelfError,
+			userBooks,
+			shelvedBooks.length,
+			filter,
+		],
 	);
 	const pillOptions = useMemo(
 		() => LIBRARY_FILTERS.filter((o) => view.pills.includes(o.key)),
@@ -72,11 +81,15 @@ export default function LibraryScreen() {
 				<ActivityIndicator size="large" color={tokens.accent.primary} />
 			</View>
 		) : view.kind === 'error' ? (
-			<ErrorState
-				title="Couldn't load the archive"
-				message={catalogError}
-				onRetry={refetchCatalog}
-			/>
+			view.source === 'shelf' ? (
+				<ErrorState title="Couldn't load your library" message={shelfError} onRetry={refetch} />
+			) : (
+				<ErrorState
+					title="Couldn't load the archive"
+					message={catalogError}
+					onRetry={refetchCatalog}
+				/>
+			)
 		) : view.kind === 'onboarding' ? (
 			<View style={styles.emptyContainer}>
 				<Text style={styles.emptyTitle}>Your collection awaits</Text>
