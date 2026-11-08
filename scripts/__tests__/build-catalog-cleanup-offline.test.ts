@@ -28,8 +28,9 @@ vi.mock('../_supabase', async (importOriginal) => {
 	return { ...real, productionEnv: vi.fn(real.productionEnv), makeClient: vi.fn(real.makeClient) };
 });
 
+import { offlineChangesetRefusal } from '../../lib/wookieepedia/apply-plan';
 import { makeClient, productionEnv } from '../_supabase';
-import { type CleanupPaths, parseArgs, runCleanup } from '../build-catalog-cleanup';
+import { type CleanupPaths, LOOKUP_KINDS, parseArgs, runCleanup } from '../build-catalog-cleanup';
 
 const HEADER =
 	'id,slug,title,author,canon,type,era,series_name,series_order,timeline_order,date_published,publisher,language,isbn,primary_isbn,format,cover_image,synopsis,created_at';
@@ -119,6 +120,53 @@ describe('build-catalog-cleanup --from-backup --offline', () => {
 		expect(run.changeset.cover_fills.map((c) => [c.slug, c.after])).toEqual([
 			['fixture-no-cover', url],
 		]);
+	});
+
+	it('marks the JSON offline with per-kind skip counts, and apply refuses it', async () => {
+		const run = await runCleanup(offline());
+		const json = JSON.parse(readFileSync(paths.outJson, 'utf-8'));
+		expect(json.offline).toBe(true);
+		expect(Object.keys(json.skipped).sort()).toEqual(Object.keys(LOOKUP_KINDS).sort());
+		expect(json.skipped).toEqual(run.skipped);
+		expect(json.skipped.wiki).toBe(1);
+		expect(offlineChangesetRefusal(json)).toMatch(/built with --offline.*wiki 1/);
+	});
+
+	// Bounded: a gate that lets the lookup through retries the blocked fetch.
+	const bounded = (p: Promise<unknown>) =>
+		Promise.race([p, new Promise((r) => setTimeout(() => r('still running after 2s'), 2000))]);
+	const WORK = '/works/OL1W';
+	const AUTHOR = '/authors/OL1A';
+	const edition = { '9781484709122': { title: 'Fixture No Cover', subtitle: null, work: WORK } };
+
+	it('skips an uncached Open Library work behind a cached edition (olWorks gate)', async () => {
+		writeFileSync(paths.cache, JSON.stringify({ ol: edition }));
+		const run = (await bounded(runCleanup(offline()))) as Awaited<ReturnType<typeof runCleanup>>;
+		expect(fetchSpy).not.toHaveBeenCalled();
+		expect(run.skipped?.olWorks).toBe(1);
+		expect(run.skipped?.olAuthors).toBe(0);
+	});
+
+	it('skips an uncached Open Library author of a cached work (olAuthors gate)', async () => {
+		writeFileSync(
+			paths.cache,
+			JSON.stringify({
+				ol: edition,
+				olWorks: {
+					[WORK]: {
+						title: 'Fixture No Cover',
+						subtitle: null,
+						author_keys: [AUTHOR],
+						covers: [],
+						first_publish_year: 2015,
+					},
+				},
+			}),
+		);
+		const run = (await bounded(runCleanup(offline()))) as Awaited<ReturnType<typeof runCleanup>>;
+		expect(fetchSpy).not.toHaveBeenCalled();
+		expect(run.skipped?.olWorks).toBe(0);
+		expect(run.skipped?.olAuthors).toBe(1);
 	});
 
 	it('refuses --offline without --from-backup (a DB read is a network call)', async () => {
