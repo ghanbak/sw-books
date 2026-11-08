@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BookDetailSkeleton } from '@/components/book-detail-skeleton';
 import { BookDetailToolbar } from '@/components/book-detail-toolbar';
 import { BuyOnAmazonButton } from '@/components/buy-on-amazon-button';
+import { EmptyState } from '@/components/empty-state';
 import { EnrichmentSection } from '@/components/enrichment/enrichment-section';
 import { ErrorState } from '@/components/error-state';
 import { HoloFace, NoCoverText } from '@/components/holo-cover';
@@ -21,6 +22,7 @@ import { useHoloStatus } from '@/lib/holo3d/status';
 import type { Book } from '@/lib/hooks';
 import { useBookEnrichment, useBooks, useUserBooks } from '@/lib/hooks';
 import { displayIsbn } from '@/lib/isbn';
+import { formatPublishedDate } from '@/lib/published-date';
 import { supabase } from '@/lib/supabase';
 import { eraLabel } from '@/lib/timeline';
 import { parseTimeline } from '@/lib/wookieepedia/enrichment-display';
@@ -78,11 +80,10 @@ export default function BookDetailScreen() {
 
 	if (!book) {
 		return (
-			<View style={styles.center}>
-				<Text style={styles.notFoundText}>
-					If an item does not appear in our records, it does not exist.
-				</Text>
-			</View>
+			<EmptyState
+				message="If an item does not appear in our records, it does not exist."
+				style={styles.notFound}
+			/>
 		);
 	}
 
@@ -254,15 +255,6 @@ function FavoriteHeaderButton({ bookId }: { bookId: string }) {
 	);
 }
 
-function formatPublishedDate(date: string | null): string | null {
-	if (!date) return null;
-	return new Date(date).toLocaleDateString('en-US', {
-		year: 'numeric',
-		month: 'long',
-		day: 'numeric',
-	});
-}
-
 function DetailRow({
 	icon,
 	label,
@@ -291,15 +283,8 @@ const styles = StyleSheet.create({
 	content: {
 		padding: 20,
 	},
-	center: {
-		flex: 1,
-		justifyContent: 'center',
-		alignItems: 'center',
+	notFound: {
 		backgroundColor: tokens.surface.background,
-	},
-	notFoundText: {
-		color: tokens.text.hint,
-		fontSize: 16,
 	},
 	title: {
 		fontSize: 20,
@@ -355,7 +340,7 @@ const styles = StyleSheet.create({
 	},
 	detailLabel: {
 		fontSize: 13,
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		width: 80,
 	},
 	detailValue: {

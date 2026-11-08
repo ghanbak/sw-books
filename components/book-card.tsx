@@ -7,6 +7,7 @@ import { CanonBadge } from '@/components/ui/canon-badge';
 import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { bookRowLabel } from '@/lib/book-a11y';
 import type { Book } from '@/lib/hooks';
 import { displayIsbn } from '@/lib/isbn';
 import { eraLabel } from '@/lib/timeline';
@@ -39,7 +40,7 @@ export const BookCard = memo(function BookCard({ book }: { book: Book }) {
 			<Link.Trigger>
 				<Pressable
 					accessibilityRole="button"
-					accessibilityLabel={`${book.title} by ${book.author.join(', ')}`}
+					accessibilityLabel={bookRowLabel(book)}
 					style={styles.wrap}
 				>
 					{({ pressed }) => (
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
 		fontSize: 9,
 		fontWeight: '600',
 		letterSpacing: 0.6,
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 	},
 	dataValue: {
 		fontSize: 11,

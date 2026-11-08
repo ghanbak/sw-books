@@ -76,3 +76,14 @@ export function barcodeResultAnnouncement(kind: BarcodeResultKind, bookTitle?: s
 			return 'Lookup failed. Check your connection and try again.';
 	}
 }
+
+/**
+ * Wrapper props for a decorative cover inside a labelled row/tile: taps fall through to
+ * the row, and VoiceOver/TalkBack skip the cover instead of announcing a nameless extra
+ * element (the row's own label already names the book).
+ */
+export const hiddenDecorationProps = {
+	pointerEvents: 'none',
+	accessibilityElementsHidden: true,
+	importantForAccessibility: 'no-hide-descendants',
+} as const;

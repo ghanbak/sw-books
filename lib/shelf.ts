@@ -139,6 +139,8 @@ export type ShelfWriteTracker = {
 	touchedSince: (bookId: string, since: number) => boolean;
 	/** Record fetched rows as the rollback target of every book with a pending write. */
 	adoptFetched: (rows: readonly UserBook[]) => void;
+	/** `adoptFetched` for one book, when only that book was read (`null` = absent). */
+	adoptFetchedRow: (bookId: string, row: UserBook | null) => void;
 	/** Rollback target from a fetch that landed mid-write (`null` = absent); `undefined` if none. */
 	fetchedBase: (bookId: string) => UserBook | null | undefined;
 };
@@ -178,6 +180,9 @@ export function createShelfWriteTracker(): ShelfWriteTracker {
 			if (pending.size === 0) return;
 			const byBook = new Map(rows.map((r) => [r.book_id, r]));
 			for (const id of pending.keys()) fetchedBase.set(id, byBook.get(id) ?? null);
+		},
+		adoptFetchedRow: (bookId, row) => {
+			if (pending.has(bookId)) fetchedBase.set(bookId, row);
 		},
 		fetchedBase: (bookId) => fetchedBase.get(bookId),
 	};
@@ -236,14 +241,103 @@ export function settleInsert(
 	return { ...inserted, owned: inserted.owned || current.owned };
 }
 
+/** `missing`: an update matched no row (PostgREST reports that as success). */
+export type ShelfWriteResult = {
+	row: UserBook | null;
+	/** `code` is the Postgres error code, when the failure came from the database. */
+	error: { message: string; code?: string } | null;
+	missing?: boolean;
+};
+
+/** The `user_books` calls a shelf write needs (supabase-js in the app, fakes in tests). */
+export type ShelfDb = {
+	insert: (
+		entry: UserBookInsert,
+	) => Promise<{ data: UserBook | null; error: { message: string; code?: string } | null }>;
+	/** Must return the matched rows (`.select('id')`), or a 0-row update looks saved. */
+	update: (
+		id: string,
+		patch: Partial<Pick<UserBook, ShelfField>>,
+	) => Promise<{ data: { id: string }[] | null; error: { message: string } | null }>;
+	remove: (id: string) => Promise<{ error: { message: string } | null }>;
+};
+
+/**
+ * Write adapter for `ShelfToggleDeps.write` (#195). Flags an update that matched no
+ * row as `missing`. A delete that matched no row is already done.
+ */
+export function createShelfWriter(db: ShelfDb): ShelfToggleDeps['write'] {
+	return async (write) => {
+		if (write.kind === 'insert') {
+			const { data, error } = await db.insert(write.entry);
+			return { row: data, error };
+		}
+		if (write.kind === 'delete') {
+			const { error } = await db.remove(write.id);
+			return { row: null, error };
+		}
+		const { data, error } = await db.update(write.id, write.patch);
+		return { row: null, error, missing: !error && (data?.length ?? 0) === 0 };
+	};
+}
+
+/**
+ * Insert that recreates a row an update found missing (deleted on another device,
+ * or by `merge_books`), with every flag the user sees. Plain insert, not upsert: if
+ * another device recreated the row meanwhile, UNIQUE(user_id, book_id) rejects it
+ * and the toggle reverts instead of overwriting that row's other flags.
+ */
+function recreateWrite(shown: UserBook): ShelfWrite {
+	const { user_id, book_id, owned, read, want_to_read, favorite } = shown;
+	return { kind: 'insert', entry: { user_id, book_id, owned, read, want_to_read, favorite } };
+}
+
+/** Postgres `unique_violation`: here, UNIQUE(user_id, book_id). */
+const UNIQUE_VIOLATION = '23505';
+
+/** The live row (`null` = none), or `undefined` if the read failed in any way. */
+async function readLiveRow(
+	deps: ShelfToggleDeps,
+	bookId: string,
+	userId: string,
+): Promise<UserBook | null | undefined> {
+	try {
+		const { row, error } = await deps.readRow(userId, bookId);
+		return error ? undefined : row;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * Local row after a unique-key conflict, given the row re-read from the server. Replaces
+ * the dead-id row or placeholder, without undoing a write made while the toggle was pending:
+ * a different id means a settled `addOwned` already stored a newer server row, and a
+ * changed row with the same id carries a pending `addOwned`'s `owned` flag.
+ */
+function settleConflict(
+	current: UserBook | undefined,
+	live: UserBook | null,
+	optimistic: UserBook,
+	field: ShelfField,
+): UserBook | null {
+	if (current && current.id !== optimistic.id) return current;
+	return live
+		? settleInsert(current, optimistic, live)
+		: revertToggle(current, undefined, optimistic, field);
+}
+
 export type ShelfToggleDeps = {
 	/** Latest local row for a book (must reflect `set` immediately, not after a render). */
 	get: (bookId: string) => UserBook | undefined;
 	/** Replace one book's row; `null` removes it. Per-book so other books' writes survive. */
 	set: (bookId: string, row: UserBook | null) => void;
-	/** Perform the write; `row` is the inserted row for an insert. */
-	write: (
-		write: ShelfWrite,
+	/** Perform the write (see `createShelfWriter`); `row` is the inserted row for an insert. */
+	write: (write: ShelfWrite) => Promise<ShelfWriteResult>;
+	/** Read one book's live row by its unique key; `row: null` = no such row. */
+	readRow: (
+		userId: string,
+		bookId: string,
 	) => Promise<{ row: UserBook | null; error: { message: string } | null }>;
 	/** Called once per failed write, after the rollback. */
 	onError: (error: { message: string }) => void;
@@ -262,6 +356,11 @@ export type ToggleOutcome = 'ok' | 'failed' | 'ignored' | 'stale';
  * always accidental — queueing it would undo the user's change and double the
  * round-trips. Placeholder rows are never written back (their id isn't a uuid).
  * On failure the tapped flag is rolled back (see `revertToggle`) and `onError` fires.
+ * An update whose row is gone server-side is recreated (see `recreateWrite`, #195).
+ * If an insert or a recreate hits the unique key because another device already has
+ * the row, the live row is re-read so the next tap targets it (#198, #206). The claim
+ * is held across that read; if the read fails, the normal rollback runs and the next
+ * tap heals the row the same way.
  * A write that settles after the user changed touches nothing (`'stale'`).
  */
 export function createShelfToggler(deps: ShelfToggleDeps) {
@@ -277,16 +376,33 @@ export function createShelfToggler(deps: ShelfToggleDeps) {
 			const existing = deps.get(bookId);
 			const { optimistic, write } = planToggle(existing, bookId, field, userId);
 			deps.set(bookId, optimistic);
-			const { row, error } = await deps.write(write);
+			const result = await deps.write(write);
+			let { row, error } = result;
 			if (!deps.isCurrentUser(userId)) return 'stale';
+			if (result.missing && optimistic) {
+				({ row, error } = await deps.write(recreateWrite(optimistic)));
+				if (!deps.isCurrentUser(userId)) return 'stale';
+				if (!error && !row) error = { message: 'Shelf row could not be recreated' };
+			}
+			// A plain insert or a recreate hit UNIQUE(user_id, book_id).
+			const conflicted = error?.code === UNIQUE_VIOLATION ? optimistic : null;
 			if (error) {
 				applied = false;
-				const base = rollbackBase(deps.writes, bookId, existing);
-				deps.set(bookId, revertToggle(deps.get(bookId), base, optimistic, field));
+				const live = conflicted ? await readLiveRow(deps, bookId, userId) : undefined;
+				if (!deps.isCurrentUser(userId)) return 'stale';
+				if (conflicted && live !== undefined) {
+					// A pending `addOwned` that fails must roll back to this row, not the dead one.
+					deps.writes.adoptFetchedRow(bookId, live);
+					deps.set(bookId, settleConflict(deps.get(bookId), live, conflicted, field));
+				} else {
+					const base = rollbackBase(deps.writes, bookId, existing);
+					deps.set(bookId, revertToggle(deps.get(bookId), base, optimistic, field));
+				}
 				deps.onError(error);
 				return 'failed';
 			}
-			if (write.kind === 'insert' && row) {
+			if (row) {
+				// Insert, or an update recreated after its row went missing.
 				deps.set(bookId, settleInsert(deps.get(bookId), optimistic, row));
 			}
 			return 'ok';

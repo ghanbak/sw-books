@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
 	},
 	legal: {
 		fontSize: 12,
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		textAlign: 'center',
 		lineHeight: 18,
 	},

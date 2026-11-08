@@ -285,6 +285,20 @@ export function planSynopsisFill(fill: SynopsisFill, live: LiveState | null): St
 
 const isBlank = (v: string | null) => v == null || v.trim() === '';
 
+/**
+ * Why a changeset must not be applied or dry-run at all (null = load it). An
+ * `--offline` cleanup build skipped uncached lookups, so its evidence is partial.
+ */
+export function offlineChangesetRefusal(raw: unknown): string | null {
+	const cs = raw as { offline?: unknown; skipped?: Record<string, unknown> } | null;
+	if (cs?.offline !== true) return null;
+	const skips = Object.entries(cs.skipped ?? {})
+		.filter(([, n]) => typeof n === 'number' && n > 0)
+		.map(([k, n]) => `${k} ${n}`);
+	const rebuild = 'npm run catalog:cleanup -- --from-backup';
+	return `Refusing: this changeset was built with --offline (skipped lookups: ${skips.join(', ') || 'none recorded'}), so its evidence is incomplete. Rebuild it online (${rebuild}) and re-review — no changes written.`;
+}
+
 /** Problems that block ANY real write of a cleanup changeset. */
 export function cleanupBlockingProblems(cs: CleanupChangeset): string[] {
 	const out: string[] = [];

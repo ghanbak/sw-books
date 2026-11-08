@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
 	type LiveState,
 	blockingProblems,
+	offlineChangesetRefusal,
 	planAll,
 	planCoverFix,
 	planInsert,
@@ -205,5 +208,49 @@ describe('apply plan', () => {
 		expect(blockingProblems(changeset({ inserts: [pending] }))[0]).toMatch(/needs_type/);
 		expect(blockingProblems(changeset({ inserts: [insert] }))).toEqual([]);
 		expect(blockingProblems(changeset({ version: 99 }))[0]).toMatch(/version/);
+	});
+});
+
+describe('offlineChangesetRefusal', () => {
+	const ROOT = resolve(__dirname, '../..');
+
+	it('refuses an --offline changeset, naming the skipped lookups', () => {
+		const msg = offlineChangesetRefusal({
+			kind: 'catalog-cleanup',
+			offline: true,
+			skipped: { wiki: 2, openlibrary: 0, olWorks: 1 },
+		});
+		expect(msg).toMatch(/^Refusing: .*built with --offline/);
+		expect(msg).toContain('wiki 2, olWorks 1');
+		expect(msg).not.toContain('openlibrary');
+		expect(msg).toContain('npm run catalog:cleanup -- --from-backup');
+	});
+
+	it('refuses offline even with no skips recorded (a cache-complete offline build)', () => {
+		expect(offlineChangesetRefusal({ offline: true })).toMatch(/none recorded/);
+	});
+
+	it('accepts online and pre-marker changesets', () => {
+		expect(offlineChangesetRefusal({ kind: 'catalog-cleanup', offline: false })).toBeNull();
+		expect(offlineChangesetRefusal({ kind: 'catalog-cleanup' })).toBeNull();
+		expect(offlineChangesetRefusal({ offline: 'true' })).toBeNull();
+		expect(offlineChangesetRefusal(null)).toBeNull();
+		const committed = JSON.parse(
+			readFileSync(resolve(ROOT, 'data/discovery/catalog-cleanup.json'), 'utf-8'),
+		);
+		expect(offlineChangesetRefusal(committed)).toBeNull();
+	});
+
+	it('is wired into apply before any credential or live read (dry-run included)', () => {
+		const src = readFileSync(resolve(ROOT, 'scripts/apply-catalog-changeset.ts'), 'utf-8');
+		const main = src.slice(src.indexOf('async function main('));
+		const call = main.search(/offlineChangesetRefusal\(\s*raw\s*\)/);
+		expect(call).toBeGreaterThan(-1);
+		expect(main.slice(call)).toMatch(
+			/^[\s\S]*?if\s*\(\s*refusal\s*\)\s*\{[^}]*process\.exit\(\s*1\s*\)/,
+		);
+		expect(call).toBeLessThan(main.search(/resolveCredentials\(/));
+		expect(call).toBeLessThan(main.search(/readLive\(\s*\)/));
+		expect(call).toBeLessThan(main.search(/if\s*\(\s*!APPLY\s*\)/));
 	});
 });

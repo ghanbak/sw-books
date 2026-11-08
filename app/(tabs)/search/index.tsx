@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
@@ -7,10 +7,15 @@ import { ErrorState } from '@/components/error-state';
 import { TabHeaderActions } from '@/components/tab-header-actions';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { announce } from '@/hooks/useAccessibility';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
 import { selectListState } from '@/lib/list-state';
 import { searchBooks } from '@/lib/search';
+import { searchAnnouncement } from '@/lib/search-a11y';
+
+/** Wait for typing to settle before speaking the result count. */
+const ANNOUNCE_DELAY_MS = 600;
 
 /**
  * Search tab — native iOS header search bar (under the large title) with live results.
@@ -29,6 +34,15 @@ export default function SearchScreen() {
 
 	// Catalog state first: until it loads, an empty result is "not loaded yet", not "no match".
 	const catalogState = selectListState({ loading, error, count: books.length });
+
+	// Focus stays in the search field, so speak the outcome. `trimmed` is a dep so a new query
+	// with the same count still announces.
+	useEffect(() => {
+		const message = searchAnnouncement({ query: trimmed, catalogState, count: results.length });
+		if (message === null) return;
+		const timer = setTimeout(() => announce(message), ANNOUNCE_DELAY_MS);
+		return () => clearTimeout(timer);
+	}, [trimmed, catalogState, results.length]);
 
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
