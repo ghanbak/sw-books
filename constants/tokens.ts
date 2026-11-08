@@ -23,7 +23,8 @@ export const tokens = {
 	text: {
 		primary: '#ECEDEE', // main text
 		secondary: 'rgba(255,255,255,0.6)', // supporting text
-		hint: 'rgba(255,255,255,0.3)', // placeholder, metadata
+		tertiary: 'rgba(255,255,255,0.5)', // quiet readable text — labels, empty states, error detail (≥4.5:1)
+		hint: 'rgba(255,255,255,0.3)', // placeholders, disabled states and decorative icons only (~2.6:1, not for text)
 		inverse: '#0A0A0C', // text on accent-colored buttons
 	},
 	badge: {

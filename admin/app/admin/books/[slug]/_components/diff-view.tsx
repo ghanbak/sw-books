@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { createSaveGate, serializeSave } from '@app/serial-save';
 import type { BookCandidate, LookupResult } from '@app/sources/types';
 import type { Database } from '@app/types';
 import { Loader2, Sparkles } from 'lucide-react';
@@ -80,7 +81,17 @@ export function DiffView({ book }: { book: BookRow }) {
 	const router = useRouter();
 	const [candidates, setCandidates] = useState<LookupResult | null>(null);
 	const [lookupPending, startLookup] = useTransition();
-	const [applyPending, startApply] = useTransition();
+	const [, startApply] = useTransition();
+	// Held from Apply until a failed save or until the refreshed row (new
+	// `updated_at`) lands, so a second Apply can't resend the stale one (#184).
+	const [gate, setGate] = useState(createSaveGate);
+	const [applying, setApplying] = useState(false);
+	const [gateAt, setGateAt] = useState(book.updated_at);
+	if (book.updated_at !== gateAt) {
+		setGateAt(book.updated_at);
+		setGate(createSaveGate());
+		setApplying(false);
+	}
 	const [selection, setSelection] = useState<Partial<Record<DiffField, Source>>>({});
 	const [replaceIsbn, setReplaceIsbn] = useState(false);
 	const [confirmSlug, setConfirmSlug] = useState('');
@@ -154,13 +165,28 @@ export function DiffView({ book }: { book: BookRow }) {
 	const replaceBlocked = isbnSource !== 'current' && replaceIsbn && confirmSlug !== book.slug;
 
 	function apply() {
+		if (gate.held) return;
 		const p = buildPatch();
 		if (Object.keys(p).length === 0) {
 			toast.info('Nothing selected to apply');
 			return;
 		}
+		setApplying(true);
 		startApply(async () => {
-			const res = await patchBook(book.id, book.updated_at, p);
+			let res: Awaited<ReturnType<typeof patchBook>> | undefined;
+			try {
+				res = await serializeSave(
+					gate,
+					() => patchBook(book.id, book.updated_at, p),
+					(r) => r.ok,
+				);
+			} catch {
+				setApplying(false);
+				toast.error('Apply failed: request did not complete');
+				return;
+			}
+			if (!res) return;
+			if (!res.ok) setApplying(false);
 			if (res.ok) {
 				toast.success(`Applied ${Object.keys(p).length} field(s)`);
 				setSelection({});
@@ -319,8 +345,8 @@ export function DiffView({ book }: { book: BookRow }) {
 			<div className="flex items-center gap-3">
 				<AlertDialog>
 					<AlertDialogTrigger asChild>
-						<Button disabled={changeCount === 0 || replaceBlocked || applyPending}>
-							{applyPending && <Loader2 className="size-4 animate-spin" />}
+						<Button disabled={changeCount === 0 || replaceBlocked || applying}>
+							{applying && <Loader2 className="size-4 animate-spin" />}
 							Apply {changeCount > 0 ? `${changeCount} field(s)` : 'selected'}
 						</Button>
 					</AlertDialogTrigger>

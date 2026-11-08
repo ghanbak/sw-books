@@ -4,6 +4,7 @@ import {
 	addToOwnedLabel,
 	barcodeResultAnnouncement,
 	finishScanLabel,
+	hiddenDecorationProps,
 	photosCapturedLabel,
 	reviewMatchLabel,
 	swapCandidateLabel,
@@ -46,6 +47,14 @@ describe('scan a11y labels', () => {
 		expect(swapCandidateLabel({ title: 'Catalyst', authors: [], owned: false })).toBe(
 			'Swap to Catalyst',
 		);
+	});
+
+	it('hides decorative review covers from screen readers and touch (iOS + Android)', () => {
+		expect(hiddenDecorationProps).toEqual({
+			pointerEvents: 'none',
+			accessibilityElementsHidden: true,
+			importantForAccessibility: 'no-hide-descendants',
+		});
 	});
 
 	it('announces every barcode result kind', () => {

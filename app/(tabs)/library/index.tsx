@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
+import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { TabHeaderActions } from '@/components/tab-header-actions';
 import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
@@ -115,9 +116,7 @@ export default function LibraryScreen() {
 				</View>
 			</View>
 		) : (
-			<View style={styles.emptyList}>
-				<Text style={styles.emptyFilterText}>{view.emptyCopy}</Text>
-			</View>
+			<EmptyState message={view.emptyCopy} />
 		);
 
 	return (
@@ -211,10 +210,5 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		alignItems: 'center',
 		padding: 32,
-	},
-	emptyFilterText: {
-		fontSize: 15,
-		color: tokens.text.hint,
-		textAlign: 'center',
 	},
 });

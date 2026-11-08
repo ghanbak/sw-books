@@ -1,14 +1,29 @@
 import { resolve } from 'node:path';
 import { configDefaults, defineConfig } from 'vitest/config';
 
+const ADMIN = resolve(__dirname, 'admin');
+
 // `import type` aliases (e.g. `@/lib/hooks`) are erased at transform time, but the
 // resolver still needs the `@` alias to match tsconfig's paths during test runs.
+// Modules under admin/ (loaded by tests that drive a server action) follow
+// admin/tsconfig.json instead: `@/*` → admin/*, `@app/*` → lib/*.
 export default defineConfig({
-	resolve: {
-		alias: {
-			'@': resolve(__dirname, '.'),
+	plugins: [
+		{
+			name: 'tsconfig-paths',
+			enforce: 'pre',
+			resolveId(source, importer) {
+				const inAdmin = !!importer?.startsWith(`${ADMIN}/`);
+				let mapped: string | null = null;
+				if (source.startsWith('@/')) {
+					mapped = resolve(inAdmin ? ADMIN : __dirname, source.slice(2));
+				} else if (inAdmin && source.startsWith('@app/')) {
+					mapped = resolve(__dirname, 'lib', source.slice(5));
+				}
+				return mapped ? this.resolve(mapped, importer, { skipSelf: true }) : null;
+			},
 		},
-	},
+	],
 	test: {
 		environment: 'node',
 		include: ['**/*.test.ts'],

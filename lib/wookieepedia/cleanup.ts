@@ -314,6 +314,13 @@ export type CleanupChangeset = {
 	readonly kind: typeof CLEANUP_KIND;
 	readonly version: number;
 	readonly as_of: string;
+	/**
+	 * True when built with `--offline` (uncached lookups skipped, evidence partial):
+	 * catalog:apply refuses it. Absent on changesets written before the marker.
+	 */
+	readonly offline?: boolean;
+	/** Uncached lookups the build skipped, per lookup kind (all 0 online). */
+	readonly skipped?: Readonly<Record<string, number>>;
 	readonly policy: Record<string, string>;
 	readonly summary: {
 		readonly isbn_fixes: number;

@@ -115,7 +115,9 @@ export async function signInWithApple() {
 	});
 	if (error) throw error;
 
-	await flushPendingAppleName();
+	// Sign-in already succeeded; a failed name sync must not surface as a sign-in error.
+	// The pending name stays in storage and the cold-launch flush retries it.
+	await flushPendingAppleName().catch(() => {});
 }
 
 async function flushPendingAppleName() {

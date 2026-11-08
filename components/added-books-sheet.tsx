@@ -6,6 +6,11 @@ import { HoloCover } from '@/components/holo-cover';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import type { Book } from '@/lib/hooks';
+import {
+	SHEET_ICON_BUTTON_HIT_SLOP,
+	SHEET_ICON_BUTTON_SIZE,
+	slopBoundsStyle,
+} from '@/lib/tap-target';
 
 /**
  * The "N books added" confirmation that floats over the scanner camera (Figma
@@ -33,6 +38,7 @@ export function AddedBooksSheet({
 				<Pressable
 					style={styles.iconBtn}
 					onPress={onDismiss}
+					hitSlop={SHEET_ICON_BUTTON_HIT_SLOP}
 					accessibilityRole="button"
 					accessibilityLabel="Dismiss"
 					accessibilityHint="Returns to the scanner without adding"
@@ -45,6 +51,7 @@ export function AddedBooksSheet({
 				<Pressable
 					style={[styles.iconBtn, styles.confirm]}
 					onPress={onConfirm}
+					hitSlop={SHEET_ICON_BUTTON_HIT_SLOP}
 					accessibilityRole="button"
 					accessibilityLabel="Add to library"
 				>
@@ -98,6 +105,9 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'space-between',
+		// Grow the header's hit-test bounds by the buttons' slop (net zero layout); native
+		// hit-testing drops touches outside the parent before child hitSlop applies.
+		...slopBoundsStyle(SHEET_ICON_BUTTON_HIT_SLOP),
 	},
 	title: {
 		fontSize: 16,
@@ -105,9 +115,9 @@ const styles = StyleSheet.create({
 		color: tokens.text.primary,
 	},
 	iconBtn: {
-		width: 36,
-		height: 36,
-		borderRadius: 18,
+		width: SHEET_ICON_BUTTON_SIZE,
+		height: SHEET_ICON_BUTTON_SIZE,
+		borderRadius: SHEET_ICON_BUTTON_SIZE / 2,
 		alignItems: 'center',
 		justifyContent: 'center',
 		backgroundColor: tokens.surface.background,

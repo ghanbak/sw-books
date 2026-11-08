@@ -115,6 +115,26 @@ export function clampIndex(index: number, count: number): number {
 }
 
 /**
+ * What the rail's paging effect does when the pager reports `activeIndex`. While the rail is
+ * driving the pager toward `pendingIndex` (tap, scrub, a11y step), it leaves `translateX`
+ * alone until the pager arrives — a late callback for an earlier page must not yank it back.
+ * Once the pager reports the target it re-centers on it: a tap only drives the pager, so
+ * without this the tapped notch stayed wherever it was tapped.
+ *
+ * `translateX` is the target to animate to, or null to leave the rail where it is.
+ */
+export function railPagerSync(
+	pendingIndex: number | null,
+	activeIndex: number,
+	width: number,
+): { pendingIndex: number | null; translateX: number | null } {
+	if (pendingIndex !== null && activeIndex !== pendingIndex) {
+		return { pendingIndex, translateX: null };
+	}
+	return { pendingIndex: null, translateX: railTranslateX(width, activeIndex) };
+}
+
+/**
  * Where an arbitrary date falls on the (index-spaced) rail, as a fractional group index —
  * used to place film/TV anchors between the book notches they sit between. Dates outside
  * the catalog's range clamp to the first/last notch.

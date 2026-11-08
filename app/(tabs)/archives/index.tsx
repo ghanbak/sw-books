@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
+import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { TabHeaderActions } from '@/components/tab-header-actions';
 import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
@@ -43,9 +44,7 @@ export default function CatalogScreen() {
 	) : error ? (
 		<ErrorState title="Couldn't load the archive" message={error} onRetry={refetch} />
 	) : (
-		<View style={styles.center}>
-			<Text style={styles.emptyText}>No books found.</Text>
-		</View>
+		<EmptyState message="No books found." />
 	);
 
 	// The FlashList is the screen's direct first child + contentInsetAdjustmentBehavior="automatic" so the
@@ -93,9 +92,5 @@ const styles = StyleSheet.create({
 	controls: {
 		paddingHorizontal: 12,
 		paddingVertical: 8,
-	},
-	emptyText: {
-		fontSize: 15,
-		color: tokens.text.hint,
 	},
 });

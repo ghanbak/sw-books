@@ -16,6 +16,7 @@ import {
 	createOwnedAdder,
 	createShelfToggler,
 	createShelfWriteScope,
+	createShelfWriter,
 	isFetchCurrent,
 	mergeFetchedShelf,
 	setShelfRow,
@@ -182,20 +183,22 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 					userBooksRef.current = setShelfRow(userBooksRef.current, bookId, row);
 					setUserBooks((prev) => setShelfRow(prev, bookId, row));
 				},
-				write: async (w) => {
-					if (w.kind === 'insert') {
-						const { data, error } = await supabase
-							.from('user_books')
-							.insert(w.entry)
-							.select()
-							.single();
-						return { row: data, error };
-					}
-					const { error } =
-						w.kind === 'update'
-							? await supabase.from('user_books').update(w.patch).eq('id', w.id)
-							: await supabase.from('user_books').delete().eq('id', w.id);
-					return { row: null, error };
+				write: createShelfWriter({
+					insert: async (entry) =>
+						await supabase.from('user_books').insert(entry).select().single(),
+					update: async (id, patch) =>
+						await supabase.from('user_books').update(patch).eq('id', id).select('id'),
+					remove: async (id) => await supabase.from('user_books').delete().eq('id', id),
+				}),
+				readRow: async (uid, bookId) => {
+					const { data, error } = await supabase
+						.from('user_books')
+						.select('*')
+						.eq('user_id', uid)
+						.eq('book_id', bookId)
+						.maybeSingle();
+					if (error) console.warn('[user_books] re-read failed:', error.message);
+					return { row: data, error };
 				},
 				onError: (error) => {
 					console.warn('[user_books] toggle failed, reverted:', error.message);

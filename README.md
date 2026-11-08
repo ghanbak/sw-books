@@ -2,7 +2,7 @@
 
 Mobile app for tracking Star Wars novels across canon and Legends timelines.
 
-Sign in with Apple or Google, browse the curated catalog, scan ISBN barcodes to shelve quickly, and track what you own, what you've read, and what's next.
+Sign in with Apple or Google, browse the curated catalog, scan ISBN barcodes or photograph a whole shelf to add books quickly, and track what you own, what you've read, and what's next.
 
 ## Stack
 

@@ -14,7 +14,8 @@ import {
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HoloCover } from '@/components/holo-cover';
+import { EmptyState } from '@/components/empty-state';
+import { DecorativeCover, OwnedBadge } from '@/components/shelf-scan-parts';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
@@ -374,20 +375,7 @@ function ReviewRow({
 				</View>
 				{/* Cover is decorative here, so taps reach the row
 				    and VoiceOver doesn't announce a nameless extra button. */}
-				<View
-					pointerEvents="none"
-					accessibilityElementsHidden
-					importantForAccessibility="no-hide-descendants"
-				>
-					<HoloCover
-						coverUri={book.cover_image}
-						title={book.title}
-						author={book.author}
-						width={44}
-						height={66}
-						accessibilityLabel=""
-					/>
-				</View>
+				<DecorativeCover book={book} width={44} height={66} />
 				<View style={styles.rowInfo}>
 					<Text style={styles.rowTitle} numberOfLines={2}>
 						{book.title}
@@ -395,11 +383,7 @@ function ReviewRow({
 					<Text style={styles.rowAuthor} numberOfLines={1}>
 						{book.author.join(', ')}
 					</Text>
-					{owned && (
-						<View style={styles.ownedBadge}>
-							<Text style={styles.ownedBadgeText}>Already owned</Text>
-						</View>
-					)}
+					{owned && <OwnedBadge label="Already owned" />}
 				</View>
 			</Pressable>
 			<Pressable
@@ -442,20 +426,7 @@ function ReviewTile({
 			})}
 		>
 			<View style={[styles.tileCover, selected && styles.tileSelected, owned && styles.tileOwned]}>
-				<View
-					pointerEvents="none"
-					accessibilityElementsHidden
-					importantForAccessibility="no-hide-descendants"
-				>
-					<HoloCover
-						coverUri={book.cover_image}
-						title={book.title}
-						author={book.author}
-						width={84}
-						height={126}
-						accessibilityLabel=""
-					/>
-				</View>
+				<DecorativeCover book={book} width={84} height={126} />
 				{selected && (
 					<View style={styles.tileCheck}>
 						<SymbolView name="checkmark" size={14} tintColor={tokens.text.primary} weight="bold" />
@@ -549,11 +520,14 @@ function SwapSheet({
 						/>
 					</View>
 					{candidates.length === 0 && (
-						<Text style={styles.sheetEmpty}>
-							{query.trim().length >= 2
-								? 'No catalog matches.'
-								: 'No close alternates — try a search.'}
-						</Text>
+						<EmptyState
+							variant="inline"
+							message={
+								query.trim().length >= 2
+									? 'No catalog matches.'
+									: 'No close alternates — try a search.'
+							}
+						/>
 					)}
 					<FlatList
 						data={candidates}
@@ -570,20 +544,7 @@ function SwapSheet({
 									owned: ownedIds.has(item.id),
 								})}
 							>
-								<View
-									pointerEvents="none"
-									accessibilityElementsHidden
-									importantForAccessibility="no-hide-descendants"
-								>
-									<HoloCover
-										coverUri={item.cover_image}
-										title={item.title}
-										author={item.author}
-										width={32}
-										height={48}
-										accessibilityLabel=""
-									/>
-								</View>
+								<DecorativeCover book={item} width={32} height={48} />
 								<View style={styles.rowInfo}>
 									<Text style={styles.rowTitle} numberOfLines={1}>
 										{item.title}
@@ -592,11 +553,7 @@ function SwapSheet({
 										{item.author.join(', ')}
 									</Text>
 								</View>
-								{ownedIds.has(item.id) && (
-									<View style={styles.ownedBadge}>
-										<Text style={styles.ownedBadgeText}>Owned</Text>
-									</View>
-								)}
+								{ownedIds.has(item.id) && <OwnedBadge label="Owned" />}
 							</Pressable>
 						)}
 						style={styles.sheetList}
@@ -658,7 +615,7 @@ const styles = StyleSheet.create({
 		paddingBottom: 12,
 	},
 	sectionLabel: {
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		fontSize: 12,
 		fontWeight: '600',
 		textTransform: 'uppercase',
@@ -700,19 +657,6 @@ const styles = StyleSheet.create({
 	rowAuthor: {
 		color: tokens.text.secondary,
 		fontSize: 12,
-	},
-	ownedBadge: {
-		alignSelf: 'flex-start',
-		paddingHorizontal: 6,
-		paddingVertical: 2,
-		borderRadius: 4,
-		backgroundColor: tokens.badge.canon,
-		marginTop: 2,
-	},
-	ownedBadgeText: {
-		color: tokens.text.primary,
-		fontSize: 10,
-		fontWeight: '600',
 	},
 	swapButton: {
 		padding: 10,
@@ -767,7 +711,7 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 	},
 	tileOwnedText: {
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		fontSize: 10,
 	},
 	// Footer
@@ -798,7 +742,7 @@ const styles = StyleSheet.create({
 	},
 	startOver: { alignItems: 'center', paddingVertical: 6 },
 	startOverText: {
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		fontSize: 13,
 	},
 	// Done
@@ -890,12 +834,6 @@ const styles = StyleSheet.create({
 		color: tokens.text.primary,
 		fontSize: 14,
 		paddingVertical: 10,
-	},
-	sheetEmpty: {
-		color: tokens.text.hint,
-		fontSize: 13,
-		textAlign: 'center',
-		paddingVertical: 12,
 	},
 	sheetList: { flexGrow: 0 },
 	sheetRow: {

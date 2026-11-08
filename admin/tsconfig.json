@@ -30,6 +30,7 @@
 			"@app/result": ["../lib/result.ts"],
 			"@app/action-errors": ["../lib/action-errors.ts"],
 			"@app/stale-write": ["../lib/stale-write.ts"],
+			"@app/serial-save": ["../lib/serial-save.ts"],
 			"@app/book-schema": ["../lib/book-schema.ts"],
 			"@app/slug": ["../lib/slug.ts"],
 			"@app/wookieepedia/*": ["../lib/wookieepedia/*"]
