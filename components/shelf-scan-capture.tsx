@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.accent.primary,
 	},
 	finishText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 15,
 		fontWeight: '600',
 	},
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 	},
 	introButtonText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 16,
 		fontWeight: '600',
 	},
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.accent.primary,
 	},
 	primaryButtonText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 14,
 		fontWeight: '600',
 	},

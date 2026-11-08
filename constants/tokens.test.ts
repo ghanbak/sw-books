@@ -43,6 +43,18 @@ const card = parse(tokens.surface.card).rgb;
 // Scanner screens draw the overlay over a live camera feed; a white frame is the worst case.
 const overlayOnWhite = over(tokens.surface.overlay, [255, 255, 255]);
 
+describe('text on accent.primary (WCAG 1.4.3, 4.5:1)', () => {
+	const accent = parse(tokens.accent.primary).rgb;
+
+	it('text.inverse meets 4.5:1', () => {
+		expect(contrast(tokens.text.inverse, accent)).toBeGreaterThanOrEqual(4.5);
+	});
+
+	it('text.primary is below 4.5:1, so it is not a color for accent fills', () => {
+		expect(contrast(tokens.text.primary, accent)).toBeLessThan(4.5);
+	});
+});
+
 describe('text.tertiary contrast (WCAG 1.4.3, 4.5:1)', () => {
 	it.each([
 		['surface.background', background],
