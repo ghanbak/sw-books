@@ -14,6 +14,7 @@ import {
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { EmptyState } from '@/components/empty-state';
 import { HoloCover } from '@/components/holo-cover';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
@@ -499,11 +500,14 @@ function SwapSheet({
 						/>
 					</View>
 					{candidates.length === 0 && (
-						<Text style={styles.sheetEmpty}>
-							{query.trim().length >= 2
-								? 'No catalog matches.'
-								: 'No close alternates — try a search.'}
-						</Text>
+						<EmptyState
+							variant="inline"
+							message={
+								query.trim().length >= 2
+									? 'No catalog matches.'
+									: 'No close alternates — try a search.'
+							}
+						/>
 					)}
 					<FlatList
 						data={candidates}
@@ -831,12 +835,6 @@ const styles = StyleSheet.create({
 		color: tokens.text.primary,
 		fontSize: 14,
 		paddingVertical: 10,
-	},
-	sheetEmpty: {
-		color: tokens.text.tertiary,
-		fontSize: 13,
-		textAlign: 'center',
-		paddingVertical: 12,
 	},
 	sheetList: { flexGrow: 0 },
 	sheetRow: {
