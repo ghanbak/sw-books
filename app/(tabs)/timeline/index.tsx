@@ -15,6 +15,7 @@ import {
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { HoloFace, NoCoverText } from '@/components/holo-cover';
 import { HoloStage, type StageBook, type StageFace } from '@/components/holo-stage';
@@ -189,9 +190,7 @@ export default function TimelineScreen() {
 			) : listState === 'error' ? (
 				<ErrorState title="Couldn't load the timeline" message={error} onRetry={refetch} />
 			) : listState === 'empty' ? (
-				<View style={styles.empty}>
-					<Text style={styles.emptyText}>No books with a known place on the timeline yet.</Text>
-				</View>
+				<EmptyState message="No books with a known place on the timeline yet." />
 			) : (
 				<>
 					<View
@@ -275,10 +274,5 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 		padding: 32,
-	},
-	emptyText: {
-		fontSize: 14,
-		color: tokens.text.secondary,
-		textAlign: 'center',
 	},
 });
