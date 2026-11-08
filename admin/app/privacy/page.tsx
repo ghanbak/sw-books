@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ContactLink, InfoPage, Section } from '../_components/info-page';
 
 // Public, statically rendered, crawlable — App Store / Play review and bots must
 // reach this without JS or auth.
@@ -9,29 +10,11 @@ export const metadata = {
 	description: 'How Ossus Archives collects, uses, and protects your data.',
 };
 
-const EFFECTIVE = 'June 2, 2026';
-const CONTACT = 'privacy@ossusarchives.com';
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-	return (
-		<section className="space-y-2">
-			<h2 className="font-semibold text-foreground text-lg">{title}</h2>
-			<div className="space-y-2 text-muted-foreground text-sm leading-relaxed">{children}</div>
-		</section>
-	);
-}
+const EFFECTIVE = 'November 6, 2026';
 
 export default function PrivacyPolicy() {
 	return (
-		<main className="mx-auto max-w-2xl space-y-8 p-8">
-			<header className="space-y-1">
-				<Link href="/" className="text-muted-foreground text-sm hover:text-foreground">
-					← Ossus Archives
-				</Link>
-				<h1 className="font-semibold text-2xl tracking-tight">Privacy Policy</h1>
-				<p className="text-muted-foreground text-sm">Last updated: {EFFECTIVE}</p>
-			</header>
-
+		<InfoPage title="Privacy Policy" subtitle={`Last updated: ${EFFECTIVE}`}>
 			<p className="text-muted-foreground text-sm leading-relaxed">
 				Ossus Archives is a mobile app for tracking your personal Star Wars book collection. This
 				policy explains what we collect, how we use it, and your choices. We collect only what the
@@ -51,8 +34,25 @@ export default function PrivacyPolicy() {
 					to your account.
 				</p>
 				<p>
-					We do not collect location, contacts, or advertising identifiers, and we do not sell your
-					data.
+					<strong className="text-foreground">Camera and scanning.</strong> Barcode and shelf
+					scanning use your camera. Text and barcode recognition run on your device (Apple Vision on
+					iOS, ML Kit on Android); camera images are not uploaded or stored by us. When you scan an
+					ISBN, only that number is sent to look up the matching book in our catalog.
+				</p>
+				<p>
+					The app does not collect location, contacts, or advertising identifiers, and we do not
+					sell your data.
+				</p>
+			</Section>
+
+			<Section title="Website analytics">
+				<p>
+					This website (ossusarchives.com) uses Vercel Web Analytics to count page views. It uses no
+					cookies. Visitors are identified only by a hash of the incoming request, which is
+					discarded after 24 hours. Each page view records the page URL, referrer, approximate
+					location (country, region, city), browser, operating system, and device type. The data is
+					aggregated and is not used to identify you or track you across other sites. The mobile app
+					does not use these analytics.
 				</p>
 			</Section>
 
@@ -71,7 +71,8 @@ export default function PrivacyPolicy() {
 						(stores your account and library).
 					</li>
 					<li>
-						<strong className="text-foreground">Vercel</strong> — hosting for our web pages.
+						<strong className="text-foreground">Vercel</strong> — hosting and analytics for our web
+						pages.
 					</li>
 					<li>
 						<strong className="text-foreground">Apple and Google</strong> — sign-in providers.
@@ -94,11 +95,7 @@ export default function PrivacyPolicy() {
 				<p>
 					We keep your account and library until you delete your account. You can delete your
 					account and all associated data from within the app (Account → Delete account), or by
-					emailing us at{' '}
-					<a className="text-saber-blue hover:underline" href={`mailto:${CONTACT}`}>
-						{CONTACT}
-					</a>
-					.
+					emailing us at <ContactLink />.
 				</p>
 				<p>
 					Deletion removes your account identifier and your shelves, and revokes the sign-in token
@@ -123,13 +120,13 @@ export default function PrivacyPolicy() {
 
 			<Section title="Contact">
 				<p>
-					Questions? Email{' '}
-					<a className="text-saber-blue hover:underline" href={`mailto:${CONTACT}`}>
-						{CONTACT}
-					</a>
+					Questions? Email <ContactLink />. For help using the app, see{' '}
+					<Link className="text-saber-blue hover:underline" href="/support">
+						Support
+					</Link>
 					.
 				</p>
 			</Section>
-		</main>
+		</InfoPage>
 	);
 }
