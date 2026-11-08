@@ -1046,7 +1046,7 @@ export async function runCleanup(opts: CleanupOptions): Promise<CleanupRun> {
 		if (w) wikiText.set(r.slug, w.text);
 	}
 
-	const cs = buildCleanupChangeset({
+	const { kind, version, as_of, ...body } = buildCleanupChangeset({
 		rows: catalog,
 		asOf,
 		isbnEvidence,
@@ -1064,6 +1064,8 @@ export async function runCleanup(opts: CleanupOptions): Promise<CleanupRun> {
 		approvedCovers: APPROVED_COVERS,
 		approvedCoverHead: new Map(APPROVED_COVERS.map((a) => [a.url, cache.head[a.url] === true])),
 	});
+	// The marker lives in the JSON (not only the .md) so catalog:apply can refuse it.
+	const cs: CleanupChangeset = { kind, version, as_of, offline, skipped, ...body };
 	writeFileSync(paths.outJson, `${JSON.stringify(cs, null, 2)}\n`);
 	writeFileSync(paths.outMd, summaryMarkdown(cs, catalog.length, label, skipped));
 

@@ -11,6 +11,9 @@
  * (`"kind": "catalog-cleanup"`, lib/wookieepedia/cleanup.ts — ISBN repairs,
  * cover fills, drafted synopsis fills; written in that order).
  *
+ * A cleanup changeset built with `--offline` (`"offline": true`) is refused
+ * outright, dry-run included: its skipped lookups make the evidence partial.
+ *
  * Real writes require BOTH --apply and --production, then:
  *   1. no blocking problems (any insert with needs_type / invalid type refuses the run);
  *   2. a clean pre-flight plan (any conflict — a row changed since the build — refuses);
@@ -41,6 +44,7 @@ import {
 	type StepKind,
 	blockingProblems,
 	cleanupBlockingProblems,
+	offlineChangesetRefusal,
 	planAll,
 	planCleanup,
 	planCoverFix,
@@ -229,8 +233,14 @@ function load(raw: unknown, live: readonly LiveState[]): Loaded {
 }
 
 async function main(): Promise<void> {
-	const { url } = resolveCredentials(PROD);
 	const raw: unknown = JSON.parse(readFileSync(CHANGESET, 'utf-8'));
+	// Before any credential or DB read, and for dry-runs too.
+	const refusal = offlineChangesetRefusal(raw);
+	if (refusal) {
+		console.error(refusal);
+		process.exit(1);
+	}
+	const { url } = resolveCredentials(PROD);
 	const live = await readLive();
 	const cs = load(raw, live);
 	const { plan, problems } = cs;
