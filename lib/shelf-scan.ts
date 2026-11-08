@@ -262,6 +262,21 @@ export function stillsToDeleteOnUnmount(files: ShelfScanState['files']): string[
 	return Object.keys(files).filter((uri) => files[uri] !== 'pending');
 }
 
+/**
+ * Per-mount still filename generator. Names carry a session token so they never
+ * repeat across mounts: a late OCR continuation from an unmounted scanner deletes
+ * its still by uri, and must not hit a file the next mount reused the name for.
+ */
+export function createStillNamer(
+	session = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`,
+): () => string {
+	let seq = 0;
+	return () => {
+		seq += 1;
+		return `still-${session}-${seq}.jpg`;
+	};
+}
+
 /** At the photo cap → auto-capture stops and the UI nudges Finish. */
 export function atCaptureCap(state: ShelfScanState): boolean {
 	return state.captures.length >= SHELF_SCAN_CONSTANTS.MAX_CAPTURES;

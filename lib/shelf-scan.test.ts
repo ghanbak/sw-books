@@ -1,9 +1,13 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import {
 	SHELF_SCAN_CONSTANTS,
 	type ShelfScanAction,
 	type ShelfScanState,
 	atCaptureCap,
 	createCaptureGate,
+	createStillNamer,
 	deriveShelfChrome,
 	ghostUri,
 	initialShelfScanState,
@@ -347,5 +351,32 @@ describe('deriveShelfChrome', () => {
 		['done', 5, { immersive: true, dirty: false }], // already saved
 	] as const)('phase=%s captures=%d → %o', (phase, count, expected) => {
 		expect(deriveShelfChrome(phase, count)).toEqual(expected);
+	});
+});
+
+describe('createStillNamer', () => {
+	it('names are unique within a mount', () => {
+		const next = createStillNamer();
+		expect(next()).not.toBe(next());
+	});
+
+	it('a remount never reuses the previous mount’s names', () => {
+		// The old mount's late OCR continuation deletes by uri; any overlap with the
+		// new mount's names would delete a still under review.
+		const oldMount = createStillNamer();
+		const oldNames = new Set([oldMount(), oldMount(), oldMount()]);
+		const newMount = createStillNamer();
+		for (let i = 0; i < 3; i++) expect(oldNames.has(newMount())).toBe(false);
+	});
+
+	it('keeps the still-*.jpg shape', () => {
+		expect(createStillNamer('abc')()).toBe('still-abc-1.jpg');
+	});
+
+	it('useShelfScan names stills through the namer', () => {
+		const hook = readFileSync(resolve(__dirname, '..', 'hooks/useShelfScan.ts'), 'utf8');
+		expect(hook).toMatch(/useState\(\s*\(\)\s*=>\s*createStillNamer\(\s*\)\s*\)/);
+		expect(hook).toMatch(/new File\(\s*scanDirectory\(\),\s*nextStillName\(\)\s*\)/);
+		expect(hook).not.toMatch(/still-\$\{/);
 	});
 });
