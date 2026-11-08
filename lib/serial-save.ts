@@ -34,3 +34,46 @@ export async function serializeSave<T>(
 		throw e;
 	}
 }
+
+/**
+ * Per-row save chain for inline edits that stay mounted after a save (no
+ * remount frees a gate). A save queued while another for the same row is in
+ * flight waits for it and sends the `updated_at` that save returned, instead
+ * of the stale one it was queued with. The entry is dropped once the chain
+ * drains, so the next edit uses the caller's (refreshed) `updated_at`.
+ */
+export type RowSaveQueue = Map<string, { tail: Promise<unknown>; at: string | null }>;
+
+export function createRowSaveQueue(): RowSaveQueue {
+	return new Map();
+}
+
+/**
+ * `savedAt` returns the row's new `updated_at` for a successful result, or
+ * `undefined` for a failed one (later saves keep the previous value).
+ */
+export function queueRowSave<T>(
+	queue: RowSaveQueue,
+	id: string,
+	loadedAt: string | null,
+	send: (at: string | null) => Promise<T>,
+	savedAt: (result: T) => string | null | undefined,
+): Promise<T> {
+	const slot = queue.get(id) ?? { tail: Promise.resolve(), at: loadedAt };
+	const run = slot.tail.then(async () => {
+		const result = await send(slot.at);
+		const next = savedAt(result);
+		if (next !== undefined) slot.at = next;
+		return result;
+	});
+	const tail = run.then(
+		() => undefined,
+		() => undefined,
+	);
+	slot.tail = tail;
+	queue.set(id, slot);
+	void tail.then(() => {
+		if (slot.tail === tail && queue.get(id) === slot) queue.delete(id);
+	});
+	return run;
+}
