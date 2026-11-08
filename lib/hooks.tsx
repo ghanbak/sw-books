@@ -190,6 +190,16 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 						await supabase.from('user_books').update(patch).eq('id', id).select('id'),
 					remove: async (id) => await supabase.from('user_books').delete().eq('id', id),
 				}),
+				readRow: async (uid, bookId) => {
+					const { data, error } = await supabase
+						.from('user_books')
+						.select('*')
+						.eq('user_id', uid)
+						.eq('book_id', bookId)
+						.maybeSingle();
+					if (error) console.warn('[user_books] re-read failed:', error.message);
+					return { row: data, error };
+				},
 				onError: (error) => {
 					console.warn('[user_books] toggle failed, reverted:', error.message);
 					Alert.alert('Couldn’t update shelf', 'Your change wasn’t saved. Try again.');
