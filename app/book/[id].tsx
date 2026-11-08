@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Link, Stack, useIsPreview, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -393,6 +393,9 @@ const styles = StyleSheet.create({
  */
 function DetailHero({ book }: { book: Book }) {
 	const status = useHoloStatus();
+	// A long-press peek (`Link.Preview` on the book rows) renders this screen in a context-menu
+	// preview: keep it to the static face rather than spinning up a WebGPU device for a glance.
+	const isPreview = useIsPreview();
 	const [stageReady, setStageReady] = useState(false);
 	const stageBooks = useMemo<StageBook[]>(
 		() => [
@@ -411,34 +414,40 @@ function DetailHero({ book }: { book: Book }) {
 	const onFacesChange = useCallback((faces: ReadonlyMap<number, StageFace>) => {
 		setFace(faces.get(0) ?? null);
 	}, []);
-	const show3D = status.kind === 'available' && stageReady && face !== null;
+	const show3D = !isPreview && status.kind === 'available' && stageReady && face !== null;
 	return (
 		<View style={styles.hero}>
-			<HoloStage
-				mode="single"
-				books={stageBooks}
-				cardWidth={HERO_CARD_W}
-				pixelRatioCap={2}
-				onReadyChange={setStageReady}
-				onFacesChange={onFacesChange}
-			/>
-			{show3D ? (
-				face === 'sky' ? (
-					<View pointerEvents="none" style={[styles.heroFace, styles.heroText]}>
-						<NoCoverText title={book.title} author={book.author} width={HERO_CARD_W} />
-					</View>
-				) : null
-			) : (
-				<View style={styles.heroFace}>
-					<HoloFace
-						coverUri={book.cover_image}
-						title={book.title}
-						author={book.author}
-						width={HERO_CARD_W}
-						height={HERO_CARD_W * 1.5}
-					/>
-				</View>
+			{isPreview ? null : (
+				<HoloStage
+					mode="single"
+					books={stageBooks}
+					cardWidth={HERO_CARD_W}
+					pixelRatioCap={2}
+					onReadyChange={setStageReady}
+					onFacesChange={onFacesChange}
+				/>
 			)}
+			{/* The card-sized slot stays mounted across HoloFace → 3D so the row cover's zoom
+			    (Link.AppleZoom in BookCard) has a stable target to land on and return from. */}
+			<View pointerEvents={show3D ? 'none' : 'auto'} style={styles.heroFace}>
+				<Link.AppleZoomTarget>
+					<View style={styles.heroText}>
+						{show3D ? (
+							face === 'sky' ? (
+								<NoCoverText title={book.title} author={book.author} width={HERO_CARD_W} />
+							) : null
+						) : (
+							<HoloFace
+								coverUri={book.cover_image}
+								title={book.title}
+								author={book.author}
+								width={HERO_CARD_W}
+								height={HERO_CARD_W * 1.5}
+							/>
+						)}
+					</View>
+				</Link.AppleZoomTarget>
+			</View>
 		</View>
 	);
 }

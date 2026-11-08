@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -17,10 +17,12 @@ type DataPoint = { label: string; value: string };
  * Book row for the Archives and Library lists (Figma 130:344): a static holo-cover
  * thumbnail, title/author + canon badge, and a right-hand "data points" column,
  * wrapped in the shared Card with its notch footer.
+ *
+ * Opens detail through a `Link` (push, same `/book/[id]` route): on iOS 18+ the cover zooms into
+ * the detail hero (`Link.AppleZoom` → `Link.AppleZoomTarget` in `app/book/[id].tsx`) and a
+ * long-press peeks the detail (`Link.Preview`). Android and web get the plain push.
  */
 export const BookCard = memo(function BookCard({ book }: { book: Book }) {
-	const router = useRouter();
-
 	const dataPoints: DataPoint[] = [];
 	if (book.series_name) dataPoints.push({ label: 'SERIES', value: book.series_name });
 	const isbn = displayIsbn(book);
@@ -30,45 +32,60 @@ export const BookCard = memo(function BookCard({ book }: { book: Book }) {
 	if (book.format?.[0]) dataPoints.push({ label: 'FORMAT', value: book.format[0].toUpperCase() });
 
 	return (
-		<Pressable
-			onPress={() => router.push(`/book/${book.id}`)}
-			accessibilityRole="button"
-			accessibilityLabel={`${book.title} by ${book.author.join(', ')}`}
-			style={({ pressed }) => [styles.wrap, pressed && styles.pressed]}
-		>
-			<Card>
-				<View style={styles.row}>
-					<HoloCover
-						coverUri={book.cover_image}
-						title={book.title}
-						author={book.author}
-						width={66}
-						height={108}
-					/>
-					<View style={styles.leading}>
-						<Text style={styles.title} numberOfLines={2}>
-							{book.title}
-						</Text>
-						<Text style={styles.author} numberOfLines={1}>
-							{book.author.join(', ')}
-						</Text>
-						<CanonBadge canon={book.canon} style={styles.badge} />
-					</View>
-					{dataPoints.length > 0 && (
-						<View style={styles.data}>
-							{dataPoints.map((d) => (
-								<View key={d.label} style={styles.dataRow}>
-									<Text style={styles.dataLabel}>{d.label}</Text>
-									<Text style={styles.dataValue} numberOfLines={1}>
-										{d.value}
-									</Text>
+		// Link merges props into its child via Slot, which spreads `style`: the Pressable keeps a
+		// plain style object (a style function is dropped, an array throws in dev) and the press
+		// state lives on an inner View.
+		<Link href={`/book/${book.id}`} push asChild>
+			<Link.Trigger>
+				<Pressable
+					accessibilityRole="button"
+					accessibilityLabel={`${book.title} by ${book.author.join(', ')}`}
+					style={styles.wrap}
+				>
+					{({ pressed }) => (
+						<View style={pressed ? styles.pressed : undefined}>
+							<Card>
+								<View style={styles.row}>
+									<Link.AppleZoom>
+										<View>
+											<HoloCover
+												coverUri={book.cover_image}
+												title={book.title}
+												author={book.author}
+												width={66}
+												height={108}
+											/>
+										</View>
+									</Link.AppleZoom>
+									<View style={styles.leading}>
+										<Text style={styles.title} numberOfLines={2}>
+											{book.title}
+										</Text>
+										<Text style={styles.author} numberOfLines={1}>
+											{book.author.join(', ')}
+										</Text>
+										<CanonBadge canon={book.canon} style={styles.badge} />
+									</View>
+									{dataPoints.length > 0 && (
+										<View style={styles.data}>
+											{dataPoints.map((d) => (
+												<View key={d.label} style={styles.dataRow}>
+													<Text style={styles.dataLabel}>{d.label}</Text>
+													<Text style={styles.dataValue} numberOfLines={1}>
+														{d.value}
+													</Text>
+												</View>
+											))}
+										</View>
+									)}
 								</View>
-							))}
+							</Card>
 						</View>
 					)}
-				</View>
-			</Card>
-		</Pressable>
+				</Pressable>
+			</Link.Trigger>
+			<Link.Preview />
+		</Link>
 	);
 });
 
