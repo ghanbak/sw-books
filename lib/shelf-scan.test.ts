@@ -155,9 +155,26 @@ describe('shelfScanReducer — add flow', () => {
 		expect(s.phase).toBe('done');
 	});
 
-	it('adding → review when blocked (offline keeps the draft)', () => {
+	it('adding → review when blocked (non-queueable failure keeps the draft)', () => {
 		const s = run([{ type: 'add_started' }, { type: 'add_blocked' }], review);
 		expect(s.phase).toBe('review');
+	});
+
+	it('adding → queued when the batch is queued offline', () => {
+		const s = run([{ type: 'add_started' }, { type: 'add_queued' }], review);
+		expect(s.phase).toBe('queued');
+	});
+
+	it('ignores add_queued outside adding (stale result)', () => {
+		expect(shelfScanReducer(review, { type: 'add_queued' })).toBe(review);
+		expect(shelfScanReducer(initialShelfScanState, { type: 'add_queued' })).toBe(
+			initialShelfScanState,
+		);
+	});
+
+	it('reset returns to the initial state from queued', () => {
+		const s = run([{ type: 'add_started' }, { type: 'add_queued' }, { type: 'reset' }], review);
+		expect(s).toEqual(initialShelfScanState);
 	});
 
 	it.each([
@@ -349,6 +366,7 @@ describe('deriveShelfChrome', () => {
 		['review', 0, { immersive: true, dirty: true }], // resumed draft, no captures
 		['adding', 5, { immersive: true, dirty: true }],
 		['done', 5, { immersive: true, dirty: false }], // already saved
+		['queued', 5, { immersive: true, dirty: false }], // saved to the offline queue
 	] as const)('phase=%s captures=%d → %o', (phase, count, expected) => {
 		expect(deriveShelfChrome(phase, count)).toEqual(expected);
 	});
