@@ -61,8 +61,9 @@ export type MatchConstants = {
  * Calibrated 2026-06-10 (Phase 4.5) on 3 labeled shelf photos: 28 expected catalog
  * books, ~12 on-shelf off-catalog books, DVDs, and two full non–Star Wars shelves as
  * noise. Result at these values: high-bucket recall 1.00 with the only high FPs
- * caused by a DVD spine bearing a catalog title verbatim. Desktop OCR (Apple Vision)
- * proxied ML Kit — revalidate on device (see plan). Sweep harness: `.calibration/`
+ * caused by a DVD spine bearing a catalog title verbatim. Run on desktop Apple Vision
+ * OCR, standing in for the shipping on-device engine (`expo-text-extractor`: Apple Vision
+ * on iOS, ML Kit on Android) — revalidate on device (see plan). Sweep harness: `.calibration/`
  * (local-only, gitignored — contains personal shelf photos).
  */
 export const MATCH_CONSTANTS = {

@@ -40,8 +40,20 @@ export type ShelfScanPhase =
 
 export type CaptureOcrStatus = 'pending' | 'done' | 'failed';
 
+/**
+ * Who owns a still's file on disk — distinct from its OCR status, and tracked by uri
+ * because a still can outlive its capture record (reset, or a `capture_taken` the
+ * reducer refused) while its OCR read is still in flight.
+ *
+ * - `pending`: an OCR read may be using the file — never delete it.
+ * - `retained`: settled, but kept as the ghost overlap guide while capturing may resume.
+ * - `deleted`: settled and no longer needed — the hook deletes it, then acknowledges
+ *   with `files_deleted`, which drops the entry. Terminal.
+ */
+export type CaptureFileStatus = 'pending' | 'retained' | 'deleted';
+
 export type CaptureRecord = {
-	/** `file://` URI of the still (deleted from disk once it stops being the ghost). */
+	/** `file://` URI of the still (its file's lifecycle lives in `ShelfScanState.files`). */
 	uri: string;
 	ocr: CaptureOcrStatus;
 };
@@ -51,9 +63,13 @@ export type ShelfScanState = {
 	captures: CaptureRecord[];
 	/** OCR fragments accumulated incrementally across all captures (cross-photo bag). */
 	fragments: OcrFragment[];
+	/** File ledger for every still the session saved to disk and hasn't deleted yet. */
+	files: Readonly<Record<string, CaptureFileStatus>>;
 };
 
 export type ShelfScanAction =
+	/** A still was saved to disk — the session owns its file from here (any phase). */
+	| { type: 'still_saved'; uri: string }
 	| { type: 'capture_taken'; uri: string }
 	| { type: 'ocr_finished'; uri: string; fragments: OcrFragment[] }
 	| { type: 'ocr_failed'; uri: string }
@@ -65,12 +81,15 @@ export type ShelfScanAction =
 	| { type: 'add_started' }
 	| { type: 'add_blocked' }
 	| { type: 'add_succeeded' }
-	| { type: 'reset' };
+	| { type: 'reset' }
+	/** The hook deleted these `deleted`-status files — drop them from the ledger. */
+	| { type: 'files_deleted'; uris: string[] };
 
 export const initialShelfScanState: ShelfScanState = {
 	phase: 'capturing',
 	captures: [],
 	fragments: [],
+	files: {},
 };
 
 function setOcrStatus(
@@ -82,12 +101,91 @@ function setOcrStatus(
 }
 
 /**
+ * Phases where the ghost still is needed because more capturing could follow (incl.
+ * Empty's "keep scanning", and processing, where its OCR may still be settling).
+ */
+function ghostStillNeeded(phase: ShelfScanPhase): boolean {
+	return (
+		phase === 'capturing' || phase === 'interrupted' || phase === 'processing' || phase === 'empty'
+	);
+}
+
+/** Ledger bookkeeping the action itself implies (registration, release, acknowledgement). */
+function applyFileAction(
+	files: ShelfScanState['files'],
+	next: ShelfScanState,
+	action: ShelfScanAction,
+): ShelfScanState['files'] {
+	switch (action.type) {
+		case 'still_saved':
+			return action.uri in files ? files : { ...files, [action.uri]: 'pending' };
+		case 'ocr_finished':
+		case 'ocr_failed':
+			// A released still (no capture record) whose OCR just settled: nothing else
+			// will ever need the file.
+			if (files[action.uri] !== 'pending' || next.captures.some((c) => c.uri === action.uri)) {
+				return files;
+			}
+			return { ...files, [action.uri]: 'deleted' };
+		case 'files_deleted': {
+			const gone = action.uris.filter((uri) => files[uri] === 'deleted');
+			if (gone.length === 0) return files;
+			const rest = { ...files };
+			for (const uri of gone) delete rest[uri];
+			return rest;
+		}
+		default:
+			return files;
+	}
+}
+
+/** The status every live ledger entry should have in `state`. `deleted` is terminal. */
+function reconcileFiles(
+	files: ShelfScanState['files'],
+	state: ShelfScanState,
+): ShelfScanState['files'] {
+	const ghost = ghostUri(state);
+	const keepGhost = ghostStillNeeded(state.phase);
+	let changed: Record<string, CaptureFileStatus> | null = null;
+	for (const [uri, status] of Object.entries(files)) {
+		if (status === 'deleted') continue;
+		const capture = state.captures.find((c) => c.uri === uri);
+		let wanted: CaptureFileStatus;
+		if (!capture) {
+			// Released (reset / refused capture): keep it only while its OCR is in flight.
+			wanted = status === 'pending' ? 'pending' : 'deleted';
+		} else if (capture.ocr === 'pending') {
+			wanted = 'pending';
+		} else {
+			wanted = uri === ghost && keepGhost ? 'retained' : 'deleted';
+		}
+		if (wanted !== status) {
+			changed ??= { ...files };
+			changed[uri] = wanted;
+		}
+	}
+	return changed ?? files;
+}
+
+/**
  * Pure transition function. Actions that are invalid for the current phase are
  * ignored (return the state unchanged) — async results (OCR, stale UI events)
  * can land after a phase change without corrupting the flow.
+ *
+ * Every transition also reconciles the file ledger, so "which stills may be deleted
+ * now" is a pure function of state (`stillsToDelete`) rather than hook-side refs.
  */
 export function shelfScanReducer(state: ShelfScanState, action: ShelfScanAction): ShelfScanState {
+	const next = transition(state, action);
+	const files = reconcileFiles(applyFileAction(next.files, next, action), next);
+	return files === next.files ? next : { ...next, files };
+}
+
+function transition(state: ShelfScanState, action: ShelfScanAction): ShelfScanState {
 	switch (action.type) {
+		case 'still_saved':
+		case 'files_deleted':
+			return state; // ledger-only — handled by applyFileAction
 		case 'capture_taken': {
 			if (state.phase !== 'capturing') return state;
 			if (state.captures.length >= SHELF_SCAN_CONSTANTS.MAX_CAPTURES) return state;
@@ -130,7 +228,11 @@ export function shelfScanReducer(state: ShelfScanState, action: ShelfScanAction)
 		case 'add_succeeded':
 			return state.phase === 'adding' ? { ...state, phase: 'done' } : state;
 		case 'reset':
-			return initialShelfScanState;
+			// Captures leave the session, but their files stay in the ledger: settled ones
+			// reconcile to `deleted`; OCR-pending ones wait for their read to settle.
+			return Object.keys(state.files).length === 0
+				? initialShelfScanState
+				: { ...initialShelfScanState, files: state.files };
 		default:
 			return assertNever(action);
 	}
@@ -144,6 +246,20 @@ export function pendingOcrCount(state: ShelfScanState): number {
 /** The previous still, shown as the low-opacity overlap guide. */
 export function ghostUri(state: ShelfScanState): string | null {
 	return state.captures.length > 0 ? state.captures[state.captures.length - 1].uri : null;
+}
+
+/** Stills whose files can be deleted now (the hook deletes them, then `files_deleted`). */
+export function stillsToDelete(files: ShelfScanState['files']): string[] {
+	return Object.keys(files).filter((uri) => files[uri] === 'deleted');
+}
+
+/**
+ * Stills to delete when the session unmounts: everything not under an OCR read.
+ * `pending` files are left to their OCR continuation, which deletes them itself once
+ * it sees the hook has unmounted (no reducer is left to own them).
+ */
+export function stillsToDeleteOnUnmount(files: ShelfScanState['files']): string[] {
+	return Object.keys(files).filter((uri) => files[uri] !== 'pending');
 }
 
 /** At the photo cap → auto-capture stops and the UI nudges Finish. */
