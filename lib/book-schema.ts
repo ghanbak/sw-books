@@ -42,8 +42,15 @@ export const bookFields = {
 	timeline_order: z.number().nullable(),
 };
 
+/**
+ * Patch-only: an edit may change authors but never clear them all (the
+ * manual form's empty Author field would otherwise write `author: []`).
+ * `createSchema` still allows `[]`; the seed/CSV path doesn't use these schemas.
+ */
+export const AUTHOR_REQUIRED_MESSAGE = 'at least one author is required';
+
 export const patchSchema = z
-	.object(bookFields)
+	.object({ ...bookFields, author: bookFields.author.min(1, AUTHOR_REQUIRED_MESSAGE) })
 	.partial()
 	// Lenient: a patch may omit isbn while setting primary_isbn (partial update).
 	.refine((p) => !p.isbn || !p.primary_isbn || p.isbn.includes(p.primary_isbn), {

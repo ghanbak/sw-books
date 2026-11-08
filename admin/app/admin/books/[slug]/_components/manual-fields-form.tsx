@@ -24,6 +24,7 @@ import {
 	manualEditPatch,
 	patchSchema,
 } from '@app/book-schema';
+import { createSaveGate, serializeSave } from '@app/serial-save';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { type ReactNode, startTransition, useState, useTransition } from 'react';
@@ -51,6 +52,8 @@ type Errors = Partial<Record<string, string>>;
  * `patchBook` with the `updated_at` the page loaded, so a write made elsewhere
  * since (another tab, a diff apply, a bulk op) comes back as CONFLICT. The
  * parent keys this on `updated_at`, so a refresh after any save resets drafts.
+ * Saves are serialized: after a success the form stays locked until that
+ * refresh remounts it, so a second click can't resend the stale `updated_at`.
  */
 export function ManualFieldsForm({
 	bookId,
@@ -64,7 +67,12 @@ export function ManualFieldsForm({
 	const router = useRouter();
 	const [draft, setDraft] = useState<ManualDraft>(() => draftFromBook(book));
 	const [errors, setErrors] = useState<Errors>({});
-	const [saving, startSave] = useTransition();
+	const [, startSave] = useTransition();
+	// Per-mount gate; the remount on the new `updated_at` is what frees it.
+	const [gate] = useState(createSaveGate);
+	// Mirrors the gate for rendering: true from submit until a failed save or
+	// the post-success remount.
+	const [saving, setSaving] = useState(false);
 
 	const patch = manualEditPatch(book, draft);
 	const changed = Object.keys(patch);
@@ -76,15 +84,29 @@ export function ManualFieldsForm({
 
 	function save(e: React.FormEvent) {
 		e.preventDefault();
-		if (saving || changed.length === 0) return;
+		if (gate.held || changed.length === 0) return;
 		const parsed = patchSchema.safeParse(patch);
 		if (!parsed.success) {
 			setErrors(issuesByField(parsed.error));
 			return;
 		}
 		setErrors({});
+		setSaving(true);
 		startSave(async () => {
-			const res = await patchBook(bookId, updatedAt, patch);
+			let res: Awaited<ReturnType<typeof patchBook>> | undefined;
+			try {
+				res = await serializeSave(
+					gate,
+					() => patchBook(bookId, updatedAt, patch),
+					(r) => r.ok,
+				);
+			} catch {
+				setSaving(false);
+				toast.error('Save failed: request did not complete');
+				return;
+			}
+			if (!res) return;
+			if (!res.ok) setSaving(false);
 			if (res.ok) {
 				toast.success(`Saved ${changed.length} field(s)`);
 				startTransition(() => router.refresh());

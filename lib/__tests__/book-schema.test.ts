@@ -75,6 +75,10 @@ describe('patchSchema', () => {
 		expect(reject({ author: ['Timothy Zahn', '  '] })).toMatch(/^author\.1: /);
 	});
 
+	it('rejects clearing every author (#172)', () => {
+		expect(reject({ author: [] })).toMatch(/^author: /);
+	});
+
 	it('keeps the primary_isbn membership rule', () => {
 		expect(reject({ isbn: ['9780345511270'], primary_isbn: '9780000000000' })).toMatch(
 			/^primary_isbn: /,
@@ -87,6 +91,11 @@ describe('createSchema', () => {
 		const base = { title: 'X', slug: 'x', canon: 'Canon', type: 'Adult Novel' };
 		expect(createSchema.safeParse({ ...base, cover_image: 'nope' }).success).toBe(false);
 		expect(createSchema.safeParse(base).success).toBe(true);
+	});
+
+	it('still allows a book with no author (create path is not narrowed)', () => {
+		const base = { title: 'X', slug: 'x', canon: 'Canon', type: 'Adult Novel' };
+		expect(createSchema.safeParse({ ...base, author: [] }).success).toBe(true);
 	});
 });
 
@@ -123,6 +132,14 @@ describe('manualEditPatch', () => {
 		const res = patchSchema.safeParse(patch);
 		expect(res.success).toBe(false);
 		if (!res.success) expect(Object.keys(issuesByField(res.error))).toEqual(['timeline_order']);
+	});
+
+	it('turns a cleared Author field into a field error, not an author: [] write (#172)', () => {
+		const patch = manualEditPatch(BOOK, { ...draftFromBook(BOOK), author: ' ; , ' });
+		expect(patch).toEqual({ author: [] });
+		const res = patchSchema.safeParse(patch);
+		expect(res.success).toBe(false);
+		if (!res.success) expect(Object.keys(issuesByField(res.error))).toEqual(['author']);
 	});
 
 	it('passes a blank title through so validation rejects it', () => {
