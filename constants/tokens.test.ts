@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { tokens } from '@/constants/tokens';
@@ -60,5 +63,65 @@ describe('text.tertiary contrast (WCAG 1.4.3, 4.5:1)', () => {
 
 	it('text.hint is below 4.5:1, so it is not a text color', () => {
 		expect(contrast(tokens.text.hint, background)).toBeLessThan(4.5);
+	});
+});
+
+const source = (path: string) => readFileSync(resolve(__dirname, '..', path), 'utf8');
+
+describe('meaningful non-text UI contrast (WCAG 1.4.11, 3:1)', () => {
+	const surfaces = [
+		['surface.background', background],
+		['surface.card', card],
+		['surface.overlay over a white camera frame', overlayOnWhite],
+	] as const;
+
+	it.each(surfaces)('text.tertiary meets 3:1 on %s', (_name, surface) => {
+		expect(contrast(tokens.text.tertiary, surface)).toBeGreaterThanOrEqual(3);
+	});
+
+	it('text.hint is below 3:1, so meaningful graphics cannot use it', () => {
+		expect(contrast(tokens.text.hint, background)).toBeLessThan(3);
+	});
+
+	it.each([
+		[
+			'buy-button info icon',
+			'components/buy-on-amazon-button.tsx',
+			/name="info\.circle"[^>]*?tintColor=\{\s*tokens\.text\.tertiary\s*\}/,
+		],
+		[
+			'profile external-link arrow',
+			'app/profile.tsx',
+			/name="arrow\.up\.right"[^>]*?color=\{\s*tokens\.text\.tertiary\s*\}/,
+		],
+		[
+			'shelf-scan-review unchecked checkbox border',
+			'components/shelf-scan-review.tsx',
+			/\bcheckbox:\s*\{[^}]*?borderColor:\s*tokens\.text\.tertiary\b/,
+		],
+		[
+			'timeline-rail inactive tick',
+			'components/timeline-rail.tsx',
+			/\btick:\s*\{[^}]*?backgroundColor:\s*tokens\.text\.tertiary\b/,
+		],
+	])('%s uses text.tertiary', (_name, path, pattern) => {
+		expect(source(path)).toMatch(pattern);
+	});
+});
+
+describe('book not-found layout', () => {
+	it('renders the full-screen EmptyState, which carries the horizontal padding', () => {
+		expect(source('app/book/[id].tsx')).toMatch(
+			/<EmptyState\s+message="If an item does not appear in our records, it does not exist\."\s+style=\{styles\.notFound\}\s*\/>/,
+		);
+		expect(source('components/empty-state.tsx')).toMatch(
+			/\bscreen:\s*\{[^}]*?paddingHorizontal:\s*40\b/,
+		);
+	});
+
+	it('does not override that padding', () => {
+		const notFound = source('app/book/[id].tsx').match(/\bnotFound:\s*\{[^}]*\}/)?.[0];
+		expect(notFound).toBeDefined();
+		expect(notFound).not.toMatch(/padding/);
 	});
 });
