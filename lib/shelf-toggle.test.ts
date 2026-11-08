@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { UserBook } from '@/lib/hooks';
 import {
 	type AddOwnedDeps,
+	type ShelfDb,
 	type ShelfToggleDeps,
 	type ShelfWrite,
 	type ShelfWriteTracker,
@@ -9,6 +12,7 @@ import {
 	createShelfToggler,
 	createShelfWriteScope,
 	createShelfWriteTracker,
+	createShelfWriter,
 	mergeFetchedShelf,
 	planToggle,
 	setShelfRow,
@@ -580,5 +584,120 @@ describe('planToggle', () => {
 			optimistic: null,
 			write: { kind: 'delete', id: existing.id },
 		});
+	});
+});
+
+/** `user_books` fake: `rows` is the server table; ids of deleted rows match nothing. */
+function fakeDb(rows: UserBook[] = []) {
+	const table = new Map(rows.map((r) => [r.id, r]));
+	let nextId = 1;
+	const db = {
+		insert: vi.fn(async (entry: Parameters<ShelfDb['insert']>[0]) => {
+			const dup = [...table.values()].some(
+				(r) => r.user_id === entry.user_id && r.book_id === entry.book_id,
+			);
+			if (dup) return { data: null, error: { message: 'duplicate key (user_id, book_id)' } };
+			const inserted = row({ ...entry, id: `server-${nextId++}` } as UserBook);
+			table.set(inserted.id, inserted);
+			return { data: inserted, error: null };
+		}),
+		update: vi.fn<ShelfDb['update']>(async (id, patch) => {
+			const hit = table.get(id);
+			if (!hit) return { data: [], error: null }; // PostgREST: 0 rows is not an error
+			table.set(id, { ...hit, ...patch });
+			return { data: [{ id }], error: null };
+		}),
+		remove: vi.fn(async (id: string) => {
+			table.delete(id);
+			return { error: null };
+		}),
+	} satisfies ShelfDb;
+	return { db, table };
+}
+
+function writerHarness(local: UserBook[], server: UserBook[]) {
+	const h = harness(local);
+	const { db, table } = fakeDb(server);
+	h.deps.write = createShelfWriter(db);
+	return { ...h, db, table, toggle: createShelfToggler(h.deps) };
+}
+
+describe('createShelfWriter — row gone on the server (#195)', () => {
+	it('an update matching no row recreates it with the shown flags, not a silent ok', async () => {
+		const stale = row({ book_id: 'b1', read: true });
+		const h = writerHarness([stale], []); // another device deleted the row
+
+		expect(await h.toggle('b1', 'owned', 'user-a')).toBe('ok');
+		expect(h.db.insert).toHaveBeenCalledWith({
+			user_id: 'user-a',
+			book_id: 'b1',
+			owned: true,
+			read: true,
+			want_to_read: false,
+			favorite: false,
+		});
+		const server = [...h.table.values()];
+		expect(server).toHaveLength(1);
+		expect(server[0]).toMatchObject({ book_id: 'b1', owned: true, read: true });
+		// Local row now carries the recreated id, so the next tap hits a real row.
+		expect(h.state().get('b1')).toEqual(server[0]);
+		expect(h.deps.onError).not.toHaveBeenCalled();
+	});
+
+	it('an update matching no row reverts and alerts when the recreate conflicts', async () => {
+		const stale = row({ book_id: 'b1', read: true });
+		const recreated = row({ id: 'other-device', book_id: 'b1', favorite: true });
+		const h = writerHarness([stale], [recreated]);
+
+		expect(await h.toggle('b1', 'owned', 'user-a')).toBe('failed');
+		expect(h.state().get('b1')).toEqual(stale);
+		expect(h.deps.onError).toHaveBeenCalledTimes(1);
+		// The other device's row is not clobbered.
+		expect(h.table.get('other-device')).toEqual(recreated);
+	});
+
+	it('an update matching its row does not insert', async () => {
+		const existing = row({ book_id: 'b1', read: true });
+		const h = writerHarness([existing], [existing]);
+
+		expect(await h.toggle('b1', 'owned', 'user-a')).toBe('ok');
+		expect(h.db.insert).not.toHaveBeenCalled();
+		expect(h.table.get(existing.id)).toMatchObject({ owned: true, read: true });
+		expect(h.state().get('b1')).toMatchObject({ id: existing.id, owned: true, read: true });
+	});
+
+	it('an update error is reported without a recreate', async () => {
+		const existing = row({ book_id: 'b1', read: true });
+		const h = writerHarness([existing], [existing]);
+		h.db.update.mockResolvedValueOnce({ data: null, error: { message: 'network' } });
+
+		expect(await h.toggle('b1', 'owned', 'user-a')).toBe('failed');
+		expect(h.db.insert).not.toHaveBeenCalled();
+		expect(h.state().get('b1')).toEqual(existing);
+		expect(h.deps.onError).toHaveBeenCalledWith({ message: 'network' });
+	});
+
+	it('a delete matching no row resolves as done, with no alert', async () => {
+		const stale = row({ book_id: 'b1', read: true });
+		const h = writerHarness([stale], []);
+
+		expect(await h.toggle('b1', 'read', 'user-a')).toBe('ok');
+		expect(h.state().has('b1')).toBe(false);
+		expect(h.db.insert).not.toHaveBeenCalled();
+		expect(h.deps.onError).not.toHaveBeenCalled();
+	});
+});
+
+describe('shelf provider wiring (#195)', () => {
+	const src = readFileSync(resolve(__dirname, 'hooks.tsx'), 'utf8');
+
+	it('the toggler writes through createShelfWriter', () => {
+		expect(src).toMatch(/write:\s*createShelfWriter\(\s*\{/);
+	});
+
+	it('the update returns its matched rows', () => {
+		expect(src).toMatch(
+			/\.update\(\s*patch\s*\)\s*\.eq\(\s*'id',\s*id\s*\)\s*\.select\(\s*'id'\s*\)/,
+		);
 	});
 });
