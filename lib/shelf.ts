@@ -310,8 +310,8 @@ async function readLiveRow(
 }
 
 /**
- * Local row after a recreate conflict, given the row re-read from the server. Replaces
- * the dead-id row, without undoing a write made while the toggle was pending:
+ * Local row after a unique-key conflict, given the row re-read from the server. Replaces
+ * the dead-id row or placeholder, without undoing a write made while the toggle was pending:
  * a different id means a settled `addOwned` already stored a newer server row, and a
  * changed row with the same id carries a pending `addOwned`'s `owned` flag.
  */
@@ -357,9 +357,10 @@ export type ToggleOutcome = 'ok' | 'failed' | 'ignored' | 'stale';
  * round-trips. Placeholder rows are never written back (their id isn't a uuid).
  * On failure the tapped flag is rolled back (see `revertToggle`) and `onError` fires.
  * An update whose row is gone server-side is recreated (see `recreateWrite`, #195).
- * If another device recreated it first, the live row is re-read so the next tap
- * targets it (#198). The claim is held across that read; if the read fails, the
- * normal rollback runs and the next tap heals the row the same way.
+ * If an insert or a recreate hits the unique key because another device already has
+ * the row, the live row is re-read so the next tap targets it (#198, #206). The claim
+ * is held across that read; if the read fails, the normal rollback runs and the next
+ * tap heals the row the same way.
  * A write that settles after the user changed touches nothing (`'stale'`).
  */
 export function createShelfToggler(deps: ShelfToggleDeps) {
@@ -377,14 +378,14 @@ export function createShelfToggler(deps: ShelfToggleDeps) {
 			deps.set(bookId, optimistic);
 			const result = await deps.write(write);
 			let { row, error } = result;
-			let conflicted: UserBook | null = null;
 			if (!deps.isCurrentUser(userId)) return 'stale';
 			if (result.missing && optimistic) {
 				({ row, error } = await deps.write(recreateWrite(optimistic)));
 				if (!deps.isCurrentUser(userId)) return 'stale';
 				if (!error && !row) error = { message: 'Shelf row could not be recreated' };
-				if (error?.code === UNIQUE_VIOLATION) conflicted = optimistic;
 			}
+			// A plain insert or a recreate hit UNIQUE(user_id, book_id).
+			const conflicted = error?.code === UNIQUE_VIOLATION ? optimistic : null;
 			if (error) {
 				applied = false;
 				const live = conflicted ? await readLiveRow(deps, bookId, userId) : undefined;
