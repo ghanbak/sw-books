@@ -7,6 +7,7 @@ import { CanonBadge } from '@/components/ui/canon-badge';
 import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { bookRowLabel } from '@/lib/book-a11y';
 import type { Book } from '@/lib/hooks';
 import { displayIsbn } from '@/lib/isbn';
 import { eraLabel } from '@/lib/timeline';
@@ -33,7 +34,7 @@ export const BookCard = memo(function BookCard({ book }: { book: Book }) {
 		<Pressable
 			onPress={() => router.push(`/book/${book.id}`)}
 			accessibilityRole="button"
-			accessibilityLabel={`${book.title} by ${book.author.join(', ')}`}
+			accessibilityLabel={bookRowLabel(book)}
 			style={({ pressed }) => [styles.wrap, pressed && styles.pressed]}
 		>
 			<Card>

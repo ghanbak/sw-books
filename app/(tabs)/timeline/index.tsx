@@ -25,6 +25,7 @@ import { CanonBadge } from '@/components/ui/canon-badge';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { useReduceMotion } from '@/hooks/useAccessibility';
+import { bookRowLabel } from '@/lib/book-a11y';
 import { getCoverColor } from '@/lib/cover';
 import { cardRect } from '@/lib/holo3d/pager';
 import { useHoloStatus } from '@/lib/holo3d/status';
@@ -139,7 +140,7 @@ export default function TimelineScreen() {
 						}}
 						onPressOut={() => setPressedPage(null)}
 						accessibilityRole="button"
-						accessibilityLabel={`${item.title} by ${item.author.join(', ')}`}
+						accessibilityLabel={bookRowLabel(item)}
 					>
 						{show3D && face ? (
 							<>
