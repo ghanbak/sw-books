@@ -17,6 +17,7 @@ import {
 	type TimelineGroup,
 	clampIndex,
 	indexAtScreenX,
+	railPagerSync,
 	railTranslateX,
 } from '@/lib/timeline';
 import {
@@ -91,16 +92,14 @@ export function TimelineRail({
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `resync` is a deliberate re-run trigger (the settle fallback bumps it to make the rail follow the pager again).
 	useEffect(() => {
 		if (scrubbing.value) return;
-		if (pendingIndex.current !== null) {
-			// translateX is already where the scrub put it; just wait for the pager to agree.
-			if (activeIndex === pendingIndex.current) {
-				pendingIndex.current = null;
-				setTargetIndex(null);
-			}
-			return;
-		}
+		// Hold the rail while the pager catches up to a pending target; re-center once it does
+		// (a tap only drives the pager, so this is what centers the tapped notch).
+		const sync = railPagerSync(pendingIndex.current, activeIndex, width);
+		if (sync.translateX === null) return;
+		if (pendingIndex.current !== null) setTargetIndex(null);
+		pendingIndex.current = sync.pendingIndex;
 		lastGroup.value = activeIndex;
-		translateX.value = withTiming(railTranslateX(width, activeIndex), { duration: 220 });
+		translateX.value = withTiming(sync.translateX, { duration: 220 });
 	}, [activeIndex, width, translateX, scrubbing, lastGroup, resync]);
 
 	// Drive the pager to a group (JS thread): remember the target, buzz, scroll.
@@ -267,8 +266,15 @@ export function TimelineRail({
 					</View>
 				</GestureDetector>
 			</View>
+			{/* Hidden from screen readers: the rail already announces this date as its value. */}
 			{active && (
-				<Text style={[styles.label, isScrubbing && styles.labelScrubbing]}>{active.label}</Text>
+				<Text
+					style={[styles.label, isScrubbing && styles.labelScrubbing]}
+					accessibilityElementsHidden
+					importantForAccessibility="no-hide-descendants"
+				>
+					{active.label}
+				</Text>
 			)}
 		</View>
 	);
