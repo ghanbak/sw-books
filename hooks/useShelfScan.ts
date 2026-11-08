@@ -14,6 +14,7 @@ import {
 	SHELF_SCAN_CONSTANTS,
 	atCaptureCap,
 	createCaptureGate,
+	createStillNamer,
 	ghostUri,
 	initialShelfScanState,
 	pendingOcrCount,
@@ -115,7 +116,8 @@ export function useShelfScan({
 
 	const gateRef = useRef(createCaptureGate());
 	const captureInFlightRef = useRef(false);
-	const stillSeqRef = useRef(0);
+	// Session-unique names, so a previous mount's late cleanup can't delete ours.
+	const [nextStillName] = useState(() => createStillNamer());
 	// Per-mount liveness token: a remount's orphan sweep must not receive files from
 	// a previous instance's still-running capture pipeline, and once unmounted there is
 	// no reducer left to own a still whose OCR settles late.
@@ -223,10 +225,9 @@ export function useShelfScan({
 				return;
 			}
 
-			// Our own sequential names — capture records are keyed by uri, so uniqueness
-			// is enforced here rather than assumed of the camera's temp names.
-			stillSeqRef.current += 1;
-			const destination = new File(scanDirectory(), `still-${stillSeqRef.current}.jpg`);
+			// Our own names — capture records are keyed by uri, so uniqueness is enforced
+			// here rather than assumed of the camera's temp names.
+			const destination = new File(scanDirectory(), nextStillName());
 			file.move(destination);
 			const uri = destination.uri;
 
@@ -258,7 +259,7 @@ export function useShelfScan({
 		} finally {
 			captureInFlightRef.current = false;
 		}
-	}, [recognizeStill]);
+	}, [recognizeStill, nextStillName]);
 
 	// Hands-free auto-capture: steady-hold fires the gate; movement between captures
 	// is required, so resting on a framing never duplicates stills.
