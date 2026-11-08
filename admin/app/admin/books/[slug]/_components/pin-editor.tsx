@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { callAction } from '@/lib/call-action';
 import { cn } from '@/lib/utils';
 import type { EnrichmentPin } from '@app/wookieepedia/pins';
 import { Check, ExternalLink, Loader2, Pin, PinOff, Search, X } from 'lucide-react';
@@ -71,7 +72,7 @@ export function PinEditor({
 	function search(e: React.FormEvent) {
 		e.preventDefault();
 		startSearch(async () => {
-			const res = await searchPinCandidates(slug, query);
+			const res = await callAction(() => searchPinCandidates(slug, query), 'Search failed');
 			if (res.ok) setResults(res.data);
 			else toast.error(res.error.message);
 		});
@@ -80,7 +81,10 @@ export function PinEditor({
 	function save(c: PinCandidate) {
 		setSavingId(c.pageid);
 		startSave(async () => {
-			const res = await savePin({ slug, pageid: c.pageid, note: note.trim() || undefined });
+			const res = await callAction(
+				() => savePin({ slug, pageid: c.pageid, note: note.trim() || undefined }),
+				'Pin failed',
+			);
 			setSavingId(null);
 			if (!res.ok) {
 				toast.error(res.error.message);
@@ -96,7 +100,7 @@ export function PinEditor({
 
 	function remove() {
 		startSave(async () => {
-			const res = await removePin(slug);
+			const res = await callAction(() => removePin(slug), 'Remove failed');
 			if (!res.ok) {
 				toast.error(res.error.message);
 				return;

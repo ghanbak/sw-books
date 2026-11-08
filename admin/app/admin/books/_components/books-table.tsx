@@ -27,6 +27,7 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
+import { callAction } from '@/lib/call-action';
 import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
 import { cn } from '@/lib/utils';
 import { type BulkItemResult, runBulkSequential } from '@app/bulk-run';
@@ -182,7 +183,7 @@ function DeleteBookCell({
 						disabled={typed.trim() !== slug || pending}
 						onClick={() =>
 							startDelete(async () => {
-								const res = await deleteBook(id, typed.trim());
+								const res = await callAction(() => deleteBook(id, typed.trim()), 'Delete failed');
 								if (res.ok) {
 									toast.success(`Deleted “${title}”`);
 									setOpen(false);
@@ -525,7 +526,7 @@ export function BooksTable({
 
 	function recheck() {
 		startRecheck(async () => {
-			const res = await recheckWiki();
+			const res = await callAction(() => recheckWiki(), 'Recheck failed');
 			if (!res.ok) {
 				toast.error(res.error.message);
 				return;
@@ -553,12 +554,14 @@ export function BooksTable({
 		);
 		startTransition(async () => {
 			applyOptimistic({ id, field, value });
-			const res = await queueRowSave(
-				saveQueue,
-				id,
-				loadedAt,
-				(at) => patchBook(id, at, { [field]: value }),
-				(r) => (r.ok ? r.data.updated_at : undefined),
+			const res = await callAction(() =>
+				queueRowSave(
+					saveQueue,
+					id,
+					loadedAt,
+					(at) => patchBook(id, at, { [field]: value }),
+					(r) => (r.ok ? r.data.updated_at : undefined),
+				),
 			);
 			if (res.ok) {
 				const { updated_at } = res.data;
