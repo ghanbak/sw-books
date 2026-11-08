@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { tokens } from '@/constants/tokens';
@@ -31,11 +34,16 @@ function luminance(rgb: Rgb): number {
 	return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+/** WCAG 2.x contrast ratio of two opaque colors. */
+function ratio(first: Rgb, second: Rgb): number {
+	const a = luminance(first);
+	const b = luminance(second);
+	return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
 /** WCAG 2.x contrast ratio of `fg` (may be translucent) drawn on an opaque surface. */
 function contrast(fg: string, surface: Rgb): number {
-	const a = luminance(over(fg, surface));
-	const b = luminance(surface);
-	return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+	return ratio(over(fg, surface), surface);
 }
 
 const background = parse(tokens.surface.background).rgb;
@@ -60,5 +68,58 @@ describe('text.tertiary contrast (WCAG 1.4.3, 4.5:1)', () => {
 
 	it('text.hint is below 4.5:1, so it is not a text color', () => {
 		expect(contrast(tokens.text.hint, background)).toBeLessThan(4.5);
+	});
+});
+
+describe('OwnedBadge neutral style', () => {
+	const read = (path: string) => readFileSync(resolve(__dirname, '..', path), 'utf8');
+	const parts = read('components/shelf-scan-parts.tsx');
+	const review = read('components/shelf-scan-review.tsx');
+
+	const styleBlock = (name: string) =>
+		parts.match(new RegExp(`\\b${name}:\\s*\\{([^}]*)\\}`))?.[1] ?? '';
+
+	/** The real color a style prop resolves to, read from the component source. */
+	function styleColor(block: string, prop: string): string {
+		const match = block.match(new RegExp(`\\b${prop}:\\s*tokens\\.(\\w+)\\.(\\w+)`));
+		if (!match) throw new Error(`${prop} does not reference a token`);
+		return (tokens as unknown as Record<string, Record<string, string>>)[match[1]][match[2]];
+	}
+
+	const badge = styleBlock('badge');
+	const fill = styleColor(badge, 'backgroundColor');
+	const label = parse(styleColor(styleBlock('text'), 'color')).rgb;
+
+	// Owned rows dim as a group, so the pill and its label both fade toward the row's backdrop.
+	const rowOpacity = Number(review.match(/\browOwned:\s*\{\s*opacity:\s*([\d.]+)/)?.[1] ?? 1);
+	const overlayOnBlack = over(tokens.surface.overlay, [0, 0, 0]);
+
+	const placements = [
+		['alternates sheet on surface.card', card, 1],
+		['owned row on the overlay over a black frame', overlayOnBlack, rowOpacity],
+		['owned row on the overlay over a white frame', overlayOnWhite, rowOpacity],
+	] as const;
+
+	const rendered = (surface: Rgb, opacity: number) => {
+		const dim = (rgb: Rgb) => rgb.map((c, i) => c * opacity + surface[i] * (1 - opacity)) as Rgb;
+		return { pill: dim(over(fill, surface)), text: dim(label) };
+	};
+
+	it.each(placements)('label meets 4.5:1 in the %s', (_name, surface, opacity) => {
+		const { pill, text } = rendered(surface, opacity);
+		expect(ratio(text, pill)).toBeGreaterThanOrEqual(4.5);
+	});
+
+	it.each(placements)('fill stays distinct from the %s', (_name, surface, opacity) => {
+		expect(ratio(rendered(surface, opacity).pill, surface)).toBeGreaterThan(1.05);
+	});
+
+	it('uses the neutral style and no Canon or Legends token', () => {
+		expect(parts).toMatch(/<View\s+style=\{\s*styles\.badge\s*\}\s*>/);
+		expect(parts).toMatch(/<Text\s+style=\{\s*styles\.text\s*\}\s*>/);
+		expect(parts).not.toMatch(/tokens\s*\.\s*badge\b/);
+		expect(badge).toMatch(/backgroundColor:\s*tokens\.border\.subtle\b/);
+		expect(badge).toMatch(/borderColor:\s*tokens\.border\.subtle\b/);
+		expect(badge).toMatch(/borderWidth:\s*1\b/);
 	});
 });
