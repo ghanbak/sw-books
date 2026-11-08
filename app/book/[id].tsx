@@ -21,6 +21,7 @@ import { useHoloStatus } from '@/lib/holo3d/status';
 import type { Book } from '@/lib/hooks';
 import { useBookEnrichment, useBooks, useUserBooks } from '@/lib/hooks';
 import { displayIsbn } from '@/lib/isbn';
+import { formatPublishedDate } from '@/lib/published-date';
 import { supabase } from '@/lib/supabase';
 import { eraLabel } from '@/lib/timeline';
 import { parseTimeline } from '@/lib/wookieepedia/enrichment-display';
@@ -252,15 +253,6 @@ function FavoriteHeaderButton({ bookId }: { bookId: string }) {
 			/>
 		</Stack.Toolbar>
 	);
-}
-
-function formatPublishedDate(date: string | null): string | null {
-	if (!date) return null;
-	return new Date(date).toLocaleDateString('en-US', {
-		year: 'numeric',
-		month: 'long',
-		day: 'numeric',
-	});
 }
 
 function DetailRow({
