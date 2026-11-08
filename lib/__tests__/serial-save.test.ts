@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { createSaveGate, serializeSave } from '../serial-save';
+import { createRowSaveQueue, createSaveGate, queueRowSave, serializeSave } from '../serial-save';
 
 type Res = { ok: boolean };
 
@@ -76,5 +76,103 @@ describe('manual edit form wiring (#172)', () => {
 		// useTransition's isPending clears when patchBook resolves, before
 		// router.refresh() lands — the window that re-enabled Save.
 		expect(src).not.toMatch(/const \[saving, startSave\] = useTransition\(\)/);
+	});
+});
+
+type Saved = { ok: true; at: string } | { ok: false };
+const savedAt = (r: Saved) => (r.ok ? r.at : undefined);
+
+describe('queueRowSave (#184)', () => {
+	it("a second edit on the same row waits and sends the first save's updated_at", async () => {
+		const queue = createRowSaveQueue();
+		const d = deferred<Saved>();
+		const send = vi.fn(
+			(at: string | null): Promise<Saved> =>
+				at === 't0' ? d.promise : Promise.resolve({ ok: true, at: 't2' }),
+		);
+		const first = queueRowSave(queue, 'a', 't0', send, savedAt);
+		const second = queueRowSave(queue, 'a', 't0', send, savedAt);
+		await Promise.resolve();
+		expect(send).toHaveBeenCalledTimes(1);
+		d.resolve({ ok: true, at: 't1' });
+		await first;
+		await second;
+		expect(send.mock.calls.map((c) => c[0])).toEqual(['t0', 't1']);
+	});
+
+	it("does not chain across rows, and drains so the next edit uses the caller's value", async () => {
+		const queue = createRowSaveQueue();
+		const d = deferred<Saved>();
+		const send = vi.fn((_at: string | null): Promise<Saved> => d.promise);
+		void queueRowSave(queue, 'a', 'a0', send, savedAt);
+		void queueRowSave(queue, 'b', 'b0', send, savedAt);
+		await Promise.resolve();
+		expect(send.mock.calls.map((c) => c[0])).toEqual(['a0', 'b0']);
+		d.resolve({ ok: true, at: 'x1' });
+		await new Promise((r) => setTimeout(r, 0));
+		expect(queue.size).toBe(0);
+		const later = vi.fn(async (_at: string | null): Promise<Saved> => ({ ok: true, at: 'x2' }));
+		await queueRowSave(queue, 'a', 'fresh', later, savedAt);
+		expect(later).toHaveBeenCalledWith('fresh');
+	});
+
+	it('a failed or thrown save keeps the chain going with the last good updated_at', async () => {
+		const queue = createRowSaveQueue();
+		const thrown = queueRowSave(
+			queue,
+			'a',
+			't0',
+			async () => {
+				throw new Error('network');
+			},
+			savedAt,
+		);
+		const failed = queueRowSave(
+			queue,
+			'a',
+			't0',
+			async (): Promise<Saved> => ({ ok: false }),
+			savedAt,
+		);
+		const next = vi.fn(async (_at: string | null): Promise<Saved> => ({ ok: true, at: 't1' }));
+		const third = queueRowSave(queue, 'a', 't0', next, savedAt);
+		await expect(thrown).rejects.toThrow('network');
+		expect(await failed).toEqual({ ok: false });
+		await third;
+		expect(next).toHaveBeenCalledWith('t0');
+	});
+});
+
+describe('diff view apply wiring (#184)', () => {
+	const src = readFileSync(
+		resolve(__dirname, '../../admin/app/admin/books/[slug]/_components/diff-view.tsx'),
+		'utf8',
+	);
+
+	it('sends patchBook through the save gate', () => {
+		expect(src).toMatch(/from '@app\/serial-save'/);
+		expect(src).toMatch(/useState\(createSaveGate\)/);
+		expect(src).toMatch(/serializeSave\(\s*gate,\s*\(\)\s*=>\s*patchBook\(/);
+	});
+
+	it('frees the gate only when the refreshed row lands', () => {
+		expect(src).toMatch(/book\.updated_at !== gateAt/);
+		expect(src).toMatch(/setGate\(createSaveGate\(\)\)/);
+		expect(src).not.toMatch(/const \[applyPending, startApply\] = useTransition\(\)/);
+	});
+});
+
+describe('books table inline edit wiring (#184)', () => {
+	const src = readFileSync(
+		resolve(__dirname, '../../admin/app/admin/books/_components/books-table.tsx'),
+		'utf8',
+	);
+
+	it('queues inline saves per row with the carried updated_at', () => {
+		expect(src).toMatch(/useState\(createRowSaveQueue\)/);
+		expect(src).toMatch(
+			/queueRowSave\(\s*saveQueue,\s*id,\s*loadedAt,\s*\(at\)\s*=>\s*patchBook\(\s*id,\s*at,/,
+		);
+		expect(src).not.toMatch(/await patchBook\(\s*id,\s*loadedAt/);
 	});
 });

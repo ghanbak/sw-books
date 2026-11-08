@@ -31,6 +31,7 @@ import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
 import { cn } from '@/lib/utils';
 import { type BulkItemResult, runBulkSequential } from '@app/bulk-run';
 import { isValidIsbn } from '@app/isbn';
+import { createRowSaveQueue, queueRowSave } from '@app/serial-save';
 import type { Database } from '@app/types';
 import {
 	ENRICHMENT_STATUSES,
@@ -526,11 +527,21 @@ export function BooksTable({
 		});
 	}
 
+	// Two quick edits on one row would otherwise both send the loaded
+	// `updated_at`; the queue sends the second with the first's result (#184).
+	const [saveQueue] = useState(createRowSaveQueue);
+
 	const updateField = (id: string, field: EditableField, value: string | null) => {
 		const loadedAt = data.find((r) => r.id === id)?.updated_at ?? null;
 		startTransition(async () => {
 			applyOptimistic({ id, field, value });
-			const res = await patchBook(id, loadedAt, { [field]: value });
+			const res = await queueRowSave(
+				saveQueue,
+				id,
+				loadedAt,
+				(at) => patchBook(id, at, { [field]: value }),
+				(r) => (r.ok ? r.data.updated_at : undefined),
+			);
 			if (res.ok) {
 				const { updated_at } = res.data;
 				setData((prev) =>
