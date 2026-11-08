@@ -46,7 +46,7 @@ export default async function BooksPage() {
 			.order('title', { ascending: true }),
 		loadPlaceholderSlugs(),
 		loadEnrichmentContext(supabaseAdmin),
-		// Drift is N/A on hosted: there's no data/books.csv to compare against.
+		// Drift is N/A on hosted: there's no data/catalog-backup.csv to compare against.
 		IS_HOSTED ? null : getDriftReport(),
 	]);
 
@@ -120,7 +120,7 @@ export default async function BooksPage() {
 										: 'text-muted-foreground tabular-nums'
 								}
 							>
-								{driftRows > 0 ? `${driftRows} unsaved` : 'Synced to books.csv'}
+								{driftRows > 0 ? `${driftRows} unsaved` : 'Matches backup'}
 							</Badge>
 						</Link>
 					)}

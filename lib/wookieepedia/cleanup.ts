@@ -280,11 +280,32 @@ export type CoverReview = {
 	readonly note: string;
 };
 
-/** A cover fill; `fallback` is set when it came from the work-level fallback. */
+/**
+ * An operator-sourced cover for one row ISBN (e.g. the publisher's own image,
+ * which no automated pass reads), downloaded and looked at: right book and
+ * edition, English, not a placeholder. Wins over the automated passes; still
+ * held to the blank-row, row-ISBN, HEAD, shared and wiki guards.
+ */
+export type ApprovedCover = {
+	readonly slug: string;
+	/** The row ISBN the image is anchored to (must be in `coverIsbns(row)`). */
+	readonly isbn: string;
+	readonly url: string;
+	readonly note: string;
+};
+
+/**
+ * A cover fill; `fallback` is set when it came from the work-level fallback,
+ * `approved` when it came from an operator-approved cover.
+ */
 export type CleanupCoverFill = CoverFix & {
 	readonly fallback?: {
 		readonly via: FallbackVia;
 		readonly work: string;
+		readonly review: string;
+	};
+	readonly approved?: {
+		readonly isbn: string;
 		readonly review: string;
 	};
 };
@@ -293,6 +314,13 @@ export type CleanupChangeset = {
 	readonly kind: typeof CLEANUP_KIND;
 	readonly version: number;
 	readonly as_of: string;
+	/**
+	 * True when built with `--offline` (uncached lookups skipped, evidence partial):
+	 * catalog:apply refuses it. Absent on changesets written before the marker.
+	 */
+	readonly offline?: boolean;
+	/** Uncached lookups the build skipped, per lookup kind (all 0 online). */
+	readonly skipped?: Readonly<Record<string, number>>;
 	readonly policy: Record<string, string>;
 	readonly summary: {
 		readonly isbn_fixes: number;
@@ -323,7 +351,7 @@ export type CleanupChangeset = {
 export const CLEANUP_POLICY: Record<string, string> = {
 	isbn: "primary_isbn ∉ isbn[]: add primary_isbn to isbn[] when Open Library titles it as this book AND (the wiki lists it OR it is the same OL work as a row ISBN); reset primary_isbn to a row ISBN when the evidence assigns it to another book; flag anything else. Operator-approved additions (listed in the builder, each in the row's wiki infobox and on no other row) are appended in the same write. The only removal: an operator-approved collision removal (listed in the builder) drops an ISBN two rows share from the row it does not belong to, only while the owner row still holds it, never the row's primary_isbn, and never when Open Library titles it as this row's book. An operator-approved invalid-ISBN removal (listed in the builder) drops a value that fails the ISBN-13 check digit; when it was primary_isbn, primary_isbn moves to the named valid ISBN, which must be on the row. An operator-approved misfiled-ISBN removal (listed in the builder) drops a valid ISBN that is a different book, never when Open Library files it under the same work as an ISBN the row keeps; when it was primary_isbn, primary_isbn resets to the named or wiki-infobox row ISBN, which must be valid and on the row.",
 	covers:
-		'null/blank cover_image only: Open Library (every row ISBN), then Google Books (every row ISBN), then a Google Books title search accepted only when the hit lists a row ISBN; HEAD-checked against MIN_COVER_BYTES, never a cover another row uses, never a Wookieepedia image. Only when all of those find nothing for a released book: the cover of the Open Library work a row ISBN belongs to (openlibrary-work), else — only when no row ISBN is on Open Library — the single work an OL title + author search returns (openlibrary-search, "different edition: title+author match"; first published no later than the row, in English, Canon works 2014+). Both need the full normalized title + author-set match, the same HEAD/shared/wiki guards, and an operator visual review of that exact image; they may show a different printing. Unreleased books without one are listed, not forced.',
+		'null/blank cover_image only: Open Library (every row ISBN), then Google Books (every row ISBN), then a Google Books title search accepted only when the hit lists a row ISBN; HEAD-checked against MIN_COVER_BYTES, never a cover another row uses, never a Wookieepedia image. Only when all of those find nothing for a released book: the cover of the Open Library work a row ISBN belongs to (openlibrary-work), else — only when no row ISBN is on Open Library — the single work an OL title + author search returns (openlibrary-search, "different edition: title+author match"; first published no later than the row, in English, Canon works 2014+). Both need the full normalized title + author-set match, the same HEAD/shared/wiki guards, and an operator visual review of that exact image; they may show a different printing. Unreleased books without one are listed, not forced. An operator-approved cover (listed in the builder: an image for a row ISBN from a source no automated pass reads, e.g. the publisher, downloaded and visually reviewed) wins over all of the above, under the same blank-row, HEAD, shared and wiki guards, and only for an ISBN on the row.',
 	synopsis:
 		'null/blank synopsis only: original one-line drafts (never wiki CC BY-SA prose or publisher blurbs), each marked drafted for review; rows without a confident draft are skipped and listed.',
 };
@@ -723,6 +751,35 @@ export function vetFallbackCover(
 	return { ok: true, review };
 }
 
+export type ApprovedCoverVet =
+	| { readonly ok: true }
+	| { readonly ok: false; readonly reason: string };
+
+/**
+ * The guards an operator-approved cover must pass: the row has no cover, the
+ * anchor ISBN is on the row, not a wiki image, HEAD-checked (MIN_COVER_BYTES),
+ * and held by no other row.
+ */
+export function vetApprovedCover(
+	row: CleanupRow,
+	a: ApprovedCover,
+	ctx: {
+		readonly headOk: boolean;
+		/** coverKey → slug of every cover already on a row or reserved by a fill. */
+		readonly inUse: ReadonlyMap<string, string>;
+	},
+): ApprovedCoverVet {
+	const no = (reason: string): ApprovedCoverVet => ({ ok: false, reason });
+	if (!isBlank(row.cover_image)) return no('row already has a cover — never overwritten');
+	if (!coverIsbns(row).includes(a.isbn)) return no(`${a.isbn} is not an ISBN on the row`);
+	if (isWikiImage(a.url)) return no(`${a.url} is a Wookieepedia image`);
+	if (!ctx.headOk)
+		return no(`${a.url} failed the HEAD check (< ${MIN_COVER_BYTES} bytes or not 200)`);
+	const holder = ctx.inUse.get(coverKey(a.url));
+	if (holder && holder !== row.slug) return no(`${coverKey(a.url)} is already used by ${holder}`);
+	return { ok: true };
+}
+
 /** The changeset provenance tag for a fallback fill. */
 export function fallbackSource(c: WorkCoverCandidate): string {
 	return c.via === 'same-work'
@@ -803,6 +860,10 @@ export type CleanupInput = {
 	readonly fallbackHead?: ReadonlyMap<string, boolean>;
 	/** Operator visual reviews of fallback covers. */
 	readonly coverReviews?: readonly CoverReview[];
+	/** Operator-approved covers (win over every automated pass). */
+	readonly approvedCovers?: readonly ApprovedCover[];
+	/** HEAD-check results for approved cover URLs (url → passed). */
+	readonly approvedCoverHead?: ReadonlyMap<string, boolean>;
 };
 
 /**
@@ -1181,6 +1242,33 @@ export function buildCleanupChangeset(input: CleanupInput): CleanupChangeset {
 	const coversNotYet: CleanupFlag[] = [];
 	for (const row of rows) {
 		if (!isBlank(row.cover_image)) continue;
+		// Operator-approved cover first: a reviewed image beats any automated pick.
+		let approvedWhy: string | null = null;
+		let approvedFill = false;
+		for (const a of (input.approvedCovers ?? []).filter((x) => x.slug === row.slug)) {
+			const v = vetApprovedCover(row, a, {
+				headOk: input.approvedCoverHead?.get(a.url) === true,
+				inUse,
+			});
+			if (!v.ok) {
+				approvedWhy = v.reason;
+				continue;
+			}
+			inUse.set(coverKey(a.url), row.slug);
+			coverFills.push({
+				id: row.id,
+				slug: row.slug,
+				title: row.title,
+				before: row.cover_image,
+				after: a.url,
+				source: `operator-approved:isbn:${a.isbn}`,
+				reason: `no cover; operator-approved cover for ${a.isbn}; visual review: ${a.note}`,
+				approved: { isbn: a.isbn, review: a.note },
+			});
+			approvedFill = true;
+			break;
+		}
+		if (approvedFill) continue;
 		const candidates = input.coverCandidates.get(row.slug) ?? [];
 		const pick = pickCover(candidates, inUse, row.slug);
 		// Work-level fallback: only once every per-ISBN pass found nothing, released books only.
@@ -1248,6 +1336,7 @@ export function buildCleanupChangeset(input: CleanupInput): CleanupChangeset {
 				);
 			}
 			if (fallbackWhy) parts.push(`work-level fallback: ${fallbackWhy}`);
+			if (approvedWhy) parts.push(`operator-approved cover: ${approvedWhy}`);
 			return parts.join('; ');
 		})();
 		if (unreleased(row, input.asOf)) {

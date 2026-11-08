@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { DiffView } from './_components/diff-view';
 import { EnrichmentCard, EnrichmentShell } from './_components/enrichment-card';
+import { ManualFieldsForm } from './_components/manual-fields-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,15 @@ export default async function BookDiffPage({ params }: { params: Promise<{ slug:
 				<ArrowLeft className="size-4" /> Catalog
 			</Link>
 			<DiffView book={data} />
+			<div className="mt-10">
+				{/* Keyed on updated_at: any save (here, diff apply, bulk) resets the drafts. */}
+				<ManualFieldsForm
+					key={data.updated_at ?? 'null'}
+					bookId={data.id}
+					updatedAt={data.updated_at}
+					book={data}
+				/>
+			</div>
 			<div className="mt-10">
 				<Suspense
 					fallback={

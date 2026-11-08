@@ -1,14 +1,20 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import {
 	SHELF_SCAN_CONSTANTS,
 	type ShelfScanAction,
 	type ShelfScanState,
 	atCaptureCap,
 	createCaptureGate,
+	createStillNamer,
 	deriveShelfChrome,
 	ghostUri,
 	initialShelfScanState,
 	pendingOcrCount,
 	shelfScanReducer,
+	stillsToDelete,
+	stillsToDeleteOnUnmount,
 } from '@/lib/shelf-scan';
 import { describe, expect, it } from 'vitest';
 
@@ -173,6 +179,96 @@ describe('shelfScanReducer — add flow', () => {
 	});
 });
 
+// File ledger: pins WHEN each still becomes deletable. Expectations mirror the pre-ledger
+// hook (settled non-ghost stills deleted; ghost kept while capturing may resume; never
+// delete under an OCR read; released stills deleted once their OCR settles).
+describe('shelfScanReducer — still file ledger', () => {
+	const shot = (uri: string): ShelfScanAction[] => [
+		{ type: 'still_saved', uri },
+		{ type: 'capture_taken', uri },
+	];
+	const ocr = (uri: string): ShelfScanAction => ({ type: 'ocr_finished', uri, fragments: [] });
+
+	it('keeps an OCR-pending still, retains the settled ghost, deletes older settled stills', () => {
+		const pending = run(shot('a.jpg'));
+		expect(pending.files).toEqual({ 'a.jpg': 'pending' });
+		const s = run([ocr('a.jpg'), ...shot('b.jpg'), { type: 'ocr_failed', uri: 'b.jpg' }], pending);
+		expect(s.files).toEqual({ 'a.jpg': 'deleted', 'b.jpg': 'retained' });
+		expect(stillsToDelete(s.files)).toEqual(['a.jpg']);
+	});
+
+	it('deletes an older settled still while the newest is still OCR-pending', () => {
+		const s = run([...shot('a.jpg'), ...shot('b.jpg'), ocr('a.jpg')]);
+		expect(s.files).toEqual({ 'a.jpg': 'deleted', 'b.jpg': 'pending' });
+	});
+
+	it.each([
+		['interrupted', [{ type: 'interrupted' }]],
+		['processing', [{ type: 'finished' }]],
+		['empty', [{ type: 'finished' }, { type: 'matched', matchCount: 0 }]],
+	] as [string, ShelfScanAction[]][])('retains the ghost in %s', (phase, actions) => {
+		const s = run([...shot('a.jpg'), ocr('a.jpg'), ...actions]);
+		expect(s.phase).toBe(phase);
+		expect(s.files).toEqual({ 'a.jpg': 'retained' });
+	});
+
+	it('deletes the ghost once capture is over (review), and never resurrects it', () => {
+		const review = run([
+			...shot('a.jpg'),
+			ocr('a.jpg'),
+			{ type: 'finished' },
+			{ type: 'matched', matchCount: 1 },
+		]);
+		expect(review.files).toEqual({ 'a.jpg': 'deleted' });
+		const acked = shelfScanReducer(review, { type: 'files_deleted', uris: ['a.jpg'] });
+		expect(acked.files).toEqual({});
+		expect(run([{ type: 'add_started' }, { type: 'add_blocked' }], acked).files).toEqual({});
+	});
+
+	it('reset deletes settled stills but waits for in-flight OCR before releasing the rest', () => {
+		const s = run([...shot('a.jpg'), ocr('a.jpg'), ...shot('b.jpg'), { type: 'reset' }]);
+		expect(s.captures).toEqual([]);
+		expect(s.files).toEqual({ 'a.jpg': 'deleted', 'b.jpg': 'pending' });
+		const settled = shelfScanReducer(s, ocr('b.jpg'));
+		expect(settled.files).toEqual({ 'a.jpg': 'deleted', 'b.jpg': 'deleted' });
+		expect(settled.fragments).toEqual([]); // a released still's text doesn't leak back in
+	});
+
+	it('releases a refused capture once its OCR settles (shutter landed after Finish)', () => {
+		const s = run([{ type: 'finished' }, ...shot('late.jpg')]);
+		expect(s.captures).toEqual([]);
+		expect(s.files).toEqual({ 'late.jpg': 'pending' });
+		expect(shelfScanReducer(s, { type: 'ocr_failed', uri: 'late.jpg' }).files).toEqual({
+			'late.jpg': 'deleted',
+		});
+	});
+
+	it('files_deleted only drops deleted entries', () => {
+		const s = run([...shot('a.jpg')]);
+		expect(shelfScanReducer(s, { type: 'files_deleted', uris: ['a.jpg', 'x.jpg'] })).toBe(s);
+	});
+
+	it('the unmount sweep skips OCR-pending stills (their continuation self-cleans)', () => {
+		const s = run([
+			...shot('a.jpg'),
+			ocr('a.jpg'),
+			...shot('b.jpg'),
+			ocr('b.jpg'),
+			...shot('c.jpg'),
+		]);
+		expect(s.files).toEqual({ 'a.jpg': 'deleted', 'b.jpg': 'deleted', 'c.jpg': 'pending' });
+		const ghostRetained = run([...shot('d.jpg'), ocr('d.jpg')]);
+		expect(stillsToDeleteOnUnmount(ghostRetained.files)).toEqual(['d.jpg']);
+		expect(stillsToDeleteOnUnmount(s.files)).toEqual(['a.jpg', 'b.jpg']);
+	});
+
+	it('reset with no saved stills is exactly the initial state', () => {
+		expect(shelfScanReducer(run(shot('a.jpg').slice(1)), { type: 'reset' })).toBe(
+			initialShelfScanState,
+		);
+	});
+});
+
 describe('createCaptureGate', () => {
 	const cfg = { steadyMaxMagnitude: 0.15, steadyHoldMs: 600, minIntervalMs: 1200 };
 
@@ -255,5 +351,32 @@ describe('deriveShelfChrome', () => {
 		['done', 5, { immersive: true, dirty: false }], // already saved
 	] as const)('phase=%s captures=%d → %o', (phase, count, expected) => {
 		expect(deriveShelfChrome(phase, count)).toEqual(expected);
+	});
+});
+
+describe('createStillNamer', () => {
+	it('names are unique within a mount', () => {
+		const next = createStillNamer();
+		expect(next()).not.toBe(next());
+	});
+
+	it('a remount never reuses the previous mount’s names', () => {
+		// The old mount's late OCR continuation deletes by uri; any overlap with the
+		// new mount's names would delete a still under review.
+		const oldMount = createStillNamer();
+		const oldNames = new Set([oldMount(), oldMount(), oldMount()]);
+		const newMount = createStillNamer();
+		for (let i = 0; i < 3; i++) expect(oldNames.has(newMount())).toBe(false);
+	});
+
+	it('keeps the still-*.jpg shape', () => {
+		expect(createStillNamer('abc')()).toBe('still-abc-1.jpg');
+	});
+
+	it('useShelfScan names stills through the namer', () => {
+		const hook = readFileSync(resolve(__dirname, '..', 'hooks/useShelfScan.ts'), 'utf8');
+		expect(hook).toMatch(/useState\(\s*\(\)\s*=>\s*createStillNamer\(\s*\)\s*\)/);
+		expect(hook).toMatch(/new File\(\s*scanDirectory\(\),\s*nextStillName\(\)\s*\)/);
+		expect(hook).not.toMatch(/still-\$\{/);
 	});
 });

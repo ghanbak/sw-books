@@ -117,6 +117,7 @@ const TEMPLATE_TO_MARKER: Readonly<Record<string, AppearanceMarker>> = {
 	sim: 'simulation',
 	holocron: 'holocron',
 	qo: 'quote',
+	nc: 'non_canon',
 	// "Mentioned only; in the opening crawl" — a mention, with the crawl as the note.
 	crawl: 'mentioned',
 };

@@ -8,9 +8,11 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { AddedBooksSheet } from '@/components/added-books-sheet';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { announce } from '@/hooks/useAccessibility';
 import { type BarcodeLookupResult, selectBarcodeLookupResult } from '@/lib/barcode-lookup';
 import { type Book, useUserBooks } from '@/lib/hooks';
 import { normalizeIsbn } from '@/lib/isbn';
+import { barcodeResultAnnouncement } from '@/lib/scan-a11y';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -95,6 +97,18 @@ export function BarcodeScanPanel() {
 		[scanning],
 	);
 
+	// The result swaps in over the camera with no navigation, so a screen-reader user
+	// gets no cue that the lookup settled — speak it once per result.
+	useEffect(() => {
+		if (!result) return;
+		announce(
+			barcodeResultAnnouncement(
+				result.type,
+				result.type === 'found' ? result.book.title : undefined,
+			),
+		);
+	}, [result]);
+
 	const dismissResult = useCallback(() => {
 		setResult(null);
 		// Re-arm immediately: the cooldown was meant to debounce repeat frames of the
@@ -143,7 +157,7 @@ export function BarcodeScanPanel() {
 					<View style={styles.viewfinderSide} />
 				</View>
 				<View style={styles.viewfinderBottom}>
-					<Text style={styles.viewfinderHint}>
+					<Text style={styles.viewfinderHint} accessibilityLiveRegion="polite">
 						{scanning ? 'Looking up...' : 'Point at a book barcode'}
 					</Text>
 				</View>
@@ -169,7 +183,9 @@ export function BarcodeScanPanel() {
 				>
 					{result.type === 'not_found' && (
 						<View style={styles.resultMessage}>
-							<Text style={styles.messageTitle}>Not in the Archive</Text>
+							<Text style={styles.messageTitle} accessibilityRole="header">
+								Not in the Archive
+							</Text>
 							<Text style={styles.messageText}>
 								If an item does not appear in our records, it does not exist!
 							</Text>
@@ -179,21 +195,30 @@ export function BarcodeScanPanel() {
 
 					{result.type === 'invalid' && (
 						<View style={styles.resultMessage}>
-							<Text style={styles.messageTitle}>Invalid Barcode</Text>
+							<Text style={styles.messageTitle} accessibilityRole="header">
+								Invalid Barcode
+							</Text>
 							<Text style={styles.messageText}>Couldn't read a valid ISBN from that barcode.</Text>
 						</View>
 					)}
 
 					{result.type === 'error' && (
 						<View style={styles.resultMessage}>
-							<Text style={styles.messageTitle}>Lookup Failed</Text>
+							<Text style={styles.messageTitle} accessibilityRole="header">
+								Lookup Failed
+							</Text>
 							<Text style={styles.messageText}>
 								Couldn't reach the Archive. Check your connection and try again.
 							</Text>
 						</View>
 					)}
 
-					<Pressable style={styles.dismissButton} onPress={dismissResult}>
+					<Pressable
+						style={styles.dismissButton}
+						onPress={dismissResult}
+						accessibilityRole="button"
+						accessibilityHint="Returns to the barcode scanner"
+					>
 						<Text style={styles.dismissText}>Scan Another</Text>
 					</Pressable>
 				</Animated.View>

@@ -82,6 +82,7 @@ export const APPEARANCE_MARKERS = [
 	'simulation', // {{Sim}} Appears in simulation
 	'holocron', // {{Holocron}} Appears in holocron
 	'quote', // {{Qo}} Quote only
+	'non_canon', // {{Nc}} Non-canonical appearance
 ] as const;
 
 export type AppearanceMarker = (typeof APPEARANCE_MARKERS)[number];

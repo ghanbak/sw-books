@@ -29,7 +29,9 @@ import {
 } from '@/components/ui/table';
 import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
 import { cn } from '@/lib/utils';
+import { type BulkItemResult, runBulkSequential } from '@app/bulk-run';
 import { isValidIsbn } from '@app/isbn';
+import { createRowSaveQueue, newerUpdatedAt, queueRowSave } from '@app/serial-save';
 import type { Database } from '@app/types';
 import {
 	ENRICHMENT_STATUSES,
@@ -63,7 +65,15 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { startTransition, useMemo, useOptimistic, useState, useTransition } from 'react';
+import {
+	startTransition,
+	useEffect,
+	useMemo,
+	useOptimistic,
+	useRef,
+	useState,
+	useTransition,
+} from 'react';
 import { toast } from 'sonner';
 
 type BookRow = Database['public']['Tables']['books']['Row'];
@@ -525,13 +535,34 @@ export function BooksTable({
 		});
 	}
 
+	// Two quick edits on one row would otherwise both send the loaded
+	// `updated_at`; the queue sends the second with the first's result (#184).
+	const [saveQueue] = useState(createRowSaveQueue);
+	// `data` lags a save until setData commits, and by then the queue entry is
+	// gone. This bridges that gap, and each commit makes it redundant (#201).
+	const confirmedAt = useRef(new Map<string, string | null>());
+	// biome-ignore lint/correctness/useExhaustiveDependencies: clears on each `data` commit
+	useEffect(() => {
+		confirmedAt.current.clear();
+	}, [data]);
+
 	const updateField = (id: string, field: EditableField, value: string | null) => {
-		const loadedAt = data.find((r) => r.id === id)?.updated_at ?? null;
+		const loadedAt = newerUpdatedAt(
+			data.find((r) => r.id === id)?.updated_at ?? null,
+			confirmedAt.current.get(id) ?? null,
+		);
 		startTransition(async () => {
 			applyOptimistic({ id, field, value });
-			const res = await patchBook(id, loadedAt, { [field]: value });
+			const res = await queueRowSave(
+				saveQueue,
+				id,
+				loadedAt,
+				(at) => patchBook(id, at, { [field]: value }),
+				(r) => (r.ok ? r.data.updated_at : undefined),
+			);
 			if (res.ok) {
 				const { updated_at } = res.data;
+				confirmedAt.current.set(id, updated_at);
 				setData((prev) =>
 					prev.map((r) => (r.id === id ? { ...r, [field]: value, updated_at } : r)),
 				);
@@ -567,40 +598,42 @@ export function BooksTable({
 	const selectedCount = selectedRows.length;
 	const running = bulk !== null;
 
-	async function runSequential<T extends { slug: string }>(
+	function runSequential<T extends { slug: string }>(
 		label: string,
 		items: T[],
-		fn: (item: T) => Promise<{ status: string; message?: string }>,
+		fn: (item: T) => Promise<BulkItemResult>,
 		opts: { usesGoogleBooks?: boolean } = {},
 	) {
-		if (opts.usesGoogleBooks) {
-			const gb = await googleBooksStatus();
-			if (!gb.available) {
-				toast.warning(
-					gb.keyed
-						? 'Google Books unavailable (check GOOGLE_BOOKS_API_KEY / quota). Using Open Library only.'
-						: 'Google Books is quota-blocked (keyless). Set GOOGLE_BOOKS_API_KEY in admin/.env.local to include it — using Open Library only.',
-				);
-			}
-		}
-		setBulk({ label, done: 0, total: items.length });
-		let updated = 0;
-		const failures: string[] = [];
-		for (let i = 0; i < items.length; i++) {
-			const item = items[i];
-			if (!item) continue;
-			const res = await fn(item);
-			if (res.status === 'updated') updated++;
-			if (res.status === 'error') failures.push(item.slug);
-			setBulk({ label, done: i + 1, total: items.length });
-		}
-		setBulk(null);
-		if (failures.length)
-			toast.error(`${label}: ${failures.length} failed (${failures.slice(0, 3).join(', ')}…)`);
-		// Only claim success if something didn't fail outright.
-		if (failures.length < items.length)
-			toast.success(`${label}: ${updated} updated / ${items.length}`);
-		startTransition(() => router.refresh());
+		return runBulkSequential({
+			items,
+			fn,
+			probe: opts.usesGoogleBooks
+				? async () => {
+						const gb = await googleBooksStatus();
+						if (!gb.available) {
+							toast.warning(
+								gb.keyed
+									? 'Google Books unavailable (check GOOGLE_BOOKS_API_KEY / quota). Using Open Library only.'
+									: 'Google Books is quota-blocked (keyless). Set GOOGLE_BOOKS_API_KEY in admin/.env.local to include it — using Open Library only.',
+							);
+						}
+					}
+				: undefined,
+			onProbeError: (error) => {
+				console.error(`${label}: Google Books status check failed`, error);
+				toast.warning('Google Books status check failed. Continuing.');
+			},
+			onItemError: (item, error) => console.error(`${label}: ${item.slug} threw`, error),
+			onProgress: (done, total) => setBulk({ label, done, total }),
+			onSettled: ({ updated, failures, total }) => {
+				setBulk(null);
+				if (failures.length)
+					toast.error(`${label}: ${failures.length} failed (${failures.slice(0, 3).join(', ')}…)`);
+				// Only claim success if something didn't fail outright.
+				if (failures.length < total) toast.success(`${label}: ${updated} updated / ${total}`);
+				startTransition(() => router.refresh());
+			},
+		});
 	}
 
 	function validateIsbns() {

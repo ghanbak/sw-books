@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { GlassView, liquidGlassAvailable } from '@/lib/glass';
+import { FILTER_PILL_HIT_SLOP, FILTER_PILL_PADDING_V, slopBoundsStyle } from '@/lib/tap-target';
 
 export type FilterPillOption<K extends string> = { key: K; label: string };
 
@@ -30,6 +31,8 @@ export function FilterPills<K extends string>({
 						key={key}
 						style={[styles.pill, active && styles.pillActive]}
 						onPress={() => onChange(key)}
+						// Vertical only (~30pt pill -> 44pt), so side-by-side pills don't overlap.
+						hitSlop={FILTER_PILL_HIT_SLOP}
 						accessibilityRole="button"
 						accessibilityState={{ selected: active }}
 					>
@@ -47,10 +50,13 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		flexWrap: 'wrap',
 		gap: 8,
+		// Native hit-testing drops touches outside the parent before child hitSlop applies,
+		// so the row's bounds grow by the same slop (net zero layout).
+		...slopBoundsStyle(FILTER_PILL_HIT_SLOP),
 	},
 	pill: {
 		paddingHorizontal: 12,
-		paddingVertical: 6,
+		paddingVertical: FILTER_PILL_PADDING_V,
 		borderRadius: 16,
 		borderWidth: 1,
 		borderColor: tokens.border.subtle,
