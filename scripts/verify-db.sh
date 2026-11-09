@@ -14,19 +14,60 @@ cd "$root"
 tests=("$@")
 [ ${#tests[@]} -gt 0 ] || tests=(supabase/tests/*.sql)
 
-lock=/tmp/sw-books-verify-db.lock
-for _ in $(seq 1 90); do mkdir "$lock" 2>/dev/null && break; sleep 10; done
-[ -d "$lock" ] || { echo "verify-db lock busy for 15 min" >&2; exit 1; }
-
 cfg=supabase/config.toml
-cp "$cfg" "$cfg.verify-bak"
 project=ossus-archives-verify
+
+lock=${VERIFY_DB_LOCK:-/tmp/sw-books-verify-db.lock}
+lock_tries=${VERIFY_DB_LOCK_TRIES:-90}
+steal_mutex="$lock.steal"
+stale_minutes=180 # the 3-hour rule in docs/agents/README.md
+owner="$(date -u +%Y-%m-%dT%H:%M:%SZ) pid=$$ $root"
+
+# Age comes from the directory's mtime, so a lock with a missing or unreadable owner file (one from before
+# owner files existed, or one caught mid-acquire) still ages out on the same clock and is never stolen early.
+is_stale() { [ -n "$(find "$1" -maxdepth 0 -mmin +"$stale_minutes" 2>/dev/null)" ]; }
+lock_owner() { cat "$lock/owner" 2>/dev/null || echo "unknown owner"; }
+holds_lock() { [ "$(cat "$lock/owner" 2>/dev/null)" = "$owner" ]; }
+
+acquire_lock() {
+	mkdir "$lock" 2>/dev/null || return 1
+	echo "$owner" >"$lock/owner"
+}
+
+# The mutex allows one stealer at a time. Holding it, a run re-checks the age before removing, so a second
+# stealer that saw the same stale lock finds the winner's fresh one instead of deleting it.
+steal_stale_lock() {
+	is_stale "$lock" || return 1
+	if is_stale "$steal_mutex"; then rmdir "$steal_mutex" 2>/dev/null || true; fi # left by a killed stealer
+	mkdir "$steal_mutex" 2>/dev/null || return 1
+	local stolen=1
+	if is_stale "$lock"; then
+		echo "verify-db removing stale lock ($(lock_owner))" >&2
+		rm -rf "$lock"
+		if acquire_lock; then stolen=0; fi
+	fi
+	rmdir "$steal_mutex" 2>/dev/null || true
+	return "$stolen"
+}
+
+got=
+for ((try = 1; try <= lock_tries; try++)); do
+	if acquire_lock || steal_stale_lock; then
+		got=1
+		break
+	fi
+	if [ "$try" -lt "$lock_tries" ]; then sleep 10; fi
+done
+[ -n "$got" ] || { echo "verify-db lock busy for 15 min ($(lock_owner))" >&2; exit 1; }
+
+# A run that outlives the stale threshold can lose the lock. The stack and the lock are then the new holder's.
 cleanup() {
-	supabase stop --project-id "$project" --no-backup >/dev/null 2>&1 || true
-	mv -f "$cfg.verify-bak" "$cfg"
-	rmdir "$lock" 2>/dev/null || true
+	if holds_lock; then supabase stop --project-id "$project" --no-backup >/dev/null 2>&1 || true; fi
+	if [ -f "$cfg.verify-bak" ]; then mv -f "$cfg.verify-bak" "$cfg"; fi
+	if holds_lock; then rm -rf "$lock"; fi
 }
 trap cleanup EXIT
+cp "$cfg" "$cfg.verify-bak"
 
 if ! docker info >/dev/null 2>&1; then
 	open -a Docker
