@@ -12,6 +12,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { numOrNull } from '@app/book-schema';
 import { slugify } from '@app/slug';
 import type { BookCandidate, LookupResult } from '@app/sources/types';
 import { Loader2, Sparkles } from 'lucide-react';
@@ -74,13 +75,6 @@ function splitList(value: string): string[] {
 function orNull(value: string): string | null {
 	const t = value.trim();
 	return t.length > 0 ? t : null;
-}
-
-function numOrNull(value: string): number | null {
-	const t = value.trim();
-	if (!t) return null;
-	const n = Number(t);
-	return Number.isFinite(n) ? n : null;
 }
 
 export function NewBookForm() {
