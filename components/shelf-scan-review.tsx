@@ -23,6 +23,7 @@ import { type Book, useBooks, useUserBooks } from '@/lib/hooks';
 import { addToOwnedLabel, reviewMatchLabel, swapCandidateLabel } from '@/lib/scan-a11y';
 import { exitScanTo } from '@/lib/scan-exit';
 import { useScanSession } from '@/lib/scan-session';
+import { swapCandidates } from '@/lib/search';
 import { swapMatch, toggleSelection } from '@/lib/shelf';
 import type { ShelfScanPhase } from '@/lib/shelf-scan';
 import type { SpineMatch } from '@/lib/spine-match';
@@ -475,13 +476,7 @@ function SwapSheet({
 		if (q.length < 2) {
 			return match.alternates.map((a) => a.book).filter((b) => !takenIds.has(b.id));
 		}
-		return books
-			.filter(
-				(b) =>
-					!takenIds.has(b.id) &&
-					(b.title.toLowerCase().includes(q) || b.author.some((a) => a.toLowerCase().includes(q))),
-			)
-			.slice(0, 12);
+		return swapCandidates(books, query, takenIds);
 	}, [query, books, match.alternates, takenIds]);
 
 	return (
