@@ -33,8 +33,16 @@ if [ -n "$VERIFY_STUB_HOLD" ]; then
 	i=0
 	while [ ! -e "$VERIFY_STUB_HOLD" ] && [ "$i" -lt 400 ]; do sleep 0.05; i=$((i + 1)); done
 fi
+if [ -n "$VERIFY_STUB_DOCKER_UP" ]; then exit 0; fi
 exit 1
 `;
+// Frees the lock during the script's wait between tries.
+const FREE_LOCK_SLEEP_STUB = `#!/bin/sh
+rm -rf "$VERIFY_DB_LOCK"
+`;
+// With Docker up, a run gets past readiness: macOS then fails at the \`supabase start\` stub, Linux at BSD-only sed.
+const DOCKER_UP = { VERIFY_STUB_DOCKER_UP: '1' };
+const STOP = 'supabase stop --project-id ossus-archives-verify --no-backup';
 
 type RunResult = { status: number | null; stderr: string };
 
@@ -84,6 +92,16 @@ function run(extra: Record<string, string> = {}): Promise<RunResult> {
 function calls(): string[] {
 	if (!existsSync(log)) return [];
 	return readFileSync(log, 'utf8').trim().split('\n').filter(Boolean);
+}
+
+function stopCalls(): string[] {
+	return calls().filter((call) => call.startsWith('supabase stop'));
+}
+
+function callsBeforeStart(): string[] {
+	const all = calls();
+	const start = all.findIndex((call) => call.startsWith('supabase start'));
+	return start === -1 ? all : all.slice(0, start);
 }
 
 function holdLock({ ageHours, owner }: { ageHours: number; owner?: string }) {
@@ -225,6 +243,54 @@ describe('scripts/verify-db.sh lock', { timeout: TEST_TIMEOUT }, () => {
 
 	it('acquires a free lock and releases it', async () => {
 		expectProceededAndReleased(await run());
+	});
+
+	it('stops a crashed run stack after Docker is up and before starting', async () => {
+		holdLock({ ageHours: 4, owner: 'crashed run\n' });
+
+		const result = await run(DOCKER_UP);
+
+		expect(result.status).not.toBe(0);
+		expect(result.stderr).toMatch(/stale lock/);
+		// One stop clears the crashed stack; the other is the EXIT trap's. The stub exits 1, so failure is tolerated.
+		expect(stopCalls()).toEqual([STOP, STOP]);
+		expect(callsBeforeStart().slice(0, 2)).toEqual(['docker info', STOP]);
+		expect(calls().some((call) => call.startsWith('supabase start'))).toBe(
+			process.platform === 'darwin',
+		);
+		expect(existsSync(lock)).toBe(false);
+		expectConfigRestored();
+	});
+
+	it('makes no extra stop after acquiring a free lock', async () => {
+		const result = await run(DOCKER_UP);
+
+		expect(result.status).not.toBe(0);
+		// Only the EXIT trap's stop: a pre-start stop would make two.
+		expect(stopCalls()).toEqual([STOP]);
+		expect(existsSync(lock)).toBe(false);
+		expectConfigRestored();
+	});
+
+	it('makes no extra stop when a steal attempt lost and a later try got a free lock', async () => {
+		holdLock({ ageHours: 4, owner: 'crashed run\n' });
+		mkdirSync(`${lock}.steal`); // fresh, so the steal attempt on the first try loses
+		const sleepStubs = join(dir, 'bin');
+		mkdirSync(sleepStubs);
+		writeFileSync(join(sleepStubs, 'sleep'), FREE_LOCK_SLEEP_STUB);
+		chmodSync(join(sleepStubs, 'sleep'), 0o755);
+
+		const result = await run({
+			...DOCKER_UP,
+			VERIFY_DB_LOCK_TRIES: '2',
+			PATH: `${sleepStubs}:${stubs}:${process.env.PATH}`,
+		});
+
+		expect(result.stderr).not.toMatch(BUSY);
+		expect(result.stderr).not.toMatch(/stale lock/);
+		expect(stopCalls()).toEqual([STOP]);
+		expect(existsSync(lock)).toBe(false);
+		expectConfigRestored();
 	});
 
 	it('records an owner file while it holds the lock', async () => {
