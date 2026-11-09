@@ -27,6 +27,39 @@ import { swapCandidates } from '@/lib/search';
 import { swapMatch, toggleSelection } from '@/lib/shelf';
 import type { ShelfScanPhase } from '@/lib/shelf-scan';
 import type { SpineMatch } from '@/lib/spine-match';
+import { slopBoundsStyle, squareHitSlop, verticalHitSlop } from '@/lib/tap-target';
+
+// Hit areas, sized from the styles below (lib/tap-target-shelf-review.test.ts recomputes them).
+// Native hit-testing rejects touches outside a parent's bounds, so a parent that a control's
+// slop passes grows through `slopBoundsStyle`.
+const SWAP_BUTTON_SIZE = 36; // 16pt icon + 2x10 padding
+const SWAP_HIT_SLOP = squareHitSlop(SWAP_BUTTON_SIZE);
+const SWAP_ROW_BOUNDS = slopBoundsStyle({ right: SWAP_HIT_SLOP.right }); // vertical fits the row
+
+const VIEW_TOGGLE_WIDTH = 36; // 16pt icon + 2x10 padding
+const VIEW_TOGGLE_HEIGHT = 28; // 16pt icon + 2x6 padding
+const VIEW_TOGGLE_PILL_INSET = 2;
+// The toggles touch, so the whole 8pt width shortfall goes on each one's outer edge.
+const VIEW_TOGGLE_OUTER_SLOP = 8;
+const LIST_TOGGLE_HIT_SLOP = {
+	...verticalHitSlop(VIEW_TOGGLE_HEIGHT),
+	left: VIEW_TOGGLE_OUTER_SLOP,
+};
+const GRID_TOGGLE_HIT_SLOP = {
+	...verticalHitSlop(VIEW_TOGGLE_HEIGHT),
+	right: VIEW_TOGGLE_OUTER_SLOP,
+};
+const VIEW_TOGGLE_OUTSET = 6; // slop past the pill: 8pt less its 2pt inset
+const VIEW_TOGGLE_BOUNDS = slopBoundsStyle({
+	top: VIEW_TOGGLE_OUTSET,
+	bottom: VIEW_TOGGLE_OUTSET,
+	left: VIEW_TOGGLE_OUTSET,
+	right: VIEW_TOGGLE_OUTSET,
+});
+
+// 13pt system line (about 15.5pt, floored so rounding can't land under 44) + 2x6 padding.
+const START_OVER_HEIGHT = 27;
+const START_OVER_HIT_SLOP = verticalHitSlop(START_OVER_HEIGHT); // 9pt fits the 10pt gap to Add
 
 /**
  * The inline review queue (plan Phase 4): renders as a full-screen overlay on the
@@ -205,9 +238,11 @@ export function ShelfScanReview({
 					</Text>
 				</View>
 				<View style={styles.viewToggle}>
+					<View style={styles.viewTogglePill} />
 					<Pressable
 						style={[styles.viewToggleButton, view === 'list' && styles.viewToggleActive]}
 						onPress={() => setView('list')}
+						hitSlop={LIST_TOGGLE_HIT_SLOP}
 						accessibilityRole="button"
 						accessibilityLabel="List view"
 						accessibilityState={{ selected: view === 'list' }}
@@ -221,6 +256,7 @@ export function ShelfScanReview({
 					<Pressable
 						style={[styles.viewToggleButton, view === 'grid' && styles.viewToggleActive]}
 						onPress={() => setView('grid')}
+						hitSlop={GRID_TOGGLE_HIT_SLOP}
 						accessibilityRole="button"
 						accessibilityLabel="Grid view"
 						accessibilityState={{ selected: view === 'grid' }}
@@ -318,6 +354,7 @@ export function ShelfScanReview({
 					style={styles.startOver}
 					onPress={onReset}
 					disabled={adding}
+					hitSlop={START_OVER_HIT_SLOP}
 					accessibilityRole="button"
 					accessibilityHint="Discards these matches and your photos"
 					accessibilityState={{ disabled: adding }}
@@ -390,6 +427,7 @@ function ReviewRow({
 			<Pressable
 				style={styles.swapButton}
 				onPress={() => onSwap(book.id)}
+				hitSlop={SWAP_HIT_SLOP}
 				accessibilityRole="button"
 				accessibilityLabel={`Wrong match? Swap ${book.title}`}
 				accessibilityHint="Opens alternates and catalog search"
@@ -591,9 +629,22 @@ const styles = StyleSheet.create({
 	},
 	viewToggle: {
 		flexDirection: 'row',
+		...VIEW_TOGGLE_BOUNDS,
+		// The helper's edge padding replaces the pill's inset, so add it back.
+		paddingTop: VIEW_TOGGLE_OUTSET + VIEW_TOGGLE_PILL_INSET,
+		paddingBottom: VIEW_TOGGLE_OUTSET + VIEW_TOGGLE_PILL_INSET,
+		paddingLeft: VIEW_TOGGLE_OUTSET + VIEW_TOGGLE_PILL_INSET,
+		paddingRight: VIEW_TOGGLE_OUTSET + VIEW_TOGGLE_PILL_INSET,
+	},
+	// The background lives here so the grown hit bounds above stay invisible.
+	viewTogglePill: {
+		position: 'absolute',
+		top: VIEW_TOGGLE_OUTSET,
+		bottom: VIEW_TOGGLE_OUTSET,
+		left: VIEW_TOGGLE_OUTSET,
+		right: VIEW_TOGGLE_OUTSET,
 		borderRadius: 8,
 		backgroundColor: tokens.surface.card,
-		padding: 2,
 	},
 	viewToggleButton: {
 		paddingHorizontal: 10,
@@ -621,7 +672,10 @@ const styles = StyleSheet.create({
 	row: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		paddingVertical: 8,
+		...SWAP_ROW_BOUNDS,
+		// After the spread: the helper zeroes these edges, and an edge beats paddingVertical.
+		paddingTop: 8,
+		paddingBottom: 8,
 	},
 	rowOwned: { opacity: 0.55 },
 	rowMain: {
