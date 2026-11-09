@@ -24,6 +24,8 @@ export default defineConfig({
 			},
 		},
 	],
+	// admin/tsconfig.json sets `jsx: preserve` for Next; tests that drive an admin page need it compiled.
+	oxc: { jsx: { runtime: 'automatic' } },
 	test: {
 		environment: 'node',
 		include: ['**/*.test.ts'],
