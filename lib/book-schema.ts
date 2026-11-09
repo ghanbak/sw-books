@@ -111,6 +111,16 @@ export function issuesByField(error: z.ZodError): Partial<Record<string, string>
 	return out;
 }
 
+/**
+ * New-book numeric input: blank → null. Anything else becomes a number, so
+ * non-numeric input arrives as NaN and `createSchema` rejects it instead of
+ * clearing the field.
+ */
+export function numOrNull(value: string): number | null {
+	const t = value.trim();
+	return t ? Number(t) : null;
+}
+
 // ---------------------------------------------------------------------------
 // Manual edit form (book page)
 
