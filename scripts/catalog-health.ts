@@ -12,6 +12,7 @@
  *   error   duplicate slug · ISBN on 2+ books · invalid/malformed ISBN-10/13 ·
  *           primary_isbn not in isbn[] · (--head) cover 4xx/5xx or non-image
  *   warning shared cover URL · null cover · null synopsis ·
+ *           formats equal after normalizing case/spaces/hyphens ·
  *           (--head) cover < 2 KB (placeholder) or host unreachable
  *
  * Exit code: 1 when any error is found, 0 otherwise (warnings never fail).
