@@ -51,8 +51,9 @@ steal_stale_lock() {
 }
 
 got=
+stole=
 for ((try = 1; try <= lock_tries; try++)); do
-	if acquire_lock || steal_stale_lock; then
+	if acquire_lock || { steal_stale_lock && stole=1; }; then
 		got=1
 		break
 	fi
@@ -74,6 +75,11 @@ if ! docker info >/dev/null 2>&1; then
 	for _ in $(seq 1 60); do docker info >/dev/null 2>&1 && break; sleep 3; done
 	docker info >/dev/null 2>&1 || { echo "Docker did not start" >&2; exit 1; }
 fi
+
+# A stolen lock usually means the last run never reached its EXIT trap, so its stack may still be up and
+# `supabase start` would reuse it. This waits for Docker because a stop fails while Docker is down, and the
+# stack's unless-stopped containers would then come back with Docker.
+if [ -n "$stole" ]; then supabase stop --project-id "$project" --no-backup >/dev/null 2>&1 || true; fi
 
 sed -i '' -E \
 	-e "s/^project_id = .*/project_id = \"$project\"/" \
