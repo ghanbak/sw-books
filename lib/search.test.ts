@@ -33,6 +33,11 @@ describe('normalizeQuery', () => {
 		expect(normalizeQuery('I, Jedi')).toBe('i jedi');
 		expect(normalizeQuery('  Heir---to  ')).toBe('heir to');
 	});
+
+	it('folds precomposed and decomposed diacritics to the same form', () => {
+		expect(normalizeQuery('Daniel José Older')).toBe('daniel jose older');
+		expect(normalizeQuery('Daniel José Older')).toBe('daniel jose older');
+	});
 });
 
 describe('searchBooks', () => {
@@ -58,5 +63,28 @@ describe('searchBooks', () => {
 
 	it('returns [] when nothing matches', () => {
 		expect(searchBooks(CATALOG, 'mandalorian')).toEqual([]);
+	});
+
+	it('matches a punctuated query against the slug alone', () => {
+		const onlySlug = book({ title: 'Untitled', slug: 'i-jedi' });
+		expect(searchBooks([onlySlug], 'I, Jedi')).toEqual([onlySlug]);
+	});
+
+	describe.each([
+		['precomposed', 'Daniel José Older'],
+		['decomposed', 'Daniel José Older'],
+	])('with a %s accented author', (_form, author) => {
+		const accented = book({
+			title: 'Midnight Horizon',
+			author: [author],
+			slug: 'midnight-horizon',
+		});
+
+		it.each(['jose', 'José', 'José', 'Daniel Jose Older', 'Daniel José Older'])(
+			'matches %j',
+			(query) => {
+				expect(searchBooks([accented], query)).toEqual([accented]);
+			},
+		);
 	});
 });

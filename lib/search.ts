@@ -1,4 +1,5 @@
 import type { Book } from '@/lib/hooks';
+import { normalizeSearch } from './wookieepedia/enrichment-display';
 
 /**
  * Catalog search, extracted from the old Archives inline search so the Search tab
@@ -6,13 +7,13 @@ import type { Book } from '@/lib/hooks';
  */
 
 /**
- * Normalize for fuzzy matching: lowercase, collapse any run of non-alphanumerics to
- * a single space, trim. So "I, Jedi" and the slug "i-jedi" both match a query of
- * "i jedi".
+ * Normalize for fuzzy matching: fold diacritics (NFD, strip combining marks), lowercase,
+ * collapse any run of non-alphanumerics to a single space, trim. So "I, Jedi" and the
+ * slug "i-jedi" both match a query of "i jedi", and "jose" matches "José". Letters NFD
+ * does not decompose (ø, ł, æ) are not folded and still act as word breaks.
  */
 export function normalizeQuery(s: string): string {
-	return s
-		.toLowerCase()
+	return normalizeSearch(s)
 		.replace(/[^a-z0-9]+/g, ' ')
 		.trim();
 }
