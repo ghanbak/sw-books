@@ -56,16 +56,40 @@ Owner's rule, 2026-11-07: the owner reviews product decisions, not proof agents 
 - If the proof truly can't be produced this run (the script or simulator errors out), open the PR as a **draft** with the `needs-proof` label and a `Not run` section saying what's missing. Drafts don't auto-merge. The caretaker retries the proof each run and runs `gh pr ready` once it passes. Assign the owner only after 3 failed caretaker attempts, with what failed.
 - If a bug or maintenance fix also needs a production step (data write, secret, console), let the code merge and open a separate issue assigned to the owner for that step.
 
+**"How to review" section** (owner's rule, 2026-11-10: every PR waiting on the owner says what to check and how)
+- Every PR assigned to the owner starts with this section, before `## Screenshots`. It replaces the old "What to look at" list. The same goes for comments that assign the owner on a Dependabot PR.
+- Write checks in user terms ("the list scrolls back to the top after a new search"), not code terms. Give the least setup that proves it: Code only beats Browser, and Browser beats Simulator.
+
+  ```markdown
+  ## How to review (~<minutes> min)
+  **Where:** Simulator | Browser | Code only
+  **Check:**
+  1. <behaviour to confirm, in user terms>
+  2. <edge case worth a look>
+  **Steps:**
+  - Simulator: `npm run review -- <PR#>`, then <deep link `ossusarchives://<route>` or taps>.
+  - Browser: <Vercel preview URL>/<path>. Admin: `npm run admin` in a worktree on the branch.
+  - Code only: <files to read and what to look for>.
+  **Decide:** <the product call, if any>
+  **Approve:** unassign yourself; auto-merge takes it from there.
+  **Request changes:** comment; the caretaker picks it up on its next run.
+  ```
+
+- Keep only the **Steps** lines that apply. Put deep links in full (`ossusarchives://book/<slug>`); `npm run review` prints them.
+- `needs-build` PRs: the installed dev client can't run them. Say so; **Where** is Code only plus the PR's screenshots.
+- Agents never leave `npm run review` running (it holds the simulator lock until Ctrl-C). Use `npm run review -- <PR#> --check --out <dir>`: it screenshots each deep link in the PR body, cleans up and exits. Run it in the background (it can wait 15 min for the simulator lock).
+
 **Independent reviewer**
 - Before opening a PR (or before the caretaker clears a Dependabot PR), spawn a separate reviewer subagent (`general-purpose`) that gets only the diff, the issue or PR description and these rules, not your reasoning. Ask it to find reasons not to ship and end with `APPROVE` or `BLOCK: <reason>`. On `BLOCK`, fix it, or assign the owner with the reason in a comment.
 - Visual changes (screenshots.md): the reviewer blocks a PR with no `## Screenshots` section and no `Screenshots: not captured (<reason>)` line, and any image showing data that isn't local seed data.
+- PRs that will be assigned to the owner: give the reviewer the draft PR body too. It blocks one with no `## How to review` section, or one whose deep links don't match a route changed in the diff (`app/` files).
 
 **Feature branches** (owner's rule, 2026-11-06: nothing half-built reaches `main`)
 - Work that needs more than one agent, or several issues that only make sense together, is a **feature**: a parent issue with one sub-issue per piece of work (GitHub sub-issues), usually one per agent (e.g. Tregg design, Brandon backend, Luis mobile).
 - The parent issue holds the shared contract so agents can work in parallel: the data shape or API, the screens and states, and which sub-issue owns what. A sub-issue that truly can't start until another lands says `Blocked by #<n>` in its body and stays out of `Todo` until that one is closed.
 - Each feature has one branch, `feature/<parent-number>-<slug>`, created from `origin/main` by the first execute run that picks up one of its sub-issues. A ruleset on `feature/*` requires CI and blocks direct pushes, so all changes arrive by PR.
 - Sub-issue PRs (`agent/<n>-<slug>` → `feature/...`) auto-merge into the feature branch once CI and the independent reviewer pass. Don't assign the owner on them, even for design or UX work; the owner reviews the feature as a whole.
-- When every sub-issue is closed, the caretaker opens one PR `feature/...` → `main`, assigned to the owner, with `Closes #<parent>`, a "What to look at" list and links to each sub-issue PR. The review gate holds it until the owner unassigns.
+- When every sub-issue is closed, the caretaker opens one PR `feature/...` → `main`, assigned to the owner, with `Closes #<parent>`, a `## How to review` section and links to each sub-issue PR. The review gate holds it until the owner unassigns.
 - Keep the feature branch current: when it falls behind `main` or conflicts, open an `agent/sync-<parent>` PR that merges `origin/main` into it.
 - Single-agent bugs, perf and maintenance work skip all this and PR straight to `main` as before.
 
