@@ -40,7 +40,7 @@ export default function BookDetailScreen() {
 	const insets = useSafeAreaInsets();
 	const router = useRouter();
 	// In a long-press peek the header isn't shown and navigation.setOptions is a warning no-op,
-	// so skip the screen options and toolbar there.
+	// so skip the screen options and toolbars there.
 	const isPreview = useIsPreview();
 	// Separate from the catalog cache: enrichment rows are large and never embedded in the list query.
 	const { enrichment, fromCache } = useBookEnrichment(id);
@@ -235,7 +235,7 @@ export default function BookDetailScreen() {
 				)}
 			</ScrollView>
 
-			<BookDetailToolbar bookId={book.id} />
+			{isPreview ? null : <BookDetailToolbar bookId={book.id} />}
 		</View>
 	);
 }
