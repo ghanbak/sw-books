@@ -107,6 +107,28 @@ describe('server action call sites use callAction (#210)', () => {
 	});
 });
 
+describe('books table optimistic edits settle (#210)', () => {
+	// While an optimistic edit is pending, `useOptimistic` returns a new rows
+	// array on every render. TanStack's default page-index auto reset queues a
+	// state update for each new array, so the table re-renders forever at
+	// default priority. That starves the transition lane: a failed inline edit
+	// never reverts, and every later `useTransition` (Delete, Recheck) stays
+	// pending with its spinner. Root admin deps can't load table-core, so this
+	// guards the option in source.
+	const src = source('app/admin/books/_components/books-table.tsx');
+	const tableOptions = src.match(/useReactTable\(\s*\{[\s\S]*?\n\t\}\);/)?.[0] ?? '';
+
+	it('rows still go through useOptimistic', () => {
+		expect(src).toMatch(/useOptimistic\(/);
+		expect(tableOptions).toMatch(/data:\s*visibleData/);
+	});
+
+	it('turns off the page-index auto reset', () => {
+		expect(tableOptions).toMatch(/autoResetPageIndex:\s*false/);
+		expect(tableOptions).not.toMatch(/autoResetAll:\s*true/);
+	});
+});
+
 describe('admin error boundary (#210)', () => {
 	const path = 'app/admin/error.tsx';
 

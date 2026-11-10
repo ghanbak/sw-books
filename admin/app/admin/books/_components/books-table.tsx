@@ -592,6 +592,11 @@ export function BooksTable({
 		onGlobalFilterChange: setGlobalFilter,
 		onRowSelectionChange: setRowSelection,
 		enableRowSelection: true,
+		// No pagination here. Left on, a pending optimistic edit hands the table
+		// a new `data` array every render, each one queues a page-index reset,
+		// and that render loop starves the transition that reverts the edit and
+		// clears every `useTransition` pending flag (Delete stuck spinning, #210).
+		autoResetPageIndex: false,
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
