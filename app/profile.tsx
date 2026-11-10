@@ -101,7 +101,7 @@ export default function ProfileScreen() {
 					<ListItem trailing={<Text>{`v${APP_VERSION}`}</Text>}>Version</ListItem>
 					<ListItem
 						onPress={() => openInAppBrowser(PRIVACY_POLICY_URL)}
-						trailing={<Icon name="arrow.up.right" color={tokens.text.hint} />}
+						trailing={<Icon name="arrow.up.right" color={tokens.text.tertiary} />}
 					>
 						Privacy Policy
 					</ListItem>

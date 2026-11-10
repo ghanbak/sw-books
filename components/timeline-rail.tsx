@@ -403,11 +403,12 @@ const styles = StyleSheet.create({
 		width: RAIL_PITCH,
 		alignItems: 'center',
 	},
+	// Inactive ticks are the rail's visible track, so they need 3:1 (WCAG 1.4.11).
 	tick: {
 		width: 3,
 		height: 12,
 		borderRadius: 2,
-		backgroundColor: tokens.text.hint,
+		backgroundColor: tokens.text.tertiary,
 	},
 	tickActive: {
 		width: 4,

@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
 		height: 22,
 		borderRadius: 11,
 		borderWidth: 1.5,
-		borderColor: tokens.text.hint,
+		borderColor: tokens.text.tertiary,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
