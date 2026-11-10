@@ -1,6 +1,7 @@
+import { FlashList } from '@shopify/flash-list';
 import { Stack } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
 import { ErrorState } from '@/components/error-state';
@@ -19,7 +20,7 @@ const ANNOUNCE_DELAY_MS = 600;
 
 /**
  * Search tab — native iOS header search bar (under the large title) with live results.
- * Putting the field in the header lets the results FlatList be the screen's first child, so
+ * Putting the field in the header lets the results FlashList be the screen's first child, so
  * the large title collapses on scroll (and there's no tab-bar clipping). Match logic is in
  * lib/search.ts.
  */
@@ -60,7 +61,7 @@ export default function SearchScreen() {
 					},
 				}}
 			/>
-			<FlatList
+			<FlashList
 				style={styles.list}
 				contentContainerStyle={results.length === 0 ? styles.emptyContent : undefined}
 				data={results}
