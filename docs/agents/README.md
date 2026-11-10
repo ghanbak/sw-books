@@ -1,6 +1,6 @@
 # Agent loops
 
-Three scheduled loops keep sw-books moving: PR caretaker and scout + triage every 4 hours, execute every 2 hours, staggered, as a fresh Claude Code session in the desktop app.
+Three scheduled loops keep sw-books moving: execute every 2 hours (:45 on even hours), PR caretaker every 2 hours (:15 on odd hours, so it picks up execute's PRs), and scout + triage every 4 hours, staggered, as a fresh Claude Code session in the desktop app.
 
 | Loop | Playbook | Writes code? |
 |---|---|---|
