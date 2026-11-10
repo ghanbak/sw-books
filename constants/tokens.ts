@@ -33,7 +33,7 @@ export const tokens = {
 		legends: '#5c3a1a',
 	},
 	status: {
-		error: '#CC4444',
+		error: '#FF453A', // iOS dark systemRed — destructive labels, error text and fills (≥4.5:1; text.inverse on fills)
 		success: '#4A90D9',
 	},
 	// Timeline rail: film/TV marker pills that float over the hologram glow.
