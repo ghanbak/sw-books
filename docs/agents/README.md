@@ -36,7 +36,7 @@ Every loop follows the shared rules below, then its own playbook. [releases.md](
 - Unassign the owner (`ghanbak`) from anything, run `gh pr merge`, or touch the review-gate, auto-merge or fingerprint workflows or `.eas/workflows/`. Only the owner removes themselves.
 - Run `eas build`, `eas submit`, `eas update`, `eas metadata:push`, `eas env:*` writes or `eas credentials`. Read-only EAS commands are fine (releases.md).
 
-**Labels** describe the work, nothing else: type (`bug`, `enhancement`, `perf`, `a11y`, `design-drift`, `tech-debt`, `documentation`, `dependencies`), owner agent (`agent:tregg|luis|dylan|brandon`), product (`product:app|web|admin`, `area:data`), plus `source:scout` and `launch` where they apply. `release` marks a release issue; `needs-build` is set by the fingerprint check only. `needs-proof` marks a draft agent PR still waiting on a check (see below). `device-review` asks for a phone preview ("How to review").
+**Labels** describe the work, nothing else: type (`bug`, `enhancement`, `perf`, `a11y`, `design-drift`, `tech-debt`, `documentation`, `dependencies`), owner agent (`agent:tregg|luis|dylan|brandon`), product (`product:app|web|admin`, `area:data`), plus `source:scout` and `launch` where they apply. `release` marks a release issue; `needs-build` is set by the fingerprint check only. `needs-proof` marks a draft agent PR still waiting on a check (see below).
 
 **Assigned to `ghanbak` = the owner's turn** (owner's rule, 2026-11-06). Agents start any triaged work without approval, and every change lands as a PR with auto-merge on.
 - **Issues** assigned to the owner: don't start work. They're waiting on a keep-or-close decision, a question, or a step only Ethan can do (consoles, secrets, accounts, a physical device, production data, licences). Say which in a comment. When the owner unassigns, the issue goes back to triage.
@@ -62,12 +62,11 @@ Owner's rule, 2026-11-07: the owner reviews product decisions, not proof agents 
 
   ```markdown
   ## How to review (~<minutes> min)
-  **Where:** Phone preview | Simulator | Browser | Code only
+  **Where:** Simulator | Browser | Code only
   **Check:**
   1. <behaviour to confirm, in user terms>
   2. <edge case worth a look>
   **Steps:**
-  - Phone: scan the QR in this PR's "Expo preview" comment with the Camera, then <taps>.
   - Simulator: `npm run review -- <PR#>`, then <deep link `ossusarchives://<route>` or taps>.
   - Browser: <Vercel preview URL>/<path>. Admin: `npm run admin` in a worktree on the branch.
   - Code only: <files to read and what to look for>.
@@ -77,7 +76,6 @@ Owner's rule, 2026-11-07: the owner reviews product decisions, not proof agents 
   ```
 
 - Keep only the **Steps** lines that apply. Put deep links in full (`ossusarchives://book/<slug>`); `npm run review` prints them.
-- **Phone previews:** when you assign the owner a PR into `main` that changes `app/`, `components/`, `hooks/`, `constants/`, `lib/` or `assets/`, add the `device-review` label, unless it's `needs-build` or touches `supabase/` (previews run on production data, which doesn't have the PR's schema yet). `.eas/workflows/pr-preview.yml` then publishes the head as an EAS update and comments a QR, re-publishing on each push. Lead **Where** with Phone preview for anything touch, motion, haptics or camera related. PRs branched before the workflow landed need a sync with `main` first; EAS runs the workflow file from the PR head.
 - `needs-build` PRs: the installed dev client can't run them. Say so; **Where** is Code only plus the PR's screenshots.
 - Agents never leave `npm run review` running (it holds the simulator lock until Ctrl-C). Use `npm run review -- <PR#> --check --out <dir>`: it screenshots each deep link in the PR body, cleans up and exits. Run it in the background (it can wait 15 min for the simulator lock).
 

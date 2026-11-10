@@ -41,7 +41,7 @@ Required on every PR assigned to you. The reviewer subagent blocks without it. T
 1. <behaviour to confirm, in user terms>
 2. <edge case worth a look>
 **Steps:**
-- Phone (added in step 3): open the "Expo preview" comment on this PR and scan its QR with the Camera. It opens in the development build, signed in as you, on production data.
+- Phone (added in step 3): open the "Expo preview" comment on this PR and scan its QR with the Camera. It opens in Ossus Archives (Dev), signed in as you, on production data.
 - Simulator: `npm run review -- <PR#>`, then <deep link or taps>.
 - Browser: <Vercel preview URL>/<path>.
 **Approve:** unassign yourself; auto-merge takes it from there.
@@ -69,9 +69,9 @@ Recommendation: yes. Use EAS Workflows, which run in Expo's CI, so agents still 
 - New `.eas/workflows/pr-preview.yml`, triggered by the `device-review` label (`pull_request_labeled`) and re-run on new commits to labeled PRs.
 - Jobs:
   1. `fingerprint`
-  2. if it matches the installed dev build: `update` on an update branch named after the PR's git branch
+  2. if it matches the installed dev build: `update` on branch `pr-<n>`
   3. `github-comment`, which posts a QR that opens the update in your dev build
-- When the git branch is deleted (GitHub deletes it on merge): `branch-delete`, in `pr-preview-cleanup.yml`.
+- On PR close: `branch-delete`.
 - Who adds the label: execute and the caretaker, when they assign you a PR that changes `app/`, `components/`, `hooks/`, `constants/` or `assets/`.
 
 **Phase B: native changes.** These ride the weekly train (section 4), so there are no per-PR builds.
@@ -80,8 +80,7 @@ Recommendation: yes. Use EAS Workflows, which run in Expo's CI, so agents still 
 
 **Caveats**
 - Previews use the build's env, so they run against production Supabase with your real account, like TestFlight. A PR that needs an unapplied migration can't be previewed on a device; its guide says "Simulator" instead.
-- Previews publish to PR-named update branches, never the `production` channel, so store users never get them. (With the `fingerprint` policy a dev build shares its runtime with a store build of the same native state.)
-- The `development-device` build uses the store app's bundle ID, so installing it replaces the App Store/TestFlight app on the phone (open decision below).
+- Dev-client updates use a different runtime than TestFlight and App Store builds, so previews never reach users.
 - Cost: updates are negligible at one device. Native builds count against the EAS build quota, so they sit behind approval.
 - Previews don't replace the agents' own simulator proof. They're for your review only.
 
@@ -118,4 +117,3 @@ First train: finish the open `Release iOS 1.4.0` (#111) this week, then 1.5.0 st
 - Native builds: weekly train, with one release-branch dev build per change day; no per-PR builds.
 - Previews on production data and your account: OK.
 - Cut day: Wednesday 9:00.
-- Open: the phone dev build's bundle ID. As is, it replaces the App Store/TestFlight app on the phone. A separate dev variant (`app.config.ts` with `APP_VARIANT`, its own bundle ID) lets both coexist but is a native change and needs Apple/Google sign-in set up for the new bundle ID.
