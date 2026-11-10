@@ -186,7 +186,7 @@ export function ShelfScanReview({
 						accessibilityElementsHidden
 						importantForAccessibility="no-hide-descendants"
 					>
-						<SymbolView name="checkmark" size={36} tintColor={tokens.text.primary} weight="bold" />
+						<SymbolView name="checkmark" size={36} tintColor={tokens.text.inverse} weight="bold" />
 					</View>
 					<Text style={styles.doneTitle} accessibilityRole="header">
 						{addedCount === 1 ? '1 book added to Owned' : `${addedCount} books added to Owned`}
@@ -250,7 +250,7 @@ export function ShelfScanReview({
 						<SymbolView
 							name="list.bullet"
 							size={16}
-							tintColor={view === 'list' ? tokens.text.primary : tokens.text.secondary}
+							tintColor={view === 'list' ? tokens.text.inverse : tokens.text.secondary}
 						/>
 					</Pressable>
 					<Pressable
@@ -264,7 +264,7 @@ export function ShelfScanReview({
 						<SymbolView
 							name="square.grid.2x2"
 							size={16}
-							tintColor={view === 'grid' ? tokens.text.primary : tokens.text.secondary}
+							tintColor={view === 'grid' ? tokens.text.inverse : tokens.text.secondary}
 						/>
 					</Pressable>
 				</View>
@@ -341,7 +341,7 @@ export function ShelfScanReview({
 					}}
 				>
 					{adding ? (
-						<ActivityIndicator color={tokens.text.primary} />
+						<ActivityIndicator color={tokens.text.inverse} />
 					) : (
 						<Text style={styles.addButtonText}>
 							{effectiveSelected.length === 0
@@ -408,7 +408,7 @@ function ReviewRow({
 			>
 				<View style={[styles.checkbox, selected && styles.checkboxOn]}>
 					{selected && (
-						<SymbolView name="checkmark" size={14} tintColor={tokens.text.primary} weight="bold" />
+						<SymbolView name="checkmark" size={14} tintColor={tokens.text.inverse} weight="bold" />
 					)}
 				</View>
 				{/* Cover is decorative here, so taps reach the row
@@ -468,7 +468,7 @@ function ReviewTile({
 				<DecorativeCover book={book} width={84} height={126} />
 				{selected && (
 					<View style={styles.tileCheck}>
-						<SymbolView name="checkmark" size={14} tintColor={tokens.text.primary} weight="bold" />
+						<SymbolView name="checkmark" size={14} tintColor={tokens.text.inverse} weight="bold" />
 					</View>
 				)}
 				{match.bucket === 'low' && !owned && (
@@ -785,7 +785,7 @@ const styles = StyleSheet.create({
 	},
 	addDisabled: { opacity: 0.45 },
 	addButtonText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 16,
 		fontWeight: '600',
 	},
@@ -829,7 +829,7 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.accent.primary,
 	},
 	primaryButtonText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 14,
 		fontWeight: '600',
 	},
