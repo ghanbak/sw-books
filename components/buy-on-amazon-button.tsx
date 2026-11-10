@@ -35,7 +35,7 @@ export function BuyOnAmazonButton({ url, onInfoPress }: Props) {
 					accessibilityRole="button"
 					accessibilityLabel="Affiliate disclosure"
 				>
-					<SymbolView name="info.circle" size={20} tintColor={tokens.text.hint} />
+					<SymbolView name="info.circle" size={20} tintColor={tokens.text.tertiary} />
 				</Pressable>
 			)}
 		</View>

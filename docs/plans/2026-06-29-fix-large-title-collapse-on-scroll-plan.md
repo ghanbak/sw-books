@@ -39,6 +39,8 @@ native collapse and is corroborated-broken for header folding — so swap it out
 
 ## Decision: FlatList, not FlashList
 
+> **Superseded by #165 (2026-11-07):** Archives, Library and Search move back to FlashList v2. The wrapper View and the missing inset prop that broke collapse here are both gone, and FlashList v2's ScrollView is the first subview that rn-screens walks to find the scroll view. Large-title collapse must be confirmed on device before that PR leaves draft.
+
 Use RN `FlatList` on the three large-title list screens — the component Expo documents and supports,
 guaranteed native collapse, zero native code, `BookCard`/`FilterPills` unchanged. The catalog is bounded
 (hundreds of rows), so FlatList's virtualization is plenty. **No `getItemLayout`** — `BookCard` is

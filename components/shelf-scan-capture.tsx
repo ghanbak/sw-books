@@ -14,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ShelfScanQueued } from '@/components/shelf-scan-queued';
 import { ShelfScanReview } from '@/components/shelf-scan-review';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
@@ -270,6 +271,8 @@ export function ShelfScanCapture({
 					onReset={scan.reset}
 				/>
 			)}
+
+			{phase === 'queued' && <ShelfScanQueued count={scan.queuedCount} onReset={scan.reset} />}
 		</View>
 	);
 }
@@ -432,7 +435,7 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.accent.primary,
 	},
 	finishText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 15,
 		fontWeight: '600',
 	},
@@ -478,7 +481,7 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 	},
 	introButtonText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 16,
 		fontWeight: '600',
 	},
@@ -521,7 +524,7 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.accent.primary,
 	},
 	primaryButtonText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 14,
 		fontWeight: '600',
 	},

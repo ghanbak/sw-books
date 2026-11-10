@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
 	type ManualBook,
@@ -6,6 +8,7 @@ import {
 	firstIssueMessage,
 	issuesByField,
 	manualEditPatch,
+	numOrNull,
 	patchSchema,
 } from '../book-schema';
 
@@ -96,6 +99,62 @@ describe('createSchema', () => {
 	it('still allows a book with no author (create path is not narrowed)', () => {
 		const base = { title: 'X', slug: 'x', canon: 'Canon', type: 'Adult Novel' };
 		expect(createSchema.safeParse({ ...base, author: [] }).success).toBe(true);
+	});
+});
+
+describe('numOrNull (new-book form, #234)', () => {
+	const BASE = { title: 'X', slug: 'x', canon: 'Canon', type: 'Adult Novel' };
+	const FORM = resolve(__dirname, '../../admin/app/admin/books/new/_components/new-book-form.tsx');
+
+	function createError(input: Record<string, unknown>): string {
+		const res = createSchema.safeParse({ ...BASE, ...input });
+		if (res.success) throw new Error(`expected ${JSON.stringify(input)} to be rejected`);
+		return firstIssueMessage(res.error, 'invalid book');
+	}
+
+	it.each(['1O', '12a', 'soon', 'Infinity', '-Infinity', '1e999'])(
+		'sends %j to createSchema as a field error, not null',
+		(raw) => {
+			expect(numOrNull(raw)).not.toBeNull();
+			expect(createError({ timeline_order: numOrNull(raw) })).toMatch(/^timeline_order: /);
+			expect(createError({ series_order: numOrNull(raw) })).toMatch(/^series_order: /);
+		},
+	);
+
+	it.each(['', '   '])('maps empty input %j to null, and the book still validates', (raw) => {
+		expect(numOrNull(raw)).toBeNull();
+		const res = createSchema.safeParse({
+			...BASE,
+			series_order: numOrNull(raw),
+			timeline_order: numOrNull(raw),
+		});
+		expect(res.success).toBe(true);
+		if (res.success) {
+			expect(res.data.series_order).toBeNull();
+			expect(res.data.timeline_order).toBeNull();
+		}
+	});
+
+	it('keeps valid numbers unchanged', () => {
+		expect(numOrNull(' 12 ')).toBe(12);
+		const res = createSchema.safeParse({
+			...BASE,
+			series_order: numOrNull('3'),
+			timeline_order: numOrNull('-2.5'),
+		});
+		expect(res.success).toBe(true);
+		if (res.success) {
+			expect(res.data.series_order).toBe(3);
+			expect(res.data.timeline_order).toBe(-2.5);
+		}
+	});
+
+	it('is the parser the new-book form uses for both fields', () => {
+		const source = readFileSync(FORM, 'utf8');
+		expect(source).toMatch(/import\s*\{[^}]*\bnumOrNull\b[^}]*\}\s*from\s*'@app\/book-schema'/);
+		expect(source).not.toMatch(/function\s+numOrNull\b/);
+		expect(source).toMatch(/series_order:\s*numOrNull\(\s*form\.series_order\s*,?\s*\)/);
+		expect(source).toMatch(/timeline_order:\s*numOrNull\(\s*form\.timeline_order\s*,?\s*\)/);
 	});
 });
 

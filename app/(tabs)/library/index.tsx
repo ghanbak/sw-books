@@ -1,6 +1,7 @@
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
 import { EmptyState } from '@/components/empty-state';
@@ -74,7 +75,7 @@ export default function LibraryScreen() {
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
-	// Every state renders inside the always-mounted FlatList (as ListEmptyComponent), so the
+	// Every state renders inside the always-mounted FlashList (as ListEmptyComponent), so the
 	// header actions stay and the large title still collapses — see Archives (rn-screens#2871).
 	const listEmpty =
 		view.kind === 'loading' ? (
@@ -121,7 +122,7 @@ export default function LibraryScreen() {
 	return (
 		<>
 			<TabHeaderActions showFilter onFilter={openSortMenu} />
-			<FlatList
+			<FlashList
 				style={styles.list}
 				contentContainerStyle={shelvedBooks.length === 0 ? styles.emptyContent : undefined}
 				data={shelvedBooks}

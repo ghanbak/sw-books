@@ -15,6 +15,7 @@ export const tokens = {
 		background: '#0A0A0C', // near-black, main background
 		card: '#1A1A1E', // elevated surfaces, cards, inputs
 		overlay: 'rgba(0,0,0,0.88)', // modal/overlay backgrounds
+		skeletonHighlight: 'rgba(255,255,255,0.06)', // loading-skeleton shimmer sweep
 	},
 	border: {
 		subtle: 'rgba(255,255,255,0.08)', // dividers, inactive borders

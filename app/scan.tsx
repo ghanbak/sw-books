@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.accent.primary,
 	},
 	primaryButtonText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 15,
 		fontWeight: '600',
 	},

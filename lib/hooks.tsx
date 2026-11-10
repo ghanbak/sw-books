@@ -227,9 +227,9 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 					setUserBooks((prev) => fn(prev));
 				},
 				rpc: async (ids) => {
-					const { data, error } = await supabase.rpc('add_owned_books', { book_ids: ids });
+					const { data, error, status } = await supabase.rpc('add_owned_books', { book_ids: ids });
 					if (error) console.warn('[user_books] addOwned failed, reverting:', error.message);
-					return { rows: data, error };
+					return { rows: data, error, status };
 				},
 				writes,
 				isCurrentUser: (id) => userIdRef.current === id,

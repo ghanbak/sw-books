@@ -12,8 +12,10 @@
  *              returns 4xx/5xx or a non-image (--head only).
  *  - warning — degraded but not broken: shared cover URL (often a
  *              placeholder, sometimes a legit omnibus), null cover, null
- *              synopsis, tiny cover payload or unreachable cover host
- *              (--head only; network flakes must not fail the loop).
+ *              synopsis, formats on one row equal after normalizing case,
+ *              spaces and hyphens (book detail shows a duplicate chip), tiny
+ *              cover payload or unreachable cover host (--head only; network
+ *              flakes must not fail the loop).
  */
 import { isValidIsbn13, isbn10to13 } from './isbn';
 
@@ -25,6 +27,7 @@ export type HealthCheck =
 	| 'invalid-isbn'
 	| 'primary-not-in-isbns'
 	| 'duplicate-cover'
+	| 'duplicate-format'
 	| 'null-cover'
 	| 'null-synopsis'
 	| 'cover-http'
@@ -43,6 +46,7 @@ export type HealthRow = {
 	slug: string;
 	isbn?: string[] | null;
 	primary_isbn?: string | null;
+	format?: string[] | null;
 	cover_image?: string | null;
 	synopsis?: string | null;
 };
@@ -170,6 +174,34 @@ export function checkDuplicateCovers(rows: HealthRow[]): Finding[] {
 	}));
 }
 
+/** Case, whitespace and hyphens don't distinguish one format from another. */
+function formatKey(raw: string): string {
+	return raw.toLowerCase().replace(/[\s-]+/g, '');
+}
+
+/** One finding per group of formats on a row that share a formatKey. */
+export function checkDuplicateFormats(rows: HealthRow[]): Finding[] {
+	const out: Finding[] = [];
+	for (const r of rows) {
+		const groups = new Map<string, string[]>();
+		for (const raw of r.format ?? []) {
+			const key = formatKey(raw);
+			if (key.length === 0) continue;
+			groups.set(key, [...(groups.get(key) ?? []), raw]);
+		}
+		for (const raws of groups.values()) {
+			if (raws.length < 2) continue;
+			out.push({
+				severity: 'warning',
+				check: 'duplicate-format',
+				slugs: [r.slug],
+				message: `${r.slug}: duplicate formats ${raws.map((v) => `"${v}"`).join(', ')}`,
+			});
+		}
+	}
+	return out;
+}
+
 export function checkNullFields(rows: HealthRow[]): Finding[] {
 	const out: Finding[] = [];
 	for (const r of rows) {
@@ -201,6 +233,7 @@ export function runOfflineChecks(rows: HealthRow[]): Finding[] {
 		...checkInvalidIsbns(rows),
 		...checkPrimaryInIsbns(rows),
 		...checkDuplicateCovers(rows),
+		...checkDuplicateFormats(rows),
 		...checkNullFields(rows),
 	];
 }

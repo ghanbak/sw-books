@@ -10,7 +10,7 @@ import type { OcrFragment } from '@/lib/spine-match';
  *
  *   Capturing → (auto-capture loop) → Processing → Review | Empty
  *   Capturing ⇄ Interrupted (call / background; captures preserved)
- *   Review → Adding → Done, or Adding → Review (offline → block + keep draft)
+ *   Review → Adding → Done | Queued (offline), or Adding → Review (rejected → keep draft)
  *   Empty → Capturing (keep scanning)
  *
  * Prereq conditions (signed-out, camera-denied, catalog-loading/failed) are derived
@@ -36,7 +36,8 @@ export type ShelfScanPhase =
 	| 'review'
 	| 'empty'
 	| 'adding'
-	| 'done';
+	| 'done'
+	| 'queued';
 
 export type CaptureOcrStatus = 'pending' | 'done' | 'failed';
 
@@ -80,6 +81,7 @@ export type ShelfScanAction =
 	| { type: 'continued' }
 	| { type: 'add_started' }
 	| { type: 'add_blocked' }
+	| { type: 'add_queued' }
 	| { type: 'add_succeeded' }
 	| { type: 'reset' }
 	/** The hook deleted these `deleted`-status files — drop them from the ledger. */
@@ -223,8 +225,10 @@ function transition(state: ShelfScanState, action: ShelfScanAction): ShelfScanSt
 		case 'add_started':
 			return state.phase === 'review' ? { ...state, phase: 'adding' } : state;
 		case 'add_blocked':
-			// Offline at Add → back to review, draft intact (v1: no queue).
+			// Not queueable (auth/RLS/validation, or storage failed) → back to review, draft intact.
 			return state.phase === 'adding' ? { ...state, phase: 'review' } : state;
+		case 'add_queued':
+			return state.phase === 'adding' ? { ...state, phase: 'queued' } : state;
 		case 'add_succeeded':
 			return state.phase === 'adding' ? { ...state, phase: 'done' } : state;
 		case 'reset':
@@ -294,13 +298,14 @@ export type ShelfChrome = {
  * Derive the host chrome from the capture phase. Pure so the immersive/dirty table is
  * unit-tested rather than reasoned about by hand. `dirty` is true whenever a switch
  * would lose work: any phase that isn't pristine capture (0 photos) and isn't `done`
- * (already saved). Note a published draft only exists in the immersive phases
- * (review/adding/done), where the switcher is hidden — so the host never needs to
+ * or `queued` (already saved). Note a published draft only exists in the immersive phases
+ * (review/adding/done/queued), where the switcher is hidden — so the host never needs to
  * clear a draft on a switch it actually allows.
  */
 export function deriveShelfChrome(phase: ShelfScanPhase, captureCount: number): ShelfChrome {
-	const immersive = phase === 'review' || phase === 'adding' || phase === 'done';
-	const dirty = phase !== 'done' && !(phase === 'capturing' && captureCount === 0);
+	const saved = phase === 'done' || phase === 'queued';
+	const immersive = phase === 'review' || phase === 'adding' || saved;
+	const dirty = !saved && !(phase === 'capturing' && captureCount === 0);
 	return { immersive, dirty };
 }
 
