@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	type HealthRow,
 	checkDuplicateCovers,
+	checkDuplicateFormats,
 	checkDuplicateSlugs,
 	checkInvalidIsbns,
 	checkIsbnCollisions,
@@ -137,6 +138,83 @@ describe('offline checks', () => {
 			warnings: 1,
 			byCheck: { 'isbn-collision': 1, 'null-synopsis': 1 },
 		});
+	});
+});
+
+describe('checkDuplicateFormats', () => {
+	const withFormats = (format: HealthRow['format']) => [healthy('a', '9780553392869', { format })];
+
+	it('flags Hard Cover + Hardcover, naming the slug and raw values', () => {
+		const f = checkDuplicateFormats(withFormats(['Audiobook', 'Hard Cover', 'Hardcover', 'eBook']));
+		expect(f).toEqual([
+			{
+				severity: 'warning',
+				check: 'duplicate-format',
+				slugs: ['a'],
+				message: 'a: duplicate formats "Hard Cover", "Hardcover"',
+			},
+		]);
+	});
+
+	it.each([
+		['hyphen', ['Hard-Cover', 'Hardcover']],
+		['case', ['HARDCOVER', 'hardcover']],
+		['hyphen and case', ['hard-cover', 'Hard Cover']],
+		['surrounding whitespace', [' Hardcover ', 'Hardcover']],
+		['exact repeat', ['Hardcover', 'Hardcover']],
+	])('flags %s variants', (_name, format) => {
+		expect(checkDuplicateFormats(withFormats(format))).toHaveLength(1);
+	});
+
+	it('reports each colliding group once and keeps all of its raw values', () => {
+		const f = checkDuplicateFormats(
+			withFormats(['Hard Cover', 'Hardcover', 'hard-cover', 'e-Book', 'eBook', 'Paperback']),
+		);
+		expect(f.map((x) => x.message)).toEqual([
+			'a: duplicate formats "Hard Cover", "Hardcover", "hard-cover"',
+			'a: duplicate formats "e-Book", "eBook"',
+		]);
+	});
+
+	it('does not flag distinct formats', () => {
+		expect(
+			checkDuplicateFormats(withFormats(['Paperback', 'Hardcover', 'eBook', 'Audiobook'])),
+		).toEqual([]);
+	});
+
+	it('handles null, absent, empty and blank formats', () => {
+		expect(checkDuplicateFormats(withFormats(null))).toEqual([]);
+		expect(checkDuplicateFormats([healthy('a', '9780553392869')])).toEqual([]);
+		expect(checkDuplicateFormats(withFormats([]))).toEqual([]);
+		expect(checkDuplicateFormats(withFormats(['', '  ', '-']))).toEqual([]);
+	});
+
+	it('does not compare formats across rows', () => {
+		const rows = [
+			healthy('a', '9780553392869', { format: ['Hard Cover'] }),
+			healthy('b', '9780345279132', { format: ['Hardcover'] }),
+		];
+		expect(checkDuplicateFormats(rows)).toEqual([]);
+	});
+
+	it('is wired into runOfflineChecks as a non-failing warning', () => {
+		const findings = runOfflineChecks(withFormats(['Hard Cover', 'Hardcover']));
+		expect(findings.map((x) => x.check)).toEqual(['duplicate-format']);
+		expect(summarize(findings)).toEqual({
+			errors: 0,
+			warnings: 1,
+			byCheck: { 'duplicate-format': 1 },
+		});
+	});
+
+	it('reads the format column from backup CSV text', () => {
+		const csv = [
+			'id,slug,title,author,canon,type,era,series_name,series_order,timeline_order,date_published,publisher,language,isbn,primary_isbn,format,cover_image,synopsis,created_at',
+			',mission-to-disaster,Mission to Disaster,Jude Watson,Legends,YA Novel,,,,,,,,9780553392869,9780553392869,Audiobook;Hard Cover;Hardcover;Paperback;eBook,https://c/m.jpg,S,',
+		].join('\n');
+		expect(runOfflineChecks(parseBackup(csv)).map((x) => x.message)).toEqual([
+			'mission-to-disaster: duplicate formats "Hard Cover", "Hardcover"',
+		]);
 	});
 });
 

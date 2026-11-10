@@ -9,6 +9,7 @@ import {
 	isAppleUser as hasAppleIdentity,
 } from '../supabase/functions/_shared/account-deletion';
 import { requestAppleCredential } from './auth';
+import { shelfQueue } from './shelf-queue';
 import { supabase } from './supabase';
 
 export { DELETE_ACCOUNT_ERROR_MESSAGES };
@@ -103,5 +104,7 @@ export async function isAccountGone(): Promise<boolean> {
 /** The user and its refresh tokens are gone server-side; clear the local session only. */
 export async function signOutLocally(): Promise<void> {
 	deletionAccessToken = undefined;
+	// First: signOut can return early without clearing anything if the session read fails.
+	await shelfQueue.clearAll();
 	await supabase.auth.signOut({ scope: 'local' });
 }

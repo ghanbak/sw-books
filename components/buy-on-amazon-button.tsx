@@ -7,10 +7,9 @@ import { openInAppBrowser } from '@/lib/external-link';
 
 type Props = {
 	url: string;
-	onInfoPress?: () => void;
 };
 
-export function BuyOnAmazonButton({ url, onInfoPress }: Props) {
+export function BuyOnAmazonButton({ url }: Props) {
 	return (
 		<View style={styles.row}>
 			<Pressable
@@ -27,17 +26,6 @@ export function BuyOnAmazonButton({ url, onInfoPress }: Props) {
 				/>
 				<Text style={styles.label}>Find on Amazon</Text>
 			</Pressable>
-			{onInfoPress && (
-				<Pressable
-					style={styles.infoButton}
-					onPress={onInfoPress}
-					hitSlop={8}
-					accessibilityRole="button"
-					accessibilityLabel="Affiliate disclosure"
-				>
-					<SymbolView name="info.circle" size={20} tintColor={tokens.text.hint} />
-				</Pressable>
-			)}
 		</View>
 	);
 }
@@ -65,11 +53,5 @@ const styles = StyleSheet.create({
 		color: tokens.text.inverse,
 		fontSize: 16,
 		fontWeight: '600',
-	},
-	infoButton: {
-		width: 40,
-		height: 40,
-		alignItems: 'center',
-		justifyContent: 'center',
 	},
 });

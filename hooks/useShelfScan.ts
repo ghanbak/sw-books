@@ -9,7 +9,8 @@ import { useAuth } from '@/lib/auth';
 import { useBooks, useUserBooks } from '@/lib/hooks';
 import { recognizeImage } from '@/lib/ocr';
 import { useScanSession } from '@/lib/scan-session';
-import { defaultSelection, pruneOwned } from '@/lib/shelf';
+import { ADD_OFFLINE_CODE, defaultSelection, pruneOwned } from '@/lib/shelf';
+import { shelfQueue } from '@/lib/shelf-queue';
 import {
 	SHELF_SCAN_CONSTANTS,
 	atCaptureCap,
@@ -93,6 +94,10 @@ export function useShelfScan({
 
 	const [addError, setAddError] = useState<string | null>(null);
 	const [addedCount, setAddedCount] = useState(0);
+	const [queuedCount, setQueuedCount] = useState(0);
+	// Read after an await: a batch must only be queued for the user who is still signed in.
+	const userIdRef = useRef(user?.id ?? null);
+	userIdRef.current = user?.id ?? null;
 	// Consecutive capture failures → a user-visible banner (see CAPTURE_FAILURE_LIMIT).
 	const captureFailureStreakRef = useRef(0);
 	const [captureError, setCaptureError] = useState<string | null>(null);
@@ -342,6 +347,7 @@ export function useShelfScan({
 		addInFlightRef.current = true;
 		setAddError(null);
 		dispatch({ type: 'add_started' });
+		const ownerId = userIdRef.current;
 		try {
 			const result = await addOwned(ids);
 			if (result.ok) {
@@ -349,8 +355,19 @@ export function useShelfScan({
 				setDraft(null); // draft consumed — a later tab-return starts a fresh session
 				Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 				dispatch({ type: 'add_succeeded' });
+			} else if (
+				result.error.code === ADD_OFFLINE_CODE &&
+				ownerId !== null &&
+				ownerId === userIdRef.current &&
+				(await shelfQueue.enqueue(ownerId, ids))
+			) {
+				// Only connectivity failures reach here; ShelfQueueSync replays the batch.
+				setQueuedCount(ids.length);
+				setDraft(null);
+				Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+				dispatch({ type: 'add_queued' });
 			} else {
-				// v1 offline policy: block, keep the draft, let the user retry (plan §Decision 3).
+				// Not queueable (auth/RLS/validation) or unstorable: block, keep the draft.
 				setAddError(
 					result.error.code === 'not_signed_in'
 						? result.error.message
@@ -388,6 +405,7 @@ export function useShelfScan({
 		// lifecycle effect, OCR-pending ones once their read settles.
 		setAddError(null);
 		setAddedCount(0);
+		setQueuedCount(0);
 		captureFailureStreakRef.current = 0;
 		setCaptureError(null);
 		setDraft(null);
@@ -420,6 +438,7 @@ export function useShelfScan({
 		addSelected,
 		addError,
 		addedCount,
+		queuedCount,
 		/** Set after repeated capture failures so the HUD can warn the user (Phase 5). */
 		captureError,
 	};

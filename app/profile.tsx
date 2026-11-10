@@ -18,6 +18,7 @@ import {
 import { useAuth } from '@/lib/auth';
 import { runDeleteAccountFlow } from '@/lib/delete-account-flow';
 import { PRIVACY_POLICY_URL, openInAppBrowser } from '@/lib/external-link';
+import { shelfQueue } from '@/lib/shelf-queue';
 import { supabase } from '@/lib/supabase';
 
 // Single source of truth: app.json's expo.version (kept in lockstep with package.json by
@@ -50,6 +51,7 @@ export default function ProfileScreen() {
 	async function handleSignOut() {
 		const { error } = await supabase.auth.signOut();
 		if (error) Alert.alert('Sign-out failed', error.message);
+		else await shelfQueue.clearAll();
 	}
 
 	async function handleDeleteAccount() {
@@ -99,7 +101,7 @@ export default function ProfileScreen() {
 					<ListItem trailing={<Text>{`v${APP_VERSION}`}</Text>}>Version</ListItem>
 					<ListItem
 						onPress={() => openInAppBrowser(PRIVACY_POLICY_URL)}
-						trailing={<Icon name="arrow.up.right" color={tokens.text.hint} />}
+						trailing={<Icon name="arrow.up.right" color={tokens.text.tertiary} />}
 					>
 						Privacy Policy
 					</ListItem>
