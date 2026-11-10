@@ -7,6 +7,7 @@ import { ActivityIndicator, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
+import { ShelfQueueSync } from '@/components/shelf-queue-sync';
 import { tokens } from '@/constants/tokens';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { FontProvider, loadAurebeshPref, useFontPref } from '@/lib/font-prefs';
@@ -53,6 +54,7 @@ export default function RootLayout() {
 				<AuthProvider>
 					<BooksProvider>
 						<UserBooksProvider>
+							<ShelfQueueSync />
 							<ScanSessionProvider>
 								<ThemeProvider value={appDarkTheme}>
 									<AuthGate>

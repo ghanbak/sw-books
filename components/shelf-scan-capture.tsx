@@ -14,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ShelfScanQueued } from '@/components/shelf-scan-queued';
 import { ShelfScanReview } from '@/components/shelf-scan-review';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
@@ -270,6 +271,8 @@ export function ShelfScanCapture({
 					onReset={scan.reset}
 				/>
 			)}
+
+			{phase === 'queued' && <ShelfScanQueued count={scan.queuedCount} onReset={scan.reset} />}
 		</View>
 	);
 }

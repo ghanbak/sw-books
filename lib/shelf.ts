@@ -412,15 +412,65 @@ export function createShelfToggler(deps: ShelfToggleDeps) {
 	};
 }
 
+/** `addOwned` error code for a connectivity failure, the only kind the shelf scan queues. */
+export const ADD_OFFLINE_CODE = 'add_offline';
+
+/**
+ * - `connectivity`: the backend wasn't reached. Add queues these.
+ * - `retryable`: transient or unidentified. Add blocks and keeps the draft (the user is
+ *   there to retry, and "when you're back online" would be untrue); a flush backs off.
+ * - `auth`: the session was refused. Add blocks; a flush keeps the ops for the next start.
+ * - `rejected`: Postgres definitely refused the write. Only these are ever dropped.
+ */
+export type ShelfWriteFailure = 'connectivity' | 'retryable' | 'auth' | 'rejected';
+
+const CONNECTIVITY_MESSAGE = /network request failed|failed to fetch|network error|timed? ?out/i;
+
+/** RLS (42501), data exceptions (22xxx), integrity violations (23xxx). */
+const POSTGRES_REJECTION = /^(42501|22[0-9A-Z]{3}|23[0-9A-Z]{3})$/;
+
+/** 502/503/504, captive-portal 511, and Cloudflare's 520-530 "couldn't reach origin" range. */
+function isUnreachableStatus(status: number): boolean {
+	return (
+		status === 0 ||
+		status === 502 ||
+		status === 503 ||
+		status === 504 ||
+		status === 511 ||
+		(status >= 520 && status <= 530)
+	);
+}
+
+/**
+ * postgrest-js resolves a failed `fetch` (or a 200 whose body isn't JSON) as `status: 0`,
+ * and a non-JSON error page as `{ message: body }` with no code, so a portal's 403 stays
+ * retryable. Auth comes first: PostgREST answers 42501 with 401 for the anon role.
+ * Message matching is only for thrown errors, which have no status.
+ */
+export function classifyShelfWriteError(
+	error: { code?: string | null; message?: string | null } | null | undefined,
+	status?: number,
+): ShelfWriteFailure {
+	if (status !== undefined && isUnreachableStatus(status)) return 'connectivity';
+	if (status === undefined && CONNECTIVITY_MESSAGE.test(error?.message ?? '')) {
+		return 'connectivity';
+	}
+	const code = error?.code ?? '';
+	if (status === 401 || /^PGRST30\d$/.test(code)) return 'auth';
+	return POSTGRES_REJECTION.test(code) ? 'rejected' : 'retryable';
+}
+
 export type AddOwnedDeps = {
 	/** Latest local Map (must reflect `update` immediately, not after a render). */
 	current: () => ReadonlyMap<string, UserBook>;
 	/** Apply `fn` to the local Map (and to React state, functionally). */
 	update: (fn: (prev: ReadonlyMap<string, UserBook>) => Map<string, UserBook>) => void;
 	/** The `add_owned_books` RPC. */
-	rpc: (
-		bookIds: string[],
-	) => Promise<{ rows: UserBook[] | null; error: { message: string } | null }>;
+	rpc: (bookIds: string[]) => Promise<{
+		rows: UserBook[] | null;
+		error: { code?: string; message: string } | null;
+		status?: number;
+	}>;
 	/** Pending-write registry shared with the toggler. */
 	writes: ShelfWriteTracker;
 	/** False once the user the batch ran for is no longer signed in. */
@@ -458,7 +508,7 @@ export function createOwnedAdder(deps: AddOwnedDeps) {
 
 		let applied = true;
 		try {
-			const { rows, error } = await deps.rpc(ids);
+			const { rows, error, status } = await deps.rpc(ids);
 			const stale = !deps.isCurrentUser(userId); // signed out / switched meanwhile
 			if (error) {
 				applied = false;
@@ -481,7 +531,8 @@ export function createOwnedAdder(deps: AddOwnedDeps) {
 						return next;
 					});
 				}
-				return err({ code: 'add_failed', message: error.message });
+				const offline = classifyShelfWriteError(error, status) === 'connectivity';
+				return err({ code: offline ? ADD_OFFLINE_CODE : 'add_failed', message: error.message });
 			}
 			const result = rows ?? [];
 			if (!stale) deps.update((prev) => mergeServerRows(prev, result));
