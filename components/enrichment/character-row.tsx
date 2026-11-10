@@ -44,7 +44,7 @@ export const CharacterRow = memo(function CharacterRow({ item }: { item: Charact
 						name="chevron.forward"
 						size={15}
 						weight="medium"
-						tintColor={tokens.text.hint}
+						tintColor={tokens.text.tertiary}
 					/>
 				) : null}
 			</View>
