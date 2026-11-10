@@ -120,7 +120,7 @@ export function PinEditor({
 			</div>
 
 			{pinErrors.length > 0 && (
-				<p className="text-destructive text-sm">
+				<p className="text-destructive-text text-sm">
 					Pin file is invalid ({pinErrors[0]}). Fix it before editing pins.
 				</p>
 			)}
@@ -139,7 +139,7 @@ export function PinEditor({
 							{storedPageid === pin.pageid ? ' · matches the stored row' : null}
 						</p>
 						{conflict && (
-							<p className="text-destructive text-xs">
+							<p className="text-destructive-text text-xs">
 								Differs from the stored row (#{storedPageid}). The sync keeps the stored page and
 								reports a conflict unless run with --repin.
 							</p>
@@ -151,7 +151,7 @@ export function PinEditor({
 							size="sm"
 							onClick={remove}
 							disabled={saving || pinErrors.length > 0}
-							className="text-muted-foreground hover:text-destructive"
+							className="text-muted-foreground hover:text-destructive-text"
 						>
 							<PinOff className="size-4" /> Remove pin
 						</Button>

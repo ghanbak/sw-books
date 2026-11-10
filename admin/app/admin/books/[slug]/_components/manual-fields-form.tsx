@@ -264,7 +264,7 @@ function Field({
 			</Label>
 			{children}
 			{error && (
-				<p id={`manual-${field}-error`} className="text-destructive text-xs">
+				<p id={`manual-${field}-error`} className="text-destructive-text text-xs">
 					{error}
 				</p>
 			)}

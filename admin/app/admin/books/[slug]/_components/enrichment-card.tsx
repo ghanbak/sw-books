@@ -61,7 +61,7 @@ export async function EnrichmentCard({
 	if (!ctx.ok || rowRes.error) {
 		return (
 			<EnrichmentShell>
-				<p className="text-destructive text-sm">
+				<p className="text-destructive-text text-sm">
 					Couldn’t read enrichment:{' '}
 					{ctx.ok ? dbError('EnrichmentCard', rowRes.error).message : ctx.message}
 				</p>
