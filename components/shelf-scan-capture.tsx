@@ -20,7 +20,7 @@ import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce, useReduceMotion, useScreenReaderEnabled } from '@/hooks/useAccessibility';
 import { useShelfScan } from '@/hooks/useShelfScan';
-import { finishScanLabel, photosCapturedLabel } from '@/lib/scan-a11y';
+import { finishScanLabel, photosCapturedLabel, shelfIntroCopy } from '@/lib/scan-a11y';
 import { deriveShelfChrome } from '@/lib/shelf-scan';
 
 const INTRO_SEEN_KEY = '@ossus/scan_intro_seen';
@@ -117,7 +117,11 @@ export function ShelfScanCapture({
 	if (enabled && introSeen === false && phase === 'capturing') {
 		return (
 			<View style={styles.container}>
-				<ShelfIntro onDismiss={dismissIntro} topInset={insets.top} />
+				<ShelfIntro
+					onDismiss={dismissIntro}
+					topInset={insets.top}
+					screenReaderEnabled={screenReaderEnabled}
+				/>
 			</View>
 		);
 	}
@@ -280,9 +284,19 @@ export function ShelfScanCapture({
 /**
  * One-time explainer for the silent auto-capture model (plan Phase 5 first-run).
  * Renders before the camera starts so panning instructions land before the first
- * photo, not after.
+ * photo, not after. Screen-reader users get the manual-shutter copy instead, since
+ * `useShelfScan` runs `manualOnly` for them.
  */
-function ShelfIntro({ onDismiss, topInset }: { onDismiss: () => void; topInset: number }) {
+function ShelfIntro({
+	onDismiss,
+	topInset,
+	screenReaderEnabled,
+}: {
+	onDismiss: () => void;
+	topInset: number;
+	screenReaderEnabled: boolean;
+}) {
+	const [howTo, finishNote] = shelfIntroCopy(screenReaderEnabled);
 	return (
 		<Animated.View
 			style={[styles.introOverlay, { paddingTop: topInset + 24 }]}
@@ -292,13 +306,8 @@ function ShelfIntro({ onDismiss, topInset }: { onDismiss: () => void; topInset: 
 				<Text style={styles.introTitle} accessibilityRole="header">
 					Scan your shelf
 				</Text>
-				<Text style={styles.introText}>
-					Pan the camera slowly across a row of spines. Photos snap on their own each time you hold
-					steady — no tapping.
-				</Text>
-				<Text style={styles.introText}>
-					Tap Finish when you're done and we'll match what we found against the Archive.
-				</Text>
+				<Text style={styles.introText}>{howTo}</Text>
+				<Text style={styles.introText}>{finishNote}</Text>
 			</View>
 			<Pressable
 				style={styles.introButton}

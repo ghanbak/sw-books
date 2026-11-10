@@ -1,7 +1,8 @@
 /**
  * Screen-reader strings for the scanner (barcode + shelf). Pure so the pluralization
  * and state suffixes unit-test in the node vitest env; the components only wire them
- * to `accessibilityLabel` / `announce()`. None of these are rendered as visible text.
+ * to `accessibilityLabel` / `announce()`. All are screen-reader-only except
+ * `shelfIntroCopy`, which is the visible first-run intro text.
  */
 
 function plural(n: number, one: string, many: string): string {
@@ -16,6 +17,24 @@ export function photosCapturedLabel(count: number): string {
 /** Shelf HUD Finish button. */
 export function finishScanLabel(count: number): string {
 	return `Finish scanning, ${plural(count, 'photo', 'photos')} taken`;
+}
+
+/**
+ * Shelf-scan first-run intro paragraphs. With a screen reader on, `useShelfScan` runs
+ * `manualOnly` (no auto-capture), so that path describes the manual shutter by its
+ * accessibilityLabel ("Take photo") and the Finish button.
+ */
+export function shelfIntroCopy(screenReaderEnabled: boolean): readonly [string, string] {
+	if (screenReaderEnabled) {
+		return [
+			'Point the camera at a section of your shelf, then double-tap Take photo for each one.',
+			"Double-tap Finish when you're done and we'll match what we found against the Archive.",
+		];
+	}
+	return [
+		'Pan the camera slowly across a row of spines. Photos snap on their own each time you hold steady — no tapping.',
+		"Tap Finish when you're done and we'll match what we found against the Archive.",
+	];
 }
 
 /** Review footer add button. Matches the visible "Nothing selected" when empty. */
