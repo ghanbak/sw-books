@@ -43,7 +43,7 @@ The installed dev client only runs JS changes. If the iOS fingerprint changed, s
   ```
 
 - Couldn't capture (no simulator, Docker down, native change)? Write `Screenshots: not captured (<reason>)` instead. A reason is fine; silence isn't.
-- Feature → main PRs: the caretaker copies the sub-issue PRs' "after" images into the feature PR's "What to look at".
+- Feature → main PRs: the caretaker copies the sub-issue PRs' "after" images into the feature PR's `## Screenshots` section.
 
 ## Diagrams (Brandon)
 - When a schema, data-flow, pipeline, auth/RLS or API change is easier to see than read, put a Mermaid block in the PR body or the issue proposal (GitHub renders it): `erDiagram` for schema, `flowchart` for pipelines and data flow, `sequenceDiagram` for auth and request flows.
