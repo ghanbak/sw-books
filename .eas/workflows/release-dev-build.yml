@@ -19,10 +19,11 @@ concurrency:
   group: release-dev-build-${{ github.ref }}
 
 jobs:
+  # Same environment as the development-device builds it looks for (EAS default: development).
   fingerprint:
     name: Fingerprint
     type: fingerprint
-    environment: production
+    environment: development
 
   get_build:
     name: Find matching dev build
