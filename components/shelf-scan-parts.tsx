@@ -33,7 +33,7 @@ export function DecorativeCover({
 	);
 }
 
-/** Small canon-blue pill marking a book the user already owns. */
+/** Small neutral pill marking a book the user already owns, whatever its Canon or Legends status. */
 export function OwnedBadge({ label }: { label: string }) {
 	return (
 		<View style={styles.badge}>
@@ -48,7 +48,11 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 6,
 		paddingVertical: 2,
 		borderRadius: 4,
-		backgroundColor: tokens.badge.canon,
+		// Translucent so the pill lifts off both the review row (overlay) and the swap sheet
+		// (surface.card), where a surface.card fill would disappear.
+		backgroundColor: tokens.border.subtle,
+		borderWidth: 1,
+		borderColor: tokens.border.subtle,
 		marginTop: 2,
 	},
 	text: {
