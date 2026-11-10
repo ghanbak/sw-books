@@ -40,7 +40,7 @@ export default async function DiffPage() {
 			</Link>
 
 			{!res.ok ? (
-				<p className="text-destructive">Failed to compute drift: {res.error.message}</p>
+				<p className="text-destructive-text">Failed to compute drift: {res.error.message}</p>
 			) : (
 				<>
 					<div className="mb-6 flex items-center justify-between gap-4">

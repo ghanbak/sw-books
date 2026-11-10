@@ -11,7 +11,7 @@ Follow [README.md](README.md) shared rules first. Check backpressure before star
 
 ## Do the work (per item, in parallel)
 1. Pick the base:
-   - Sub-issue of a feature (it has a parent issue): base is `feature/<parent-number>-<slug>`. If that branch doesn't exist on origin yet, create it from `origin/main` and push it (`git push origin origin/main:refs/heads/feature/<...>`).
+   - Sub-issue of a feature (it has a parent issue): base is `feature/<parent-number>-<slug>`. If that branch doesn't exist on origin yet, create it from `origin/main` and push it (patch release branches excepted: the caretaker creates those, releases.md) (`git push origin origin/main:refs/heads/feature/<...>`).
    - Anything else: base is `main`.
 2. Worktree on a new branch from the base: `agent/<issue-number>-<short-slug>`.
 3. Delegate the implementation to the owning subagent from the `agent:*` label (Tregg, Luis, Dylan, Brandon). Give it the issue body, the parent issue's contract if it's a sub-issue, the owner's comments on the issue (the owner's latest instructions override the body), acceptance criteria, the worktree path, and the README never-list. Ask it to end its report with a "Lessons / corrections" section.
