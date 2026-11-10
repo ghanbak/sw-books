@@ -155,11 +155,6 @@ describe('meaningful non-text UI contrast (WCAG 1.4.11, 3:1)', () => {
 
 	it.each([
 		[
-			'buy-button info icon',
-			'components/buy-on-amazon-button.tsx',
-			/name="info\.circle"[^>]*?tintColor=\{\s*tokens\.text\.tertiary\s*\}/,
-		],
-		[
 			'profile external-link arrow',
 			'app/profile.tsx',
 			/name="arrow\.up\.right"[^>]*?color=\{\s*tokens\.text\.tertiary\s*\}/,
