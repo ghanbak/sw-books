@@ -1,6 +1,6 @@
 # Owner digest, PR review guides and device previews
 
-Status: approved 2026-11-10. Step 1 (digest) is live; steps 2–5 land as separate PRs.
+Status: shipped 2026-11-10. Digest live; steps 2–5 merged (#265, #266, #269, #268). Previews start after the owner's one-time setup.
 
 ## Today
 - No daily or weekly update exists. The only scheduled item for you is the one-time X-post reminder on Fri 2026-11-13.
@@ -81,7 +81,7 @@ Recommendation: yes. Use EAS Workflows, which run in Expo's CI, so agents still 
 **Caveats**
 - Previews use the build's env, so they run against production Supabase with your real account, like TestFlight. A PR that needs an unapplied migration can't be previewed on a device; its guide says "Simulator" instead.
 - Previews publish to PR-named update branches, never the `production` channel, so store users never get them. (With the `fingerprint` policy a dev build shares its runtime with a store build of the same native state.)
-- The `development-device` build uses the store app's bundle ID, so installing it replaces the App Store/TestFlight app on the phone (open decision below).
+- The `development-device` build uses the store app's bundle ID, so installing it replaces the App Store/TestFlight app on the phone. Decided: accept that (see Decisions).
 - Cost: updates are negligible at one device. Native builds count against the EAS build quota, so they sit behind approval.
 - Previews don't replace the agents' own simulator proof. They're for your review only.
 
@@ -118,4 +118,4 @@ First train: finish the open `Release iOS 1.4.0` (#111) this week, then 1.5.0 st
 - Native builds: weekly train, with one release-branch dev build per change day; no per-PR builds.
 - Previews on production data and your account: OK.
 - Cut day: Wednesday 9:00.
-- Open: the phone dev build's bundle ID. As is, it replaces the App Store/TestFlight app on the phone. A separate dev variant (`app.config.ts` with `APP_VARIANT`, its own bundle ID) lets both coexist but is a native change and needs Apple/Google sign-in set up for the new bundle ID.
+- Phone dev build: one app (same bundle ID as the store app). The owner reinstalls TestFlight to check the latest production build. Revisit a separate dev variant (`app.config.ts` with `APP_VARIANT`, its own bundle ID, Apple/Google sign-in set up for it) if swapping gets old; it would ride a weekly release.
