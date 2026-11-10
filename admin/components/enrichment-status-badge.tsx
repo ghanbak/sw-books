@@ -8,7 +8,7 @@ import {
 const STYLES: Record<EnrichmentStatus, string> = {
 	enriched: 'border-saber-blue/40 bg-saber-blue/10 text-saber-blue',
 	pinned: 'border-saber-yellow/40 bg-saber-yellow/10 text-saber-yellow',
-	flagged: 'border-destructive/50 bg-destructive/15 text-destructive',
+	flagged: 'border-destructive/50 bg-destructive/15 text-destructive-text',
 	no_page: 'text-muted-foreground',
 };
 

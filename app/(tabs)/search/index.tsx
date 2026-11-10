@@ -1,6 +1,6 @@
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { Stack } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
@@ -9,6 +9,7 @@ import { TabHeaderActions } from '@/components/tab-header-actions';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
+import { useScrollResetOnChange } from '@/hooks/useScrollResetOnChange';
 import type { Book } from '@/lib/hooks';
 import { useBooks } from '@/lib/hooks';
 import { selectListState } from '@/lib/list-state';
@@ -17,6 +18,7 @@ import { searchAnnouncement } from '@/lib/search-a11y';
 
 /** Wait for typing to settle before speaking the result count. */
 const ANNOUNCE_DELAY_MS = 600;
+const MVCP_DISABLED = { disabled: true };
 
 /**
  * Search tab — native iOS header search bar (under the large title) with live results.
@@ -45,6 +47,11 @@ export default function SearchScreen() {
 		return () => clearTimeout(timer);
 	}, [trimmed, catalogState, results.length]);
 
+	// A new query replaces the results wholesale: back to the top so the new first match (or the
+	// empty state) is in view under the header, not wherever the old results were scrolled to.
+	const listRef = useRef<FlashListRef<Book>>(null);
+	const scrollReset = useScrollResetOnChange(listRef, trimmed);
+
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
@@ -62,6 +69,7 @@ export default function SearchScreen() {
 				}}
 			/>
 			<FlashList
+				ref={listRef}
 				style={styles.list}
 				contentContainerStyle={results.length === 0 ? styles.emptyContent : undefined}
 				data={results}
@@ -69,6 +77,9 @@ export default function SearchScreen() {
 				keyExtractor={keyExtractor}
 				contentInsetAdjustmentBehavior="automatic"
 				keyboardDismissMode="on-drag"
+				// Results aren't a feed: anchoring the old first item would fight the reset.
+				maintainVisibleContentPosition={MVCP_DISABLED}
+				{...scrollReset}
 				ListEmptyComponent={
 					catalogState === 'loading' ? (
 						<View style={styles.center}>

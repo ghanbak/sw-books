@@ -13,6 +13,7 @@ import {
 	AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { callAction } from '@/lib/call-action';
 import { Loader2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
@@ -26,7 +27,7 @@ export function ExportButton({ rows, target }: { rows: number; target: DbTarget 
 
 	function run() {
 		startExport(async () => {
-			const res = await exportToCsv();
+			const res = await callAction(() => exportToCsv());
 			if (res.ok) {
 				toast.success(`Exported ${res.data.rows} rows to data/catalog-backup.csv`);
 				router.refresh();
