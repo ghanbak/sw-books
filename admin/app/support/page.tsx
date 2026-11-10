@@ -37,7 +37,7 @@ export default function Support() {
 				<p>
 					Your sign-in identifier, email address (as returned by Apple or Google), and the books on
 					your shelves. See the{' '}
-					<Link className="text-saber-blue hover:underline" href="/privacy">
+					<Link className="text-saber-blue underline underline-offset-2" href="/privacy">
 						Privacy Policy
 					</Link>{' '}
 					for details.

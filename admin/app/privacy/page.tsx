@@ -121,7 +121,7 @@ export default function PrivacyPolicy() {
 			<Section title="Contact">
 				<p>
 					Questions? Email <ContactLink />. For help using the app, see{' '}
-					<Link className="text-saber-blue hover:underline" href="/support">
+					<Link className="text-saber-blue underline underline-offset-2" href="/support">
 						Support
 					</Link>
 					.

@@ -7,7 +7,7 @@ export const CONTACT = 'privacy@ossusarchives.com';
 
 export function ContactLink() {
 	return (
-		<a className="text-saber-blue hover:underline" href={`mailto:${CONTACT}`}>
+		<a className="text-saber-blue underline underline-offset-2" href={`mailto:${CONTACT}`}>
 			{CONTACT}
 		</a>
 	);
