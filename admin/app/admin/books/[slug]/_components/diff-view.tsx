@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
+import { callAction } from '@/lib/call-action';
 import { cn } from '@/lib/utils';
 import { createSaveGate, serializeSave } from '@app/serial-save';
 import {
@@ -90,7 +91,7 @@ export function DiffView({ book }: { book: BookRow }) {
 
 	function runLookup() {
 		startLookup(async () => {
-			const res = await lookupCandidates(book.slug);
+			const res = await callAction(() => lookupCandidates(book.slug));
 			if (res.ok) {
 				setCandidates(res.data);
 				const olEmpty = Object.keys(res.data.ol).length === 0;
