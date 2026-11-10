@@ -54,6 +54,11 @@ Its body has four sections. The caretaker keeps the first two current every run:
 3. **Owner checklist**: production steps agents can't take (secrets, Edge Function deploys, console changes), then build, TestFlight check, notes, submit.
 4. **Release notes**: a short suggested draft, for the owner to rewrite.
 
+The caretaker also keeps a `Phone build:` line at the top of the body: the newest finished `development-device` build of the release branch (`eas build:list --platform ios --profile development-device --status finished --limit 5 --json --non-interactive`, matched by `gitCommitHash` on the branch) with its expo.dev link. If `eas fingerprint:compare` shows the branch head's iOS fingerprint differs from that build's, add "native changes newer than this build; approve the rebuild in expo.dev".
+
+## Phone builds for native work
+`.eas/workflows/release-dev-build.yml` runs on every push to `main` and to `feature/*-ios-*` release branches. When the iOS fingerprint has no matching `development-device` build, it waits for the owner's approval in expo.dev, then builds one. The owner installs it from expo.dev and tests the week's native work on it before the cut. After a release merges, the same workflow offers a rebuild from `main`, so phone previews (`pr-preview.yml`) match again. JS-only pushes build nothing, and a running build is never cancelled. The phone holds one dev build: while the release-branch build is installed, previews of PRs into `main` won't open until `main`'s build is reinstalled from expo.dev.
+
 Builds and submissions stay with the owner:
 ```bash
 eas build --platform ios --profile production
