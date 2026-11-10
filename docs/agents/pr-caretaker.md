@@ -23,7 +23,7 @@ Follow [README.md](README.md) shared rules first (lock, worktrees, never-list, a
 - Owner review comments: address each one in a commit, verify, push, and reply to the comment with the commit SHA. If a comment asks for something out of scope, reply with a new issue number instead of growing the PR. Once all of them are addressed, comment once: "Ready for another look."
 - Draft labeled `needs-proof`: produce the missing proof (`scripts/verify-db.sh`, simulator, browser; README "Verify like CI"). Passes → add it to the PR body, remove the label, `gh pr ready <n>` (auto-merge turns on). Fails → comment what failed (`needs-proof attempt <k>/3`); on the 3rd failure, assign the owner.
 - Unassigned PR whose diff turns out to need review (see README "When to assign the owner"): assign the owner with a one-line reason.
-- Assigned to the owner with no `## How to review` section, or one that no longer matches the diff: write it into the top of the body (`gh pr edit <n> --body-file`), keeping everything else. Check the steps with `npm run review -- <n> --check --out <dir>` (never without `--check`; it holds the simulator until Ctrl-C).
+- Assigned to the owner with no `## How to review` section, or one that no longer matches the diff: write it into the top of the body (`gh pr edit <n> --body-file`), keeping everything else. Check the steps with `npm run review -- <n> --check --out <dir>` (never without `--check`; it holds the simulator until Ctrl-C). Add `device-review` if it qualifies (README) and it's missing; merge `origin/main` into the branch first if it has no `.eas/workflows/pr-preview.yml`.
 - Merged: set the linked issue's Roadmap Status to `Done`.
 
 **Owner PRs** (author `ghanbak`, not `agent/*` or `feature/*`)
