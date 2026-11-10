@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.status.error,
 	},
 	errorBannerText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 13,
 		fontWeight: '500',
 		textAlign: 'center',

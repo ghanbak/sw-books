@@ -1,9 +1,11 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
+import { tokens } from '@/constants/tokens';
 import { useFontPref } from '@/lib/font-prefs';
 
-// Native tab bar — UIKit on iOS, Material 3 on Android. No custom styling: the
-// system renders its default (the floating Liquid Glass capsule on iOS 26+).
+// Native tab bar — UIKit on iOS, Material 3 on Android. Only the selected tint
+// comes from tokens (`accent.primary`); the system renders everything else (the
+// floating Liquid Glass capsule on iOS 26+, unselected items).
 //
 // Tabs: Archives · Timeline · Library · Search. Search uses `role="search"` for
 // the separated circular affordance (like Apple News). Scan and Profile are no
@@ -16,7 +18,7 @@ import { useFontPref } from '@/lib/font-prefs';
 export default function TabLayout() {
 	const { fontFamily } = useFontPref();
 	return (
-		<NativeTabs labelStyle={{ fontFamily }}>
+		<NativeTabs tintColor={tokens.accent.primary} labelStyle={{ fontFamily }}>
 			<NativeTabs.Trigger name="archives">
 				<NativeTabs.Trigger.Icon sf={{ default: 'pyramid', selected: 'pyramid.fill' }} />
 				<NativeTabs.Trigger.Label>Archives</NativeTabs.Trigger.Label>

@@ -27,6 +27,7 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
+import { callAction } from '@/lib/call-action';
 import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
 import { cn } from '@/lib/utils';
 import { type BulkItemResult, runBulkSequential } from '@app/bulk-run';
@@ -154,7 +155,7 @@ function DeleteBookCell({
 				<Button
 					variant="ghost"
 					size="sm"
-					className="h-7 text-muted-foreground hover:text-destructive"
+					className="h-7 text-muted-foreground hover:text-destructive-text"
 					aria-label={`Delete ${title}`}
 				>
 					<Trash2 className="size-3.5" />
@@ -171,6 +172,7 @@ function DeleteBookCell({
 				</AlertDialogHeader>
 				<Input
 					autoFocus
+					aria-label={`Type ${slug} to confirm deletion`}
 					value={typed}
 					placeholder={slug}
 					onChange={(e) => setTyped(e.target.value)}
@@ -182,7 +184,7 @@ function DeleteBookCell({
 						disabled={typed.trim() !== slug || pending}
 						onClick={() =>
 							startDelete(async () => {
-								const res = await deleteBook(id, typed.trim());
+								const res = await callAction(() => deleteBook(id, typed.trim()), 'Delete failed');
 								if (res.ok) {
 									toast.success(`Deleted “${title}”`);
 									setOpen(false);
@@ -525,7 +527,7 @@ export function BooksTable({
 
 	function recheck() {
 		startRecheck(async () => {
-			const res = await recheckWiki();
+			const res = await callAction(() => recheckWiki(), 'Recheck failed');
 			if (!res.ok) {
 				toast.error(res.error.message);
 				return;
@@ -553,12 +555,14 @@ export function BooksTable({
 		);
 		startTransition(async () => {
 			applyOptimistic({ id, field, value });
-			const res = await queueRowSave(
-				saveQueue,
-				id,
-				loadedAt,
-				(at) => patchBook(id, at, { [field]: value }),
-				(r) => (r.ok ? r.data.updated_at : undefined),
+			const res = await callAction(() =>
+				queueRowSave(
+					saveQueue,
+					id,
+					loadedAt,
+					(at) => patchBook(id, at, { [field]: value }),
+					(r) => (r.ok ? r.data.updated_at : undefined),
+				),
 			);
 			if (res.ok) {
 				const { updated_at } = res.data;
@@ -589,6 +593,11 @@ export function BooksTable({
 		onGlobalFilterChange: setGlobalFilter,
 		onRowSelectionChange: setRowSelection,
 		enableRowSelection: true,
+		// No pagination here. Left on, a pending optimistic edit hands the table
+		// a new `data` array every render, each one queues a page-index reset,
+		// and that render loop starves the transition that reverts the edit and
+		// clears every `useTransition` pending flag (Delete stuck spinning, #210).
+		autoResetPageIndex: false,
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
@@ -707,7 +716,7 @@ export function BooksTable({
 					</Button>
 				</div>
 				{enrichment.error ? (
-					<p className="px-3 text-destructive text-xs">{enrichment.error}</p>
+					<p className="px-3 text-destructive-text text-xs">{enrichment.error}</p>
 				) : (
 					ENRICHMENT_STATUSES.map((status) => (
 						<button
@@ -735,7 +744,7 @@ export function BooksTable({
 							)}
 							{!enrichment.pinsAvailable && <li>Pin file not on this deploy: pins not shown.</li>}
 							{enrichment.pinErrors > 0 && (
-								<li className="text-destructive">
+								<li className="text-destructive-text">
 									data/enrichment-pins.json has {enrichment.pinErrors} invalid pin(s).
 								</li>
 							)}
@@ -746,6 +755,8 @@ export function BooksTable({
 			<div className="min-w-0 flex-1 space-y-3">
 				<div className="flex flex-wrap items-center gap-3">
 					<Input
+						type="search"
+						aria-label="Filter catalog"
 						placeholder="Filter by title, author, series, publisher…"
 						value={globalFilter}
 						onChange={(e) => setGlobalFilter(e.target.value)}
