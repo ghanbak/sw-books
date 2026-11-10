@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { type AccessibilityActionEvent, Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
 	runOnJS,
@@ -17,6 +17,7 @@ import {
 	type TimelineGroup,
 	clampIndex,
 	indexAtScreenX,
+	railPagerSync,
 	railTranslateX,
 } from '@/lib/timeline';
 import {
@@ -25,6 +26,7 @@ import {
 	layoutAnchorPills,
 	truncateAnchorTitle,
 } from '@/lib/timeline-anchors';
+import { RAIL_A11Y_ACTIONS, RAIL_A11Y_LABEL, railA11yStep } from '@/lib/timeline-rail-a11y';
 
 // Wide enough for the longest (24-char) pill label.
 const PILL_SLOT_W = 180;
@@ -90,16 +92,14 @@ export function TimelineRail({
 	// biome-ignore lint/correctness/useExhaustiveDependencies: `resync` is a deliberate re-run trigger (the settle fallback bumps it to make the rail follow the pager again).
 	useEffect(() => {
 		if (scrubbing.value) return;
-		if (pendingIndex.current !== null) {
-			// translateX is already where the scrub put it; just wait for the pager to agree.
-			if (activeIndex === pendingIndex.current) {
-				pendingIndex.current = null;
-				setTargetIndex(null);
-			}
-			return;
-		}
+		// Hold the rail while the pager catches up to a pending target; re-center once it does
+		// (a tap only drives the pager, so this is what centers the tapped notch).
+		const sync = railPagerSync(pendingIndex.current, activeIndex, width);
+		if (sync.translateX === null) return;
+		if (pendingIndex.current !== null) setTargetIndex(null);
+		pendingIndex.current = sync.pendingIndex;
 		lastGroup.value = activeIndex;
-		translateX.value = withTiming(railTranslateX(width, activeIndex), { duration: 220 });
+		translateX.value = withTiming(sync.translateX, { duration: 220 });
 	}, [activeIndex, width, translateX, scrubbing, lastGroup, resync]);
 
 	// Drive the pager to a group (JS thread): remember the target, buzz, scroll.
@@ -163,6 +163,15 @@ export function TimelineRail({
 		const g = clampIndex(Math.round(indexAtScreenX(e.x, translateX.value)), count);
 		runOnJS(driveTo)(g);
 	});
+
+	// VoiceOver / TalkBack swipe up/down: step one date, moving the rail like a scrub would.
+	const onAccessibilityAction = (e: AccessibilityActionEvent) => {
+		const next = railA11yStep(e.nativeEvent.actionName, shownIndex, count);
+		if (next === null) return;
+		translateX.value = withTiming(railTranslateX(width, next), { duration: 160 });
+		lastGroup.value = next;
+		driveTo(next);
+	};
 
 	const rowStyle = useAnimatedStyle(() => ({
 		transform: [{ translateX: translateX.value }],
@@ -234,8 +243,20 @@ export function TimelineRail({
 					</Animated.View>
 				</View>
 				<GestureDetector gesture={Gesture.Race(pan, tap)}>
-					<View style={styles.ticksWindow}>
-						<Animated.View style={[styles.row, rowStyle]}>
+					<View
+						style={styles.ticksWindow}
+						accessible
+						accessibilityRole="adjustable"
+						accessibilityLabel={RAIL_A11Y_LABEL}
+						accessibilityValue={active ? { text: active.label } : undefined}
+						accessibilityActions={RAIL_A11Y_ACTIONS}
+						onAccessibilityAction={onAccessibilityAction}
+					>
+						<Animated.View
+							style={[styles.row, rowStyle]}
+							accessibilityElementsHidden
+							importantForAccessibility="no-hide-descendants"
+						>
 							{groups.map((g, i) => (
 								<View key={g.order} style={styles.slot}>
 									<View style={i === shownIndex ? styles.tickActive : styles.tick} />
@@ -245,8 +266,15 @@ export function TimelineRail({
 					</View>
 				</GestureDetector>
 			</View>
+			{/* Hidden from screen readers: the rail already announces this date as its value. */}
 			{active && (
-				<Text style={[styles.label, isScrubbing && styles.labelScrubbing]}>{active.label}</Text>
+				<Text
+					style={[styles.label, isScrubbing && styles.labelScrubbing]}
+					accessibilityElementsHidden
+					importantForAccessibility="no-hide-descendants"
+				>
+					{active.label}
+				</Text>
 			)}
 		</View>
 	);
@@ -375,11 +403,12 @@ const styles = StyleSheet.create({
 		width: RAIL_PITCH,
 		alignItems: 'center',
 	},
+	// Inactive ticks are the rail's visible track, so they need 3:1 (WCAG 1.4.11).
 	tick: {
 		width: 3,
 		height: 12,
 		borderRadius: 2,
-		backgroundColor: tokens.text.hint,
+		backgroundColor: tokens.text.tertiary,
 	},
 	tickActive: {
 		width: 4,

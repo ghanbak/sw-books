@@ -9,15 +9,19 @@ import { useAuth } from '@/lib/auth';
 import { useBooks, useUserBooks } from '@/lib/hooks';
 import { recognizeImage } from '@/lib/ocr';
 import { useScanSession } from '@/lib/scan-session';
-import { defaultSelection, pruneOwned } from '@/lib/shelf';
+import { ADD_OFFLINE_CODE, defaultSelection, pruneOwned } from '@/lib/shelf';
+import { shelfQueue } from '@/lib/shelf-queue';
 import {
 	SHELF_SCAN_CONSTANTS,
 	atCaptureCap,
 	createCaptureGate,
+	createStillNamer,
 	ghostUri,
 	initialShelfScanState,
 	pendingOcrCount,
 	shelfScanReducer,
+	stillsToDelete,
+	stillsToDeleteOnUnmount,
 } from '@/lib/shelf-scan';
 import { type SpineMatch, buildCatalogIndex, matchFragments } from '@/lib/spine-match';
 
@@ -51,8 +55,11 @@ function scanDirectory(): Directory {
  * moment its OCR settles — bounded memory regardless of session length).
  *
  * The filesystem is treated as a second, slower participant in the state machine:
- * every async continuation re-checks intent (`aliveRef` + reducer phase) before
- * moving/keeping a file, and deletes it when the session has moved on.
+ * every saved still is registered in the reducer's file ledger (`state.files`, status
+ * `pending | retained | deleted`), and one effect deletes whatever the ledger marks
+ * `deleted`. The only file work outside it is what no reducer can own: a shutter that
+ * lands after the session moved on (never registered), and OCR that settles after
+ * unmount (`aliveRef`).
  *
  * On Finish it waits for in-flight OCR, runs the matcher over the pooled
  * fragments, and publishes the draft to `ScanSessionProvider` (which is what
@@ -87,6 +94,10 @@ export function useShelfScan({
 
 	const [addError, setAddError] = useState<string | null>(null);
 	const [addedCount, setAddedCount] = useState(0);
+	const [queuedCount, setQueuedCount] = useState(0);
+	// Read after an await: a batch must only be queued for the user who is still signed in.
+	const userIdRef = useRef(user?.id ?? null);
+	userIdRef.current = user?.id ?? null;
 	// Consecutive capture failures → a user-visible banner (see CAPTURE_FAILURE_LIMIT).
 	const captureFailureStreakRef = useRef(0);
 	const [captureError, setCaptureError] = useState<string | null>(null);
@@ -110,10 +121,11 @@ export function useShelfScan({
 
 	const gateRef = useRef(createCaptureGate());
 	const captureInFlightRef = useRef(false);
-	const deletedUrisRef = useRef(new Set<string>());
-	const stillSeqRef = useRef(0);
+	// Session-unique names, so a previous mount's late cleanup can't delete ours.
+	const [nextStillName] = useState(() => createStillNamer());
 	// Per-mount liveness token: a remount's orphan sweep must not receive files from
-	// a previous instance's still-running capture pipeline.
+	// a previous instance's still-running capture pipeline, and once unmounted there is
+	// no reducer left to own a still whose OCR settles late.
 	const aliveRef = useRef(true);
 	useEffect(() => {
 		aliveRef.current = true;
@@ -135,8 +147,6 @@ export function useShelfScan({
 	}, []);
 
 	const deleteStill = useCallback((uri: string) => {
-		if (deletedUrisRef.current.has(uri)) return;
-		deletedUrisRef.current.add(uri);
 		try {
 			const file = new File(uri);
 			if (file.exists) file.delete();
@@ -146,37 +156,25 @@ export function useShelfScan({
 	}, []);
 
 	// Unmount sweep (tab blur, or a discard-via-mode-switch): delete the settled stills
-	// now rather than leaving them for the next session's orphan sweep. Pending-OCR
+	// now rather than leaving them for the next session's orphan sweep. OCR-pending
 	// stills are left for their continuation, which sees aliveRef false and self-cleans —
-	// never delete a file under a live ML Kit read.
+	// never delete a file under a live OCR read.
 	useEffect(() => {
 		return () => {
-			for (const capture of stateRef.current.captures) {
-				if (capture.ocr !== 'pending') deleteStill(capture.uri);
-			}
+			for (const uri of stillsToDeleteOnUnmount(stateRef.current.files)) deleteStill(uri);
 		};
 	}, [deleteStill]);
 
-	// Temp-file lifecycle, derived from reducer state: every settled still except the
-	// current ghost is deleted; once the session leaves capture (review/done/adding),
-	// the ghost goes too. OCR-pending stills are never touched (never delete a file
-	// ML Kit may be reading). Captures that LEAVE state (reset, dropped dispatches)
-	// are invisible here — their continuations below clean up after themselves.
+	// Temp-file lifecycle: the reducer's ledger marks a still `deleted` once nothing
+	// needs it (settled and not the ghost, the ghost once capture is over, or a released
+	// still whose OCR settled). Delete those, then acknowledge so the entries drop.
+	const files = state.files;
 	useEffect(() => {
-		const ghost = ghostUri(state);
-		// The ghost still is needed while more capturing could follow (incl. Empty's
-		// "keep scanning" and processing, where its OCR may still be settling).
-		const ghostStillNeeded =
-			state.phase === 'capturing' ||
-			state.phase === 'interrupted' ||
-			state.phase === 'processing' ||
-			state.phase === 'empty';
-		for (const capture of state.captures) {
-			if (capture.ocr === 'pending') continue;
-			if (capture.uri === ghost && ghostStillNeeded) continue;
-			deleteStill(capture.uri);
-		}
-	}, [state, deleteStill]);
+		const owed = stillsToDelete(files);
+		if (owed.length === 0) return;
+		for (const uri of owed) deleteStill(uri);
+		dispatch({ type: 'files_deleted', uris: owed });
+	}, [files, deleteStill]);
 
 	/** Incremental OCR continuation — runs detached so captures never serialize on it. */
 	const recognizeStill = useCallback(
@@ -191,11 +189,9 @@ export function useShelfScan({
 				if (__DEV__) console.warn('[shelf-scan] OCR failed:', result.error.message);
 				dispatch({ type: 'ocr_failed', uri });
 			}
-			// If the session moved on (reset/unmount) the dispatch above was a no-op and
-			// the lifecycle effect can no longer see this uri — clean up here instead.
-			if (!aliveRef.current || !stateRef.current.captures.some((c) => c.uri === uri)) {
-				deleteStill(uri);
-			}
+			// After unmount the dispatch above was a no-op and no ledger owns this file —
+			// clean up here. (A reset session still owns it: the ledger releases it.)
+			if (!aliveRef.current) deleteStill(uri);
 		},
 		[deleteStill],
 	);
@@ -234,20 +230,23 @@ export function useShelfScan({
 				return;
 			}
 
-			// Our own sequential names — capture records are keyed by uri, so uniqueness
-			// is enforced here rather than assumed of the camera's temp names.
-			stillSeqRef.current += 1;
-			const destination = new File(scanDirectory(), `still-${stillSeqRef.current}.jpg`);
+			// Our own names — capture records are keyed by uri, so uniqueness is enforced
+			// here rather than assumed of the camera's temp names.
+			const destination = new File(scanDirectory(), nextStillName());
 			file.move(destination);
 			const uri = destination.uri;
 
+			// Register the file first: if capture_taken is refused (a Finish/reset dispatched
+			// but not yet rendered), the ledger still owns the file and releases it once
+			// its OCR settles.
+			dispatch({ type: 'still_saved', uri });
 			dispatch({ type: 'capture_taken', uri });
 			// A real still landed — clear any failure streak/banner.
 			captureFailureStreakRef.current = 0;
 			setCaptureError(null);
 			Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); // best-effort
 			// Fire-and-forget: OCR must not hold the in-flight guard, or captures
-			// serialize behind ML Kit and steady-holds get eaten without firing.
+			// serialize behind OCR and steady-holds get eaten without firing.
 			void recognizeStill(uri);
 		} catch (cause) {
 			if (__DEV__) console.warn('[shelf-scan] capture failed:', cause);
@@ -265,7 +264,7 @@ export function useShelfScan({
 		} finally {
 			captureInFlightRef.current = false;
 		}
-	}, [recognizeStill]);
+	}, [recognizeStill, nextStillName]);
 
 	// Hands-free auto-capture: steady-hold fires the gate; movement between captures
 	// is required, so resting on a framing never duplicates stills.
@@ -348,6 +347,7 @@ export function useShelfScan({
 		addInFlightRef.current = true;
 		setAddError(null);
 		dispatch({ type: 'add_started' });
+		const ownerId = userIdRef.current;
 		try {
 			const result = await addOwned(ids);
 			if (result.ok) {
@@ -355,8 +355,19 @@ export function useShelfScan({
 				setDraft(null); // draft consumed — a later tab-return starts a fresh session
 				Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 				dispatch({ type: 'add_succeeded' });
+			} else if (
+				result.error.code === ADD_OFFLINE_CODE &&
+				ownerId !== null &&
+				ownerId === userIdRef.current &&
+				(await shelfQueue.enqueue(ownerId, ids))
+			) {
+				// Only connectivity failures reach here; ShelfQueueSync replays the batch.
+				setQueuedCount(ids.length);
+				setDraft(null);
+				Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+				dispatch({ type: 'add_queued' });
 			} else {
-				// v1 offline policy: block, keep the draft, let the user retry (plan §Decision 3).
+				// Not queueable (auth/RLS/validation) or unstorable: block, keep the draft.
 				setAddError(
 					result.error.code === 'not_signed_in'
 						? result.error.message
@@ -390,19 +401,16 @@ export function useShelfScan({
 		dispatch({ type: 'continued' });
 	}, []);
 	const reset = useCallback(() => {
-		// Captures leave state on reset, taking their files out of the lifecycle
-		// effect's sight — delete the settled ones now. Pending-OCR stills are left
-		// for their recognizeStill continuation (never delete under a ML Kit read).
-		for (const capture of stateRef.current.captures) {
-			if (capture.ocr !== 'pending') deleteStill(capture.uri);
-		}
+		// The reducer releases this session's stills: settled ones are deleted by the
+		// lifecycle effect, OCR-pending ones once their read settles.
 		setAddError(null);
 		setAddedCount(0);
+		setQueuedCount(0);
 		captureFailureStreakRef.current = 0;
 		setCaptureError(null);
 		setDraft(null);
 		dispatch({ type: 'reset' });
-	}, [setDraft, deleteStill]);
+	}, [setDraft]);
 
 	// Account-switch safety net: ScanSessionProvider clears the draft when a different
 	// user signs in — a Review with nothing to review must fall back to capturing.
@@ -430,6 +438,7 @@ export function useShelfScan({
 		addSelected,
 		addError,
 		addedCount,
+		queuedCount,
 		/** Set after repeated capture failures so the HUD can warn the user (Phase 5). */
 		captureError,
 	};

@@ -7,8 +7,11 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { AddedBooksSheet } from '@/components/added-books-sheet';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { announce } from '@/hooks/useAccessibility';
+import { type BarcodeLookupResult, selectBarcodeLookupResult } from '@/lib/barcode-lookup';
 import { type Book, useUserBooks } from '@/lib/hooks';
 import { normalizeIsbn } from '@/lib/isbn';
+import { barcodeResultAnnouncement } from '@/lib/scan-a11y';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -23,12 +26,7 @@ import { supabase } from '@/lib/supabase';
  * surfaces the AddedBooksSheet confirmation (add to library / view / scan another).
  */
 
-type ScanResult =
-	| { type: 'found'; book: Book }
-	| { type: 'not_found'; isbn: string }
-	| { type: 'invalid' }
-	| { type: 'error' }
-	| null;
+type ScanResult = BarcodeLookupResult | { type: 'invalid' } | null;
 
 const SCAN_COOLDOWN_MS = 2000;
 
@@ -83,11 +81,9 @@ export function BarcodeScanPanel() {
 				}
 
 				if (!aliveRef.current) return;
-				if (books && books.length > 0) {
-					setResult({ type: 'found', book: books[0] });
-				} else {
-					setResult({ type: 'not_found', isbn });
-				}
+				// postgrest resolves (not throws) on network/server failures, so the
+				// error must be checked here or it falls through to "not found".
+				setResult(selectBarcodeLookupResult(isbn, { data: books, error }));
 			} catch (cause) {
 				// A thrown lookup (network error) must surface a result and release the
 				// scanner — otherwise `scanning` stays true and every later scan is blocked.
@@ -99,6 +95,18 @@ export function BarcodeScanPanel() {
 		},
 		[scanning],
 	);
+
+	// The result swaps in over the camera with no navigation, so a screen-reader user
+	// gets no cue that the lookup settled — speak it once per result.
+	useEffect(() => {
+		if (!result) return;
+		announce(
+			barcodeResultAnnouncement(
+				result.type,
+				result.type === 'found' ? result.book.title : undefined,
+			),
+		);
+	}, [result]);
 
 	const dismissResult = useCallback(() => {
 		setResult(null);
@@ -148,7 +156,7 @@ export function BarcodeScanPanel() {
 					<View style={styles.viewfinderSide} />
 				</View>
 				<View style={styles.viewfinderBottom}>
-					<Text style={styles.viewfinderHint}>
+					<Text style={styles.viewfinderHint} accessibilityLiveRegion="polite">
 						{scanning ? 'Looking up...' : 'Point at a book barcode'}
 					</Text>
 				</View>
@@ -174,7 +182,9 @@ export function BarcodeScanPanel() {
 				>
 					{result.type === 'not_found' && (
 						<View style={styles.resultMessage}>
-							<Text style={styles.messageTitle}>Not in the Archive</Text>
+							<Text style={styles.messageTitle} accessibilityRole="header">
+								Not in the Archive
+							</Text>
 							<Text style={styles.messageText}>
 								If an item does not appear in our records, it does not exist!
 							</Text>
@@ -184,21 +194,30 @@ export function BarcodeScanPanel() {
 
 					{result.type === 'invalid' && (
 						<View style={styles.resultMessage}>
-							<Text style={styles.messageTitle}>Invalid Barcode</Text>
+							<Text style={styles.messageTitle} accessibilityRole="header">
+								Invalid Barcode
+							</Text>
 							<Text style={styles.messageText}>Couldn't read a valid ISBN from that barcode.</Text>
 						</View>
 					)}
 
 					{result.type === 'error' && (
 						<View style={styles.resultMessage}>
-							<Text style={styles.messageTitle}>Lookup Failed</Text>
+							<Text style={styles.messageTitle} accessibilityRole="header">
+								Lookup Failed
+							</Text>
 							<Text style={styles.messageText}>
 								Couldn't reach the Archive. Check your connection and try again.
 							</Text>
 						</View>
 					)}
 
-					<Pressable style={styles.dismissButton} onPress={dismissResult}>
+					<Pressable
+						style={styles.dismissButton}
+						onPress={dismissResult}
+						accessibilityRole="button"
+						accessibilityHint="Returns to the barcode scanner"
+					>
 						<Text style={styles.dismissText}>Scan Another</Text>
 					</Pressable>
 				</Animated.View>
@@ -305,7 +324,7 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 	},
 	messageIsbn: {
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		fontSize: 12,
 		fontFamily: 'monospace',
 		marginTop: 8,

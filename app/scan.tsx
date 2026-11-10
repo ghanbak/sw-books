@@ -111,7 +111,10 @@ export default function ScanScreen() {
 	if (!permission) {
 		return (
 			<View style={styles.center}>
-				<ActivityIndicator color={tokens.accent.primary} />
+				<ActivityIndicator
+					color={tokens.accent.primary}
+					accessibilityLabel="Checking camera access"
+				/>
 				{closeButton}
 			</View>
 		);
@@ -122,7 +125,9 @@ export default function ScanScreen() {
 		const canAsk = permission.canAskAgain;
 		return (
 			<View style={styles.center}>
-				<Text style={styles.title}>Camera Access Needed</Text>
+				<Text style={styles.title} accessibilityRole="header">
+					Camera Access Needed
+				</Text>
 				<Text style={styles.bodyText}>
 					{canAsk
 						? 'OssusArchives needs camera access to scan books.'
@@ -132,6 +137,9 @@ export default function ScanScreen() {
 					style={styles.primaryButton}
 					onPress={canAsk ? requestPermission : () => openSettings()}
 					accessibilityRole="button"
+					accessibilityHint={
+						canAsk ? 'Shows the camera permission prompt' : 'Opens Settings for OssusArchives'
+					}
 				>
 					<Text style={styles.primaryButtonText}>{canAsk ? 'Grant Access' : 'Open Settings'}</Text>
 				</Pressable>
@@ -219,11 +227,18 @@ function ShelfModePanel({
 	if (catalogError) {
 		return (
 			<View style={styles.center}>
-				<Text style={styles.title}>Couldn't load the Archive</Text>
+				<Text style={styles.title} accessibilityRole="header">
+					Couldn't load the Archive
+				</Text>
 				<Text style={styles.bodyText}>
 					Shelf scanning needs the book catalog. Check your connection and try again.
 				</Text>
-				<Pressable style={styles.primaryButton} onPress={onRetry} accessibilityRole="button">
+				<Pressable
+					style={styles.primaryButton}
+					onPress={onRetry}
+					accessibilityRole="button"
+					accessibilityHint="Reloads the book catalog"
+				>
 					<Text style={styles.primaryButtonText}>Retry</Text>
 				</Pressable>
 			</View>
@@ -233,7 +248,11 @@ function ShelfModePanel({
 	// Loading (or an empty catalog that's still settling).
 	return (
 		<View style={styles.center}>
-			<ActivityIndicator color={tokens.accent.primary} />
+			<ActivityIndicator
+				color={tokens.accent.primary}
+				accessibilityElementsHidden
+				importantForAccessibility="no-hide-descendants"
+			/>
 			<Text style={styles.bodyText}>Loading the Archive…</Text>
 		</View>
 	);
@@ -281,7 +300,7 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.accent.primary,
 	},
 	primaryButtonText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 15,
 		fontWeight: '600',
 	},

@@ -14,11 +14,13 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ShelfScanQueued } from '@/components/shelf-scan-queued';
 import { ShelfScanReview } from '@/components/shelf-scan-review';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce, useReduceMotion, useScreenReaderEnabled } from '@/hooks/useAccessibility';
 import { useShelfScan } from '@/hooks/useShelfScan';
+import { finishScanLabel, photosCapturedLabel } from '@/lib/scan-a11y';
 import { deriveShelfChrome } from '@/lib/shelf-scan';
 
 const INTRO_SEEN_KEY = '@ossus/scan_intro_seen';
@@ -90,9 +92,7 @@ export function ShelfScanCapture({
 	const announcedCountRef = useRef(0);
 	useEffect(() => {
 		if (scan.captureCount > announcedCountRef.current) {
-			announce(
-				scan.captureCount === 1 ? '1 photo captured' : `${scan.captureCount} photos captured`,
-			);
+			announce(photosCapturedLabel(scan.captureCount));
 		}
 		announcedCountRef.current = scan.captureCount;
 	}, [scan.captureCount]);
@@ -183,7 +183,10 @@ export function ShelfScanCapture({
 							disabled={scan.atCap}
 							accessibilityRole="button"
 							accessibilityLabel="Take photo"
-							accessibilityHint="Captures a photo of your shelf now"
+							accessibilityHint={
+								scan.atCap ? 'Photo limit reached' : 'Captures a photo of your shelf now'
+							}
+							accessibilityState={{ disabled: scan.atCap }}
 						>
 							<View style={[styles.shutterInner, scan.atCap && styles.shutterDisabled]} />
 						</Pressable>
@@ -192,7 +195,8 @@ export function ShelfScanCapture({
 								style={styles.finishButton}
 								onPress={scan.finish}
 								accessibilityRole="button"
-								accessibilityLabel={`Finish scanning, ${scan.captureCount} photos taken`}
+								accessibilityLabel={finishScanLabel(scan.captureCount)}
+								accessibilityHint="Matches your photos against the Archive"
 							>
 								<Text style={styles.finishText}>Finish</Text>
 							</Pressable>
@@ -213,7 +217,12 @@ export function ShelfScanCapture({
 					entering={FadeIn.duration(200)}
 					exiting={FadeOut.duration(200)}
 				>
-					<ActivityIndicator size="large" color={tokens.accent.secondary} />
+					<ActivityIndicator
+						size="large"
+						color={tokens.accent.secondary}
+						accessibilityElementsHidden
+						importantForAccessibility="no-hide-descendants"
+					/>
 					<Text style={styles.stateTitle} accessibilityRole="header">
 						Reading spines…
 					</Text>
@@ -238,10 +247,16 @@ export function ShelfScanCapture({
 						style={styles.primaryButton}
 						onPress={scan.keepScanning}
 						accessibilityRole="button"
+						accessibilityHint="Returns to the camera. Your photos are kept."
 					>
 						<Text style={styles.primaryButtonText}>Keep Scanning</Text>
 					</Pressable>
-					<Pressable style={styles.secondaryButton} onPress={scan.reset} accessibilityRole="button">
+					<Pressable
+						style={styles.secondaryButton}
+						onPress={scan.reset}
+						accessibilityRole="button"
+						accessibilityHint="Discards the photos from this scan"
+					>
 						<Text style={styles.secondaryButtonText}>Start Over</Text>
 					</Pressable>
 				</Animated.View>
@@ -256,6 +271,8 @@ export function ShelfScanCapture({
 					onReset={scan.reset}
 				/>
 			)}
+
+			{phase === 'queued' && <ShelfScanQueued count={scan.queuedCount} onReset={scan.reset} />}
 		</View>
 	);
 }
@@ -332,7 +349,7 @@ function CaptureCounter({ count, reduceMotion }: { count: number; reduceMotion: 
 	const style = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 	return (
 		<Animated.View style={[styles.counter, style]}>
-			<Text style={styles.counterText} accessibilityLabel={`${count} photos captured`}>
+			<Text style={styles.counterText} accessibilityLabel={photosCapturedLabel(count)}>
 				{count}
 			</Text>
 		</Animated.View>
@@ -418,7 +435,7 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.accent.primary,
 	},
 	finishText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 15,
 		fontWeight: '600',
 	},
@@ -464,7 +481,7 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 	},
 	introButtonText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 16,
 		fontWeight: '600',
 	},
@@ -507,7 +524,7 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.accent.primary,
 	},
 	primaryButtonText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 14,
 		fontWeight: '600',
 	},

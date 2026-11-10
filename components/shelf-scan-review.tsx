@@ -14,16 +14,52 @@ import {
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HoloCover } from '@/components/holo-cover';
+import { EmptyState } from '@/components/empty-state';
+import { DecorativeCover, OwnedBadge } from '@/components/shelf-scan-parts';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
 import { type Book, useBooks, useUserBooks } from '@/lib/hooks';
+import { addToOwnedLabel, reviewMatchLabel, swapCandidateLabel } from '@/lib/scan-a11y';
 import { exitScanTo } from '@/lib/scan-exit';
 import { useScanSession } from '@/lib/scan-session';
+import { swapCandidates } from '@/lib/search';
 import { swapMatch, toggleSelection } from '@/lib/shelf';
 import type { ShelfScanPhase } from '@/lib/shelf-scan';
 import type { SpineMatch } from '@/lib/spine-match';
+import { slopBoundsStyle, squareHitSlop, verticalHitSlop } from '@/lib/tap-target';
+
+// Hit areas, sized from the styles below (lib/tap-target-shelf-review.test.ts recomputes them).
+// Native hit-testing rejects touches outside a parent's bounds, so a parent that a control's
+// slop passes grows through `slopBoundsStyle`.
+const SWAP_BUTTON_SIZE = 36; // 16pt icon + 2x10 padding
+const SWAP_HIT_SLOP = squareHitSlop(SWAP_BUTTON_SIZE);
+const SWAP_ROW_BOUNDS = slopBoundsStyle({ right: SWAP_HIT_SLOP.right }); // vertical fits the row
+
+const VIEW_TOGGLE_WIDTH = 36; // 16pt icon + 2x10 padding
+const VIEW_TOGGLE_HEIGHT = 28; // 16pt icon + 2x6 padding
+const VIEW_TOGGLE_PILL_INSET = 2;
+// The toggles touch, so the whole 8pt width shortfall goes on each one's outer edge.
+const VIEW_TOGGLE_OUTER_SLOP = 8;
+const LIST_TOGGLE_HIT_SLOP = {
+	...verticalHitSlop(VIEW_TOGGLE_HEIGHT),
+	left: VIEW_TOGGLE_OUTER_SLOP,
+};
+const GRID_TOGGLE_HIT_SLOP = {
+	...verticalHitSlop(VIEW_TOGGLE_HEIGHT),
+	right: VIEW_TOGGLE_OUTER_SLOP,
+};
+const VIEW_TOGGLE_OUTSET = 6; // slop past the pill: 8pt less its 2pt inset
+const VIEW_TOGGLE_BOUNDS = slopBoundsStyle({
+	top: VIEW_TOGGLE_OUTSET,
+	bottom: VIEW_TOGGLE_OUTSET,
+	left: VIEW_TOGGLE_OUTSET,
+	right: VIEW_TOGGLE_OUTSET,
+});
+
+// 13pt system line (about 15.5pt, floored so rounding can't land under 44) + 2x6 padding.
+const START_OVER_HEIGHT = 27;
+const START_OVER_HIT_SLOP = verticalHitSlop(START_OVER_HEIGHT); // 9pt fits the 10pt gap to Add
 
 /**
  * The inline review queue (plan Phase 4): renders as a full-screen overlay on the
@@ -145,17 +181,31 @@ export function ShelfScanReview({
 		return (
 			<Animated.View style={styles.overlay} entering={FadeIn.duration(200)}>
 				<View style={styles.doneBody}>
-					<View style={styles.doneCheck}>
-						<SymbolView name="checkmark" size={36} tintColor={tokens.text.primary} weight="bold" />
+					<View
+						style={styles.doneCheck}
+						accessibilityElementsHidden
+						importantForAccessibility="no-hide-descendants"
+					>
+						<SymbolView name="checkmark" size={36} tintColor={tokens.text.inverse} weight="bold" />
 					</View>
 					<Text style={styles.doneTitle} accessibilityRole="header">
 						{addedCount === 1 ? '1 book added to Owned' : `${addedCount} books added to Owned`}
 					</Text>
 					<Text style={styles.doneText}>Your archive grows.</Text>
-					<Pressable style={styles.primaryButton} onPress={goToShelf} accessibilityRole="button">
+					<Pressable
+						style={styles.primaryButton}
+						onPress={goToShelf}
+						accessibilityRole="button"
+						accessibilityHint="Closes the scanner and opens your library"
+					>
 						<Text style={styles.primaryButtonText}>View Shelf</Text>
 					</Pressable>
-					<Pressable style={styles.secondaryButton} onPress={onReset} accessibilityRole="button">
+					<Pressable
+						style={styles.secondaryButton}
+						onPress={onReset}
+						accessibilityRole="button"
+						accessibilityHint="Starts a new shelf scan"
+					>
 						<Text style={styles.secondaryButtonText}>Scan More</Text>
 					</Pressable>
 				</View>
@@ -166,6 +216,8 @@ export function ShelfScanReview({
 	if (!draft) return null;
 	const { matches } = draft;
 	const adding = phase === 'adding';
+	// Android has no accessibilityViewIsModal: hide the review behind an open swap sheet.
+	const behindSheet = swapTarget ? 'no-hide-descendants' : 'auto';
 
 	return (
 		<Animated.View
@@ -173,7 +225,10 @@ export function ShelfScanReview({
 			entering={FadeIn.duration(200)}
 			exiting={FadeOut.duration(200)}
 		>
-			<View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+			<View
+				style={[styles.header, { paddingTop: insets.top + 16 }]}
+				importantForAccessibility={behindSheet}
+			>
 				<View style={styles.headerText}>
 					<Text style={styles.title} accessibilityRole="header">
 						Your shelf, recognized
@@ -183,9 +238,11 @@ export function ShelfScanReview({
 					</Text>
 				</View>
 				<View style={styles.viewToggle}>
+					<View style={styles.viewTogglePill} />
 					<Pressable
 						style={[styles.viewToggleButton, view === 'list' && styles.viewToggleActive]}
 						onPress={() => setView('list')}
+						hitSlop={LIST_TOGGLE_HIT_SLOP}
 						accessibilityRole="button"
 						accessibilityLabel="List view"
 						accessibilityState={{ selected: view === 'list' }}
@@ -193,12 +250,13 @@ export function ShelfScanReview({
 						<SymbolView
 							name="list.bullet"
 							size={16}
-							tintColor={view === 'list' ? tokens.text.primary : tokens.text.secondary}
+							tintColor={view === 'list' ? tokens.text.inverse : tokens.text.secondary}
 						/>
 					</Pressable>
 					<Pressable
 						style={[styles.viewToggleButton, view === 'grid' && styles.viewToggleActive]}
 						onPress={() => setView('grid')}
+						hitSlop={GRID_TOGGLE_HIT_SLOP}
 						accessibilityRole="button"
 						accessibilityLabel="Grid view"
 						accessibilityState={{ selected: view === 'grid' }}
@@ -206,13 +264,16 @@ export function ShelfScanReview({
 						<SymbolView
 							name="square.grid.2x2"
 							size={16}
-							tintColor={view === 'grid' ? tokens.text.primary : tokens.text.secondary}
+							tintColor={view === 'grid' ? tokens.text.inverse : tokens.text.secondary}
 						/>
 					</Pressable>
 				</View>
 			</View>
 
-			<View style={[styles.body, adding && styles.bodyDisabled]}>
+			<View
+				style={[styles.body, adding && styles.bodyDisabled]}
+				importantForAccessibility={behindSheet}
+			>
 				{view === 'list' ? (
 					<FlatList
 						data={ordered}
@@ -260,7 +321,10 @@ export function ShelfScanReview({
 				)}
 			</View>
 
-			<View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+			<View
+				style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}
+				importantForAccessibility={behindSheet}
+			>
 				{addError && <Text style={styles.errorText}>{addError}</Text>}
 				<Pressable
 					style={[
@@ -270,10 +334,14 @@ export function ShelfScanReview({
 					onPress={onAdd}
 					disabled={adding || effectiveSelected.length === 0}
 					accessibilityRole="button"
-					accessibilityLabel={`Add ${effectiveSelected.length} books to owned shelf`}
+					accessibilityLabel={addToOwnedLabel(effectiveSelected.length)}
+					accessibilityState={{
+						disabled: adding || effectiveSelected.length === 0,
+						busy: adding,
+					}}
 				>
 					{adding ? (
-						<ActivityIndicator color={tokens.text.primary} />
+						<ActivityIndicator color={tokens.text.inverse} />
 					) : (
 						<Text style={styles.addButtonText}>
 							{effectiveSelected.length === 0
@@ -286,7 +354,10 @@ export function ShelfScanReview({
 					style={styles.startOver}
 					onPress={onReset}
 					disabled={adding}
+					hitSlop={START_OVER_HIT_SLOP}
 					accessibilityRole="button"
+					accessibilityHint="Discards these matches and your photos"
+					accessibilityState={{ disabled: adding }}
 				>
 					<Text style={styles.startOverText}>Discard & start over</Text>
 				</Pressable>
@@ -328,29 +399,21 @@ function ReviewRow({
 				disabled={owned}
 				accessibilityRole="checkbox"
 				accessibilityState={{ checked: selected, disabled: owned }}
-				accessibilityLabel={`${book.title} by ${book.author.join(', ')}${owned ? ', already owned' : ''}`}
+				accessibilityLabel={reviewMatchLabel({
+					title: book.title,
+					authors: book.author,
+					owned,
+					lowConfidence: match.bucket === 'low',
+				})}
 			>
 				<View style={[styles.checkbox, selected && styles.checkboxOn]}>
 					{selected && (
-						<SymbolView name="checkmark" size={14} tintColor={tokens.text.primary} weight="bold" />
+						<SymbolView name="checkmark" size={14} tintColor={tokens.text.inverse} weight="bold" />
 					)}
 				</View>
 				{/* Cover is decorative here, so taps reach the row
 				    and VoiceOver doesn't announce a nameless extra button. */}
-				<View
-					pointerEvents="none"
-					accessibilityElementsHidden
-					importantForAccessibility="no-hide-descendants"
-				>
-					<HoloCover
-						coverUri={book.cover_image}
-						title={book.title}
-						author={book.author}
-						width={44}
-						height={66}
-						accessibilityLabel=""
-					/>
-				</View>
+				<DecorativeCover book={book} width={44} height={66} />
 				<View style={styles.rowInfo}>
 					<Text style={styles.rowTitle} numberOfLines={2}>
 						{book.title}
@@ -358,18 +421,16 @@ function ReviewRow({
 					<Text style={styles.rowAuthor} numberOfLines={1}>
 						{book.author.join(', ')}
 					</Text>
-					{owned && (
-						<View style={styles.ownedBadge}>
-							<Text style={styles.ownedBadgeText}>Already owned</Text>
-						</View>
-					)}
+					{owned && <OwnedBadge label="Already owned" />}
 				</View>
 			</Pressable>
 			<Pressable
 				style={styles.swapButton}
 				onPress={() => onSwap(book.id)}
+				hitSlop={SWAP_HIT_SLOP}
 				accessibilityRole="button"
 				accessibilityLabel={`Wrong match? Swap ${book.title}`}
+				accessibilityHint="Opens alternates and catalog search"
 			>
 				<SymbolView name="arrow.left.arrow.right" size={16} tintColor={tokens.text.secondary} />
 			</Pressable>
@@ -396,26 +457,18 @@ function ReviewTile({
 			disabled={owned}
 			accessibilityRole="checkbox"
 			accessibilityState={{ checked: selected, disabled: owned }}
-			accessibilityLabel={`${book.title}${owned ? ', already owned' : ''}`}
+			accessibilityLabel={reviewMatchLabel({
+				title: book.title,
+				authors: book.author,
+				owned,
+				lowConfidence: match.bucket === 'low',
+			})}
 		>
 			<View style={[styles.tileCover, selected && styles.tileSelected, owned && styles.tileOwned]}>
-				<View
-					pointerEvents="none"
-					accessibilityElementsHidden
-					importantForAccessibility="no-hide-descendants"
-				>
-					<HoloCover
-						coverUri={book.cover_image}
-						title={book.title}
-						author={book.author}
-						width={84}
-						height={126}
-						accessibilityLabel=""
-					/>
-				</View>
+				<DecorativeCover book={book} width={84} height={126} />
 				{selected && (
 					<View style={styles.tileCheck}>
-						<SymbolView name="checkmark" size={14} tintColor={tokens.text.primary} weight="bold" />
+						<SymbolView name="checkmark" size={14} tintColor={tokens.text.inverse} weight="bold" />
 					</View>
 				)}
 				{match.bucket === 'low' && !owned && (
@@ -461,22 +514,23 @@ function SwapSheet({
 		if (q.length < 2) {
 			return match.alternates.map((a) => a.book).filter((b) => !takenIds.has(b.id));
 		}
-		return books
-			.filter(
-				(b) =>
-					!takenIds.has(b.id) &&
-					(b.title.toLowerCase().includes(q) || b.author.some((a) => a.toLowerCase().includes(q))),
-			)
-			.slice(0, 12);
+		return swapCandidates(books, query, takenIds);
 	}, [query, books, match.alternates, takenIds]);
 
 	return (
-		<Animated.View style={styles.sheetBackdrop} entering={FadeIn.duration(150)}>
+		<Animated.View
+			style={styles.sheetBackdrop}
+			entering={FadeIn.duration(150)}
+			accessibilityViewIsModal
+			onAccessibilityEscape={onClose}
+		>
+			{/* Tap-outside dismiss; Cancel is the screen-reader path, so keep it out of the
+			    swipe order (a full-screen nameless-feeling target before the sheet). */}
 			<Pressable
 				style={StyleSheet.absoluteFill}
 				onPress={onClose}
-				accessibilityRole="button"
-				accessibilityLabel="Close"
+				accessible={false}
+				importantForAccessibility="no"
 			/>
 			<KeyboardAvoidingView
 				behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -499,11 +553,14 @@ function SwapSheet({
 						/>
 					</View>
 					{candidates.length === 0 && (
-						<Text style={styles.sheetEmpty}>
-							{query.trim().length >= 2
-								? 'No catalog matches.'
-								: 'No close alternates — try a search.'}
-						</Text>
+						<EmptyState
+							variant="inline"
+							message={
+								query.trim().length >= 2
+									? 'No catalog matches.'
+									: 'No close alternates — try a search.'
+							}
+						/>
 					)}
 					<FlatList
 						data={candidates}
@@ -514,22 +571,13 @@ function SwapSheet({
 								style={styles.sheetRow}
 								onPress={() => onPick(item)}
 								accessibilityRole="button"
-								accessibilityLabel={`Swap to ${item.title}`}
+								accessibilityLabel={swapCandidateLabel({
+									title: item.title,
+									authors: item.author,
+									owned: ownedIds.has(item.id),
+								})}
 							>
-								<View
-									pointerEvents="none"
-									accessibilityElementsHidden
-									importantForAccessibility="no-hide-descendants"
-								>
-									<HoloCover
-										coverUri={item.cover_image}
-										title={item.title}
-										author={item.author}
-										width={32}
-										height={48}
-										accessibilityLabel=""
-									/>
-								</View>
+								<DecorativeCover book={item} width={32} height={48} />
 								<View style={styles.rowInfo}>
 									<Text style={styles.rowTitle} numberOfLines={1}>
 										{item.title}
@@ -538,16 +586,17 @@ function SwapSheet({
 										{item.author.join(', ')}
 									</Text>
 								</View>
-								{ownedIds.has(item.id) && (
-									<View style={styles.ownedBadge}>
-										<Text style={styles.ownedBadgeText}>Owned</Text>
-									</View>
-								)}
+								{ownedIds.has(item.id) && <OwnedBadge label="Owned" />}
 							</Pressable>
 						)}
 						style={styles.sheetList}
 					/>
-					<Pressable style={styles.secondaryButton} onPress={onClose} accessibilityRole="button">
+					<Pressable
+						style={styles.secondaryButton}
+						onPress={onClose}
+						accessibilityRole="button"
+						accessibilityHint="Keeps the current match"
+					>
 						<Text style={styles.secondaryButtonText}>Cancel</Text>
 					</Pressable>
 				</View>
@@ -580,9 +629,22 @@ const styles = StyleSheet.create({
 	},
 	viewToggle: {
 		flexDirection: 'row',
+		...VIEW_TOGGLE_BOUNDS,
+		// The helper's edge padding replaces the pill's inset, so add it back.
+		paddingTop: VIEW_TOGGLE_OUTSET + VIEW_TOGGLE_PILL_INSET,
+		paddingBottom: VIEW_TOGGLE_OUTSET + VIEW_TOGGLE_PILL_INSET,
+		paddingLeft: VIEW_TOGGLE_OUTSET + VIEW_TOGGLE_PILL_INSET,
+		paddingRight: VIEW_TOGGLE_OUTSET + VIEW_TOGGLE_PILL_INSET,
+	},
+	// The background lives here so the grown hit bounds above stay invisible.
+	viewTogglePill: {
+		position: 'absolute',
+		top: VIEW_TOGGLE_OUTSET,
+		bottom: VIEW_TOGGLE_OUTSET,
+		left: VIEW_TOGGLE_OUTSET,
+		right: VIEW_TOGGLE_OUTSET,
 		borderRadius: 8,
 		backgroundColor: tokens.surface.card,
-		padding: 2,
 	},
 	viewToggleButton: {
 		paddingHorizontal: 10,
@@ -599,7 +661,7 @@ const styles = StyleSheet.create({
 		paddingBottom: 12,
 	},
 	sectionLabel: {
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		fontSize: 12,
 		fontWeight: '600',
 		textTransform: 'uppercase',
@@ -610,7 +672,10 @@ const styles = StyleSheet.create({
 	row: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		paddingVertical: 8,
+		...SWAP_ROW_BOUNDS,
+		// After the spread: the helper zeroes these edges, and an edge beats paddingVertical.
+		paddingTop: 8,
+		paddingBottom: 8,
 	},
 	rowOwned: { opacity: 0.55 },
 	rowMain: {
@@ -624,7 +689,7 @@ const styles = StyleSheet.create({
 		height: 22,
 		borderRadius: 11,
 		borderWidth: 1.5,
-		borderColor: tokens.text.hint,
+		borderColor: tokens.text.tertiary,
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
@@ -641,19 +706,6 @@ const styles = StyleSheet.create({
 	rowAuthor: {
 		color: tokens.text.secondary,
 		fontSize: 12,
-	},
-	ownedBadge: {
-		alignSelf: 'flex-start',
-		paddingHorizontal: 6,
-		paddingVertical: 2,
-		borderRadius: 4,
-		backgroundColor: tokens.badge.canon,
-		marginTop: 2,
-	},
-	ownedBadgeText: {
-		color: tokens.text.primary,
-		fontSize: 10,
-		fontWeight: '600',
 	},
 	swapButton: {
 		padding: 10,
@@ -708,7 +760,7 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 	},
 	tileOwnedText: {
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		fontSize: 10,
 	},
 	// Footer
@@ -733,13 +785,13 @@ const styles = StyleSheet.create({
 	},
 	addDisabled: { opacity: 0.45 },
 	addButtonText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 16,
 		fontWeight: '600',
 	},
 	startOver: { alignItems: 'center', paddingVertical: 6 },
 	startOverText: {
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		fontSize: 13,
 	},
 	// Done
@@ -777,7 +829,7 @@ const styles = StyleSheet.create({
 		backgroundColor: tokens.accent.primary,
 	},
 	primaryButtonText: {
-		color: tokens.text.primary,
+		color: tokens.text.inverse,
 		fontSize: 14,
 		fontWeight: '600',
 	},
@@ -831,12 +883,6 @@ const styles = StyleSheet.create({
 		color: tokens.text.primary,
 		fontSize: 14,
 		paddingVertical: 10,
-	},
-	sheetEmpty: {
-		color: tokens.text.hint,
-		fontSize: 13,
-		textAlign: 'center',
-		paddingVertical: 12,
 	},
 	sheetList: { flexGrow: 0 },
 	sheetRow: {

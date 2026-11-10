@@ -7,6 +7,7 @@
  * Also exposes the audience signals (GB `categories`, OL work `subjects`) that
  * the discovery changeset uses to resolve a Legends book's `type`.
  */
+import { parseDate } from '../catalog';
 import { isEnglishIsbn, toIsbn13 } from '../isbn';
 import { fetchVolumes } from './google-books';
 import {
@@ -66,11 +67,9 @@ type GbVolumeInfo = {
 };
 type GbVolumes = { items?: Array<{ volumeInfo?: GbVolumeInfo }> };
 
-function toIsoDate(raw?: string | null): string | null {
-	if (!raw) return null;
-	const d = new Date(raw);
-	if (Number.isNaN(d.getTime())) return null;
-	return d.toISOString().slice(0, 10);
+/** OL `publish_date` / GB `publishedDate` → `YYYY-MM-DD`, independent of host TZ. */
+export function toIsoDate(raw?: string | null): string | null {
+	return raw ? parseDate(raw) : null;
 }
 
 function normalizeLanguage(code?: string | null): string | null {

@@ -38,6 +38,10 @@ Operating rules:
 - Accessibility and responsive behavior are baseline, not extra.
 - Verify with the dev server/build when possible; if blocked, say what still needs
   checking. Report honestly.
+- Screenshot your visual changes. Any PR that changes what a screen renders gets
+  before/after screenshots in a `## Screenshots` section of the PR body, captured and
+  uploaded per docs/agents/screenshots.md (local seed data and the dev user only; the
+  repo is public). If you can't capture, say why.
 
 When your task is complete, give a terse report — files changed, key decisions,
 deploy/runtime caveats — then stop.

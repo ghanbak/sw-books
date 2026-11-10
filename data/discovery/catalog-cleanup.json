@@ -1,18 +1,18 @@
 {
   "kind": "catalog-cleanup",
   "version": 1,
-  "as_of": "2026-11-06",
+  "as_of": "2026-11-07",
   "policy": {
-    "isbn": "primary_isbn ∉ isbn[]: add primary_isbn to isbn[] when Open Library titles it as this book AND (the wiki lists it OR it is the same OL work as a row ISBN); reset primary_isbn to a row ISBN when the evidence assigns it to another book; flag anything else. Operator-approved additions (listed in the builder, each in the row's wiki infobox and on no other row) are appended in the same write. The only removal: an operator-approved collision removal (listed in the builder) drops an ISBN two rows share from the row it does not belong to, only while the owner row still holds it, never the row's primary_isbn, and never when Open Library titles it as this row's book.",
-    "covers": "null/blank cover_image only: Open Library (every row ISBN), then Google Books (every row ISBN), then a Google Books title search accepted only when the hit lists a row ISBN; HEAD-checked against MIN_COVER_BYTES, never a cover another row uses, never a Wookieepedia image. Only when all of those find nothing for a released book: the cover of the Open Library work a row ISBN belongs to (openlibrary-work), else — only when no row ISBN is on Open Library — the single work an OL title + author search returns (openlibrary-search, \"different edition: title+author match\"; first published no later than the row, in English, Canon works 2014+). Both need the full normalized title + author-set match, the same HEAD/shared/wiki guards, and an operator visual review of that exact image; they may show a different printing. Unreleased books without one are listed, not forced.",
+    "isbn": "primary_isbn ∉ isbn[]: add primary_isbn to isbn[] when Open Library titles it as this book AND (the wiki lists it OR it is the same OL work as a row ISBN); reset primary_isbn to a row ISBN when the evidence assigns it to another book; flag anything else. Operator-approved additions (listed in the builder, each in the row's wiki infobox and on no other row) are appended in the same write. The only removal: an operator-approved collision removal (listed in the builder) drops an ISBN two rows share from the row it does not belong to, only while the owner row still holds it, never the row's primary_isbn, and never when Open Library titles it as this row's book. An operator-approved invalid-ISBN removal (listed in the builder) drops a value that fails the ISBN-13 check digit; when it was primary_isbn, primary_isbn moves to the named valid ISBN, which must be on the row. An operator-approved misfiled-ISBN removal (listed in the builder) drops a valid ISBN that is a different book, never when Open Library files it under the same work as an ISBN the row keeps; when it was primary_isbn, primary_isbn resets to the named or wiki-infobox row ISBN, which must be valid and on the row.",
+    "covers": "null/blank cover_image only: Open Library (every row ISBN), then Google Books (every row ISBN), then a Google Books title search accepted only when the hit lists a row ISBN; HEAD-checked against MIN_COVER_BYTES, never a cover another row uses, never a Wookieepedia image. Only when all of those find nothing for a released book: the cover of the Open Library work a row ISBN belongs to (openlibrary-work), else — only when no row ISBN is on Open Library — the single work an OL title + author search returns (openlibrary-search, \"different edition: title+author match\"; first published no later than the row, in English, Canon works 2014+). Both need the full normalized title + author-set match, the same HEAD/shared/wiki guards, and an operator visual review of that exact image; they may show a different printing. Unreleased books without one are listed, not forced. An operator-approved cover (listed in the builder: an image for a row ISBN from a source no automated pass reads, e.g. the publisher, downloaded and visually reviewed) wins over all of the above, under the same blank-row, HEAD, shared and wiki guards, and only for an ISBN on the row.",
     "synopsis": "null/blank synopsis only: original one-line drafts (never wiki CC BY-SA prose or publisher blurbs), each marked drafted for review; rows without a confident draft are skipped and listed."
   },
   "summary": {
-    "isbn_fixes": 20,
+    "isbn_fixes": 23,
     "isbn_flagged": 0,
-    "cover_fills": 2,
+    "cover_fills": 5,
     "cover_fills_fallback": 2,
-    "covers_missing": 3,
+    "covers_missing": 0,
     "covers_not_yet_available": 5,
     "synopsis_fills": 0,
     "synopses_skipped": 1
@@ -32,13 +32,12 @@
       },
       "after": {
         "isbn": [
-          "9781368099123",
           "9781368082167",
           "9781368070126"
         ],
         "primary_isbn": "9781368082167"
       },
-      "reason": "operator-approved: isbn[] += 9781368070126 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Disney–Lucasfilm Press hardcover, July 29 2025); Open Library: \"Star Wars: the Acolyte: the Crystal Crown\", Tessa Gratton)",
+      "reason": "operator-approved: isbn[] += 9781368070126 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Disney–Lucasfilm Press hardcover, July 29 2025); Open Library: \"Star Wars: the Acolyte: the Crystal Crown\", Tessa Gratton); operator-approved: isbn[] -= 9781368099123 (invalid check digit) (2026-11-07 (#86) — bad check digit (extra isbn[] entry); recomputed 9781368099127 has no Open Library record, so nothing is added)",
       "evidence": {
         "wiki_title": "The Acolyte: The Crystal Crown",
         "wiki_infobox_isbns": [
@@ -66,6 +65,13 @@
           "note": "2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Disney–Lucasfilm Press hardcover, July 29 2025); Open Library: \"Star Wars: the Acolyte: the Crystal Crown\", Tessa Gratton"
         }
       ],
+      "invalid_removals": [
+        {
+          "slug": "acolyte-crystal-crown",
+          "isbn": "9781368099123",
+          "note": "2026-11-07 (#86) — bad check digit (extra isbn[] entry); recomputed 9781368099127 has no Open Library record, so nothing is added"
+        }
+      ],
       "notes": []
     },
     {
@@ -81,12 +87,11 @@
       },
       "after": {
         "isbn": [
-          "9780593723456",
           "9780593874431"
         ],
-        "primary_isbn": "9780593723456"
+        "primary_isbn": "9780593874431"
       },
-      "reason": "operator-approved: isbn[] += 9780593874431 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, May 6 2025); penguinrandomhouse.com lists it as \"The Acolyte: Wayseeker\" by Justina Ireland; not on Open Library)",
+      "reason": "operator-approved: isbn[] += 9780593874431 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, May 6 2025); penguinrandomhouse.com lists it as \"The Acolyte: Wayseeker\" by Justina Ireland; not on Open Library); operator-approved: isbn[] -= 9780593723456 (is Mace Windu: The Glass Abyss (Random House Worlds paperback)), primary_isbn → 9780593874431 (2026-11-07 (#143, from #97) — penguinrandomhouse.com: Mace Windu: The Glass Abyss paperback; seeded on mace-windu-glass-abyss. Primary → the approved Random House Worlds HC)",
       "evidence": {
         "wiki_title": "The Acolyte: Wayseeker",
         "wiki_infobox_isbns": [
@@ -110,6 +115,15 @@
           "note": "2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, May 6 2025); penguinrandomhouse.com lists it as \"The Acolyte: Wayseeker\" by Justina Ireland; not on Open Library"
         }
       ],
+      "misfiled_removals": [
+        {
+          "slug": "acolyte-wayseeker",
+          "isbn": "9780593723456",
+          "belongs_to": "Mace Windu: The Glass Abyss (Random House Worlds paperback)",
+          "primary": "9780593874431",
+          "note": "2026-11-07 (#143, from #97) — penguinrandomhouse.com: Mace Windu: The Glass Abyss paperback; seeded on mace-windu-glass-abyss. Primary → the approved Random House Worlds HC"
+        }
+      ],
       "notes": []
     },
     {
@@ -125,12 +139,11 @@
       },
       "after": {
         "isbn": [
-          "9780345511638",
           "9781101966938"
         ],
-        "primary_isbn": "9780345511638"
+        "primary_isbn": "9781101966938"
       },
-      "reason": "operator-approved: isbn[] += 9781101966938 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey US hardcover, July 12 2016); Open Library: \"Star Wars: Aftermath: Life debt\", Chuck Wendig, Del Rey)",
+      "reason": "operator-approved: isbn[] += 9781101966938 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey US hardcover, July 12 2016); Open Library: \"Star Wars: Aftermath: Life debt\", Chuck Wendig, Del Rey); operator-approved: isbn[] -= 9780345511638 (is \"Bubby's brunch cookbook\" (Open Library)), primary_isbn → 9781101966938 (2026-11-07 (#143, from #97) — Open Library titles it \"Bubby's brunch cookbook\". Primary → the approved Del Rey US HC)",
       "evidence": {
         "wiki_title": "Aftermath: Life Debt",
         "wiki_infobox_isbns": [
@@ -165,6 +178,15 @@
           "note": "2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Del Rey US hardcover, July 12 2016); Open Library: \"Star Wars: Aftermath: Life debt\", Chuck Wendig, Del Rey"
         }
       ],
+      "misfiled_removals": [
+        {
+          "slug": "aftermath-life-debt",
+          "isbn": "9780345511638",
+          "belongs_to": "\"Bubby's brunch cookbook\" (Open Library)",
+          "primary": "9781101966938",
+          "note": "2026-11-07 (#143, from #97) — Open Library titles it \"Bubby's brunch cookbook\". Primary → the approved Del Rey US HC"
+        }
+      ],
       "notes": []
     },
     {
@@ -180,12 +202,11 @@
       },
       "after": {
         "isbn": [
-          "9780553572832",
           "9780553298031"
         ],
-        "primary_isbn": "9780553572832"
+        "primary_isbn": "9780553298031"
       },
-      "reason": "operator-approved: isbn[] += 9780553298031 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US paperback, Feb 2 1995); Open Library: \"Star Wars: Ambush at Corellia\", Roger MacBride Allen, Spectra)",
+      "reason": "operator-approved: isbn[] += 9780553298031 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US paperback, Feb 2 1995); Open Library: \"Star Wars: Ambush at Corellia\", Roger MacBride Allen, Spectra); operator-approved: isbn[] -= 9780553572832 (invalid check digit), primary_isbn → 9780553298031 (2026-11-07 (#86) — bad check digit; recomputed 9780553572834 is \"Buffalo Palace\" on Open Library. Primary → Spectra PB (OL: \"Star Wars: Ambush at Corellia\"))",
       "evidence": {
         "wiki_title": "Ambush at Corellia",
         "wiki_infobox_isbns": [
@@ -210,6 +231,14 @@
           "slug": "corellian-trilogy-ambush",
           "isbn": "9780553298031",
           "note": "2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US paperback, Feb 2 1995); Open Library: \"Star Wars: Ambush at Corellia\", Roger MacBride Allen, Spectra"
+        }
+      ],
+      "invalid_removals": [
+        {
+          "slug": "corellian-trilogy-ambush",
+          "isbn": "9780553572832",
+          "primary": "9780553298031",
+          "note": "2026-11-07 (#86) — bad check digit; recomputed 9780553572834 is \"Buffalo Palace\" on Open Library. Primary → Spectra PB (OL: \"Star Wars: Ambush at Corellia\")"
         }
       ],
       "notes": []
@@ -274,12 +303,11 @@
       },
       "after": {
         "isbn": [
-          "9780553572993",
           "9780553100358"
         ],
-        "primary_isbn": "9780553572993"
+        "primary_isbn": "9780553100358"
       },
-      "reason": "operator-approved: isbn[] += 9780553100358 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US hardcover, Sep 1998); Open Library: \"Star Wars: Vision of the Future\", Timothy Zahn, Bantam)",
+      "reason": "operator-approved: isbn[] += 9780553100358 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US hardcover, Sep 1998); Open Library: \"Star Wars: Vision of the Future\", Timothy Zahn, Bantam); operator-approved: isbn[] -= 9780553572993 (invalid check digit), primary_isbn → 9780553100358 (2026-11-07 (#86) — bad check digit; recomputed 9780553572995 is \"The Alienist\" on Open Library. Primary → Bantam US HC (OL: \"Star Wars: Vision of the Future\"))",
       "evidence": {
         "wiki_title": "Vision of the Future",
         "wiki_infobox_isbns": [
@@ -305,6 +333,212 @@
           "slug": "hand-of-thrawn-vision",
           "isbn": "9780553100358",
           "note": "2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US hardcover, Sep 1998); Open Library: \"Star Wars: Vision of the Future\", Timothy Zahn, Bantam"
+        }
+      ],
+      "invalid_removals": [
+        {
+          "slug": "hand-of-thrawn-vision",
+          "isbn": "9780553572993",
+          "primary": "9780553100358",
+          "note": "2026-11-07 (#86) — bad check digit; recomputed 9780553572995 is \"The Alienist\" on Open Library. Primary → Bantam US HC (OL: \"Star Wars: Vision of the Future\")"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "id": "e172131c-7c6f-4708-afb3-83523ff297e1",
+      "slug": "heir-to-the-empire",
+      "title": "Heir to the Empire",
+      "action": "remove_invalid_isbn",
+      "before": {
+        "isbn": [
+          "9780553296129",
+          "9780307796103",
+          "9781529150384",
+          "9781473583580",
+          "9780593358764",
+          "9781787466326",
+          "9780307933553",
+          "9780553073270",
+          "9780606107211",
+          "9780345528295",
+          "9780345530004",
+          "9780785727354",
+          "9780739316627",
+          "9780553452969",
+          "9780613922715",
+          "9780783811000",
+          "9780553745085",
+          "9780553634853",
+          "9780553199789",
+          "9780553073409",
+          "9780553404715"
+        ],
+        "primary_isbn": "9780553634853"
+      },
+      "after": {
+        "isbn": [
+          "9780553296129",
+          "9780307796103",
+          "9781529150384",
+          "9781473583580",
+          "9780593358764",
+          "9781787466326",
+          "9780307933553",
+          "9780553073270",
+          "9780606107211",
+          "9780345530004",
+          "9780785727354",
+          "9780739316627",
+          "9780553452969",
+          "9780613922715",
+          "9780783811000",
+          "9780553745085",
+          "9780553634853",
+          "9780553199789",
+          "9780553073409",
+          "9780553404715"
+        ],
+        "primary_isbn": "9780553634853"
+      },
+      "reason": "operator-approved: isbn[] -= 9780345528295 (invalid check digit) (2026-11-07 (#86) — bad check digit (extra isbn[] entry); recomputed 9780345528292 (OL: \"Heir to the Empire\", Lucas Books 2011) is already on the row)",
+      "evidence": {
+        "wiki_title": "Heir to the Empire",
+        "wiki_infobox_isbns": [
+          "9780553073270"
+        ],
+        "wiki_page_isbns": [
+          "9780307796103",
+          "9780553073270",
+          "9780553296129",
+          "9780593358764",
+          "9783442413348",
+          "9788025213407",
+          "9788070332856",
+          "9788072143207",
+          "9788571233645",
+          "9788576571988",
+          "9788863552935",
+          "9789510216361",
+          "9789545282157",
+          "9789634971085",
+          "9789721036468"
+        ],
+        "openlibrary": {
+          "9780553634853": {
+            "title": "Star Wars",
+            "subtitle": "Heir to the Empire",
+            "work": "/works/OL83589W"
+          },
+          "9780553296129": {
+            "title": "Star Wars - Thrawn Trilogy - Heir to the Empire",
+            "subtitle": null,
+            "work": "/works/OL83589W"
+          },
+          "9780307796103": {
+            "title": "Heir to the Empire",
+            "subtitle": "Star Wars Legends  Vol. 1",
+            "work": "/works/OL83589W"
+          },
+          "9781529150384": {
+            "title": "Heir to the Empire",
+            "subtitle": "Book 1",
+            "work": "/works/OL83589W"
+          },
+          "9781473583580": {
+            "title": "Heir to the Empire",
+            "subtitle": "Book 1",
+            "work": "/works/OL83589W"
+          },
+          "9780593358764": {
+            "title": "Heir to the Empire",
+            "subtitle": "Star Wars Legends",
+            "work": "/works/OL83589W"
+          },
+          "9781787466326": {
+            "title": "Heir to the Empire",
+            "subtitle": null,
+            "work": "/works/OL83589W"
+          },
+          "9780307933553": {
+            "title": "Star Wars",
+            "subtitle": "Heir to the Empire, 20th Anniversary Edition",
+            "work": "/works/OL83589W"
+          },
+          "9780553073270": {
+            "title": "Heir to the Empire",
+            "subtitle": null,
+            "work": "/works/OL83589W"
+          },
+          "9780606107211": {
+            "title": "Heir to the Empire\r\n            \r\n                Star Wars Thrawn Trilogy",
+            "subtitle": null,
+            "work": "/works/OL83589W"
+          },
+          "9780345528295": {
+            "title": "Heir to the empire",
+            "subtitle": null,
+            "work": "/works/OL83589W"
+          },
+          "9780345530004": {
+            "title": "Heir to the empire",
+            "subtitle": null,
+            "work": "/works/OL83589W"
+          },
+          "9780785727354": {
+            "title": "Star Wars Empire #1",
+            "subtitle": "Heir to the Empire",
+            "work": "/works/OL83589W"
+          },
+          "9780739316627": {
+            "title": "SW",
+            "subtitle": "Heir to the Empire (AU Star Wars)",
+            "work": "/works/OL83589W"
+          },
+          "9780553452969": {
+            "title": "Heir to the Empire (Star Wars: The Thrawn Trilogy, Vol. 1)",
+            "subtitle": null,
+            "work": "/works/OL83589W"
+          },
+          "9780613922715": {
+            "title": "Heir to the Empire (Star Wars: The Thrawn Trilogy, Vol. 1)",
+            "subtitle": null,
+            "work": "/works/OL83589W"
+          },
+          "9780783811000": {
+            "title": "Star Wars",
+            "subtitle": "Heir to the Empire/8 Cassettes (G. K. Hall Audio Books Series Volume 1)",
+            "work": "/works/OL83589W"
+          },
+          "9780553745085": {
+            "title": "Star Wars",
+            "subtitle": "Heir to the Empire (Star Wars (Random House Audio))",
+            "work": "/works/OL83589W"
+          },
+          "9780553199789": {
+            "title": "Star Wars",
+            "subtitle": "Heir to the Empire (Star Wars (Random House Audio))",
+            "work": "/works/OL83589W"
+          },
+          "9780553073409": {
+            "title": "Star Wars",
+            "subtitle": "Heir to the Empire Limited Edition (Star Wars, Vol 1)",
+            "work": "/works/OL83589W"
+          },
+          "9780553404715": {
+            "title": "Heir to the Empire",
+            "subtitle": null,
+            "work": "/works/OL83589W"
+          }
+        },
+        "other_rows_with_primary": []
+      },
+      "approved_additions": [],
+      "invalid_removals": [
+        {
+          "slug": "heir-to-the-empire",
+          "isbn": "9780345528295",
+          "note": "2026-11-07 (#86) — bad check digit (extra isbn[] entry); recomputed 9780345528292 (OL: \"Heir to the Empire\", Lucas Books 2011) is already on the row"
         }
       ],
       "notes": []
@@ -356,6 +590,74 @@
           "slug": "mace-windu-glass-abyss",
           "isbn": "9780593723432",
           "note": "2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Random House Worlds US hardcover, Oct 15 2024); Open Library: \"Mace Windu: The Glass Abyss: Star Wars\", Steven Barnes"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "id": "a64b639b-6cd8-4659-886d-62b03e3ef547",
+      "slug": "njo-final-prophecy",
+      "title": "The Final Prophecy",
+      "action": "remove_invalid_isbn",
+      "before": {
+        "isbn": [
+          "9780345428752",
+          "9780099410430",
+          "9780553713718",
+          "9780345428757"
+        ],
+        "primary_isbn": "9780099410430"
+      },
+      "after": {
+        "isbn": [
+          "9780345428752",
+          "9780099410430",
+          "9780553713718"
+        ],
+        "primary_isbn": "9780099410430"
+      },
+      "reason": "operator-approved: isbn[] -= 9780345428757 (invalid check digit) (2026-11-07 (#86) — bad check digit (extra isbn[] entry); recomputed 9780345428752 (OL: \"Star Wars: The Final Prophecy\", Del Rey 2003) is already on the row)",
+      "evidence": {
+        "wiki_title": "The New Jedi Order: The Final Prophecy",
+        "wiki_infobox_isbns": [
+          "9780345428752"
+        ],
+        "wiki_page_isbns": [
+          "9780345428752",
+          "9780345464965",
+          "9780739438022",
+          "9788025220221"
+        ],
+        "openlibrary": {
+          "9780099410430": {
+            "title": "The Final Prophecy (Star Wars: The New Jedi Order)",
+            "subtitle": null,
+            "work": "/works/OL1841317W"
+          },
+          "9780345428752": {
+            "title": "Star Wars: The Final Prophecy",
+            "subtitle": "The New Jedi Order #18",
+            "work": "/works/OL1841317W"
+          },
+          "9780553713718": {
+            "title": "The Final Prophecy",
+            "subtitle": null,
+            "work": "/works/OL1841317W"
+          },
+          "9780345428757": {
+            "title": "Star Wars: The Final Prophecy",
+            "subtitle": "The New Jedi Order #18",
+            "work": "/works/OL1841317W"
+          }
+        },
+        "other_rows_with_primary": []
+      },
+      "approved_additions": [],
+      "invalid_removals": [
+        {
+          "slug": "njo-final-prophecy",
+          "isbn": "9780345428757",
+          "note": "2026-11-07 (#86) — bad check digit (extra isbn[] entry); recomputed 9780345428752 (OL: \"Star Wars: The Final Prophecy\", Del Rey 2003) is already on the row"
         }
       ],
       "notes": []
@@ -803,12 +1105,11 @@
       },
       "after": {
         "isbn": [
-          "9780553570074",
           "9780553568042"
         ],
-        "primary_isbn": "9780553570074"
+        "primary_isbn": "9780553568042"
       },
-      "reason": "operator-approved: isbn[] += 9780553568042 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, Feb 1997); Open Library: \"Star Wars: The Bacta War: X-Wing Book 4\", Michael A. Stackpole)",
+      "reason": "operator-approved: isbn[] += 9780553568042 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, Feb 1997); Open Library: \"Star Wars: The Bacta War: X-Wing Book 4\", Michael A. Stackpole); operator-approved: isbn[] -= 9780553570074 (invalid check digit), primary_isbn → 9780553568042 (2026-11-07 (#86) — bad check digit; recomputed 9780553570076 is Sweet Valley \"The Trial of Jessica Wakefield\" on Open Library. Primary → Bantam Spectra PB (OL: \"Star Wars: The Bacta War\"))",
       "evidence": {
         "wiki_title": "X-Wing: The Bacta War",
         "wiki_infobox_isbns": [
@@ -836,6 +1137,14 @@
           "note": "2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, Feb 1997); Open Library: \"Star Wars: The Bacta War: X-Wing Book 4\", Michael A. Stackpole"
         }
       ],
+      "invalid_removals": [
+        {
+          "slug": "x-wing-bacta-war",
+          "isbn": "9780553570074",
+          "primary": "9780553568042",
+          "note": "2026-11-07 (#86) — bad check digit; recomputed 9780553570076 is Sweet Valley \"The Trial of Jessica Wakefield\" on Open Library. Primary → Bantam Spectra PB (OL: \"Star Wars: The Bacta War\")"
+        }
+      ],
       "notes": []
     },
     {
@@ -851,12 +1160,11 @@
       },
       "after": {
         "isbn": [
-          "9780553570098",
           "9780553578973"
         ],
-        "primary_isbn": "9780553570098"
+        "primary_isbn": "9780553578973"
       },
-      "reason": "operator-approved: isbn[] += 9780553578973 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox ISBN-10 0553578979 (Bantam Spectra paperback, July 1998); Open Library: \"Star Wars: Iron Fist: X-Wing Book 6\", Aaron Allston)",
+      "reason": "operator-approved: isbn[] += 9780553578973 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox ISBN-10 0553578979 (Bantam Spectra paperback, July 1998); Open Library: \"Star Wars: Iron Fist: X-Wing Book 6\", Aaron Allston); operator-approved: isbn[] -= 9780553570098 (invalid check digit), primary_isbn → 9780553578973 (2026-11-07 (#86) — bad check digit; recomputed 9780553570090 is \"Running for Her Life\" on Open Library. Primary → Bantam Spectra PB (OL: \"Star Wars: Iron Fist\"))",
       "evidence": {
         "wiki_title": "X-Wing: Iron Fist",
         "wiki_infobox_isbns": [
@@ -884,6 +1192,14 @@
           "note": "2026-11-06 (#78, approved on merge) — Wookieepedia infobox ISBN-10 0553578979 (Bantam Spectra paperback, July 1998); Open Library: \"Star Wars: Iron Fist: X-Wing Book 6\", Aaron Allston"
         }
       ],
+      "invalid_removals": [
+        {
+          "slug": "x-wing-iron-fist",
+          "isbn": "9780553570098",
+          "primary": "9780553578973",
+          "note": "2026-11-07 (#86) — bad check digit; recomputed 9780553570090 is \"Running for Her Life\" on Open Library. Primary → Bantam Spectra PB (OL: \"Star Wars: Iron Fist\")"
+        }
+      ],
       "notes": []
     },
     {
@@ -899,12 +1215,11 @@
       },
       "after": {
         "isbn": [
-          "9780553570067",
           "9780553568035"
         ],
-        "primary_isbn": "9780553570067"
+        "primary_isbn": "9780553568035"
       },
-      "reason": "operator-approved: isbn[] += 9780553568035 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, Oct 1996); Open Library: \"Star Wars: The Krytos Trap: X-Wing - Book 3\", Michael A. Stackpole)",
+      "reason": "operator-approved: isbn[] += 9780553568035 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, Oct 1996); Open Library: \"Star Wars: The Krytos Trap: X-Wing - Book 3\", Michael A. Stackpole); operator-approved: isbn[] -= 9780553570067 (invalid check digit), primary_isbn → 9780553568035 (2026-11-07 (#86) — bad check digit; recomputed 9780553570069 is Sweet Valley \"Busted!\" on Open Library. Primary → Bantam Spectra PB (OL: \"Star Wars: The Krytos Trap\"))",
       "evidence": {
         "wiki_title": "X-Wing: The Krytos Trap",
         "wiki_infobox_isbns": [
@@ -932,6 +1247,100 @@
           "note": "2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, Oct 1996); Open Library: \"Star Wars: The Krytos Trap: X-Wing - Book 3\", Michael A. Stackpole"
         }
       ],
+      "invalid_removals": [
+        {
+          "slug": "x-wing-krytos-trap",
+          "isbn": "9780553570067",
+          "primary": "9780553568035",
+          "note": "2026-11-07 (#86) — bad check digit; recomputed 9780553570069 is Sweet Valley \"Busted!\" on Open Library. Primary → Bantam Spectra PB (OL: \"Star Wars: The Krytos Trap\")"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "id": "fb9dcf59-2229-4918-8f83-cd71e5da2130",
+      "slug": "x-wing-rogue-squadron",
+      "title": "X-Wing: Rogue Squadron",
+      "action": "remove_misfiled_isbn",
+      "before": {
+        "isbn": [
+          "9781845764692",
+          "9781569713303",
+          "9780553568011",
+          "9781101968758",
+          "9780553409260"
+        ],
+        "primary_isbn": "9781845764692"
+      },
+      "after": {
+        "isbn": [
+          "9780553568011",
+          "9780553409260"
+        ],
+        "primary_isbn": "9780553568011"
+      },
+      "reason": "operator-approved: isbn[] -= 9781845764692 (is the X-Wing: Rogue Squadron comic (Titan Books, 2007)), 9781569713303 (is the X-Wing: Rogue Squadron comic (Dark Horse Comics, 1998)), 9781101968758 (is The X-Wing Series: Star Wars Legends 10-Book Bundle (ebook, Random House 2016)), primary_isbn → 9780553568011 (2026-11-07 (#143) — Open Library: \"X-Wing Rogue Squadron\", Titan Books 2007 (work OL37923497W, not the novel's OL84533W). Primary → Bantam Spectra PB (OL: \"Star Wars: Rogue Squadron\", 400 pp); 2026-11-07 (#143) — Open Library: \"Star wars / X-Wing Rogue Squadron.\", Dark Horse Comics 1998 (work OL15219983W, not the novel's OL84533W); 2026-11-07 (#154) — penguinrandomhouse.com + Open Library: \"X-Wing Series : Star Wars Legends 10-Book Bundle\" (work OL28042739W, not the novel's OL84533W). Multi-book bundle; no single row owns it)",
+      "evidence": {
+        "wiki_title": "X-Wing: Rogue Squadron",
+        "wiki_infobox_isbns": [
+          "9780553568011"
+        ],
+        "wiki_page_isbns": [
+          "9780553568011",
+          "9780593359792",
+          "9788025221716"
+        ],
+        "openlibrary": {
+          "9781845764692": {
+            "title": "X-Wing Rogue Squadron",
+            "subtitle": null,
+            "work": "/works/OL37923497W"
+          },
+          "9781569713303": {
+            "title": "Star wars",
+            "subtitle": "X-Wing Rogue Squadron.",
+            "work": "/works/OL15219983W"
+          },
+          "9780553568011": {
+            "title": "Star Wars: Rogue Squadron",
+            "subtitle": "Book 1 in the exciting new series!",
+            "work": "/works/OL84533W"
+          },
+          "9781101968758": {
+            "title": "X-Wing Series : Star Wars Legends 10-Book Bundle",
+            "subtitle": "Rogue Squadron, Wedge's Gamble, the Krytos Trap, the Bacta War, Wraith Squadron ,Iron Fist, Solo Command, Isard's Revenge, Starfighters of Adumar, Mercy Kill",
+            "work": "/works/OL28042739W"
+          },
+          "9780553409260": {
+            "title": "Rogue Squadron (Star Wars X-Wing)",
+            "subtitle": null,
+            "work": "/works/OL84533W"
+          }
+        },
+        "other_rows_with_primary": []
+      },
+      "approved_additions": [],
+      "misfiled_removals": [
+        {
+          "slug": "x-wing-rogue-squadron",
+          "isbn": "9781845764692",
+          "belongs_to": "the X-Wing: Rogue Squadron comic (Titan Books, 2007)",
+          "primary": "9780553568011",
+          "note": "2026-11-07 (#143) — Open Library: \"X-Wing Rogue Squadron\", Titan Books 2007 (work OL37923497W, not the novel's OL84533W). Primary → Bantam Spectra PB (OL: \"Star Wars: Rogue Squadron\", 400 pp)"
+        },
+        {
+          "slug": "x-wing-rogue-squadron",
+          "isbn": "9781569713303",
+          "belongs_to": "the X-Wing: Rogue Squadron comic (Dark Horse Comics, 1998)",
+          "note": "2026-11-07 (#143) — Open Library: \"Star wars / X-Wing Rogue Squadron.\", Dark Horse Comics 1998 (work OL15219983W, not the novel's OL84533W)"
+        },
+        {
+          "slug": "x-wing-rogue-squadron",
+          "isbn": "9781101968758",
+          "belongs_to": "The X-Wing Series: Star Wars Legends 10-Book Bundle (ebook, Random House 2016)",
+          "note": "2026-11-07 (#154) — penguinrandomhouse.com + Open Library: \"X-Wing Series : Star Wars Legends 10-Book Bundle\" (work OL28042739W, not the novel's OL84533W). Multi-book bundle; no single row owns it"
+        }
+      ],
       "notes": []
     },
     {
@@ -947,12 +1356,11 @@
       },
       "after": {
         "isbn": [
-          "9780553570104",
           "9780553579000"
         ],
-        "primary_isbn": "9780553570104"
+        "primary_isbn": "9780553579000"
       },
-      "reason": "operator-approved: isbn[] += 9780553579000 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US paperback, Feb 2 1999); Open Library: \"Star Wars: Solo Command: X-Wing - Book 7\", Aaron Allston)",
+      "reason": "operator-approved: isbn[] += 9780553579000 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US paperback, Feb 2 1999); Open Library: \"Star Wars: Solo Command: X-Wing - Book 7\", Aaron Allston); operator-approved: isbn[] -= 9780553570104 (invalid check digit), primary_isbn → 9780553579000 (2026-11-07 (#86) — bad check digit; recomputed 9780553570106 is Sweet Valley \"The Roommate\" on Open Library. Primary → Spectra PB (OL: \"Star Wars: Solo Command\"))",
       "evidence": {
         "wiki_title": "X-Wing: Solo Command",
         "wiki_infobox_isbns": [
@@ -980,6 +1388,14 @@
           "note": "2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra US paperback, Feb 2 1999); Open Library: \"Star Wars: Solo Command: X-Wing - Book 7\", Aaron Allston"
         }
       ],
+      "invalid_removals": [
+        {
+          "slug": "x-wing-solo-command",
+          "isbn": "9780553570104",
+          "primary": "9780553579000",
+          "note": "2026-11-07 (#86) — bad check digit; recomputed 9780553570106 is Sweet Valley \"The Roommate\" on Open Library. Primary → Spectra PB (OL: \"Star Wars: Solo Command\")"
+        }
+      ],
       "notes": []
     },
     {
@@ -995,12 +1411,11 @@
       },
       "after": {
         "isbn": [
-          "9780553570050",
           "9780553568028"
         ],
-        "primary_isbn": "9780553570050"
+        "primary_isbn": "9780553568028"
       },
-      "reason": "operator-approved: isbn[] += 9780553568028 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, May 1996); Open Library: \"Star Wars: Wedge's Gamble: X-Wing - Book 2\", Michael A. Stackpole)",
+      "reason": "operator-approved: isbn[] += 9780553568028 (2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, May 1996); Open Library: \"Star Wars: Wedge's Gamble: X-Wing - Book 2\", Michael A. Stackpole); operator-approved: isbn[] -= 9780553570050 (invalid check digit), primary_isbn → 9780553568028 (2026-11-07 (#86) — bad check digit; recomputed 9780553570052 is Sweet Valley \"Elizabeth's Secret Diary\" on Open Library. Primary → Bantam Spectra PB (OL: \"Star Wars: Wedge's Gamble\"))",
       "evidence": {
         "wiki_title": "X-Wing: Wedge's Gamble",
         "wiki_infobox_isbns": [
@@ -1026,6 +1441,14 @@
           "slug": "x-wing-wedges-gamble",
           "isbn": "9780553568028",
           "note": "2026-11-06 (#78, approved on merge) — Wookieepedia infobox (Bantam Spectra paperback, May 1996); Open Library: \"Star Wars: Wedge's Gamble: X-Wing - Book 2\", Michael A. Stackpole"
+        }
+      ],
+      "invalid_removals": [
+        {
+          "slug": "x-wing-wedges-gamble",
+          "isbn": "9780553570050",
+          "primary": "9780553568028",
+          "note": "2026-11-07 (#86) — bad check digit; recomputed 9780553570052 is Sweet Valley \"Elizabeth's Secret Diary\" on Open Library. Primary → Bantam Spectra PB (OL: \"Star Wars: Wedge's Gamble\")"
         }
       ],
       "notes": []
@@ -1059,28 +1482,51 @@
         "work": "/works/OL19653601W",
         "review": "2026-10-22 — downloaded 279×500 JPEG of the English Del Rey cover (\"Star Wars / Last Shot / A Han and Lando Novel / Daniel José Older\"); likely the later paperback printing (bestseller banner + review quote), not a placeholder or a foreign edition"
       }
+    },
+    {
+      "id": "cc36a640-681b-43de-afc7-b05951d011ec",
+      "slug": "sanctuary-a-bad-batch-novel",
+      "title": "Sanctuary: A Bad Batch Novel",
+      "before": null,
+      "after": "https://images2.penguinrandomhouse.com/cover/9780593874462",
+      "source": "operator-approved:isbn:9780593874462",
+      "reason": "no cover; operator-approved cover for 9780593874462; visual review: 2026-11-07 (#79) — downloaded 296×450 JPEG of the Random House Worlds cover (\"Star Wars / Sanctuary / A Bad Batch Novel / Lamar Giles\"); penguinrandomhouse.com resolves the ISBN to Sanctuary: A Bad Batch Novel; Open Library: \"Star Wars: Sanctuary\" (OL44264240W)",
+      "approved": {
+        "isbn": "9780593874462",
+        "review": "2026-11-07 (#79) — downloaded 296×450 JPEG of the Random House Worlds cover (\"Star Wars / Sanctuary / A Bad Batch Novel / Lamar Giles\"); penguinrandomhouse.com resolves the ISBN to Sanctuary: A Bad Batch Novel; Open Library: \"Star Wars: Sanctuary\" (OL44264240W)"
+      }
+    },
+    {
+      "id": "017e4510-c1ae-49b9-86c8-184be39e1a2a",
+      "slug": "servants-of-the-empire-imperial-justice",
+      "title": "Servants of the Empire: Imperial Justice",
+      "before": null,
+      "after": "https://images2.penguinrandomhouse.com/cover/9781484716601",
+      "source": "operator-approved:isbn:9781484716601",
+      "reason": "no cover; operator-approved cover for 9781484716601; visual review: 2026-11-07 (#79) — downloaded 275×400 JPEG of the Disney Lucasfilm Press cover (\"Star Wars Rebels / Servants of the Empire / Imperial Justice / Jason Fry\"); Open Library: \"Star Wars Rebels Servants of the Empire\", subtitle \"Imperial Justice\"",
+      "approved": {
+        "isbn": "9781484716601",
+        "review": "2026-11-07 (#79) — downloaded 275×400 JPEG of the Disney Lucasfilm Press cover (\"Star Wars Rebels / Servants of the Empire / Imperial Justice / Jason Fry\"); Open Library: \"Star Wars Rebels Servants of the Empire\", subtitle \"Imperial Justice\""
+      }
+    },
+    {
+      "id": "19e2349e-59a9-4438-a588-c6d7eb075e0e",
+      "slug": "the-high-republic-a-valiant-vow",
+      "title": "The High Republic: A Valiant Vow",
+      "before": null,
+      "after": "https://images2.penguinrandomhouse.com/cover/9781368095204",
+      "source": "operator-approved:isbn:9781368095204",
+      "reason": "no cover; operator-approved cover for 9781368095204; visual review: 2026-11-07 (#79) — downloaded 357×450 JPEG of the Disney Lucasfilm Press cover (\"Star Wars / The High Republic / A Valiant Vow / Justina Ireland\"); penguinrandomhouse.com resolves the ISBN to The High Republic: A Valiant Vow",
+      "approved": {
+        "isbn": "9781368095204",
+        "review": "2026-11-07 (#79) — downloaded 357×450 JPEG of the Disney Lucasfilm Press cover (\"Star Wars / The High Republic / A Valiant Vow / Justina Ireland\"); penguinrandomhouse.com resolves the ISBN to The High Republic: A Valiant Vow"
+      }
     }
   ],
   "synopsis_fills": [],
   "flagged": {
     "isbn": [],
-    "covers_missing": [
-      {
-        "slug": "sanctuary-a-bad-batch-novel",
-        "title": "Sanctuary: A Bad Batch Novel",
-        "reason": "tried 9780593874462 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check; work-level fallback: same-work: OL44264240W \"Star Wars / Sanctuary: A Bad Batch Novel\" (via 9780593874462) has no cover"
-      },
-      {
-        "slug": "servants-of-the-empire-imperial-justice",
-        "title": "Servants of the Empire: Imperial Justice",
-        "reason": "tried 9781484716601 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check; work-level fallback: same-work: OL27832612W \"Star Wars Rebels Servants of the Empire\" (via 9781484716601): title does not match \"Servants of the Empire: Imperial Justice\""
-      },
-      {
-        "slug": "the-high-republic-a-valiant-vow",
-        "title": "The High Republic: A Valiant Vow",
-        "reason": "tried 9781368095204 on Open Library and Google Books (+ ISBN-verified title search); 1 candidate(s) failed the HEAD check; work-level fallback: same-work: OL42425956W \"Star Wars : the High Republic\" (via 9781368095204): title does not match \"The High Republic: A Valiant Vow\""
-      }
-    ],
+    "covers_missing": [],
     "covers_not_yet_available": [
       {
         "slug": "ahsoka-a-novelization-of-season-one",

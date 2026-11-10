@@ -1,8 +1,10 @@
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
+import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { TabHeaderActions } from '@/components/tab-header-actions';
 import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
@@ -29,7 +31,7 @@ export default function LibraryScreen() {
 		error: catalogError,
 		refetch: refetchCatalog,
 	} = useBooks();
-	const { userBooks, loading, refetch } = useUserBooks();
+	const { userBooks, loading, error: shelfError, refetch } = useUserBooks();
 	const [filter, setFilter] = useState<LibraryFilter>('all');
 	const { sort, selectSort } = useCatalogSort('@ossus/library_sort');
 	const router = useRouter();
@@ -50,11 +52,20 @@ export default function LibraryScreen() {
 		() =>
 			selectLibraryView({
 				catalog: { loading: catalogLoading, error: catalogError, count: books.length },
-				shelf: { loading, rows: userBooks.values() },
+				shelf: { loading, error: shelfError, rows: userBooks.values() },
 				visibleCount: shelvedBooks.length,
 				filter,
 			}),
-		[catalogLoading, catalogError, books.length, loading, userBooks, shelvedBooks.length, filter],
+		[
+			catalogLoading,
+			catalogError,
+			books.length,
+			loading,
+			shelfError,
+			userBooks,
+			shelvedBooks.length,
+			filter,
+		],
 	);
 	const pillOptions = useMemo(
 		() => LIBRARY_FILTERS.filter((o) => view.pills.includes(o.key)),
@@ -64,7 +75,7 @@ export default function LibraryScreen() {
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
-	// Every state renders inside the always-mounted FlatList (as ListEmptyComponent), so the
+	// Every state renders inside the always-mounted FlashList (as ListEmptyComponent), so the
 	// header actions stay and the large title still collapses — see Archives (rn-screens#2871).
 	const listEmpty =
 		view.kind === 'loading' ? (
@@ -72,11 +83,15 @@ export default function LibraryScreen() {
 				<ActivityIndicator size="large" color={tokens.accent.primary} />
 			</View>
 		) : view.kind === 'error' ? (
-			<ErrorState
-				title="Couldn't load the archive"
-				message={catalogError}
-				onRetry={refetchCatalog}
-			/>
+			view.source === 'shelf' ? (
+				<ErrorState title="Couldn't load your library" message={shelfError} onRetry={refetch} />
+			) : (
+				<ErrorState
+					title="Couldn't load the archive"
+					message={catalogError}
+					onRetry={refetchCatalog}
+				/>
+			)
 		) : view.kind === 'onboarding' ? (
 			<View style={styles.emptyContainer}>
 				<Text style={styles.emptyTitle}>Your collection awaits</Text>
@@ -101,15 +116,13 @@ export default function LibraryScreen() {
 				</View>
 			</View>
 		) : (
-			<View style={styles.emptyList}>
-				<Text style={styles.emptyFilterText}>{view.emptyCopy}</Text>
-			</View>
+			<EmptyState message={view.emptyCopy} />
 		);
 
 	return (
 		<>
 			<TabHeaderActions sort={sort} onSortChange={selectSort} />
-			<FlatList
+			<FlashList
 				style={styles.list}
 				contentContainerStyle={shelvedBooks.length === 0 ? styles.emptyContent : undefined}
 				data={shelvedBooks}
@@ -197,10 +210,5 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		alignItems: 'center',
 		padding: 32,
-	},
-	emptyFilterText: {
-		fontSize: 15,
-		color: tokens.text.hint,
-		textAlign: 'center',
 	},
 });

@@ -293,6 +293,15 @@ describe('mergeFetchedShelf + write tracker (#108)', () => {
 });
 
 describe('createShelfWriteTracker', () => {
+	it('a write released as not applied (failed + reverted) is not activity (#133)', () => {
+		const writes = createShelfWriteTracker();
+		const startSeq = writes.seq();
+		writes.claim(['b1']);
+		expect(writes.touchedSince('b1', startSeq)).toBe(true); // pending
+		writes.release(['b1'], false);
+		expect(writes.touchedSince('b1', startSeq)).toBe(false);
+	});
+
 	it('refuses tryClaim while any claim on the book is pending (ref-counted)', () => {
 		const writes = createShelfWriteTracker();
 		writes.claim(['b1']);

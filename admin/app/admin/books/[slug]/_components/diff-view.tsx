@@ -22,7 +22,20 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import type { BookCandidate, LookupResult } from '@app/sources/types';
+import { createSaveGate, serializeSave } from '@app/serial-save';
+import {
+	ARRAY_FIELDS,
+	type DiffField,
+	type LookupSelection,
+	SCALAR_FIELDS,
+	type Source,
+	arr,
+	buildLookupPatch,
+	previewIsbns,
+	pruneLookupSelection,
+	scalar,
+} from '@app/sources/lookup-selection';
+import type { LookupResult } from '@app/sources/types';
 import type { Database } from '@app/types';
 import { Loader2, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -30,19 +43,6 @@ import { type ReactNode, startTransition, useState, useTransition } from 'react'
 import { toast } from 'sonner';
 
 type BookRow = Database['public']['Tables']['books']['Row'];
-type Source = 'current' | 'ol' | 'gb';
-
-const SCALAR_FIELDS = [
-	'cover_image',
-	'publisher',
-	'date_published',
-	'language',
-	'synopsis',
-] as const;
-type ScalarField = (typeof SCALAR_FIELDS)[number];
-const ARRAY_FIELDS = ['format', 'isbn'] as const;
-type ArrayField = (typeof ARRAY_FIELDS)[number];
-type DiffField = ScalarField | ArrayField;
 
 const LABELS: Record<DiffField, string> = {
 	cover_image: 'Cover',
@@ -54,37 +54,37 @@ const LABELS: Record<DiffField, string> = {
 	isbn: 'ISBN',
 };
 
-function scalar(
-	book: BookRow,
-	cand: LookupResult | null,
-	field: ScalarField,
-	source: Source,
-): string | null {
-	if (source === 'current') return book[field] ?? null;
-	const c: BookCandidate = source === 'ol' ? (cand?.ol ?? {}) : (cand?.gb ?? {});
-	return c[field] ?? null;
-}
-
-function arr(
-	book: BookRow,
-	cand: LookupResult | null,
-	field: ArrayField,
-	source: Source,
-): string[] {
-	if (source === 'current') return book[field] ?? [];
-	const c: BookCandidate = source === 'ol' ? (cand?.ol ?? {}) : (cand?.gb ?? {});
-	return c[field] ?? [];
-}
-
 export function DiffView({ book }: { book: BookRow }) {
 	const router = useRouter();
 	const [candidates, setCandidates] = useState<LookupResult | null>(null);
 	const [lookupPending, startLookup] = useTransition();
-	const [applyPending, startApply] = useTransition();
-	const [selection, setSelection] = useState<Partial<Record<DiffField, Source>>>({});
+	const [, startApply] = useTransition();
+	// Held from Apply until a failed save or until the refreshed row (new
+	// `updated_at`) lands, so a second Apply can't resend the stale one (#184).
+	const [gate, setGate] = useState(createSaveGate);
+	const [applying, setApplying] = useState(false);
+	const [gateAt, setGateAt] = useState(book.updated_at);
+	if (book.updated_at !== gateAt) {
+		setGateAt(book.updated_at);
+		setGate(createSaveGate());
+		setApplying(false);
+	}
+	const [selection, setSelection] = useState<LookupSelection>({});
 	const [replaceIsbn, setReplaceIsbn] = useState(false);
 	const [confirmSlug, setConfirmSlug] = useState('');
 	const [enlarged, setEnlarged] = useState<string | null>(null);
+	// Done in render, not in the lookup callback, so a radio changed while the
+	// lookup was pending is pruned too (#240).
+	const [prunedFor, setPrunedFor] = useState(candidates);
+	if (candidates && candidates !== prunedFor) {
+		setPrunedFor(candidates);
+		const pruned = pruneLookupSelection(selection, candidates);
+		setSelection(pruned.selection);
+		if (pruned.isbnDropped) {
+			setReplaceIsbn(false);
+			setConfirmSlug('');
+		}
+	}
 
 	const hasCandidates = candidates !== null;
 
@@ -121,48 +121,41 @@ export function DiffView({ book }: { book: BookRow }) {
 
 	// Resulting ISBN list + primary preview given the current selection.
 	const isbnSource = selection.isbn ?? 'current';
-	const resultingIsbns =
-		isbnSource === 'current'
-			? (book.isbn ?? [])
-			: replaceIsbn
-				? arr(book, candidates, 'isbn', isbnSource)
-				: [...new Set([...(book.isbn ?? []), ...arr(book, candidates, 'isbn', isbnSource)])];
-	const primaryPreview =
-		book.primary_isbn && resultingIsbns.includes(book.primary_isbn)
-			? book.primary_isbn
-			: (resultingIsbns[0] ?? null);
+	const { isbns: resultingIsbns, primary: primaryPreview } = previewIsbns(
+		book,
+		candidates,
+		isbnSource,
+		replaceIsbn,
+	);
 
-	function buildPatch(): Record<string, unknown> {
-		const patch: Record<string, unknown> = {};
-		for (const f of SCALAR_FIELDS) {
-			const src = selection[f] ?? 'current';
-			if (src === 'current') continue;
-			const v = scalar(book, candidates, f, src);
-			if (v !== (book[f] ?? null)) patch[f] = v;
-		}
-		const fmtSrc = selection.format ?? 'current';
-		if (fmtSrc !== 'current') patch.format = arr(book, candidates, 'format', fmtSrc);
-		if (isbnSource !== 'current') {
-			patch.isbn = resultingIsbns;
-			patch.primary_isbn = primaryPreview;
-		}
-		return patch;
-	}
-
-	const patch = buildPatch();
+	const patch = buildLookupPatch(book, candidates, selection, replaceIsbn);
 	const changeCount = Object.keys(patch).length;
 	const replaceBlocked = isbnSource !== 'current' && replaceIsbn && confirmSlug !== book.slug;
 
 	function apply() {
-		const p = buildPatch();
-		if (Object.keys(p).length === 0) {
+		if (gate.held) return;
+		if (changeCount === 0) {
 			toast.info('Nothing selected to apply');
 			return;
 		}
+		setApplying(true);
 		startApply(async () => {
-			const res = await patchBook(book.id, book.updated_at, p);
+			let res: Awaited<ReturnType<typeof patchBook>> | undefined;
+			try {
+				res = await serializeSave(
+					gate,
+					() => patchBook(book.id, book.updated_at, patch),
+					(r) => r.ok,
+				);
+			} catch {
+				setApplying(false);
+				toast.error('Apply failed: request did not complete');
+				return;
+			}
+			if (!res) return;
+			if (!res.ok) setApplying(false);
 			if (res.ok) {
-				toast.success(`Applied ${Object.keys(p).length} field(s)`);
+				toast.success(`Applied ${changeCount} field(s)`);
 				setSelection({});
 				setReplaceIsbn(false);
 				setConfirmSlug('');
@@ -241,7 +234,7 @@ export function DiffView({ book }: { book: BookRow }) {
 							</span>
 						);
 					}}
-					hasValue={(source) => scalar(book, candidates, field, source) != null}
+					hasValue={(source) => Boolean(scalar(book, candidates, field, source))}
 					disabledSources={hasCandidates ? [] : ['ol', 'gb']}
 				/>
 			))}
@@ -319,8 +312,8 @@ export function DiffView({ book }: { book: BookRow }) {
 			<div className="flex items-center gap-3">
 				<AlertDialog>
 					<AlertDialogTrigger asChild>
-						<Button disabled={changeCount === 0 || replaceBlocked || applyPending}>
-							{applyPending && <Loader2 className="size-4 animate-spin" />}
+						<Button disabled={changeCount === 0 || replaceBlocked || applying}>
+							{applying && <Loader2 className="size-4 animate-spin" />}
 							Apply {changeCount > 0 ? `${changeCount} field(s)` : 'selected'}
 						</Button>
 					</AlertDialogTrigger>

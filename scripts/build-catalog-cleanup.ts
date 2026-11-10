@@ -6,12 +6,13 @@
  *   npx tsx scripts/build-catalog-cleanup.ts                  # vs the LOCAL catalog
  *   …  --refresh-lookups                                      # ignore the lookup cache
  *   …  --from-backup                                          # rows from data/catalog-backup.csv (no DB)
+ *   …  --from-backup --offline                                # + no .env read, no network: cache only
  *
  * Three repairs (policy: lib/wookieepedia/cleanup.ts):
  *   1. primary_isbn ∉ isbn[] — add it (evidence: wiki infobox/page + Open Library),
  *      or reset primary_isbn when it belongs to another book; else flag. Plus the
- *      operator-approved isbn[] additions, collision removals and invalid-ISBN
- *      removals listed below.
+ *      operator-approved isbn[] additions, collision removals, invalid-ISBN
+ *      removals and misfiled-ISBN removals listed below.
  *   2. null/blank cover_image — Open Library then Google Books by every row ISBN,
  *      then a Google Books title search kept only when the hit lists a row ISBN;
  *      HEAD-checked, never a cover another row uses, never a wiki image. When all
@@ -26,6 +27,9 @@
  *   data/discovery/catalog-cleanup.json  — isbn_fixes / cover_fills / synopsis_fills + flags
  *   data/discovery/catalog-cleanup.md    — human summary
  * Network responses are cached in the gitignored data/discovery/cleanup-cache.json.
+ * `--offline` serves lookups from that cache only (never writes it) and lists
+ * every lookup it had to skip in the summary; with a complete cache its output
+ * matches an online build of the same day.
  *
  * Apply (dry-run by default) with the shared engine:
  *   npx tsx scripts/apply-catalog-changeset.ts --production --changeset data/discovery/catalog-cleanup.json
@@ -44,6 +48,7 @@ import {
 } from '../lib/sources/open-library';
 import { normalizeIsbnList } from '../lib/wookieepedia/changeset';
 import {
+	type ApprovedCover,
 	type ApprovedIsbnAddition,
 	type ApprovedIsbnRemoval,
 	type CleanupChangeset,
@@ -53,6 +58,7 @@ import {
 	type CoverReview,
 	type InvalidIsbnRemoval,
 	type IsbnEvidence,
+	type MisfiledIsbnRemoval,
 	type OlEditionFacts,
 	type OlWorkFacts,
 	type SynopsisDraftFile,
@@ -70,10 +76,23 @@ import { loadDiscovered } from './lib/load-discovered';
 
 const ROOT = resolve(__dirname, '..');
 const DIR = resolve(ROOT, 'data', 'discovery');
-const OUT_JSON = resolve(DIR, 'catalog-cleanup.json');
-const OUT_MD = resolve(DIR, 'catalog-cleanup.md');
-const DRAFTS = resolve(DIR, 'synopsis-drafts.json');
-const CACHE = resolve(DIR, 'cleanup-cache.json');
+
+/** Input/output files (overridable so tests can point at fixtures + a temp dir). */
+export type CleanupPaths = {
+	readonly backup: string;
+	readonly drafts: string;
+	readonly cache: string;
+	readonly outJson: string;
+	readonly outMd: string;
+};
+
+export const DEFAULT_PATHS: CleanupPaths = {
+	backup: resolve(ROOT, 'data', 'catalog-backup.csv'),
+	drafts: resolve(DIR, 'synopsis-drafts.json'),
+	cache: resolve(DIR, 'cleanup-cache.json'),
+	outJson: resolve(DIR, 'catalog-cleanup.json'),
+	outMd: resolve(DIR, 'catalog-cleanup.md'),
+};
 
 /**
  * isbn[] additions the operator reviewed and approved (additive only — never
@@ -269,6 +288,51 @@ const INVALID_ISBN_REMOVALS: readonly InvalidIsbnRemoval[] = [
 ];
 
 /**
+ * Valid ISBN-13s on the wrong book the operator approved removing (#143): the
+ * check digit passes, so INVALID_ISBN_REMOVALS can't take them, and no other
+ * row holds them, so APPROVED_ISBN_REMOVALS can't either. Where the value is
+ * the primary, primary_isbn resets to `primary` (an ISBN on the row, or an
+ * approved addition in the same write). Re-verified on every build: the value
+ * must pass the check digit and must not share an Open Library work with an
+ * ISBN the row keeps.
+ */
+const MISFILED_ISBN_REMOVALS: readonly MisfiledIsbnRemoval[] = [
+	{
+		slug: 'x-wing-rogue-squadron',
+		isbn: '9781845764692',
+		belongs_to: 'the X-Wing: Rogue Squadron comic (Titan Books, 2007)',
+		primary: '9780553568011',
+		note: '2026-11-07 (#143) — Open Library: "X-Wing Rogue Squadron", Titan Books 2007 (work OL37923497W, not the novel\'s OL84533W). Primary → Bantam Spectra PB (OL: "Star Wars: Rogue Squadron", 400 pp)',
+	},
+	{
+		slug: 'x-wing-rogue-squadron',
+		isbn: '9781569713303',
+		belongs_to: 'the X-Wing: Rogue Squadron comic (Dark Horse Comics, 1998)',
+		note: '2026-11-07 (#143) — Open Library: "Star wars / X-Wing Rogue Squadron.", Dark Horse Comics 1998 (work OL15219983W, not the novel\'s OL84533W)',
+	},
+	{
+		slug: 'x-wing-rogue-squadron',
+		isbn: '9781101968758',
+		belongs_to: 'The X-Wing Series: Star Wars Legends 10-Book Bundle (ebook, Random House 2016)',
+		note: '2026-11-07 (#154) — penguinrandomhouse.com + Open Library: "X-Wing Series : Star Wars Legends 10-Book Bundle" (work OL28042739W, not the novel\'s OL84533W). Multi-book bundle; no single row owns it',
+	},
+	{
+		slug: 'acolyte-wayseeker',
+		isbn: '9780593723456',
+		belongs_to: 'Mace Windu: The Glass Abyss (Random House Worlds paperback)',
+		primary: '9780593874431',
+		note: '2026-11-07 (#143, from #97) — penguinrandomhouse.com: Mace Windu: The Glass Abyss paperback; seeded on mace-windu-glass-abyss. Primary → the approved Random House Worlds HC',
+	},
+	{
+		slug: 'aftermath-life-debt',
+		isbn: '9780345511638',
+		belongs_to: '"Bubby\'s brunch cookbook" (Open Library)',
+		primary: '9781101966938',
+		note: '2026-11-07 (#143, from #97) — Open Library titles it "Bubby\'s brunch cookbook". Primary → the approved Del Rey US HC',
+	},
+];
+
+/**
  * Visual reviews of work-level fallback covers (lib/wookieepedia/cleanup.ts
  * `vetFallbackCover`): each image was downloaded and looked at — right book,
  * English, not a placeholder. A fallback cover with no `accept` here is listed
@@ -290,11 +354,70 @@ const COVER_FALLBACK_REVIEWS: readonly CoverReview[] = [
 	},
 ];
 
-const PROD = process.argv.includes('--production');
-/** Build from the committed prod snapshot instead of a live read (offline, no credentials). */
-const FROM_BACKUP = process.argv.includes('--from-backup');
-const BACKUP = resolve(ROOT, 'data', 'catalog-backup.csv');
-const REFRESH = process.argv.includes('--refresh-lookups');
+/**
+ * Operator-approved covers (lib/wookieepedia/cleanup.ts `vetApprovedCover`):
+ * images for a row ISBN from a source no automated pass reads — the
+ * publisher's cover endpoint. Each was downloaded and looked at; the ISBN was
+ * cross-checked against the publisher page and Open Library. PRH's endpoint
+ * answers 200 with a ~2 KB 400×400 placeholder for unknown ISBNs, so it is
+ * never an automated source — only reviewed entries here.
+ */
+const APPROVED_COVERS: readonly ApprovedCover[] = [
+	{
+		slug: 'sanctuary-a-bad-batch-novel',
+		isbn: '9780593874462',
+		url: 'https://images2.penguinrandomhouse.com/cover/9780593874462',
+		note: '2026-11-07 (#79) — downloaded 296×450 JPEG of the Random House Worlds cover ("Star Wars / Sanctuary / A Bad Batch Novel / Lamar Giles"); penguinrandomhouse.com resolves the ISBN to Sanctuary: A Bad Batch Novel; Open Library: "Star Wars: Sanctuary" (OL44264240W)',
+	},
+	{
+		slug: 'servants-of-the-empire-imperial-justice',
+		isbn: '9781484716601',
+		url: 'https://images2.penguinrandomhouse.com/cover/9781484716601',
+		note: '2026-11-07 (#79) — downloaded 275×400 JPEG of the Disney Lucasfilm Press cover ("Star Wars Rebels / Servants of the Empire / Imperial Justice / Jason Fry"); Open Library: "Star Wars Rebels Servants of the Empire", subtitle "Imperial Justice"',
+	},
+	{
+		slug: 'the-high-republic-a-valiant-vow',
+		isbn: '9781368095204',
+		url: 'https://images2.penguinrandomhouse.com/cover/9781368095204',
+		note: '2026-11-07 (#79) — downloaded 357×450 JPEG of the Disney Lucasfilm Press cover ("Star Wars / The High Republic / A Valiant Vow / Justina Ireland"); penguinrandomhouse.com resolves the ISBN to The High Republic: A Valiant Vow',
+	},
+];
+
+export type CleanupOptions = {
+	readonly prod: boolean;
+	/** Build from the committed prod snapshot instead of a live DB read (no credentials). */
+	readonly fromBackup: boolean;
+	readonly refresh: boolean;
+	/** No .env read and no network: lookups come from the cache or are skipped (needs fromBackup). */
+	readonly offline: boolean;
+	readonly paths: CleanupPaths;
+};
+
+/** Lookup kinds an offline build can skip, with their summary labels. */
+export const LOOKUP_KINDS = {
+	wiki: 'Wookieepedia pages',
+	openlibrary: 'Open Library editions',
+	covers: 'cover lookups (Open Library + Google Books by ISBN)',
+	gbSearch: 'Google Books title searches',
+	head: 'cover HEAD checks',
+	olWorks: 'Open Library works',
+	olAuthors: 'Open Library authors',
+	olSearch: 'Open Library title + author searches',
+} as const;
+
+export type SkippedLookups = Record<keyof typeof LOOKUP_KINDS, number>;
+
+export type CleanupRun = { readonly changeset: CleanupChangeset; readonly skipped: SkippedLookups };
+
+export function parseArgs(argv: readonly string[]): CleanupOptions {
+	return {
+		prod: argv.includes('--production'),
+		fromBackup: argv.includes('--from-backup'),
+		refresh: argv.includes('--refresh-lookups'),
+		offline: argv.includes('--offline'),
+		paths: DEFAULT_PATHS,
+	};
+}
 
 // --- Cache -----------------------------------------------------------------------
 
@@ -333,7 +456,7 @@ function sortKeys<T>(o: Record<string, T>): Record<string, T> {
 	return Object.fromEntries(Object.entries(o).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 }
 
-function loadCache(): Cache {
+function loadCache(path: string, refresh: boolean): Cache {
 	const empty: Cache = {
 		wiki: {},
 		ol: {},
@@ -344,15 +467,15 @@ function loadCache(): Cache {
 		olAuthors: {},
 		olSearch: {},
 	};
-	if (REFRESH || !existsSync(CACHE)) return empty;
+	if (refresh || !existsSync(path)) return empty;
 	try {
-		return { ...empty, ...(JSON.parse(readFileSync(CACHE, 'utf-8')) as Partial<Cache>) };
+		return { ...empty, ...(JSON.parse(readFileSync(path, 'utf-8')) as Partial<Cache>) };
 	} catch {
 		return empty;
 	}
 }
 
-function saveCache(c: Cache): void {
+function saveCache(path: string, c: Cache): void {
 	const out = {
 		wiki: sortKeys(c.wiki),
 		ol: sortKeys(c.ol),
@@ -363,7 +486,7 @@ function saveCache(c: Cache): void {
 		olAuthors: sortKeys(c.olAuthors),
 		olSearch: sortKeys(c.olSearch),
 	};
-	writeFileSync(CACHE, `${JSON.stringify(out, null, 2)}\n`);
+	writeFileSync(path, `${JSON.stringify(out, null, 2)}\n`);
 }
 
 // --- Lookups (network, read-only) --------------------------------------------------
@@ -393,7 +516,12 @@ function wikiPageIds(catalog: readonly CatalogBook[]): Map<string, number> {
 	return out;
 }
 
-async function fetchWiki(slugs: readonly string[], ids: Map<string, number>, cache: Cache) {
+async function fetchWiki(
+	slugs: readonly string[],
+	ids: Map<string, number>,
+	cache: Cache,
+	online: (kind: keyof SkippedLookups, n?: number) => boolean,
+) {
 	const missing = slugs.filter((s) => !(s in cache.wiki));
 	const want = new Map<number, string>();
 	for (const s of missing) {
@@ -401,7 +529,7 @@ async function fetchWiki(slugs: readonly string[], ids: Map<string, number>, cac
 		if (id != null) want.set(id, s);
 		else cache.wiki[s] = null;
 	}
-	if (want.size === 0) return;
+	if (want.size === 0 || !online('wiki', want.size)) return;
 	for (const f of await fetchPagesByIds([...want.keys()])) {
 		const slug = f.status === 'ok' ? want.get(f.page.pageid) : undefined;
 		if (f.status !== 'ok' || !slug) continue;
@@ -499,9 +627,15 @@ const ACTION_LABEL: Record<CleanupChangeset['isbn_fixes'][number]['action'], str
 	add_approved_isbn: 'operator-approved isbn[] addition',
 	remove_approved_isbn: 'operator-approved collision removal',
 	remove_invalid_isbn: 'operator-approved invalid-ISBN removal',
+	remove_misfiled_isbn: 'operator-approved misfiled-ISBN removal',
 };
 
-function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: string): string {
+function summaryMarkdown(
+	cs: CleanupChangeset,
+	catalogRows: number,
+	label: string,
+	skipped: SkippedLookups,
+): string {
 	const L: string[] = [];
 	const s = cs.summary;
 	L.push('# Catalog cleanup changeset', '');
@@ -510,6 +644,21 @@ function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: strin
 		'Apply (dry-run first): `npx tsx scripts/apply-catalog-changeset.ts --production --changeset data/discovery/catalog-cleanup.json`',
 		'',
 	);
+	const skips = (Object.keys(LOOKUP_KINDS) as Array<keyof SkippedLookups>).filter(
+		(k) => skipped[k],
+	);
+	if (skips.length) {
+		L.push(
+			'## Offline build — lookups skipped',
+			'',
+			'Built with `--offline`: these lookups were not in the cache and were not fetched, so the evidence below is incomplete (rows may be flagged or missing fills an online build would produce). Do not apply this changeset; rebuild online first.',
+			'',
+			'| Lookup | Skipped |',
+			'| --- | --- |',
+			...skips.map((k) => `| ${LOOKUP_KINDS[k]} | ${skipped[k]} |`),
+			'',
+		);
+	}
 	L.push('| Section | Count |', '| --- | --- |');
 	L.push(`| ISBN repairs (primary_isbn ∉ isbn[]) | ${s.isbn_fixes} (flagged: ${s.isbn_flagged}) |`);
 	L.push(`| Cover fills (null cover_image) | ${s.cover_fills} |`);
@@ -550,14 +699,31 @@ function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: strin
 			L.push(
 				`- invalid-ISBN removal ${r.isbn}${r.primary ? ` (primary → ${r.primary})` : ''}: ${r.note}`,
 			);
+		for (const r of f.misfiled_removals ?? [])
+			L.push(
+				`- misfiled-ISBN removal ${r.isbn} (is ${r.belongs_to})${r.primary ? ` (primary → ${r.primary})` : ''}: ${r.note}`,
+			);
 		for (const n of f.notes) L.push(`- note: ${n}`);
 		L.push('');
 	}
 	flagLines(L, 'Flagged ISBN rows (not changed)', cs.flagged.isbn);
 
 	L.push('', '## Cover fills (cover_image was null)', '');
-	for (const c of cs.cover_fills.filter((f) => !f.fallback)) {
+	for (const c of cs.cover_fills.filter((f) => !f.fallback && !f.approved)) {
 		L.push(`- \`${c.slug}\`: ${c.after} (${c.source}) — ${c.reason}`);
+	}
+	const approved = cs.cover_fills.filter((f) => f.approved);
+	if (approved.length) {
+		L.push(
+			'',
+			'### Operator-approved covers',
+			'',
+			'Sourced by hand for a row ISBN (publisher image) and visually reviewed; listed in the builder’s `APPROVED_COVERS`.',
+			'',
+		);
+		for (const c of approved) {
+			L.push(`- \`${c.slug}\`: ${c.after} (\`${c.source}\`) — ${c.reason}`);
+		}
 	}
 	const fallback = cs.cover_fills.filter((f) => f.fallback);
 	if (fallback.length) {
@@ -605,32 +771,46 @@ function summaryMarkdown(cs: CleanupChangeset, catalogRows: number, label: strin
 
 // --- Main ------------------------------------------------------------------------
 
-async function main(): Promise<void> {
-	if (!process.env.GOOGLE_BOOKS_API_KEY) {
+export async function runCleanup(opts: CleanupOptions): Promise<CleanupRun> {
+	const { paths, offline } = opts;
+	if (offline && !opts.fromBackup) {
+		throw new Error('--offline needs --from-backup (a live catalog read is a network call).');
+	}
+	const skipped = Object.fromEntries(
+		Object.keys(LOOKUP_KINDS).map((k) => [k, 0]),
+	) as SkippedLookups;
+	/** True when a cache-missed lookup may hit the network; offline, counts it as skipped. */
+	const online = (kind: keyof SkippedLookups, n = 1): boolean => {
+		if (offline) skipped[kind] += n;
+		return !offline;
+	};
+	if (!offline && !process.env.GOOGLE_BOOKS_API_KEY) {
 		const key = productionEnv().GOOGLE_BOOKS_API_KEY;
 		if (key) process.env.GOOGLE_BOOKS_API_KEY = key;
 	}
 	let data: unknown[];
-	if (FROM_BACKUP) {
-		data = parseBackup(readFileSync(BACKUP, 'utf-8')).sort((a, b) =>
+	if (opts.fromBackup) {
+		data = parseBackup(readFileSync(paths.backup, 'utf-8')).sort((a, b) =>
 			a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0,
 		);
 	} else {
-		const supabase = makeClient(PROD);
+		const supabase = makeClient(opts.prod);
 		const res = await supabase.from('books').select('*').order('slug');
 		if (res.error) throw new Error(`catalog read failed: ${res.error.message}`);
 		data = res.data ?? [];
 	}
 	const catalog = data as unknown as Array<CatalogBook & CleanupRow>;
-	const label = FROM_BACKUP
+	const label = opts.fromBackup
 		? 'PRODUCTION-snapshot (data/catalog-backup.csv)'
-		: PROD
+		: opts.prod
 			? 'PRODUCTION'
 			: 'LOCAL';
-	console.log(`Catalog: ${label}, ${catalog.length} rows (read-only).`);
+	console.log(
+		`Catalog: ${label}, ${catalog.length} rows (read-only${offline ? ', offline: cache only' : ''}).`,
+	);
 
-	const drafts = JSON.parse(readFileSync(DRAFTS, 'utf-8')) as SynopsisDraftFile;
-	const cache = loadCache();
+	const drafts = JSON.parse(readFileSync(paths.drafts, 'utf-8')) as SynopsisDraftFile;
+	const cache = loadCache(paths.cache, opts.refresh);
 	const limit = pLimit(3);
 	const blank = (v: string | null) => v == null || v.trim() === '';
 
@@ -638,9 +818,12 @@ async function main(): Promise<void> {
 		(r) => r.primary_isbn != null && !(r.isbn ?? []).includes(r.primary_isbn),
 	);
 	const approvedSlugs = new Set(
-		[...APPROVED_ISBN_ADDITIONS, ...APPROVED_ISBN_REMOVALS, ...INVALID_ISBN_REMOVALS].map(
-			(a) => a.slug,
-		),
+		[
+			...APPROVED_ISBN_ADDITIONS,
+			...APPROVED_ISBN_REMOVALS,
+			...INVALID_ISBN_REMOVALS,
+			...MISFILED_ISBN_REMOVALS,
+		].map((a) => a.slug),
 	);
 	const evidenceRows = catalog.filter((r) => isbnRows.includes(r) || approvedSlugs.has(r.slug));
 	const coverRows = catalog.filter((r) => blank(r.cover_image));
@@ -655,6 +838,7 @@ async function main(): Promise<void> {
 		[...new Set([...evidenceRows, ...synopsisRows].map((r) => r.slug))].sort(),
 		ids,
 		cache,
+		online,
 	);
 
 	// 2. Open Library facts for each problem primary_isbn, approved addition, and row ISBN.
@@ -669,7 +853,7 @@ async function main(): Promise<void> {
 	await Promise.all(
 		[...olIsbns].map((i) =>
 			limit(async () => {
-				if (!(i in cache.ol)) cache.ol[i] = await olFacts(i);
+				if (!(i in cache.ol) && online('openlibrary')) cache.ol[i] = await olFacts(i);
 			}),
 		),
 	);
@@ -679,7 +863,7 @@ async function main(): Promise<void> {
 		coverRows.flatMap((r) =>
 			coverIsbns(r).map((isbn) =>
 				limit(async () => {
-					if (!(isbn in cache.covers)) {
+					if (!(isbn in cache.covers) && online('covers')) {
 						const res = await lookupCandidatesFor({
 							isbn,
 							title: r.title,
@@ -698,7 +882,7 @@ async function main(): Promise<void> {
 		coverRows.map((r) =>
 			limit(async () => {
 				const isbns = coverIsbns(r);
-				if (isbns.length && !(r.slug in cache.gbSearch)) {
+				if (isbns.length && !(r.slug in cache.gbSearch) && online('gbSearch')) {
 					cache.gbSearch[r.slug] = await findGbVolumeByTitleWithIsbn({
 						isbns,
 						title: r.title,
@@ -712,11 +896,12 @@ async function main(): Promise<void> {
 		[
 			...Object.values(cache.covers).flatMap((c) => [c.ol, c.gb]),
 			...Object.values(cache.gbSearch).map((g) => g?.cover_image ?? null),
+			...APPROVED_COVERS.map((a) => a.url),
 		].filter((u): u is string => !!u),
 	);
 	const headCheck = (u: string) =>
 		limit(async () => {
-			if (!(u in cache.head))
+			if (!(u in cache.head) && online('head'))
 				cache.head[u] = await headCheckCover(u, { minBytes: MIN_COVER_BYTES });
 		});
 	await Promise.all([...urls].map(headCheck));
@@ -738,7 +923,7 @@ async function main(): Promise<void> {
 	await Promise.all(
 		fbIsbns.map((i) =>
 			limit(async () => {
-				if (!(i in cache.ol)) cache.ol[i] = await olFacts(i);
+				if (!(i in cache.ol) && online('openlibrary')) cache.ol[i] = await olFacts(i);
 			}),
 		),
 	);
@@ -748,7 +933,7 @@ async function main(): Promise<void> {
 	await Promise.all(
 		workKeys.map((k) =>
 			limit(async () => {
-				if (!(k in cache.olWorks)) cache.olWorks[k] = await olWork(k);
+				if (!(k in cache.olWorks) && online('olWorks')) cache.olWorks[k] = await olWork(k);
 			}),
 		),
 	);
@@ -756,7 +941,7 @@ async function main(): Promise<void> {
 	await Promise.all(
 		authorKeys.map((k) =>
 			limit(async () => {
-				if (!(k in cache.olAuthors)) {
+				if (!(k in cache.olAuthors) && online('olAuthors')) {
 					cache.olAuthors[k] = (await fetchAuthor<{ name?: string }>(k))?.name ?? null;
 				}
 			}),
@@ -767,7 +952,7 @@ async function main(): Promise<void> {
 			.filter((r) => coverIsbns(r).every((i) => cache.ol[i] == null) && r.author?.length)
 			.map((r) =>
 				limit(async () => {
-					if (!(r.slug in cache.olSearch)) {
+					if (!(r.slug in cache.olSearch) && online('olSearch')) {
 						cache.olSearch[r.slug] = await olSearchWorks(r.title, r.author?.[0] ?? '');
 					}
 				}),
@@ -811,7 +996,7 @@ async function main(): Promise<void> {
 		})
 		.filter((u): u is string => !!u);
 	await Promise.all(fallbackUrls.map(headCheck));
-	saveCache(cache);
+	if (!offline) saveCache(paths.cache, cache);
 
 	// Assemble the pure inputs.
 	const holders = new Map<string, string[]>();
@@ -861,7 +1046,7 @@ async function main(): Promise<void> {
 		if (w) wikiText.set(r.slug, w.text);
 	}
 
-	const cs = buildCleanupChangeset({
+	const { kind, version, as_of, ...body } = buildCleanupChangeset({
 		rows: catalog,
 		asOf,
 		isbnEvidence,
@@ -871,25 +1056,40 @@ async function main(): Promise<void> {
 		approvedIsbnAdditions: APPROVED_ISBN_ADDITIONS,
 		approvedIsbnRemovals: APPROVED_ISBN_REMOVALS,
 		invalidIsbnRemovals: INVALID_ISBN_REMOVALS,
+		misfiledIsbnRemovals: MISFILED_ISBN_REMOVALS,
 		isbnHolders: holders,
 		workCovers,
 		fallbackHead: new Map(fallbackUrls.map((u) => [u, cache.head[u] === true] as const)),
 		coverReviews: COVER_FALLBACK_REVIEWS,
+		approvedCovers: APPROVED_COVERS,
+		approvedCoverHead: new Map(APPROVED_COVERS.map((a) => [a.url, cache.head[a.url] === true])),
 	});
-	writeFileSync(OUT_JSON, `${JSON.stringify(cs, null, 2)}\n`);
-	writeFileSync(OUT_MD, summaryMarkdown(cs, catalog.length, label));
+	// The marker lives in the JSON (not only the .md) so catalog:apply can refuse it.
+	const cs: CleanupChangeset = { kind, version, as_of, offline, skipped, ...body };
+	writeFileSync(paths.outJson, `${JSON.stringify(cs, null, 2)}\n`);
+	writeFileSync(paths.outMd, summaryMarkdown(cs, catalog.length, label, skipped));
 
 	const s = cs.summary;
 	console.log(
-		`\nCleanup → ${OUT_JSON.replace(`${ROOT}/`, '')}\n` +
+		`\nCleanup → ${paths.outJson.replace(`${ROOT}/`, '')}\n` +
 			`  isbn_fixes ${s.isbn_fixes} (flagged ${s.isbn_flagged}) · cover_fills ${s.cover_fills} ` +
 			`(missing ${s.covers_missing}, not yet available ${s.covers_not_yet_available}) · ` +
 			`synopsis_fills ${s.synopsis_fills} (skipped ${s.synopses_skipped})\n` +
-			`Summary → ${OUT_MD.replace(`${ROOT}/`, '')}`,
+			`Summary → ${paths.outMd.replace(`${ROOT}/`, '')}`,
 	);
+	const skippedTotal = Object.values(skipped).reduce((a, b) => a + b, 0);
+	if (skippedTotal) {
+		console.log(
+			`Offline: skipped ${skippedTotal} uncached lookups (listed in the summary) — do not apply.`,
+		);
+	}
+	return { changeset: cs, skipped };
 }
 
-main().catch((err) => {
-	console.error(`\n${err instanceof Error ? (err.stack ?? err.message) : String(err)}`);
-	process.exit(1);
-});
+// Run only as a CLI (`tsx scripts/build-catalog-cleanup.ts`), not when imported by a test.
+if (/build-catalog-cleanup\.ts$/.test(process.argv[1] ?? '')) {
+	runCleanup(parseArgs(process.argv)).catch((err) => {
+		console.error(`\n${err instanceof Error ? (err.stack ?? err.message) : String(err)}`);
+		process.exit(1);
+	});
+}

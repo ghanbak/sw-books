@@ -307,6 +307,22 @@ describe('parseAppearancesWikitext — edge cases', () => {
 		expect(isMentionOnly(back.characters[8] as (typeof back.characters)[number])).toBe(true);
 	});
 
+	it('maps {{Nc}} to the non_canon marker, not unknown-template drift', () => {
+		const r = app(
+			'|characters=\n*[[Luke Skywalker/Legends|Luke Skywalker]] {{Nc}}\n*[[Darth Vader/Legends|Darth Vader]] {{nc}} {{Mo}}',
+		);
+		expect(r.appearances.characters).toEqual([
+			{ name: 'Luke Skywalker', page: 'Luke Skywalker/Legends', markers: ['non_canon'] },
+			{ name: 'Darth Vader', page: 'Darth Vader/Legends', markers: ['non_canon', 'mentioned'] },
+		]);
+		expect(r.diagnostics.unknownTemplates).toEqual({});
+		const back = parseAppearances(r.appearances);
+		expect(back.characters.map((e) => e.markers)).toEqual([
+			['non_canon'],
+			['non_canon', 'mentioned'],
+		]);
+	});
+
 	it('returns an empty payload when the page has no {{App}}', () => {
 		const r = parseAppearancesWikitext('{{IncompleteApp}}\nNo appearances here.');
 		expect(r).toMatchObject({ appearances: {}, entryCount: 0 });

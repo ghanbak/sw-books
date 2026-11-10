@@ -52,19 +52,31 @@ export default function LoginScreen() {
 
 			<View style={styles.buttonStack}>
 				{Platform.OS === 'ios' && (
-					<Pressable style={[styles.button, styles.appleButton]} onPress={handleApple}>
+					<Pressable
+						style={[styles.button, styles.appleButton]}
+						onPress={handleApple}
+						accessibilityRole="button"
+					>
 						<SymbolView name="apple.logo" size={18} tintColor="#000" />
 						<Text style={styles.appleButtonText}>Continue with Apple</Text>
 					</Pressable>
 				)}
 
-				<Pressable style={[styles.button, styles.googleButton]} onPress={handleGoogle}>
+				<Pressable
+					style={[styles.button, styles.googleButton]}
+					onPress={handleGoogle}
+					accessibilityRole="button"
+				>
 					<GoogleGlyph />
 					<Text style={styles.googleButtonText}>Continue with Google</Text>
 				</Pressable>
 
 				{__DEV__ && (
-					<Pressable style={[styles.button, styles.devButton]} onPress={handleDev}>
+					<Pressable
+						style={[styles.button, styles.devButton]}
+						onPress={handleDev}
+						accessibilityRole="button"
+					>
 						<Text style={styles.devButtonText}>Continue as Dev User</Text>
 					</Pressable>
 				)}
@@ -98,6 +110,10 @@ function GoogleGlyph() {
 			}}
 			style={{ width: 18, height: 18 }}
 			contentFit="contain"
+			// Decorative: the button's own text names it.
+			accessible={false}
+			accessibilityElementsHidden
+			importantForAccessibility="no-hide-descendants"
 		/>
 	);
 }
@@ -185,7 +201,7 @@ const styles = StyleSheet.create({
 	},
 	legal: {
 		fontSize: 12,
-		color: tokens.text.hint,
+		color: tokens.text.tertiary,
 		textAlign: 'center',
 		lineHeight: 18,
 	},

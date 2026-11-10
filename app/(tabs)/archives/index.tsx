@@ -1,7 +1,9 @@
+import { FlashList } from '@shopify/flash-list';
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { BookCard } from '@/components/book-card';
+import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { TabHeaderActions } from '@/components/tab-header-actions';
 import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
@@ -33,7 +35,7 @@ export default function CatalogScreen() {
 	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
-	// Loading/error/empty render as the list's ListEmptyComponent on an always-mounted FlatList —
+	// Loading/error/empty render as the list's ListEmptyComponent on an always-mounted FlashList —
 	// a scroll view that mounts AFTER a placeholder View stalls native large-title collapse (rn-screens#2871).
 	const listEmpty = loading ? (
 		<View style={styles.center}>
@@ -42,17 +44,18 @@ export default function CatalogScreen() {
 	) : error ? (
 		<ErrorState title="Couldn't load the archive" message={error} onRetry={refetch} />
 	) : (
-		<View style={styles.center}>
-			<Text style={styles.emptyText}>No books found.</Text>
-		</View>
+		<EmptyState message="No books found." />
 	);
 
-	// The FlatList is the screen's direct first child + contentInsetAdjustmentBehavior="automatic" so the
-	// native large title collapses on scroll and the header/tab-bar insets are applied natively.
+	// The FlashList is the screen's direct first child + contentInsetAdjustmentBehavior="automatic" so the
+	// native large title collapses on scroll and the header/tab-bar insets are applied natively. FlashList
+	// v2 renders a plain wrapper View whose first subview is its ScrollView, so the scroll view stays on
+	// the first-descendant chain the native header tracks; the inset prop passes through to that
+	// ScrollView. Rows are recycled — HoloCover's per-row state is keyed to the cover URI.
 	return (
 		<>
 			<TabHeaderActions sort={sort} onSortChange={selectSort} />
-			<FlatList
+			<FlashList
 				style={styles.list}
 				contentContainerStyle={filteredBooks.length === 0 ? styles.emptyContent : undefined}
 				data={filteredBooks}
@@ -89,9 +92,5 @@ const styles = StyleSheet.create({
 	controls: {
 		paddingHorizontal: 12,
 		paddingVertical: 8,
-	},
-	emptyText: {
-		fontSize: 15,
-		color: tokens.text.hint,
 	},
 });

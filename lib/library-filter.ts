@@ -38,7 +38,7 @@ export const LIBRARY_FILTER_KEYS: readonly LibraryFilter[] = [
 
 export type LibraryView =
 	| { kind: 'loading'; pills: readonly LibraryFilter[] }
-	| { kind: 'error'; pills: readonly LibraryFilter[] }
+	| { kind: 'error'; source: 'catalog' | 'shelf'; pills: readonly LibraryFilter[] }
 	| { kind: 'onboarding'; pills: readonly LibraryFilter[] }
 	| { kind: 'list'; pills: readonly LibraryFilter[]; emptyCopy: string };
 
@@ -46,7 +46,8 @@ export type LibraryView =
  * Library tab body. `catalog` is useBooks(), `shelf` is useUserBooks(); `visibleCount` is how
  * many books the current pill shows. Onboarding ("collection awaits") only after both loads
  * finish and the user has no row at all — a favorites-only user gets the pills, so Favorites
- * stays reachable. A pull-to-refresh with rows already loaded keeps the pills on screen.
+ * stays reachable. A failed shelf fetch with no rows is an error, never onboarding. A
+ * pull-to-refresh with rows already loaded keeps the pills on screen.
  */
 export function selectLibraryView({
 	catalog,
@@ -55,7 +56,7 @@ export function selectLibraryView({
 	filter,
 }: {
 	catalog: { loading: boolean; error: string | null; count: number };
-	shelf: { loading: boolean; rows: Iterable<UserBook> };
+	shelf: { loading: boolean; error: string | null; rows: Iterable<UserBook> };
 	visibleCount: number;
 	filter: LibraryFilter;
 }): LibraryView {
@@ -72,7 +73,8 @@ export function selectLibraryView({
 		if ((catalog.loading && catalogPending) || (shelf.loading && !hasRows)) {
 			return { kind: 'loading', pills: [] };
 		}
-		if (catalog.error && catalogPending) return { kind: 'error', pills: [] };
+		if (catalog.error && catalogPending) return { kind: 'error', source: 'catalog', pills: [] };
+		if (shelf.error && !hasRows) return { kind: 'error', source: 'shelf', pills: [] };
 		if (!hasRows) return { kind: 'onboarding', pills: [] };
 	}
 	return {

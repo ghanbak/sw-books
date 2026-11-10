@@ -5,6 +5,7 @@ import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } fro
 import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { EmptyState } from '@/components/empty-state';
 import { CharacterRow } from '@/components/enrichment/character-row';
 import { WookieepediaCard } from '@/components/enrichment/wookieepedia-card';
 import { ErrorState } from '@/components/error-state';
@@ -67,9 +68,7 @@ export default function CharactersSheet() {
 			) : enrichment ? (
 				<CharacterList enrichment={enrichment} />
 			) : (
-				<View style={styles.center}>
-					<Text style={styles.emptyText}>No characters</Text>
-				</View>
+				<EmptyState message="No characters" />
 			)}
 		</View>
 	);
@@ -232,11 +231,6 @@ const styles = StyleSheet.create({
 		flex: 1,
 		alignItems: 'center',
 		justifyContent: 'center',
-	},
-	emptyText: {
-		fontSize: 15,
-		lineHeight: 20,
-		color: tokens.text.secondary,
 	},
 	header: {
 		flexDirection: 'row',

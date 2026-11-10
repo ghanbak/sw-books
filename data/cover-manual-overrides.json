@@ -1,6 +1,7 @@
 {
   "_comment": "Manual cover overrides — survive pipeline regeneration. Use slug → URL.",
   "a-new-hope-novelization": "https://covers.openlibrary.org/b/isbn/9780345279132-L.jpg?default=false",
+  "acolyte-wayseeker": "https://images2.penguinrandomhouse.com/cover/9780593874431",
   "aftermath": "https://covers.openlibrary.org/b/id/8760685-L.jpg",
   "aftermath-empires-end": "https://covers.openlibrary.org/b/id/8722039-L.jpg",
   "aftermath-life-debt": "https://covers.openlibrary.org/b/id/8776682-L.jpg",
@@ -16,6 +17,7 @@
   "lando-calrissian-flamewind": "https://covers.openlibrary.org/b/isbn/9780756794842-L.jpg?default=false",
   "lando-calrissian-mindharp": "https://covers.openlibrary.org/b/isbn/9780756794835-L.jpg?default=false",
   "most-wanted": "https://covers.openlibrary.org/b/id/8838864-L.jpg",
+  "njo-force-heretic-reunion": "https://images2.penguinrandomhouse.com/cover/9780345428721",
   "queens-hope": "https://books.google.com/books/content?id=YPJZEQAAQBAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
   "queens-shadow": "https://covers.openlibrary.org/b/id/8666997-L.jpg",
   "scourge": "https://books.google.com/books/content?id=pE9Hw5JhaIkC&printsec=frontcover&img=1&zoom=1&source=gbs_api",
@@ -25,6 +27,7 @@
   "x-wing-bacta-war": "https://books.google.com/books/content?id=ZepHnqy4PkUC&printsec=frontcover&img=1&zoom=1&source=gbs_api",
   "x-wing-iron-fist": "https://books.google.com/books/content?id=ZhUrKG3dwCEC&printsec=frontcover&img=1&zoom=1&source=gbs_api",
   "x-wing-krytos-trap": "https://books.google.com/books/content?id=omrWAAAAMAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
+  "x-wing-rogue-squadron": "https://covers.openlibrary.org/b/id/372165-L.jpg",
   "x-wing-solo-command": "https://books.google.com/books/content?id=D6cAAAAACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
   "x-wing-wedges-gamble": "https://books.google.com/books/content?id=e1JFl_E5kK4C&printsec=frontcover&img=1&zoom=1&source=gbs_api",
   "x-wing-wraith-squadron": "https://covers.openlibrary.org/b/id/372812-L.jpg"
