@@ -23,10 +23,13 @@ concurrency:
   cancel_in_progress: true
 
 jobs:
+  # Match the development-device profile's environment (EAS defaults dev-client builds to
+  # `development`) so the hash lines up with its builds. eas.json is part of the native
+  # fingerprint, so it isn't edited for this.
   fingerprint:
     name: Fingerprint
     type: fingerprint
-    environment: production
+    environment: development
 
   get_build:
     name: Find matching dev build
