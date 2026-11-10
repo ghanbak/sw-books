@@ -39,6 +39,9 @@ export default function BookDetailScreen() {
 	const [error, setError] = useState<string | null>(null);
 	const insets = useSafeAreaInsets();
 	const router = useRouter();
+	// In a long-press peek the header isn't shown and navigation.setOptions is a warning no-op,
+	// so skip the screen options and toolbar there.
+	const isPreview = useIsPreview();
 	// Separate from the catalog cache: enrichment rows are large and never embedded in the list query.
 	const { enrichment, fromCache } = useBookEnrichment(id);
 	const amazonUrl = book ? buildAmazonSearchUrl(displayIsbn(book)) : null;
@@ -94,25 +97,27 @@ export default function BookDetailScreen() {
 
 	return (
 		<View style={styles.container}>
-			<Stack.Screen
-				options={{
-					// No native large title: the book title is drawn in the body, so a large-title
-					// row here was just an empty band (a big gap above the title) with an opaque
-					// background that cut off the cover's hologram glow.
-					headerLargeTitle: false,
-					// The root stack gives every screen an opaque large-title background, and
-					// react-native-screens applies it to the bar's *scroll-edge* appearance — so at
-					// rest (scrolled to top) it painted a solid band that cut off the cover's glow.
-					// Transparent here, and no material blur: iOS 26+ draws its own soft scroll-edge
-					// effect once content scrolls under the bar.
-					headerLargeStyle: { backgroundColor: 'transparent' },
-					headerBlurEffect: 'none',
-					headerShadowVisible: false,
-					title: '',
-					headerBackTitle: 'Back',
-				}}
-			/>
-			<FavoriteHeaderButton bookId={book.id} />
+			{isPreview ? null : (
+				<Stack.Screen
+					options={{
+						// No native large title: the book title is drawn in the body, so a large-title
+						// row here was just an empty band (a big gap above the title) with an opaque
+						// background that cut off the cover's hologram glow.
+						headerLargeTitle: false,
+						// The root stack gives every screen an opaque large-title background, and
+						// react-native-screens applies it to the bar's *scroll-edge* appearance — so at
+						// rest (scrolled to top) it painted a solid band that cut off the cover's glow.
+						// Transparent here, and no material blur: iOS 26+ draws its own soft scroll-edge
+						// effect once content scrolls under the bar.
+						headerLargeStyle: { backgroundColor: 'transparent' },
+						headerBlurEffect: 'none',
+						headerShadowVisible: false,
+						title: '',
+						headerBackTitle: 'Back',
+					}}
+				/>
+			)}
+			{isPreview ? null : <FavoriteHeaderButton bookId={book.id} />}
 
 			<ScrollView
 				style={styles.container}
@@ -416,7 +421,9 @@ function DetailHero({ book }: { book: Book }) {
 			    (Link.AppleZoom in BookCard) has a stable target to land on and return from. */}
 			<View pointerEvents={show3D ? 'none' : 'auto'} style={styles.heroFace}>
 				<Link.AppleZoomTarget>
-					<View style={styles.heroText}>
+					{/* collapsable={false}: the zoom target needs exactly one native child, and
+					    without it this View can be flattened away, leaving an empty slot. */}
+					<View collapsable={false} style={styles.heroText}>
 						{show3D ? (
 							face === 'sky' ? (
 								<NoCoverText title={book.title} author={book.author} width={HERO_CARD_W} />
