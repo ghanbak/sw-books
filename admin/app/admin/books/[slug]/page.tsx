@@ -32,7 +32,7 @@ export default async function BookDiffPage({ params }: { params: Promise<{ slug:
 		return (
 			<main className="p-8">
 				{catalogLink}
-				<p className="text-destructive">
+				<p className="text-destructive-text">
 					Failed to load book: {dbError('BookDiffPage', error).message}
 				</p>
 			</main>
