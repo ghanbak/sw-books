@@ -27,6 +27,7 @@ if (Platform.OS === 'ios') {
 // The app is dark-only (see CLAUDE.md design context). Force colorScheme="dark"
 // so glass surfaces match our tokens regardless of the system appearance — without
 // this, glass renders light when the device is in Light mode.
+// `tintColor` / `isInteractive` pass through for tinted glass buttons (pass a token).
 export function GlassView(props: GlassViewProps) {
 	if (!RealGlassView) return null;
 	return <RealGlassView colorScheme="dark" {...props} />;

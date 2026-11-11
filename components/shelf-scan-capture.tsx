@@ -1,9 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { type BarcodeScanningResult, CameraView } from 'expo-camera';
+import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, {
 	FadeIn,
+	FadeInDown,
 	FadeOut,
 	useAnimatedStyle,
 	useSharedValue,
@@ -17,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScanTray } from '@/components/scan-tray-placeholder';
 import { ShelfScanQueued } from '@/components/shelf-scan-queued';
 import { ShelfScanReview } from '@/components/shelf-scan-review';
+import { GlassButton } from '@/components/ui/glass-button';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce, useReduceMotion, useScreenReaderEnabled } from '@/hooks/useAccessibility';
@@ -24,9 +27,18 @@ import { useShelfScan } from '@/hooks/useShelfScan';
 import { GlassView, liquidGlassAvailable } from '@/lib/glass';
 import { photosCapturedLabel, shelfIntroCopy } from '@/lib/scan-a11y';
 import { finishCapturedLabel } from '@/lib/scan-capture';
+import {
+	SCAN_INTRO_BUTTON,
+	SCAN_INTRO_BUTTON_HINT,
+	SCAN_INTRO_TITLE,
+	scanIntroPoints,
+} from '@/lib/scan-intro';
 import { deriveShelfChrome } from '@/lib/shelf-scan';
 
 const INTRO_SEEN_KEY = '@ossus/scan_intro_seen';
+// Intro row stagger: each chunk fades up 100ms after the previous one.
+const INTRO_STAGGER_MS = 100;
+const INTRO_ENTER_MS = 240;
 
 /** A barcode result that takes over the screen until dismissed (the old ISBN view's errors). */
 type BarcodeNotice = { type: 'not_star_wars'; isbn: string } | { type: 'invalid' } | null;
@@ -141,7 +153,9 @@ export function ShelfScanCapture({
 				<ShelfIntro
 					onDismiss={dismissIntro}
 					topInset={insets.top}
+					bottomInset={insets.bottom}
 					screenReaderEnabled={screenReaderEnabled}
+					reduceMotion={reduceMotion}
 				/>
 			</View>
 		);
@@ -347,42 +361,82 @@ export function ShelfScanCapture({
 }
 
 /**
- * One-time explainer for the silent auto-capture model (plan Phase 5 first-run).
- * Renders before the camera starts so panning instructions land before the first
- * photo, not after. Screen-reader users get the manual-shutter copy instead, since
- * `useShelfScan` runs `manualOnly` for them.
+ * One-time "Introduce scan mode" intro (#105): the four ways scan mode adds books.
+ * Renders before the camera starts so the instructions land before the first photo.
+ * Screen-reader users get the manual-shutter shelf copy (`useShelfScan` runs
+ * `manualOnly` for them). Scrim fades and rows stagger in while the glass button
+ * stays put as the anchor; under Reduce Motion everything appears at once. Scrolls when Dynamic Type outgrows the screen.
  */
 function ShelfIntro({
 	onDismiss,
 	topInset,
+	bottomInset,
 	screenReaderEnabled,
+	reduceMotion,
 }: {
 	onDismiss: () => void;
 	topInset: number;
+	bottomInset: number;
 	screenReaderEnabled: boolean;
+	reduceMotion: boolean;
 }) {
-	const [howTo, finishNote] = shelfIntroCopy(screenReaderEnabled);
+	const [shelfHowTo] = shelfIntroCopy(screenReaderEnabled);
+	const points = scanIntroPoints({ shelfHowTo, screenReaderEnabled });
+	const enter = (step: number) =>
+		reduceMotion ? undefined : FadeInDown.delay(step * INTRO_STAGGER_MS).duration(INTRO_ENTER_MS);
 	return (
-		<Animated.View
-			style={[styles.introOverlay, { paddingTop: topInset + 24 }]}
-			entering={FadeIn.duration(200)}
+		<View
+			style={[styles.introOverlay, { paddingTop: topInset + 64, paddingBottom: bottomInset + 16 }]}
 		>
-			<View style={styles.introBody}>
-				<Text style={styles.introTitle} accessibilityRole="header">
-					Scan your shelf
-				</Text>
-				<Text style={styles.introText}>{howTo}</Text>
-				<Text style={styles.introText}>{finishNote}</Text>
-			</View>
-			<Pressable
-				style={styles.introButton}
-				onPress={onDismiss}
-				accessibilityRole="button"
-				accessibilityLabel="Got it, start scanning"
+			{/* Only the scrim and text fade. UIGlassEffect never renders if it is created under
+			    an ancestor at opacity 0, so the glass button's ancestors must not animate opacity. */}
+			<Animated.View
+				style={styles.introScrim}
+				entering={reduceMotion ? undefined : FadeIn.duration(200)}
+			/>
+			<ScrollView
+				style={styles.introScroll}
+				contentContainerStyle={styles.introBody}
+				showsVerticalScrollIndicator={false}
+				alwaysBounceVertical={false}
 			>
-				<Text style={styles.introButtonText}>Got it</Text>
-			</Pressable>
-		</Animated.View>
+				<Animated.View entering={enter(0)}>
+					<Text style={styles.introTitle} accessibilityRole="header">
+						{SCAN_INTRO_TITLE}
+					</Text>
+				</Animated.View>
+				<View style={styles.introList}>
+					{points.map((item, index) => (
+						<Animated.View
+							key={item.id}
+							entering={enter(index + 1)}
+							style={styles.introRow}
+							accessible
+							accessibilityLabel={item.accessibilityLabel}
+						>
+							<View style={styles.introIcon}>
+								<SymbolView
+									name={item.icon}
+									size={24}
+									tintColor={tokens.accent.primary}
+									weight="medium"
+								/>
+							</View>
+							<View style={styles.introRowText}>
+								<Text style={styles.introRowTitle}>{item.title}</Text>
+								<Text style={styles.introText}>{item.body}</Text>
+							</View>
+						</Animated.View>
+					))}
+				</View>
+			</ScrollView>
+			<GlassButton
+				label={SCAN_INTRO_BUTTON}
+				onPress={onDismiss}
+				accessibilityHint={SCAN_INTRO_BUTTON_HINT}
+				reduceMotion={reduceMotion}
+			/>
+		</View>
 	);
 }
 
@@ -544,35 +598,60 @@ const styles = StyleSheet.create({
 	},
 	introOverlay: {
 		...StyleSheet.absoluteFill,
+		paddingHorizontal: 24,
+		gap: 24,
+	},
+	introScrim: {
+		...StyleSheet.absoluteFill,
 		backgroundColor: tokens.surface.overlay,
-		justifyContent: 'space-between',
-		padding: 32,
+	},
+	introScroll: {
+		flex: 1,
 	},
 	introBody: {
-		flex: 1,
+		flexGrow: 1,
 		justifyContent: 'center',
-		gap: 16,
+		gap: 32,
 	},
 	introTitle: {
 		color: tokens.text.primary,
-		fontSize: 26,
+		fontSize: 32,
+		lineHeight: 40,
 		fontWeight: '700',
+	},
+	introList: {
+		gap: 24,
+	},
+	introRow: {
+		flexDirection: 'row',
+		alignItems: 'flex-start',
+		gap: 16,
+	},
+	introIcon: {
+		width: 48,
+		height: 48,
+		borderRadius: 16,
+		borderCurve: 'continuous',
+		backgroundColor: tokens.surface.card,
+		borderWidth: StyleSheet.hairlineWidth,
+		borderColor: tokens.border.accent,
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	introRowText: {
+		flex: 1,
+		gap: 4,
+	},
+	introRowTitle: {
+		color: tokens.text.primary,
+		fontSize: 18,
+		lineHeight: 24,
+		fontWeight: '600',
 	},
 	introText: {
 		color: tokens.text.secondary,
 		fontSize: 16,
-		lineHeight: 23,
-	},
-	introButton: {
-		paddingVertical: 16,
-		borderRadius: 12,
-		backgroundColor: tokens.accent.primary,
-		alignItems: 'center',
-	},
-	introButtonText: {
-		color: tokens.text.inverse,
-		fontSize: 16,
-		fontWeight: '600',
+		lineHeight: 24,
 	},
 	banner: {
 		position: 'absolute',

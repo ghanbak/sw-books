@@ -32,12 +32,14 @@
 		"catalog:health": "npx tsx scripts/catalog-health.ts",
 		"admin": "npm --prefix admin run dev",
 		"admin:install": "npm --prefix admin install",
+		"admin:screenshot-env": "npx tsx scripts/admin-screenshot-env.ts",
 		"admin:predev": "npm run db:types"
 	},
 	"dependencies": {
 		"@expo/ui": "~56.0.26",
 		"@expo/vector-icons": "^15.0.3",
 		"@react-native-async-storage/async-storage": "2.2.0",
+		"@react-native-community/netinfo": "12.0.1",
 		"@react-native-google-signin/google-signin": "^16.1.2",
 		"@shopify/flash-list": "2.0.2",
 		"@supabase/supabase-js": "^2.103.0",

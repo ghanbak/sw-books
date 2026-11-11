@@ -33,6 +33,8 @@
 			"@app/serial-save": ["../lib/serial-save.ts"],
 			"@app/book-schema": ["../lib/book-schema.ts"],
 			"@app/slug": ["../lib/slug.ts"],
+			"@app/seed-guard": ["../lib/seed-guard.ts"],
+			"@app/admin-screenshot-env": ["../lib/admin-screenshot-env.ts"],
 			"@app/wookieepedia/*": ["../lib/wookieepedia/*"]
 		}
 	},
