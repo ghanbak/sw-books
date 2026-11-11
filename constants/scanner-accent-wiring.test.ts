@@ -34,7 +34,9 @@ describe('scanner content on accent.primary fills uses text.inverse', () => {
 	it.each([
 		[scan, 'primaryButton', 'primaryButtonText'],
 		[capture, 'finishButton', 'finishText'],
-		[capture, 'introButton', 'introButtonText'],
+		// The intro's solid button became the tinted GlassButton (#105); its no-glass fallback
+		// is the solid accent fill now.
+		['components/ui/glass-button.tsx', 'fallback', 'label'],
 		[capture, 'primaryButton', 'primaryButtonText'],
 		[review, 'addButton', 'addButtonText'],
 		[review, 'primaryButton', 'primaryButtonText'],
