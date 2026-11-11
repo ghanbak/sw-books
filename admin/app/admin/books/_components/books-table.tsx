@@ -121,6 +121,14 @@ export type EnrichmentSummary = {
 
 type EditableField = 'title' | 'publisher' | 'era' | 'date_published';
 
+/** Spoken name of each inline-edit field; the input reads "<field> of <book title>". */
+const FIELD_LABELS: Record<EditableField, string> = {
+	title: 'Title',
+	publisher: 'Publisher',
+	era: 'Era',
+	date_published: 'Publication date',
+};
+
 declare module '@tanstack/react-table' {
 	interface TableMeta<TData extends RowData> {
 		updateField: (id: string, field: EditableField, value: string | null) => void;
@@ -205,21 +213,39 @@ function DeleteBookCell({
 
 function EditableText({
 	value,
+	field,
+	bookTitle,
 	nullable,
 	mono,
 	onCommit,
 }: {
 	value: string | null;
+	field: EditableField;
+	bookTitle: string;
 	nullable: boolean;
 	mono?: boolean;
 	onCommit: (next: string | null) => void;
 }) {
 	const [editing, setEditing] = useState(false);
 	const [draft, setDraft] = useState(value ?? '');
+	// Set only by Enter/Escape: the remounted display button takes focus back so keyboard
+	// users stay on the cell. Blur (click or tab away) leaves it false and focus alone.
+	const refocus = useRef(false);
+
+	const close = (restoreFocus: boolean) => {
+		refocus.current = restoreFocus;
+		setEditing(false);
+	};
 
 	if (!editing) {
 		return (
 			<button
+				ref={(el) => {
+					if (el && refocus.current) {
+						refocus.current = false;
+						el.focus();
+					}
+				}}
 				type="button"
 				className={cn(
 					'w-full cursor-text rounded px-1 py-0.5 text-left hover:bg-secondary/60',
@@ -236,8 +262,8 @@ function EditableText({
 		);
 	}
 
-	const commit = () => {
-		setEditing(false);
+	const commit = (restoreFocus: boolean) => {
+		close(restoreFocus);
 		const trimmed = draft.trim();
 		const next = trimmed === '' ? (nullable ? null : value) : trimmed;
 		if (next !== value) onCommit(next);
@@ -246,13 +272,18 @@ function EditableText({
 	return (
 		<Input
 			autoFocus
+			aria-label={`${FIELD_LABELS[field]} of ${bookTitle}`}
 			value={draft}
 			className={cn('h-7 px-1 py-0.5', mono && 'font-mono text-xs')}
 			onChange={(e) => setDraft(e.target.value)}
-			onBlur={commit}
+			// Skip the blur a browser may fire as Enter/Escape unmounts the input: it would
+			// clear the refocus flag (and on Escape, save the discarded draft).
+			onBlur={() => {
+				if (!refocus.current) commit(false);
+			}}
 			onKeyDown={(e) => {
-				if (e.key === 'Enter') commit();
-				if (e.key === 'Escape') setEditing(false);
+				if (e.key === 'Enter') commit(true);
+				if (e.key === 'Escape') close(true);
 			}}
 		/>
 	);
@@ -285,6 +316,8 @@ function editableCell(field: EditableField, opts: { nullable: boolean; mono?: bo
 	return ({ getValue, row, table }: CellContext<RowWithIssues, string | null>) => (
 		<EditableText
 			value={getValue()}
+			field={field}
+			bookTitle={row.original.title}
 			nullable={opts.nullable}
 			mono={opts.mono}
 			onCommit={(next) => table.options.meta?.updateField(row.original.id, field, next)}
@@ -342,6 +375,8 @@ const columns = [
 			<div className="min-w-[220px]">
 				<EditableText
 					value={getValue()}
+					field="title"
+					bookTitle={row.original.title}
 					nullable={false}
 					onCommit={(next) => table.options.meta?.updateField(row.original.id, 'title', next)}
 				/>

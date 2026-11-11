@@ -229,7 +229,7 @@ export function DiffView({ book }: { book: BookRow }) {
 								// toggling the radio, stopPropagation keeps it out of the row.
 								<button
 									type="button"
-									aria-label="Enlarge cover"
+									aria-label={`Enlarge cover from ${SOURCE_LABELS[source]}`}
 									className="cursor-zoom-in rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
 									onClick={(e) => {
 										e.preventDefault();
