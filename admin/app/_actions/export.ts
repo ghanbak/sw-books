@@ -83,7 +83,19 @@ export async function exportToCsv(): Promise<Result<{ rows: number }>> {
 		};
 	}
 
-	await safeWrite(BACKUP_FILE, serializeBackup(rows));
+	try {
+		await safeWrite(BACKUP_FILE, serializeBackup(rows));
+	} catch (err) {
+		// The raw error can carry absolute paths; it stays in the server log.
+		console.error('[admin:exportToCsv]', err);
+		return {
+			ok: false,
+			error: {
+				code: 'BACKUP_WRITE',
+				message: `could not write data/${BACKUP_FILE} (see server log)`,
+			},
+		};
+	}
 	revalidateTag('books');
 	return { ok: true, data: { rows: rows.length } };
 }

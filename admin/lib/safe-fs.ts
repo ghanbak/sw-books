@@ -58,6 +58,12 @@ export async function safeWrite(rel: string, contents: string): Promise<void> {
 		throw new Error('path escape via symlink');
 	}
 	const tmp = `${target}.${process.pid}.tmp`;
-	await fs.writeFile(tmp, contents, { mode: 0o600 });
-	await fs.rename(tmp, target);
+	try {
+		await fs.writeFile(tmp, contents, { mode: 0o600 });
+		await fs.rename(tmp, target);
+	} catch (err) {
+		// Don't leave a stray .tmp in data/; the original error is what matters.
+		await fs.unlink(tmp).catch(() => {});
+		throw err;
+	}
 }
