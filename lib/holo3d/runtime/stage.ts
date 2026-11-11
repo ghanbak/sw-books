@@ -1,6 +1,7 @@
 import type { RNCanvasContext } from 'react-native-webgpu';
 import type { WebGPURenderer } from 'three/webgpu';
 
+import { STILL_EXTRAS, extrasFrame, fringeOffset } from '../extras';
 import { RIG_LIFT, cardTransform, pageAt, windowIndices, worldPerPoint } from '../pager';
 import { type GravitySample, REST_TILT, type TiltState, stepTilt } from '../tilt';
 import { createHoloRenderer, disposeHoloRenderer } from './gpu';
@@ -100,6 +101,7 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 	let facesKey = '';
 	let tilt: TiltState = REST_TILT;
 	let lastFrameAt = 0;
+	const extras = { ...STILL_EXTRAS };
 
 	const inWindow = (index: number) =>
 		mode === 'single' ? index === 0 : Math.abs(index - activePage) <= 1;
@@ -192,6 +194,7 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 			card.mesh.visible = books.length > 0;
 			card.mesh.rotation.x = tilt.pitch;
 			card.mesh.rotation.y = tilt.yaw;
+			card.setFringe(fringeOffset(tilt.yaw, tilt.pitch));
 			card.setCover(textures.get(0)?.texture ?? null, skies.has(0) ? 'sky' : 'cover');
 			if (books[0]) card.setFallbackColor(books[0].fallbackColor);
 			return;
@@ -215,6 +218,7 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 			card.mesh.position.x = t.offset * wpp;
 			card.mesh.rotation.x = tilt.pitch;
 			card.mesh.rotation.y = t.rotationY + tilt.yaw;
+			card.setFringe(fringeOffset(t.rotationY + tilt.yaw, tilt.pitch));
 			card.setFade(t.opacity);
 			card.setCover(textures.get(index)?.texture ?? null, skies.has(index) ? 'sky' : 'cover');
 			card.setFallbackColor(book.fallbackColor);
@@ -240,8 +244,13 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 			const now = performance.now();
 			if (!reduceMotion) {
 				const t = time / 1000;
+				extrasFrame(t, reduceMotion, extras);
 				holo.clock.time.value = t;
-				holo.clock.flicker.value = 0.95 + Math.sin(t * 23) * Math.sin(t * 7.3) * 0.04;
+				holo.clock.flicker.value = extras.flicker;
+				holo.clock.band.value = extras.bandCenter;
+				holo.clock.bandStrength.value = extras.bandStrength;
+				holo.motes.visible = extras.particles;
+				holo.clock.fringeOn.value = extras.fringe;
 				dirty = true;
 			}
 			const nextTilt = stepTilt(
@@ -338,8 +347,13 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 			reduceMotion = on;
 			if (on) tilt = REST_TILT;
 			if (on && holo) {
+				// A plain still card: frozen clock, no flicker, band, motes or fringe.
 				holo.clock.time.value = 0;
-				holo.clock.flicker.value = 1;
+				holo.clock.flicker.value = STILL_EXTRAS.flicker;
+				holo.clock.band.value = STILL_EXTRAS.bandCenter;
+				holo.clock.bandStrength.value = STILL_EXTRAS.bandStrength;
+				holo.motes.visible = STILL_EXTRAS.particles;
+				holo.clock.fringeOn.value = STILL_EXTRAS.fringe;
 			}
 			dirty = true;
 		},
