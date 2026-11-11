@@ -45,6 +45,34 @@ DB". Use `catalog:restore` unless you need the legacy seed.
 npm run admin            # → http://127.0.0.1:3100/books
 ```
 
+## Signed-in screenshots (local auth)
+
+`next dev` is ungated, so most pages need no sign-in. To exercise the gate (a
+production build) without the hosted project, point auth at the local stack and
+sign in as the seeded dev admin. Run from a worktree, not the main checkout.
+
+```sh
+supabase start                     # the local stack, migrations + supabase/seed.sql
+npm run admin:screenshot-env       # writes admin/.env.screenshots.local (gitignored)
+cd admin
+node --env-file=.env.screenshots.local node_modules/next/dist/bin/next build
+node --env-file=.env.screenshots.local node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3102
+```
+
+- The script reads `supabase status` and points DB (both the Local and Prod
+  slots), auth and `ADMIN_USER_IDS` at the local stack. It exits non-zero if the
+  stack is down or its API URL isn't `127.0.0.1` / `localhost`, and never prints keys.
+- Next doesn't load `.env.screenshots.local` itself, hence `node --env-file`. The
+  same flag works with `next dev`, which stays ungated but uses real local keys.
+- Open `http://127.0.0.1:3102/login`. With local auth the page shows an email
+  form instead of Google: sign in as `admin@ossus.test` / `ossus-dev-admin`
+  (dev-only, created by `supabase/seed.sql`). A stack created before the seed
+  existed lacks the user; add it without a reset (idempotent):
+  `docker exec -i supabase_db_ossus-archives psql -U postgres < supabase/seed.sql`.
+- The production build behaves as hosted: Prod target (here the local DB), no DB
+  switch, no Export or pin edits. Catalog rows come from `npm run catalog:restore`.
+- Rebuild after switching env files: `NEXT_PUBLIC_*` values are baked in at build.
+
 ## What you can do
 
 - **`/admin/books`** — sort, filter, multi-select. Edit title / publisher / era /
