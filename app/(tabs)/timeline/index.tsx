@@ -140,7 +140,12 @@ export default function TimelineScreen() {
 						}}
 						onPressOut={() => setPressedPage(null)}
 						accessibilityRole="button"
-						accessibilityLabel={bookRowLabel(item)}
+						// The hero shows no series name, so the label leaves it out (#271).
+						accessibilityLabel={bookRowLabel({
+							title: item.title,
+							author: item.author,
+							canon: item.canon,
+						})}
 					>
 						{show3D && face ? (
 							<>

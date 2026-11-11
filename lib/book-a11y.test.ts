@@ -53,7 +53,11 @@ describe('bookRowLabel', () => {
 describe('bookRowLabel wiring', () => {
 	it.each([
 		['components/book-card.tsx', 'book'],
-		['app/(tabs)/timeline/index.tsx', 'item'],
+		// The Timeline hero shows no series name, so it passes title/author/canon only (#271).
+		[
+			'app/(tabs)/timeline/index.tsx',
+			'\\{\\s*title: item\\.title,\\s*author: item\\.author,\\s*canon: item\\.canon,?\\s*\\}',
+		],
 	])('%s labels its row with the helper', (path, prop) => {
 		const src = source(path);
 		expect(src).toMatch(/import \{ bookRowLabel \} from '@\/lib\/book-a11y';/);
