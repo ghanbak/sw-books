@@ -1,5 +1,4 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
-import { DarkTheme, ThemeProvider } from 'expo-router/react-navigation';
+import { DarkTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { type ReactNode, useEffect, useState } from 'react';

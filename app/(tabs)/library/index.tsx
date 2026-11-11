@@ -33,7 +33,7 @@ export default function LibraryScreen() {
 	} = useBooks();
 	const { userBooks, loading, error: shelfError, refetch } = useUserBooks();
 	const [filter, setFilter] = useState<LibraryFilter>('all');
-	const { sort, openSortMenu } = useCatalogSort('@ossus/library_sort');
+	const { sort, selectSort } = useCatalogSort('@ossus/library_sort');
 	const router = useRouter();
 
 	const shelvedBooks = useMemo(
@@ -121,7 +121,7 @@ export default function LibraryScreen() {
 
 	return (
 		<>
-			<TabHeaderActions showFilter onFilter={openSortMenu} />
+			<TabHeaderActions sort={sort} onSortChange={selectSort} />
 			<FlashList
 				style={styles.list}
 				contentContainerStyle={shelvedBooks.length === 0 ? styles.emptyContent : undefined}

@@ -1,4 +1,4 @@
-import { useIsFocused } from 'expo-router/react-navigation';
+import { useIsFocused } from 'expo-router';
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
