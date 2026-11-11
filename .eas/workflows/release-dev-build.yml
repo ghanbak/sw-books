@@ -1,17 +1,27 @@
-# Phone build for native changes (docs/agents/releases.md "Weekly train").
-# When a push to a release branch, or to main after a release merges, changes the iOS
+# Phone build for native changes (docs/agents/releases.md "Releases follow features").
+# When a push to a feature branch, or to main after native code merges, changes the iOS
 # native fingerprint and no development-device build matches it, this asks for approval
-# in expo.dev and then builds one. The owner installs it from expo.dev and tests the whole
-# week's native work on it. Only one dev build fits on the phone: while the release-branch
-# build is installed, pr-preview.yml previews of PRs into main won't open (reinstall main's
-# build from expo.dev, or use the simulator).
+# in expo.dev and then builds one. The owner installs it from expo.dev and previews the
+# feature's native work on it. Only one dev build fits on the phone: while a feature
+# branch's build is installed, pr-preview.yml previews of PRs into main won't open
+# (reinstall main's build from expo.dev, or use the simulator).
 # JS-only pushes find a matching build and do nothing. Builds use the EAS build quota,
 # hence the approval: approve when you're ready to test, at most about once a day.
 name: Release dev build
 
 on:
   push:
-    branches: ['main', 'feature/*-ios-*']
+    branches: ['main', 'feature/**']
+    # Only pushes that can change the native fingerprint (saves EAS minutes on JS-only pushes).
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'app.json'
+      - 'eas.json'
+      - 'fingerprint.config.js'
+      - 'patches/**'
+      - 'plugins/**'
+      - 'assets/images/**'
 
 # Never cancel a running build (pushes to main land several times a day). Waiting runs
 # collapse to the newest, which then finds the finished build and stops if nothing changed.

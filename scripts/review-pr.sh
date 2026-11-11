@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Open a PR's app changes in the iOS simulator for review.
-# Usage: npm run review -- <PR#> [--port <n>] [--keep] [--check [--out <dir>]]
+# Open a PR's or branch's app changes in the iOS simulator for review.
+# Usage: npm run review -- <PR#|branch> [--port <n>] [--keep] [--check [--out <dir>]]
+#   branch   e.g. feature/74-scanner-v2; uses its open PR's body for deep links if it has one
 #   --port   Metro port (default 8090)
 #   --keep   keep the worktree afterwards (faster next time; remove later with
-#            `git worktree remove --force .claude/worktrees/review-<PR#>`)
+#            `git worktree remove --force .claude/worktrees/review-<PR#|branch>`)
 #   --check  for agents: open each deep link from the PR body, screenshot it, clean up and
 #            exit instead of staying open. Screenshots go to --out (default: a temp dir).
 # Env: SIM_UDID overrides the simulator (default: the iPhone 17 Pro on iOS 26.4).
@@ -15,7 +16,7 @@
 set -euo pipefail
 
 usage() {
-	echo "usage: npm run review -- <PR#> [--port <n>] [--keep] [--check [--out <dir>]]" >&2
+	echo "usage: npm run review -- <PR#|branch> [--port <n>] [--keep] [--check [--out <dir>]]" >&2
 	exit 2
 }
 
@@ -52,13 +53,20 @@ while [ $# -gt 0 ]; do
 		;;
 	esac
 done
-[[ "$pr" =~ ^[0-9]+$ ]] || usage
+[ -n "$pr" ] || usage
+branch=""
+if ! [[ "$pr" =~ ^[0-9]+$ ]]; then
+	branch=$pr
+	git check-ref-format --branch "$branch" >/dev/null 2>&1 || usage
+	pr=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')
+fi
+key=${pr:-${branch//\//-}}
 [[ "$port" =~ ^[0-9]+$ ]] || usage
 
 udid=${SIM_UDID:-84553B81-B5D9-4DEB-BE01-0DCC4BBBFF60}
 root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
-wt="$root/.claude/worktrees/review-$pr"
-ref="refs/review/$pr"
+wt="$root/.claude/worktrees/review-$key"
+ref="refs/review/$key"
 lock=/tmp/sw-books-sim.lock
 metro_pid=""
 have_lock=0
@@ -88,17 +96,24 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
-info=$(gh pr view "$pr" --json title,labels,state,body)
-title=$(jq -r .title <<<"$info")
-state=$(jq -r .state <<<"$info")
-echo "#$pr $title ($state)"
+if [ -n "$pr" ]; then
+	info=$(gh pr view "$pr" --json title,labels,state,body)
+	echo "#$pr $(jq -r .title <<<"$info") ($(jq -r .state <<<"$info"))${branch:+ on $branch}"
+else
+	info='{"labels":[],"body":""}'
+	echo "Branch $branch (no open PR)"
+fi
 if jq -e '.labels[].name | select(. == "needs-build")' <<<"$info" >/dev/null; then
 	echo "Warning: #$pr is labeled needs-build. It changes native code, so the installed dev client" >&2
 	echo "may crash or miss features. Review it on a dev build with its native changes instead." >&2
 fi
 
 # Worktree at the PR head. A named ref avoids racing other fetches on FETCH_HEAD.
-git -C "$root" fetch -q origin "+pull/$pr/head:$ref"
+if [ -n "$branch" ]; then
+	git -C "$root" fetch -q origin "+refs/heads/$branch:$ref"
+else
+	git -C "$root" fetch -q origin "+pull/$pr/head:$ref"
+fi
 head=$(git -C "$root" rev-parse "$ref")
 if [ -e "$wt" ] && ! is_review_worktree; then
 	echo "Recreating stale $wt"
@@ -125,7 +140,12 @@ else
 	echo "Warning: no .env.local in $root; the app won't reach Supabase." >&2
 fi
 
-changed=$(gh pr diff "$pr" --name-only 2>/dev/null || true)
+if [ -n "$branch" ]; then
+	git -C "$root" fetch -q origin main
+	changed=$(git -C "$root" diff --name-only "origin/main...$ref" 2>/dev/null || true)
+else
+	changed=$(gh pr diff "$pr" --name-only 2>/dev/null || true)
+fi
 if grep -q '^supabase/migrations/' <<<"$changed"; then
 	echo "Note: this PR adds migrations. If .env.local points at your local stack, the new" >&2
 	echo "schema isn't there yet; apply it yourself (this script never touches the database)." >&2
@@ -161,7 +181,7 @@ until mkdir "$lock" 2>/dev/null && have_lock=1; do
 	}
 	sleep 10
 done
-printf 'review-pr #%s %s\npid=%s\n' "$pr" "$(date '+%Y-%m-%d %H:%M')" "$$" >"$lock/owner"
+printf 'review-pr %s %s\npid=%s\n' "$key" "$(date '+%Y-%m-%d %H:%M')" "$$" >"$lock/owner"
 
 if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
 	echo "Port $port is in use; pass --port <n>." >&2
@@ -193,15 +213,15 @@ if [ "$check" = 1 ]; then
 	mkdir -p "$out"
 	sleep 25 # first bundle + sign-in restore
 	n=0
-	xcrun simctl io "$udid" screenshot "$out/review-$pr-$n.png" >/dev/null
-	echo "Screenshot: $out/review-$pr-$n.png"
+	xcrun simctl io "$udid" screenshot "$out/review-$key-$n.png" >/dev/null
+	echo "Screenshot: $out/review-$key-$n.png"
 	if [ -n "$links" ]; then
 		while IFS= read -r l; do
 			n=$((n + 1))
 			xcrun simctl openurl "$udid" "$l"
 			sleep 4
-			xcrun simctl io "$udid" screenshot "$out/review-$pr-$n.png" >/dev/null
-			echo "Screenshot: $out/review-$pr-$n.png ($l)"
+			xcrun simctl io "$udid" screenshot "$out/review-$key-$n.png" >/dev/null
+			echo "Screenshot: $out/review-$key-$n.png ($l)"
 		done <<<"$links"
 	else
 		echo "No ossusarchives:// links in the PR body." >&2
@@ -210,7 +230,7 @@ if [ "$check" = 1 ]; then
 fi
 
 echo
-echo "Reviewing #$pr in the simulator. Sign in on the login screen if asked."
+echo "Reviewing $key in the simulator. Sign in on the login screen if asked."
 if [ -n "$links" ]; then
 	echo "Deep links from the PR's review guide:"
 	while IFS= read -r l; do echo "  xcrun simctl openurl $udid \"$l\""; done <<<"$links"
