@@ -12,6 +12,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { callAction } from '@/lib/call-action';
 import { numOrNull } from '@app/book-schema';
 import { slugify } from '@app/slug';
 import type { BookCandidate, LookupResult } from '@app/sources/types';
@@ -100,7 +101,7 @@ export function NewBookForm() {
 			author: form.author.split(',')[0]?.trim() || undefined,
 		};
 		startSearch(async () => {
-			const res = await searchForNewBook(query);
+			const res = await callAction(() => searchForNewBook(query), 'Search failed');
 			if (!res.ok) {
 				toast.error(res.error.message);
 				return;
@@ -135,25 +136,29 @@ export function NewBookForm() {
 			return;
 		}
 		startSave(async () => {
-			const res = await createBook({
-				title: form.title.trim(),
-				slug,
-				author: splitList(form.author),
-				canon: form.canon,
-				type: form.type,
-				era: orNull(form.era),
-				series_name: orNull(form.series_name),
-				series_order: numOrNull(form.series_order),
-				timeline_order: numOrNull(form.timeline_order),
-				publisher: orNull(form.publisher),
-				date_published: orNull(form.date_published),
-				language: orNull(form.language),
-				isbn: splitList(form.isbn),
-				primary_isbn: orNull(form.primary_isbn),
-				format: splitList(form.format),
-				cover_image: orNull(form.cover_image),
-				synopsis: orNull(form.synopsis),
-			});
+			const res = await callAction(
+				() =>
+					createBook({
+						title: form.title.trim(),
+						slug,
+						author: splitList(form.author),
+						canon: form.canon,
+						type: form.type,
+						era: orNull(form.era),
+						series_name: orNull(form.series_name),
+						series_order: numOrNull(form.series_order),
+						timeline_order: numOrNull(form.timeline_order),
+						publisher: orNull(form.publisher),
+						date_published: orNull(form.date_published),
+						language: orNull(form.language),
+						isbn: splitList(form.isbn),
+						primary_isbn: orNull(form.primary_isbn),
+						format: splitList(form.format),
+						cover_image: orNull(form.cover_image),
+						synopsis: orNull(form.synopsis),
+					}),
+				'Create failed',
+			);
 			if (!res.ok) {
 				toast.error(res.error.message);
 				if (res.error.code === 'SLUG_TAKEN') {

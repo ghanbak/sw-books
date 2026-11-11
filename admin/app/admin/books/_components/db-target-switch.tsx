@@ -2,6 +2,7 @@
 
 import { setDbTarget } from '@/app/_actions/db-target';
 import { Switch } from '@/components/ui/switch';
+import { callAction } from '@/lib/call-action';
 import type { DbTarget } from '@/lib/supabase-admin';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -21,7 +22,11 @@ export function DbTargetSwitch({ current }: { current: DbTarget }) {
 	function toggle(checked: boolean) {
 		const next: DbTarget = checked ? 'prod' : 'local';
 		start(async () => {
-			await setDbTarget(next);
+			const res = await callAction(() => setDbTarget(next));
+			if (!res.ok) {
+				toast.error(`Switch failed: ${res.error.message}`);
+				return;
+			}
 			router.refresh();
 			toast.message(next === 'prod' ? 'Switched to Production' : 'Switched to Local');
 		});

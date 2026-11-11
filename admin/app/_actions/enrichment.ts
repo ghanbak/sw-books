@@ -30,6 +30,20 @@ export type PinCandidate = {
 	claimedBy: string | null;
 };
 
+/** Write the pin file. A failure is a local file error, not a dropped request. */
+async function persistPins(pins: ReadonlyMap<string, EnrichmentPin>): Promise<ActionError | null> {
+	try {
+		await writePins(pins);
+		return null;
+	} catch (err) {
+		console.error('[admin:writePins]', err);
+		return {
+			code: 'PINS_WRITE',
+			message: 'could not write data/enrichment-pins.json (see server log)',
+		};
+	}
+}
+
 const SLUG = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 
 async function inspect(pageids: number[]): Promise<Omit<PinCandidate, 'claimedBy'>[]> {
@@ -197,7 +211,8 @@ export async function savePin(
 	};
 	const next = new Map(loaded.pins);
 	next.set(slug, pin);
-	await writePins(next);
+	const writeError = await persistPins(next);
+	if (writeError) return { ok: false, error: writeError };
 
 	const stored = book.book_enrichment?.source_pageid ?? null;
 	const warning =
@@ -221,7 +236,8 @@ export async function removePin(slug: string): Promise<Result<{ slug: string }>>
 	if (!loaded.pins.has(slug)) return fail('NOT_FOUND', `no pin for "${slug}"`);
 	const next = new Map(loaded.pins);
 	next.delete(slug);
-	await writePins(next);
+	const writeError = await persistPins(next);
+	if (writeError) return { ok: false, error: writeError };
 	revalidatePath('/admin/books');
 	revalidatePath(`/admin/books/${slug}`);
 	return { ok: true, data: { slug } };
