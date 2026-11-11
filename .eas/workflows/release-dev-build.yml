@@ -12,6 +12,16 @@ name: Release dev build
 on:
   push:
     branches: ['main', 'feature/**']
+    # Only pushes that can change the native fingerprint (saves EAS minutes on JS-only pushes).
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'app.json'
+      - 'eas.json'
+      - 'fingerprint.config.js'
+      - 'patches/**'
+      - 'plugins/**'
+      - 'assets/images/**'
 
 # Never cancel a running build (pushes to main land several times a day). Waiting runs
 # collapse to the newest, which then finds the finished build and stops if nothing changed.

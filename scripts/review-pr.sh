@@ -4,7 +4,7 @@
 #   branch   e.g. feature/74-scanner-v2; uses its open PR's body for deep links if it has one
 #   --port   Metro port (default 8090)
 #   --keep   keep the worktree afterwards (faster next time; remove later with
-#            `git worktree remove --force .claude/worktrees/review-<PR#>`)
+#            `git worktree remove --force .claude/worktrees/review-<PR#|branch>`)
 #   --check  for agents: open each deep link from the PR body, screenshot it, clean up and
 #            exit instead of staying open. Screenshots go to --out (default: a temp dir).
 # Env: SIM_UDID overrides the simulator (default: the iPhone 17 Pro on iOS 26.4).

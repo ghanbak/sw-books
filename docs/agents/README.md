@@ -8,7 +8,7 @@ Three scheduled loops keep sw-books moving: execute every 2 hours (:45 on even h
 | Scout + triage | [scout-triage.md](scout-triage.md) | No, files, labels and assigns issues |
 | Execute | [execute.md](execute.md) | Yes, on `agent/*` branches |
 
-Every loop follows the shared rules below, then its own playbook. [releases.md](releases.md) covers OTA updates and store builds; [screenshots.md](screenshots.md) covers PR screenshots and diagrams. The weekly retro (owner-approved) is the only thing that edits these playbooks, the agent definitions or CLAUDE.md.
+Every loop follows the shared rules below, then its own playbook. Where a skill disagrees with a playbook, the playbook wins. [releases.md](releases.md) covers OTA updates and store builds; [screenshots.md](screenshots.md) covers PR screenshots and diagrams. The weekly retro (owner-approved) is the only thing that edits these playbooks, the agent definitions or CLAUDE.md.
 
 ## Shared rules
 
@@ -41,7 +41,7 @@ Every loop follows the shared rules below, then its own playbook. [releases.md](
 **Assigned to `ghanbak` = the owner's turn** (owner's rule, 2026-11-06). Agents start any triaged work without approval, and every change lands as a PR with auto-merge on.
 - **Issues** assigned to the owner: don't start work. They're waiting on a keep-or-close decision, a question, or a step only Ethan can do (consoles, secrets, accounts, a physical device, production data, licences). Say which in a comment. When the owner unassigns, the issue goes back to triage. Exception: a feature's **main issue** (a parent with sub-issues) is assigned to the owner for the life of the feature. Agents work its sub-issues as usual, and the owner unassigning the main issue means "approved, open the feature PR" (Feature branches).
 - **PRs** assigned to the owner can't merge: the required `review-gate` check fails while anyone is assigned. The caretaker still addresses review comments. When the owner unassigns, GitHub merges once CI is green.
-- The `auto-merge` workflow turns on auto-merge for every `agent/*` and Dependabot PR when it opens. Agents never run `gh pr merge`.
+- The `auto-merge` workflow turns on auto-merge for every `agent/*`, `feature/*` and Dependabot PR when it opens or leaves draft. Agents never run `gh pr merge`.
 
 **When to assign the owner** (assign at creation: `gh pr create --assignee ghanbak` / `gh issue create --assignee ghanbak`, so the gate holds from the first check)
 Owner's rule, 2026-11-07: the owner reviews product decisions, not proof agents could have gotten themselves. Of 6 PRs once waiting on the owner, only 2 needed them (a new website page, a native menu change); the rest were waiting on checks an agent never ran.
@@ -53,7 +53,7 @@ Owner's rule, 2026-11-07: the owner reviews product decisions, not proof agents 
 - Issues, rarely. The goal is maximum automation with the owner keeping creative and product-roadmap control. Assign an issue only when it's a roadmap call (a new feature or product direction an agent is proposing, not one the owner filed) or needs the owner's hands, or when an agent is truly blocked. Bugs, perf, a11y, maintenance and tech debt never wait on the owner at the issue stage. If you can decide it under these rules, decide it.
 - Everything else stays unassigned and merges on its own: bug fixes with a regression test, perf wins with a measurement, lint/type fixes, a11y fixes, refactors and tech debt with no behavior change, tests (including SQL tests), docs, safe dependency bumps, and the local admin tool (`admin/`, with screenshots).
 - Never assign the owner because a check didn't run. "No Docker", "no simulator" and "not checked in a browser" are the agent's job: run `scripts/verify-db.sh`, the simulator or the browser. A simulator walkthrough is a bonus on a fix that already has a regression test, not a gate.
-- If the proof truly can't be produced this run (the script or simulator errors out), open the PR as a **draft** with the `needs-proof` label and a `Not run` section saying what's missing. Drafts don't auto-merge. The caretaker retries the proof each run and runs `gh pr ready` once it passes. Assign the owner only after 3 failed caretaker attempts, with what failed.
+- If the proof truly can't be produced this run (the script or simulator errors out), open the PR as a **draft** with the `needs-proof` label and a `Not run` section saying what's missing. Drafts don't auto-merge. Inside a feature, don't draft: the sub-issue PR merges with the label and the `Not run` section, and the caretaker produces the proof on the feature branch before it opens the feature PR. The caretaker retries the proof each run and runs `gh pr ready` once it passes. Assign the owner only after 3 failed caretaker attempts, with what failed.
 - If a bug or maintenance fix also needs a production step (data write, secret, console), let the code merge and open a separate issue assigned to the owner for that step.
 
 **"How to review" section** (owner's rule, 2026-11-10: every PR waiting on the owner says what to check and how)
@@ -95,14 +95,15 @@ Owner's rule, 2026-11-07: the owner reviews product decisions, not proof agents 
   1. Comment on the main issue, starting `🤖 <loop>: @ghanbak`, with the context, screenshots, a `## How to review` section where it applies, the options and your recommendation.
   2. Add one line under `## Owner checklist`: `- [ ] <one-line question or action> — [details](<comment URL>)`. Re-read the issue body right before editing it, and only add lines to that section; never rewrite other lines (the owner may have just checked one).
   3. Add the `needs-owner` label to the main issue. Then keep working; don't wait for an answer.
-- **The owner answers by checking the box.** Checked with no owner comment after the request → go with the recommendation. An owner comment after the request overrides it. Work that comes out of an answer becomes a new sub-issue.
-- **When every sub-issue is done**, the caretaker opens the feature PR as a draft, adds a "Review the feature" checklist item and asks for the owner's review (pr-caretaker.md step 3). Production steps the merge needs (migrations, Edge Functions, secrets) become issues assigned to the owner and checklist items; they must be done before the merge, because a JS-only feature reaches users as soon as it merges.
-- **The owner approves by unassigning the main issue.** The caretaker then marks the feature PR ready and auto-merge takes it. A JS-only feature ships OTA on merge, with no version bump. A feature that changes the native fingerprint gets a version bump first, the `fingerprint` check assigns the owner to the PR as a final "yes, do a store build", and the release flow follows the merge (releases.md).
+  The owner's queue is `is:open label:needs-owner` and the daily digest. Agents post as the owner's account, so the `@ghanbak` mention doesn't notify them; it's there to make requests searchable. In parallel execute runs, the orchestrator makes the issue-body edits, one at a time, not the subagents.
+- **The owner answers by checking the box.** An owner comment is a `ghanbak` comment that doesn't start with `🤖`. Checked with no owner comment after the request → go with the recommendation. An owner comment after the request overrides it. Work that comes out of an answer becomes a new sub-issue.
+- **When every sub-issue is done**, the caretaker opens the feature PR as a draft, adds a "Review the feature" checklist item and asks for the owner's review (pr-caretaker.md step 3). Production steps the merge needs (migrations, Edge Functions, secrets) become issues assigned to the owner and checklist items. The feature PR doesn't leave draft while any of those issues is open, because a JS-only feature reaches users as soon as it merges.
+- **The owner approves by unassigning the main issue.** The caretaker then marks the feature PR ready and auto-merge takes it. A JS-only feature ships OTA on merge, with no version bump. A feature that changes the native fingerprint gets a version bump first. The `fingerprint` check assigns the owner to its PR when the draft opens; the owner leaves that assignment until the caretaker marks the PR ready, then unassigns it as the final "yes, do a store build". The release flow follows the merge (releases.md).
 - Keep the feature branch current: when it falls behind `main` or conflicts, open an `agent/sync-<parent>` PR that merges `origin/main` into it.
 - Single-agent bugs, perf and maintenance work skip all this and PR straight to `main` as before.
 
 **Backpressure**
-- If 6 or more agent PRs (branch `agent/*`) are assigned to the owner, the execute loop only takes work that won't need the owner's review (bugs, perf, maintenance) until the owner catches up.
+- If 6 or more `agent/*` or `feature/*` PRs are assigned to the owner, the execute loop only takes work that won't need the owner's review (bugs, perf, maintenance) until the owner catches up.
 
 **Talking to the owner**
 - Start every PR or issue comment with `🤖 <loop name>:`. Be terse.
