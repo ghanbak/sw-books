@@ -1,6 +1,9 @@
 import { isAllowlisted } from '@/lib/admin-allowlist';
 import { authConfig, createAuthServerClient } from '@/lib/supabase-auth';
+import { DEV_ADMIN_EMAIL } from '@app/admin-screenshot-env';
+import { isLocalUrl } from '@app/seed-guard';
 import { redirect } from 'next/navigation';
+import { DevSignInForm } from './_components/dev-sign-in-form';
 import { SignInButton } from './_components/sign-in-button';
 
 export const dynamic = 'force-dynamic';
@@ -27,7 +30,11 @@ export default async function LoginPage({
 	// Already signed in + allowlisted → in you go.
 	let signedInId: string | null = null;
 	let signedInEmail: string | null = null;
-	if (authConfig()) {
+	const auth = authConfig();
+	// Auth on the local stack (npm run admin:screenshot-env): Google OAuth isn't
+	// available there, so offer email/password for the seeded dev admin instead.
+	const localAuth = auth !== null && isLocalUrl(auth.url);
+	if (auth) {
 		const supabase = await createAuthServerClient();
 		const { data } = await supabase.auth.getClaims();
 		const claims = data?.claims;
@@ -64,6 +71,8 @@ export default async function LoginPage({
 						{signedInId}
 					</code>
 				</div>
+			) : localAuth ? (
+				<DevSignInForm defaultEmail={DEV_ADMIN_EMAIL} />
 			) : (
 				<SignInButton />
 			)}
