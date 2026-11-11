@@ -9,6 +9,9 @@ const state = vi.hoisted(() => ({
 	admin: { id: 'admin' } as { id: string } | null,
 	writePins: vi.fn(async (_pins: unknown): Promise<void> => {}),
 	cookieSets: [] as unknown[][],
+	bookRows: [] as Record<string, unknown>[],
+	safeWrite: vi.fn(async (_rel: string, _contents: string): Promise<void> => {}),
+	revalidateTag: vi.fn((_tag: string) => {}),
 }));
 
 vi.mock('../../admin/lib/auth', () => ({ getAdmin: async () => state.admin }));
@@ -22,8 +25,15 @@ vi.mock('../../admin/lib/enrichment', () => ({
 	}),
 	writePins: state.writePins,
 }));
+vi.mock('../../admin/lib/admin-allowlist', () => ({ IS_HOSTED: false }));
+vi.mock('../../admin/lib/safe-fs', () => ({
+	DataDirUnavailableError: class extends Error {},
+	safeRead: async () => null,
+	safeWrite: state.safeWrite,
+}));
 vi.mock('../../admin/lib/supabase-admin', () => ({
 	DB_TARGET_COOKIE: 'admin-db-target',
+	getDbTarget: async () => 'prod',
 	getSupabaseAdmin: async () => ({
 		from: () => {
 			const q: Record<string, (...args: unknown[]) => unknown> = {};
@@ -34,7 +44,8 @@ vi.mock('../../admin/lib/supabase-admin', () => ({
 			});
 			// `owners()` awaits the builder itself.
 			// biome-ignore lint/suspicious/noThenProperty: fake postgrest builder is thenable
-			q.then = (done: unknown) => (done as (r: unknown) => unknown)({ data: [], error: null });
+			q.then = (done: unknown) =>
+				(done as (r: unknown) => unknown)({ data: state.bookRows, error: null });
 			return q;
 		},
 	}),
@@ -55,7 +66,7 @@ vi.mock('../wookieepedia/appearances', () => ({
 }));
 // Root has no `next`. Bare ids cover CI (no admin deps, imports stay
 // unresolved); the paths cover a local run where admin's install resolves them.
-const nextCache = { revalidatePath: () => {}, revalidateTag: () => {} };
+const nextCache = { revalidatePath: () => {}, revalidateTag: state.revalidateTag };
 const nextHeaders = {
 	cookies: async () => ({ set: (...args: unknown[]) => state.cookieSets.push(args) }),
 };
@@ -69,6 +80,7 @@ type Res = { ok: boolean; error?: { code: string; message: string } };
 // `@app/*` aliases only resolve under admin/tsconfig.json).
 const enrichmentPath = resolve(__dirname, '../../admin/app/_actions/enrichment.ts');
 const dbTargetPath = resolve(__dirname, '../../admin/app/_actions/db-target.ts');
+const exportPath = resolve(__dirname, '../../admin/app/_actions/export.ts');
 type Enrichment = {
 	savePin: (raw: unknown) => Promise<Res>;
 	removePin: (slug: string) => Promise<Res>;
@@ -76,6 +88,8 @@ type Enrichment = {
 type DbTargetActions = { setDbTarget: (target: string) => Promise<Res | undefined> };
 const loadEnrichment = async () => (await import(/* @vite-ignore */ enrichmentPath)) as Enrichment;
 const loadDbTarget = async () => (await import(/* @vite-ignore */ dbTargetPath)) as DbTargetActions;
+type ExportActions = { exportToCsv: () => Promise<Res> };
+const loadExport = async () => (await import(/* @vite-ignore */ exportPath)) as ExportActions;
 
 const source = (path: string) => readFileSync(resolve(__dirname, '../../admin', path), 'utf-8');
 
@@ -84,6 +98,10 @@ beforeEach(() => {
 	state.cookieSets.length = 0;
 	state.writePins.mockReset();
 	state.writePins.mockResolvedValue(undefined);
+	state.bookRows = [];
+	state.safeWrite.mockReset();
+	state.safeWrite.mockResolvedValue(undefined);
+	state.revalidateTag.mockClear();
 	vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 afterEach(() => {
@@ -121,6 +139,35 @@ describe('a failed pin file write returns its own failure (#213)', () => {
 		await expect(savePin({ slug: 'new-book', pageid: 42 })).resolves.toMatchObject({ ok: true });
 		await expect(removePin('old-book')).resolves.toMatchObject({ ok: true });
 		expect(state.writePins).toHaveBeenCalledTimes(2);
+	});
+});
+
+describe('a failed backup file write returns its own failure (#280)', () => {
+	beforeEach(() => {
+		state.bookRows = [{ id: 'b1', slug: 'a-book', title: 'A Book' }];
+	});
+
+	it('exportToCsv resolves to a backup file failure and skips revalidation', async () => {
+		state.safeWrite.mockRejectedValue(new Error('ENOSPC: /secret/path'));
+		const { exportToCsv } = await loadExport();
+		const res = await exportToCsv().catch(() => 'rejected' as const);
+		expect(res).not.toBe('rejected');
+		expect(res).toMatchObject({ ok: false, error: { code: 'BACKUP_WRITE' } });
+		const message = (res as Res).error?.message ?? '';
+		expect(message).toContain('catalog-backup.csv');
+		expect(message).not.toContain('/secret/path');
+		expect(message).not.toContain('ENOSPC');
+		expect(message).not.toContain('request did not complete');
+		expect(state.revalidateTag).not.toHaveBeenCalled();
+		expect(console.error).toHaveBeenCalled();
+	});
+
+	it('exportToCsv still succeeds and revalidates when the write succeeds', async () => {
+		const { exportToCsv } = await loadExport();
+		await expect(exportToCsv()).resolves.toMatchObject({ ok: true, data: { rows: 1 } });
+		expect(state.safeWrite).toHaveBeenCalledTimes(1);
+		expect(state.safeWrite.mock.calls[0]?.[0]).toBe('catalog-backup.csv');
+		expect(state.revalidateTag).toHaveBeenCalledWith('books');
 	});
 });
 
