@@ -63,11 +63,25 @@ describe('diff-view cover zoom', () => {
 
 	it('no clickable <img>: zoom is a keyboard-reachable button with an accessible name', () => {
 		expect(src).not.toMatch(/<img[^>]*onClick/);
-		expect(src).toMatch(/<button\s+type="button"\s+aria-label="Enlarge cover"/);
+		expect(src).toMatch(/<button\s+type="button"\s+aria-label=\{`Enlarge cover/);
+	});
+
+	it('each zoom button names its source, so the three per row are distinct (#178)', () => {
+		expect(src).toContain('aria-label={`Enlarge cover from ${SOURCE_LABELS[source]}`}');
+		expect(src).not.toContain('aria-label="Enlarge cover"');
+	});
+
+	it('the radio takes its name from the wrapping <label> content, not an override (#178)', () => {
+		// The zoom button sits in that <label>, so the cover radio reads "Enlarge cover from
+		// <source>"; an aria-label on the item would replace that with a fixed string.
+		const row = fnBody(src, 'FieldRow');
+		expect(row).toMatch(/<label[\s\S]*?<RadioGroupItem[\s\S]*?<\/label>/);
+		const item = /<RadioGroupItem\b[^>]*>/.exec(row)?.[0] ?? '';
+		expect(item).not.toMatch(/aria-label/);
 	});
 
 	it('zoom click does not select the radio in the wrapping <label>', () => {
-		const button = /aria-label="Enlarge cover"[\s\S]*?onClick=\{\(e\) => \{([\s\S]*?)\}\}/.exec(
+		const button = /aria-label=\{`Enlarge cover[\s\S]*?onClick=\{\(e\) => \{([\s\S]*?)\}\}/.exec(
 			src,
 		);
 		expect(button?.[1]).toBeDefined();
@@ -95,5 +109,55 @@ describe('books page', () => {
 		const src = read('app/admin/books/page.tsx');
 		expect(src).not.toMatch(/<Link[^>]*>\s*<Button/);
 		expect(src).toMatch(/<Button size="sm" asChild>\s*<Link href="\/admin\/books\/new">/);
+	});
+});
+
+describe('books-table inline edit (#178)', () => {
+	const src = read('app/admin/books/_components/books-table.tsx');
+	const editable = fnBody(src, 'EditableText');
+
+	it('the inline-edit input is named by field and book', () => {
+		expect(editable).toMatch(
+			/<Input\s+autoFocus\s+aria-label=\{`\$\{FIELD_LABELS\[field\]\} of \$\{bookTitle\}`\}/,
+		);
+		for (const f of ['title', 'publisher', 'era', 'date_published']) {
+			expect(src).toMatch(
+				new RegExp(`FIELD_LABELS: Record<EditableField, string> = \\{[\\s\\S]*?\\b${f}: '`),
+			);
+		}
+	});
+
+	it('every EditableText call site passes the field and the row title', () => {
+		const sites = [...src.matchAll(/<EditableText\b([\s\S]*?)\/>/g)];
+		expect(sites.length).toBe(2);
+		for (const [, props] of sites) {
+			expect(props).toMatch(/\bfield=\{?["\w]/);
+			expect(props).toContain('bookTitle={row.original.title}');
+		}
+	});
+
+	// No DOM test environment (vitest runs in node, no jsdom), so focus return is checked
+	// at the source: Enter/Escape set the refocus flag, and the display button's ref
+	// focuses itself when it mounts with the flag set.
+	it('Enter and Escape return focus to the cell button', () => {
+		expect(editable).toMatch(/const refocus = useRef\(false\)/);
+		expect(editable).toMatch(/if \(e\.key === 'Enter'\) commit\(true\)/);
+		expect(editable).toMatch(/if \(e\.key === 'Escape'\) close\(true\)/);
+		expect(editable).toMatch(
+			/const close = \(restoreFocus: boolean\) => \{\s*refocus\.current = restoreFocus;\s*setEditing\(\s*false\s*\)/,
+		);
+		expect(editable).toMatch(/commit = \(restoreFocus: boolean\) => \{\s*close\(restoreFocus\)/);
+		const button = /<button\s+ref=\{\(el\) => \{([\s\S]*?)\}\}\s+type="button"/.exec(editable);
+		expect(button?.[1]).toMatch(
+			/if \(el && refocus\.current\) \{\s*refocus\.current = false;\s*el\.focus\(\);/,
+		);
+	});
+
+	it('blur commits without pulling focus back', () => {
+		expect(editable).toMatch(
+			/onBlur=\{\(\) => \{\s*if \(!refocus\.current\) commit\(false\);\s*\}\}/,
+		);
+		expect(editable).not.toMatch(/onBlur=\{\(\) => \{?\s*(if \([^)]*\) )?commit\(true\)/);
+		expect(editable).not.toMatch(/onBlur=\{[^}]*close\(true\)/);
 	});
 });
