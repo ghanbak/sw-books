@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Link, Stack, useIsPreview, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -39,6 +39,9 @@ export default function BookDetailScreen() {
 	const [error, setError] = useState<string | null>(null);
 	const insets = useSafeAreaInsets();
 	const router = useRouter();
+	// In a long-press peek the header isn't shown and navigation.setOptions is a warning no-op,
+	// so skip the screen options and toolbars there.
+	const isPreview = useIsPreview();
 	// Separate from the catalog cache: enrichment rows are large and never embedded in the list query.
 	const { enrichment, fromCache } = useBookEnrichment(id);
 	const amazonUrl = book ? buildAmazonSearchUrl(displayIsbn(book)) : null;
@@ -94,25 +97,27 @@ export default function BookDetailScreen() {
 
 	return (
 		<View style={styles.container}>
-			<Stack.Screen
-				options={{
-					// No native large title: the book title is drawn in the body, so a large-title
-					// row here was just an empty band (a big gap above the title) with an opaque
-					// background that cut off the cover's hologram glow.
-					headerLargeTitle: false,
-					// The root stack gives every screen an opaque large-title background, and
-					// react-native-screens applies it to the bar's *scroll-edge* appearance — so at
-					// rest (scrolled to top) it painted a solid band that cut off the cover's glow.
-					// Transparent here, and no material blur: iOS 26+ draws its own soft scroll-edge
-					// effect once content scrolls under the bar.
-					headerLargeStyle: { backgroundColor: 'transparent' },
-					headerBlurEffect: 'none',
-					headerShadowVisible: false,
-					title: '',
-					headerBackTitle: 'Back',
-				}}
-			/>
-			<FavoriteHeaderButton bookId={book.id} />
+			{isPreview ? null : (
+				<Stack.Screen
+					options={{
+						// No native large title: the book title is drawn in the body, so a large-title
+						// row here was just an empty band (a big gap above the title) with an opaque
+						// background that cut off the cover's hologram glow.
+						headerLargeTitle: false,
+						// The root stack gives every screen an opaque large-title background, and
+						// react-native-screens applies it to the bar's *scroll-edge* appearance — so at
+						// rest (scrolled to top) it painted a solid band that cut off the cover's glow.
+						// Transparent here, and no material blur: iOS 26+ draws its own soft scroll-edge
+						// effect once content scrolls under the bar.
+						headerLargeStyle: { backgroundColor: 'transparent' },
+						headerBlurEffect: 'none',
+						headerShadowVisible: false,
+						title: '',
+						headerBackTitle: 'Back',
+					}}
+				/>
+			)}
+			{isPreview ? null : <FavoriteHeaderButton bookId={book.id} />}
 
 			<ScrollView
 				style={styles.container}
@@ -230,7 +235,7 @@ export default function BookDetailScreen() {
 				)}
 			</ScrollView>
 
-			<BookDetailToolbar bookId={book.id} />
+			{isPreview ? null : <BookDetailToolbar bookId={book.id} />}
 		</View>
 	);
 }
@@ -378,6 +383,9 @@ const styles = StyleSheet.create({
  */
 function DetailHero({ book }: { book: Book }) {
 	const status = useHoloStatus();
+	// A long-press peek (`Link.Preview` on the book rows) renders this screen in a context-menu
+	// preview: keep it to the static face rather than spinning up a WebGPU device for a glance.
+	const isPreview = useIsPreview();
 	const [stageReady, setStageReady] = useState(false);
 	const stageBooks = useMemo<StageBook[]>(
 		() => [
@@ -396,34 +404,42 @@ function DetailHero({ book }: { book: Book }) {
 	const onFacesChange = useCallback((faces: ReadonlyMap<number, StageFace>) => {
 		setFace(faces.get(0) ?? null);
 	}, []);
-	const show3D = status.kind === 'available' && stageReady && face !== null;
+	const show3D = !isPreview && status.kind === 'available' && stageReady && face !== null;
 	return (
 		<View style={styles.hero}>
-			<HoloStage
-				mode="single"
-				books={stageBooks}
-				cardWidth={HERO_CARD_W}
-				pixelRatioCap={2}
-				onReadyChange={setStageReady}
-				onFacesChange={onFacesChange}
-			/>
-			{show3D ? (
-				face === 'sky' ? (
-					<View pointerEvents="none" style={[styles.heroFace, styles.heroText]}>
-						<NoCoverText title={book.title} author={book.author} width={HERO_CARD_W} />
-					</View>
-				) : null
-			) : (
-				<View style={styles.heroFace}>
-					<HoloFace
-						coverUri={book.cover_image}
-						title={book.title}
-						author={book.author}
-						width={HERO_CARD_W}
-						height={HERO_CARD_W * 1.5}
-					/>
-				</View>
+			{isPreview ? null : (
+				<HoloStage
+					mode="single"
+					books={stageBooks}
+					cardWidth={HERO_CARD_W}
+					pixelRatioCap={2}
+					onReadyChange={setStageReady}
+					onFacesChange={onFacesChange}
+				/>
 			)}
+			{/* The card-sized slot stays mounted across HoloFace → 3D so the row cover's zoom
+			    (Link.AppleZoom in BookCard) has a stable target to land on and return from. */}
+			<View pointerEvents={show3D ? 'none' : 'auto'} style={styles.heroFace}>
+				<Link.AppleZoomTarget>
+					{/* collapsable={false}: the zoom target needs exactly one native child, and
+					    without it this View can be flattened away, leaving an empty slot. */}
+					<View collapsable={false} style={styles.heroText}>
+						{show3D ? (
+							face === 'sky' ? (
+								<NoCoverText title={book.title} author={book.author} width={HERO_CARD_W} />
+							) : null
+						) : (
+							<HoloFace
+								coverUri={book.cover_image}
+								title={book.title}
+								author={book.author}
+								width={HERO_CARD_W}
+								height={HERO_CARD_W * 1.5}
+							/>
+						)}
+					</View>
+				</Link.AppleZoomTarget>
+			</View>
 		</View>
 	);
 }

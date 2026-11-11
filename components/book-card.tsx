@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -24,53 +24,70 @@ export const BOOK_CARD_DATA_WIDTH = 80;
  * thumbnail, title/author/series name, and a right-hand data column with the canon badge
  * and timeline era, wrapped in the shared Card with its notch footer (#271). ISBN and
  * edition details live on book detail.
+ *
+ * Opens detail through a `Link` (push, same `/book/[id]` route): on iOS 18+ the cover zooms into
+ * the detail hero (`Link.AppleZoom` → `Link.AppleZoomTarget` in `app/book/[id].tsx`) and a
+ * long-press peeks the detail (`Link.Preview`). Android and web get the plain push.
  */
 export const BookCard = memo(function BookCard({ book }: { book: Book }) {
-	const router = useRouter();
-
 	return (
-		<Pressable
-			onPress={() => router.push(`/book/${book.id}`)}
-			accessibilityRole="button"
-			accessibilityLabel={bookRowLabel(book)}
-			style={({ pressed }) => [styles.wrap, pressed && styles.pressed]}
-		>
-			<Card>
-				<View style={styles.row}>
-					<HoloCover
-						coverUri={book.cover_image}
-						title={book.title}
-						author={book.author}
-						width={BOOK_CARD_COVER.width}
-						height={BOOK_CARD_COVER.height}
-					/>
-					<View style={styles.leading}>
-						<Text style={styles.title} numberOfLines={2}>
-							{book.title}
-						</Text>
-						<Text style={styles.author} numberOfLines={1}>
-							{book.author.join(', ')}
-						</Text>
-						{book.series_name ? (
-							<Text style={styles.series} numberOfLines={2}>
-								{book.series_name}
-							</Text>
-						) : null}
-					</View>
-					<View style={styles.data}>
-						<CanonBadge canon={book.canon} style={styles.badge} />
-						{book.timeline_order != null ? (
-							<View>
-								<Text style={styles.dataLabel}>TIMELINE</Text>
-								<Text style={styles.dataValue} numberOfLines={2}>
-									{eraLabel(book.timeline_order)}
-								</Text>
-							</View>
-						) : null}
-					</View>
-				</View>
-			</Card>
-		</Pressable>
+		// Link merges props into its child via Slot, which spreads `style`: the Pressable keeps a
+		// plain style object (a style function is dropped, an array throws in dev) and the press
+		// state lives on an inner View.
+		<Link href={`/book/${book.id}`} push asChild>
+			<Link.Trigger>
+				<Pressable
+					accessibilityRole="button"
+					accessibilityLabel={bookRowLabel(book)}
+					style={styles.wrap}
+				>
+					{({ pressed }) => (
+						<View style={pressed ? styles.pressed : undefined}>
+							<Card>
+								<View style={styles.row}>
+									<Link.AppleZoom>
+										<View>
+											<HoloCover
+												coverUri={book.cover_image}
+												title={book.title}
+												author={book.author}
+												width={BOOK_CARD_COVER.width}
+												height={BOOK_CARD_COVER.height}
+											/>
+										</View>
+									</Link.AppleZoom>
+									<View style={styles.leading}>
+										<Text style={styles.title} numberOfLines={2}>
+											{book.title}
+										</Text>
+										<Text style={styles.author} numberOfLines={1}>
+											{book.author.join(', ')}
+										</Text>
+										{book.series_name ? (
+											<Text style={styles.series} numberOfLines={2}>
+												{book.series_name}
+											</Text>
+										) : null}
+									</View>
+									<View style={styles.data}>
+										<CanonBadge canon={book.canon} style={styles.badge} />
+										{book.timeline_order != null ? (
+											<View>
+												<Text style={styles.dataLabel}>TIMELINE</Text>
+												<Text style={styles.dataValue} numberOfLines={2}>
+													{eraLabel(book.timeline_order)}
+												</Text>
+											</View>
+										) : null}
+									</View>
+								</View>
+							</Card>
+						</View>
+					)}
+				</Pressable>
+			</Link.Trigger>
+			<Link.Preview />
+		</Link>
 	);
 });
 
