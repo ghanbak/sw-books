@@ -1,5 +1,5 @@
 import type { GlassViewProps } from 'expo-glass-effect';
-import { Platform, type ViewProps } from 'react-native';
+import { Platform } from 'react-native';
 
 // Safe wrapper around expo-glass-effect.
 //
@@ -27,7 +27,7 @@ if (Platform.OS === 'ios') {
 // The app is dark-only (see CLAUDE.md design context). Force colorScheme="dark"
 // so glass surfaces match our tokens regardless of the system appearance — without
 // this, glass renders light when the device is in Light mode.
-export function GlassView(props: ViewProps) {
+export function GlassView(props: GlassViewProps) {
 	if (!RealGlassView) return null;
 	return <RealGlassView colorScheme="dark" {...props} />;
 }
