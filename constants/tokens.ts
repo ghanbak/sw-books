@@ -57,6 +57,15 @@ export const tokens = {
 		bloom: 'rgba(111,195,255,0.3)',
 		innerGlow: 'rgba(158,224,255,0.56)',
 	},
+	// Scan tray (components/scan-tray.tsx): eased background scrim from the screen bottom up to
+	// 8px above the tray covers. One hue (surface.background) at rising alpha so the ramp never
+	// greys out; stands in for a progressive blur (no blur module is installed).
+	scanTray: {
+		scrimClear: 'rgba(10,10,12,0)',
+		scrimLow: 'rgba(10,10,12,0.2)',
+		scrimMid: 'rgba(10,10,12,0.5)',
+		scrimFull: 'rgba(10,10,12,0.72)',
+	},
 	// No-cover face: a starfield (lib/starfield.ts) with the title/author on it.
 	noCover: {
 		sky: '#000000',
