@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
  * Offline write queue for the shelf scanner's Add (plan Decision 3). A batch that fails
  * for connectivity is parked here, one AsyncStorage key per user, and replayed through
  * the idempotent `add_owned_books` RPC. `components/shelf-queue-sync.tsx` drives flushes
- * on app start, foreground, and a backoff timer while the queue is non-empty.
+ * on app start, foreground, reconnect (NetInfo), and a backoff timer while the queue is non-empty.
  *
  * Per-user safety is layered: each user has their own key, ops carry their owner and are
  * filtered on read, and every send first checks the live session. The RPC writes for
@@ -296,30 +296,51 @@ export function createShelfQueueRunner({
 	let stopped = false;
 	let running = false;
 	let enqueuedWhileRunning = false;
+	// One early reconnect flush per backoff step: spent by a reconnect, re-armed by any
+	// other flush (start, foreground, timer), so a flapping connection can't outpace backoff.
+	let reconnectArmed = true;
+	let reconnectWhileRunning = false;
 	let timer: ReturnType<typeof setTimeout> | null = null;
 
 	const cancel = () => {
 		if (timer !== null) clearTimeout(timer);
 		timer = null;
 	};
-	const schedule = (delayMs: number) => {
+	const schedule = (delayMs: number, run: () => void = trigger) => {
 		cancel();
-		timer = setTimeout(trigger, delayMs);
+		timer = setTimeout(run, delayMs);
 	};
 
-	function trigger() {
-		if (stopped || running) return;
+	function start(fromReconnect: boolean) {
+		if (stopped) return;
+		if (running) {
+			if (fromReconnect && reconnectArmed) reconnectWhileRunning = true;
+			return;
+		}
 		cancel();
 		running = true;
 		enqueuedWhileRunning = false;
+		reconnectWhileRunning = false;
+		reconnectArmed = !fromReconnect;
 		void queue.flush(userId).then((outcome) => {
 			running = false;
 			if (stopped) return;
 			if (outcome.sent > 0) onSynced();
 			if (outcome.dropped.length > 0) onDropped(outcome.dropped);
-			if (outcome.retryInMs !== null) schedule(outcome.retryInMs);
+			// A flush that started before the link came back likely failed for it: retry now.
+			if (outcome.retryInMs !== null && reconnectWhileRunning) schedule(0, reconnect);
+			else if (outcome.retryInMs !== null) schedule(outcome.retryInMs);
 			else if (enqueuedWhileRunning) schedule(SHELF_QUEUE_BACKOFF.baseMs);
 		});
+	}
+
+	function trigger() {
+		start(false);
+	}
+
+	function reconnect() {
+		if (!running && !reconnectArmed) return;
+		start(true);
 	}
 
 	const unsubscribe = queue.subscribe((enqueuedFor) => {
@@ -330,6 +351,8 @@ export function createShelfQueueRunner({
 
 	return {
 		trigger,
+		/** The device came back online. Flushes now unless this backoff step already did. */
+		reconnect,
 		stop() {
 			stopped = true;
 			cancel();
