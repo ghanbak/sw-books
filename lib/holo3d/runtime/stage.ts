@@ -263,7 +263,12 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 			if (nextTilt.yaw !== tilt.yaw || nextTilt.pitch !== tilt.pitch) dirty = true;
 			tilt = nextTilt;
 			layoutCards(holo, now);
-			if (uploadOne(now)) dirty = true;
+			// Bind a fresh upload to its card before drawing: under Reduce Motion nothing else
+			// marks the next frame dirty, so a texture bound a frame late never reaches the screen.
+			if (uploadOne(now)) {
+				dirty = true;
+				layoutCards(holo, now);
+			}
 			// Reduce Motion: a still image — only redraw when something actually changed.
 			// Until ready is reported, keep drawing so the settle check (and timeout) runs.
 			if (!dirty && readyReported) return;
