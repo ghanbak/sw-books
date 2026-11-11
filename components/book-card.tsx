@@ -3,12 +3,14 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { HoloCover } from '@/components/holo-cover';
+import { ShelfBadges } from '@/components/shelf-badges';
 import { CanonBadge } from '@/components/ui/canon-badge';
 import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { bookRowLabel } from '@/lib/book-a11y';
 import type { Book } from '@/lib/hooks';
+import { type ShelfState, shelfStateLabel } from '@/lib/shelf-state';
 import { eraLabel } from '@/lib/timeline';
 
 /**
@@ -22,14 +24,26 @@ export const BOOK_CARD_DATA_WIDTH = 80;
 /**
  * Book row for the Archives, Library and Search lists (Figma 130:344): a static holo-cover
  * thumbnail, title/author/series name, and a right-hand data column with the canon badge
- * and timeline era, wrapped in the shared Card with its notch footer (#271). ISBN and
+ * and timeline era (plus shelf glyphs when `shelf` is passed), wrapped in the shared Card with its notch footer (#271). ISBN and
  * edition details live on book detail.
  *
  * Opens detail through a `Link` (push, same `/book/[id]` route): on iOS 18+ the cover zooms into
  * the detail hero (`Link.AppleZoom` → `Link.AppleZoomTarget` in `app/book/[id].tsx`) and a
  * long-press peeks the detail (`Link.Preview`). Android and web get the plain push.
  */
-export const BookCard = memo(function BookCard({ book }: { book: Book }) {
+export const BookCard = memo(function BookCard({
+	book,
+	shelf,
+}: {
+	book: Book;
+	/**
+	 * The signed-in user's shelf state (#284); absent = no shelf badges. Pass the interned
+	 * objects from `shelfStatesByBook` so the memo skips rows whose state didn't change.
+	 */
+	shelf?: ShelfState;
+}) {
+	// VoiceOver reads the value right after the label: "…, Canon, Owned, Read, button".
+	const shelfLabel = shelfStateLabel(shelf);
 	return (
 		// Link merges props into its child via Slot, which spreads `style`: the Pressable keeps a
 		// plain style object (a style function is dropped, an array throws in dev) and the press
@@ -39,6 +53,7 @@ export const BookCard = memo(function BookCard({ book }: { book: Book }) {
 				<Pressable
 					accessibilityRole="button"
 					accessibilityLabel={bookRowLabel(book)}
+					accessibilityValue={shelfLabel ? { text: shelfLabel } : undefined}
 					style={styles.wrap}
 				>
 					{({ pressed }) => (
@@ -79,6 +94,7 @@ export const BookCard = memo(function BookCard({ book }: { book: Book }) {
 												</Text>
 											</View>
 										) : null}
+										{shelf ? <ShelfBadges shelf={shelf} /> : null}
 									</View>
 								</View>
 							</Card>

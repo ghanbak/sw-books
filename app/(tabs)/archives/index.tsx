@@ -11,7 +11,8 @@ import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { useCatalogSort } from '@/hooks/useCatalogSort';
 import type { Book } from '@/lib/hooks';
-import { useBooks } from '@/lib/hooks';
+import { useBooks, useUserBooks } from '@/lib/hooks';
+import { shelfStatesByBook } from '@/lib/shelf-state';
 import { sortBooks } from '@/lib/sort';
 
 type CanonFilter = 'all' | 'Canon' | 'Legends';
@@ -32,7 +33,14 @@ export default function CatalogScreen() {
 		return sortBooks(result, sort);
 	}, [books, canonFilter, sort]);
 
-	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
+	// Shelf state once per list; equal states share one object, so a toggle re-renders only its row.
+	const { userBooks } = useUserBooks();
+	const shelfByBook = useMemo(() => shelfStatesByBook(userBooks), [userBooks]);
+
+	const renderItem = useCallback(
+		({ item }: { item: Book }) => <BookCard book={item} shelf={shelfByBook.get(item.id)} />,
+		[shelfByBook],
+	);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
 	// Loading/error/empty render as the list's ListEmptyComponent on an always-mounted FlashList —
