@@ -1,0 +1,43 @@
+name: Close linked issues
+
+# Auto-merge merges PRs as github-actions, and GitHub skips closing-keyword
+# processing for GITHUB_TOKEN-attributed merges, so `Closes #n` never closed
+# anything (#137). This scheduled job closes the issues GitHub links from PRs
+# merged into main. Scheduled runs aren't affected by that GITHUB_TOKEN limit.
+# Idempotent: already-closed issues are skipped.
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: Look back this many days of merged PRs
+        default: '3'
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: close-linked-issues
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      DAYS: ${{ inputs.days || '3' }}
+    steps:
+      - name: Close issues linked from merged PRs
+        run: |
+          since=$(date -u -d "$DAYS days ago" +%Y-%m-%d)
+          gh pr list -R "$REPO" --state merged --base main --search "merged:>=$since" --limit 500 \
+            --json number,closingIssuesReferences \
+            --jq '.[] | .number as $pr | .closingIssuesReferences[] | "\($pr) \(.number)"' |
+          while read -r pr issue; do
+            [ "$(gh issue view "$issue" -R "$REPO" --json state -q .state)" = OPEN ] || continue
+            gh issue close "$issue" -R "$REPO" --reason completed --comment "🤖 close-linked-issues: closed by #$pr."
+            echo "closed #$issue (#$pr)"
+          done
