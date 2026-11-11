@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/table';
 import { callAction } from '@/lib/call-action';
 import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
+import { ariaSortFor, selectRowLabel } from '@/lib/table-a11y';
 import { cn } from '@/lib/utils';
 import { type BulkItemResult, runBulkSequential } from '@app/bulk-run';
 import { isValidIsbn } from '@app/isbn';
@@ -343,7 +344,7 @@ const columns = [
 		),
 		cell: ({ row }) => (
 			<Checkbox
-				aria-label="Select row"
+				aria-label={selectRowLabel(row.original.title)}
 				checked={row.getIsSelected()}
 				onCheckedChange={(value) => row.toggleSelected(!!value)}
 			/>
@@ -387,6 +388,7 @@ const columns = [
 	columnHelper.accessor((r) => r.author?.join('; ') ?? '', {
 		id: 'author',
 		header: 'Author',
+		enableSorting: false,
 		cell: ({ getValue }) => <span className="text-sm">{getValue()}</span>,
 	}),
 	columnHelper.accessor('canon', {
@@ -416,6 +418,7 @@ const columns = [
 		{
 			id: 'series',
 			header: 'Series',
+			enableSorting: false,
 			cell: ({ getValue }) => <span className="text-muted-foreground text-sm">{getValue()}</span>,
 		},
 	),
@@ -433,6 +436,7 @@ const columns = [
 	}),
 	columnHelper.accessor('primary_isbn', {
 		header: 'Primary ISBN',
+		enableSorting: false,
 		cell: ({ getValue }) => (
 			<span className="font-mono text-xs">
 				{getValue() ?? <span className="text-muted-foreground">—</span>}
@@ -473,6 +477,7 @@ const columns = [
 	}),
 	columnHelper.accessor('era', {
 		header: 'Era',
+		enableSorting: false,
 		cell: editableCell('era', { nullable: true }),
 	}),
 	columnHelper.accessor('enrichment', {
@@ -860,7 +865,15 @@ export function BooksTable({
 							{table.getHeaderGroups().map((headerGroup) => (
 								<TableRow key={headerGroup.id} className="hover:bg-transparent">
 									{headerGroup.headers.map((header) => (
-										<TableHead key={header.id} className="whitespace-nowrap">
+										<TableHead
+											key={header.id}
+											className="whitespace-nowrap"
+											aria-sort={
+												header.column.getCanSort()
+													? ariaSortFor(header.column.getIsSorted())
+													: undefined
+											}
+										>
 											{header.isPlaceholder
 												? null
 												: flexRender(header.column.columnDef.header, header.getContext())}
