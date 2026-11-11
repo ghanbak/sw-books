@@ -13,13 +13,12 @@ import {
 	isAccountGone,
 	isAppleUser,
 	reauthenticateWithAppleForDeletion,
+	signOut,
 	signOutLocally,
 } from '@/lib/account';
 import { useAuth } from '@/lib/auth';
 import { runDeleteAccountFlow } from '@/lib/delete-account-flow';
 import { PRIVACY_POLICY_URL, openInAppBrowser } from '@/lib/external-link';
-import { shelfQueue } from '@/lib/shelf-queue';
-import { supabase } from '@/lib/supabase';
 
 // Single source of truth: app.json's expo.version (kept in lockstep with package.json by
 // `npm version` → scripts/sync-app-version.mjs).
@@ -49,9 +48,9 @@ export default function ProfileScreen() {
 	const deleteInFlight = useRef(false);
 
 	async function handleSignOut() {
-		const { error } = await supabase.auth.signOut();
+		// Falls back to a local clear when the global revoke fails (offline); see lib/account.
+		const { error } = await signOut();
 		if (error) Alert.alert('Sign-out failed', error.message);
-		else await shelfQueue.clearAll();
 	}
 
 	async function handleDeleteAccount() {

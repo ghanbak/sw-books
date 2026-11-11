@@ -101,10 +101,45 @@ export async function isAccountGone(): Promise<boolean> {
 	return isAuthApiError(error) && error.code === 'user_not_found';
 }
 
-/** The user and its refresh tokens are gone server-side; clear the local session only. */
+/**
+ * Deliberate sign-out. Revokes the session globally (default scope) when online; on any
+ * error, returned or thrown (e.g. `AuthRetryableFetchError` offline), falls back to
+ * `signOutLocally`. Returns an error only when that local clear also fails.
+ */
+export async function signOut(): Promise<{ error: Error | null }> {
+	try {
+		const { error } = await supabase.auth.signOut();
+		if (!error) {
+			await shelfQueue.clearAll();
+			return { error: null };
+		}
+	} catch {
+		// Fall through to the local clear.
+	}
+	try {
+		await signOutLocally();
+		return { error: null };
+	} catch (err) {
+		return { error: err instanceof Error ? err : new Error('Sign-out failed. Try again.') };
+	}
+}
+
+type SessionRemover = { _removeSession?: () => Promise<void> };
+
+/**
+ * Clear the local session only (the user's server session is gone, or the server is
+ * unreachable). Throws when the stored session could not be cleared.
+ */
 export async function signOutLocally(): Promise<void> {
 	deletionAccessToken = undefined;
 	// First: signOut can return early without clearing anything if the session read fails.
 	await shelfQueue.clearAll();
-	await supabase.auth.signOut({ scope: 'local' });
+	const { error } = await supabase.auth.signOut({ scope: 'local' });
+	if (!error) return;
+	// auth-js (2.103) still POSTs /logout for scope 'local' and returns a network error
+	// before removing the stored session. Its private `_removeSession` clears storage and
+	// emits SIGNED_OUT with no network call; re-check it on every auth-js upgrade.
+	const auth = supabase.auth as unknown as SessionRemover;
+	if (typeof auth._removeSession !== 'function') throw error;
+	await auth._removeSession.call(supabase.auth);
 }

@@ -64,15 +64,18 @@ describe('shelf queue wiring', () => {
 		expect(sync).not.toMatch(/onAuthStateChange/);
 	});
 
-	it('deliberate sign-out clears only after it succeeds', () => {
-		expect(source('app/profile.tsx')).toMatch(
-			/if \(error\) Alert\.alert\('Sign-out failed', error\.message\);\s*else await shelfQueue\.clearAll\(\);/,
+	it('deliberate sign-out clears after a global revoke, or via the local fallback (#279)', () => {
+		expect(source('app/profile.tsx')).toMatch(/const \{ error \} = await signOut\(\);/);
+		const account = source('lib/account.ts');
+		expect(account).toMatch(
+			/await supabase\.auth\.signOut\(\);\s*if \(!error\) \{\s*await shelfQueue\.clearAll\(\);/,
 		);
+		expect(account).toMatch(/try \{\s*await signOutLocally\(\);/);
 	});
 
 	it('account deletion clears before signing out, which can return early', () => {
 		expect(source('lib/account.ts')).toMatch(
-			/await shelfQueue\.clearAll\(\);\s*await supabase\.auth\.signOut\(\{ scope: 'local' \}\);/,
+			/await shelfQueue\.clearAll\(\);\s*(?:const \{ error \} = )?await supabase\.auth\.signOut\(\{ scope: 'local' \}\);/,
 		);
 	});
 
