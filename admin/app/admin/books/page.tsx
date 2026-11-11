@@ -53,7 +53,7 @@ export default async function BooksPage() {
 	if (error) {
 		return (
 			<main className="p-8">
-				<p className="text-destructive">
+				<p className="text-destructive-text">
 					Failed to load catalog: {dbError('BooksPage', error).message}
 				</p>
 			</main>
@@ -124,12 +124,12 @@ export default async function BooksPage() {
 							</Badge>
 						</Link>
 					)}
-					<Link href="/admin/books/new">
-						<Button size="sm">
+					<Button size="sm" asChild>
+						<Link href="/admin/books/new">
 							<Plus className="size-4" />
 							New book
-						</Button>
-					</Link>
+						</Link>
+					</Button>
 				</div>
 			</header>
 			<BooksTable rows={rows} counts={counts} enrichment={enrichment} />

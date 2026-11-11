@@ -16,6 +16,7 @@
 		"verify": "biome check . && npm run typecheck && npm test",
 		"verify:admin": "npm --prefix admin run lint && (cd admin && npx tsc --noEmit -p . && npx next build) && bash scripts/check-admin-bundle.sh",
 		"version": "node scripts/sync-app-version.mjs",
+		"review": "bash scripts/review-pr.sh",
 		"db:reset": "supabase db reset",
 		"db:types": "supabase gen types typescript > lib/types.ts",
 		"db:seed": "npx tsx scripts/seed.ts",

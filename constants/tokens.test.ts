@@ -83,6 +83,35 @@ describe('text.tertiary contrast (WCAG 1.4.3, 4.5:1)', () => {
 	});
 });
 
+describe('status.error contrast (WCAG 1.4.3, 4.5:1)', () => {
+	const error = parse(tokens.status.error).rgb;
+
+	it.each([
+		['surface.background', background],
+		['surface.card', card],
+		['surface.overlay over a white camera frame', overlayOnWhite],
+	] as const)('meets 4.5:1 as text on %s', (_name, surface) => {
+		expect(contrast(tokens.status.error, surface)).toBeGreaterThanOrEqual(4.5);
+	});
+
+	it('text.inverse meets 4.5:1 on a status.error fill', () => {
+		expect(contrast(tokens.text.inverse, error)).toBeGreaterThanOrEqual(4.5);
+	});
+
+	it('text.primary is below 4.5:1, so it is not a color for status.error fills', () => {
+		expect(contrast(tokens.text.primary, error)).toBeLessThan(4.5);
+	});
+
+	it('shelf-scan capture error banner text uses text.inverse', () => {
+		const capture = readFileSync(
+			resolve(__dirname, '..', 'components/shelf-scan-capture.tsx'),
+			'utf8',
+		);
+		expect(capture).toMatch(/\berrorBanner:\s*\{[^}]*?backgroundColor:\s*tokens\.status\.error\b/);
+		expect(capture).toMatch(/\berrorBannerText:\s*\{[^}]*?color:\s*tokens\.text\.inverse\b/);
+	});
+});
+
 describe('OwnedBadge neutral style', () => {
 	const read = (path: string) => readFileSync(resolve(__dirname, '..', path), 'utf8');
 	const parts = read('components/shelf-scan-parts.tsx');

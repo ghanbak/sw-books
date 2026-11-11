@@ -2,6 +2,7 @@ import type { RNCanvasContext } from 'react-native-webgpu';
 import type { WebGPURenderer } from 'three/webgpu';
 
 import { RIG_LIFT, cardTransform, pageAt, windowIndices, worldPerPoint } from '../pager';
+import { type GravitySample, REST_TILT, type TiltState, stepTilt } from '../tilt';
 import { createHoloRenderer, disposeHoloRenderer } from './gpu';
 import { type HoloScene, buildHoloScene } from './scene';
 import { type CoverTexture, decodeCover, makeStarfieldTexture, uploadCover } from './textures';
@@ -39,6 +40,8 @@ export type StageOptions = {
 	/** Pager page width (points) and live horizontal offset. */
 	pageWidth?: number;
 	getScrollX?: () => number;
+	/** Latest gravity sample for gyro tilt, or null while the sensor is off (Reduce Motion, paused). */
+	getGravity?: () => GravitySample | null;
 	/** First frame presented with the active cover settled (uploaded, failed, or none). */
 	onFirstFrame?: () => void;
 	/**
@@ -95,6 +98,8 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 	let firstPresentAt = 0;
 	let readyReported = false;
 	let facesKey = '';
+	let tilt: TiltState = REST_TILT;
+	let lastFrameAt = 0;
 
 	const inWindow = (index: number) =>
 		mode === 'single' ? index === 0 : Math.abs(index - activePage) <= 1;
@@ -185,6 +190,8 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 		if (mode === 'single') {
 			const card = scene.cards[0];
 			card.mesh.visible = books.length > 0;
+			card.mesh.rotation.x = tilt.pitch;
+			card.mesh.rotation.y = tilt.yaw;
 			card.setCover(textures.get(0)?.texture ?? null, skies.has(0) ? 'sky' : 'cover');
 			if (books[0]) card.setFallbackColor(books[0].fallbackColor);
 			return;
@@ -206,7 +213,8 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 			const t = cardTransform(index, scrollX, pageWidth);
 			card.mesh.visible = t.visible;
 			card.mesh.position.x = t.offset * wpp;
-			card.mesh.rotation.y = t.rotationY;
+			card.mesh.rotation.x = tilt.pitch;
+			card.mesh.rotation.y = t.rotationY + tilt.yaw;
 			card.setFade(t.opacity);
 			card.setCover(textures.get(index)?.texture ?? null, skies.has(index) ? 'sky' : 'cover');
 			card.setFallbackColor(book.fallbackColor);
@@ -236,6 +244,15 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 				holo.clock.flicker.value = 0.95 + Math.sin(t * 23) * Math.sin(t * 7.3) * 0.04;
 				dirty = true;
 			}
+			const nextTilt = stepTilt(
+				tilt,
+				reduceMotion ? null : (opts.getGravity?.() ?? null),
+				lastFrameAt ? now - lastFrameAt : 0,
+				reduceMotion,
+			);
+			lastFrameAt = now;
+			if (nextTilt.yaw !== tilt.yaw || nextTilt.pitch !== tilt.pitch) dirty = true;
+			tilt = nextTilt;
 			layoutCards(holo, now);
 			if (uploadOne(now)) dirty = true;
 			// Reduce Motion: a still image — only redraw when something actually changed.
@@ -319,6 +336,7 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 		},
 		setReduceMotion: (on) => {
 			reduceMotion = on;
+			if (on) tilt = REST_TILT;
 			if (on && holo) {
 				holo.clock.time.value = 0;
 				holo.clock.flicker.value = 1;
@@ -330,6 +348,7 @@ export function createHoloStage(opts: StageOptions): HoloStageController {
 		},
 		resume: () => {
 			paused = false;
+			lastFrameAt = 0;
 			dirty = true;
 		},
 		dispose: () => {

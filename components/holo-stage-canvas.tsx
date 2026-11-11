@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { type RefObject, useEffect, useRef } from 'react';
 import { PixelRatio, StyleSheet } from 'react-native';
-import type { SharedValue } from 'react-native-reanimated';
+import { SensorType, type SharedValue, useAnimatedSensor } from 'react-native-reanimated';
 import { Canvas, type CanvasRef } from 'react-native-webgpu';
 
 import { requestStageDevice } from '@/lib/holo3d/runtime/gpu';
@@ -11,6 +11,7 @@ import {
 	createHoloStage,
 } from '@/lib/holo3d/runtime/stage';
 import { reportHoloUnavailable } from '@/lib/holo3d/status';
+import { type GravitySample, tiltSensorEnabled } from '@/lib/holo3d/tilt';
 
 export type HoloStageCanvasProps = {
 	mode: 'pager' | 'single';
@@ -33,6 +34,27 @@ export type HoloStageCanvasProps = {
 /** Frames to wait for a non-zero layout before giving up on the context. */
 const CONTEXT_RETRY_FRAMES = 30;
 
+type GravitySource = () => GravitySample | null;
+
+/**
+ * Registers the gravity sensor while mounted (only when tilt is live) and exposes a JS-thread
+ * reader. The frame loop pulls `.get()` from there — the sample never goes through an animated
+ * style or a worklet, so nothing here crosses the UI-thread boundary.
+ */
+function GravitySensor({ sourceRef }: { sourceRef: RefObject<GravitySource | null> }) {
+	const { sensor } = useAnimatedSensor(SensorType.GRAVITY, { interval: 'auto' });
+	useEffect(() => {
+		sourceRef.current = () => {
+			const { x, y, z } = sensor.get();
+			return { x, y, z };
+		};
+		return () => {
+			sourceRef.current = null;
+		};
+	}, [sensor, sourceRef]);
+	return null;
+}
+
 /**
  * The WebGPU canvas + its stage controller. The only module that imports three.js — loaded
  * lazily (components/holo-stage.tsx) so three never evaluates at app start. Mount-once: layout
@@ -41,6 +63,7 @@ const CONTEXT_RETRY_FRAMES = 30;
 export default function HoloStageCanvas(props: HoloStageCanvasProps) {
 	const ref = useRef<CanvasRef>(null);
 	const controllerRef = useRef<HoloStageController | null>(null);
+	const gravityRef = useRef<GravitySource | null>(null);
 	// Latest props for the async setup + controller callbacks (written after render, never during).
 	const latest = useRef(props);
 	useEffect(() => {
@@ -78,6 +101,7 @@ export default function HoloStageCanvas(props: HoloStageCanvasProps) {
 				cardWidth: p.cardWidth,
 				pageWidth: p.pageWidth,
 				getScrollX: () => latest.current.scrollX?.get() ?? 0,
+				getGravity: () => gravityRef.current?.() ?? null,
 				onFirstFrame: () => latest.current.onReadyChange(true),
 				onFacesChange: (faces) => latest.current.onFacesChange(faces),
 				onError: (reason) => reportHoloUnavailable(reason),
@@ -128,5 +152,12 @@ export default function HoloStageCanvas(props: HoloStageCanvasProps) {
 		else controllerRef.current?.resume();
 	}, [props.paused]);
 
-	return <Canvas ref={ref} style={StyleSheet.absoluteFill} />;
+	return (
+		<>
+			{tiltSensorEnabled(props.reduceMotion, props.paused) ? (
+				<GravitySensor sourceRef={gravityRef} />
+			) : null}
+			<Canvas ref={ref} style={StyleSheet.absoluteFill} />
+		</>
+	);
 }

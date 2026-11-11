@@ -27,6 +27,7 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
+import { callAction } from '@/lib/call-action';
 import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
 import { cn } from '@/lib/utils';
 import { type BulkItemResult, runBulkSequential } from '@app/bulk-run';
@@ -120,6 +121,14 @@ export type EnrichmentSummary = {
 
 type EditableField = 'title' | 'publisher' | 'era' | 'date_published';
 
+/** Spoken name of each inline-edit field; the input reads "<field> of <book title>". */
+const FIELD_LABELS: Record<EditableField, string> = {
+	title: 'Title',
+	publisher: 'Publisher',
+	era: 'Era',
+	date_published: 'Publication date',
+};
+
 declare module '@tanstack/react-table' {
 	interface TableMeta<TData extends RowData> {
 		updateField: (id: string, field: EditableField, value: string | null) => void;
@@ -154,7 +163,7 @@ function DeleteBookCell({
 				<Button
 					variant="ghost"
 					size="sm"
-					className="h-7 text-muted-foreground hover:text-destructive"
+					className="h-7 text-muted-foreground hover:text-destructive-text"
 					aria-label={`Delete ${title}`}
 				>
 					<Trash2 className="size-3.5" />
@@ -171,6 +180,7 @@ function DeleteBookCell({
 				</AlertDialogHeader>
 				<Input
 					autoFocus
+					aria-label={`Type ${slug} to confirm deletion`}
 					value={typed}
 					placeholder={slug}
 					onChange={(e) => setTyped(e.target.value)}
@@ -182,7 +192,7 @@ function DeleteBookCell({
 						disabled={typed.trim() !== slug || pending}
 						onClick={() =>
 							startDelete(async () => {
-								const res = await deleteBook(id, typed.trim());
+								const res = await callAction(() => deleteBook(id, typed.trim()), 'Delete failed');
 								if (res.ok) {
 									toast.success(`Deleted “${title}”`);
 									setOpen(false);
@@ -203,21 +213,39 @@ function DeleteBookCell({
 
 function EditableText({
 	value,
+	field,
+	bookTitle,
 	nullable,
 	mono,
 	onCommit,
 }: {
 	value: string | null;
+	field: EditableField;
+	bookTitle: string;
 	nullable: boolean;
 	mono?: boolean;
 	onCommit: (next: string | null) => void;
 }) {
 	const [editing, setEditing] = useState(false);
 	const [draft, setDraft] = useState(value ?? '');
+	// Set only by Enter/Escape: the remounted display button takes focus back so keyboard
+	// users stay on the cell. Blur (click or tab away) leaves it false and focus alone.
+	const refocus = useRef(false);
+
+	const close = (restoreFocus: boolean) => {
+		refocus.current = restoreFocus;
+		setEditing(false);
+	};
 
 	if (!editing) {
 		return (
 			<button
+				ref={(el) => {
+					if (el && refocus.current) {
+						refocus.current = false;
+						el.focus();
+					}
+				}}
 				type="button"
 				className={cn(
 					'w-full cursor-text rounded px-1 py-0.5 text-left hover:bg-secondary/60',
@@ -234,8 +262,8 @@ function EditableText({
 		);
 	}
 
-	const commit = () => {
-		setEditing(false);
+	const commit = (restoreFocus: boolean) => {
+		close(restoreFocus);
 		const trimmed = draft.trim();
 		const next = trimmed === '' ? (nullable ? null : value) : trimmed;
 		if (next !== value) onCommit(next);
@@ -244,13 +272,18 @@ function EditableText({
 	return (
 		<Input
 			autoFocus
+			aria-label={`${FIELD_LABELS[field]} of ${bookTitle}`}
 			value={draft}
 			className={cn('h-7 px-1 py-0.5', mono && 'font-mono text-xs')}
 			onChange={(e) => setDraft(e.target.value)}
-			onBlur={commit}
+			// Skip the blur a browser may fire as Enter/Escape unmounts the input: it would
+			// clear the refocus flag (and on Escape, save the discarded draft).
+			onBlur={() => {
+				if (!refocus.current) commit(false);
+			}}
 			onKeyDown={(e) => {
-				if (e.key === 'Enter') commit();
-				if (e.key === 'Escape') setEditing(false);
+				if (e.key === 'Enter') commit(true);
+				if (e.key === 'Escape') close(true);
 			}}
 		/>
 	);
@@ -283,6 +316,8 @@ function editableCell(field: EditableField, opts: { nullable: boolean; mono?: bo
 	return ({ getValue, row, table }: CellContext<RowWithIssues, string | null>) => (
 		<EditableText
 			value={getValue()}
+			field={field}
+			bookTitle={row.original.title}
 			nullable={opts.nullable}
 			mono={opts.mono}
 			onCommit={(next) => table.options.meta?.updateField(row.original.id, field, next)}
@@ -340,6 +375,8 @@ const columns = [
 			<div className="min-w-[220px]">
 				<EditableText
 					value={getValue()}
+					field="title"
+					bookTitle={row.original.title}
 					nullable={false}
 					onCommit={(next) => table.options.meta?.updateField(row.original.id, 'title', next)}
 				/>
@@ -525,7 +562,7 @@ export function BooksTable({
 
 	function recheck() {
 		startRecheck(async () => {
-			const res = await recheckWiki();
+			const res = await callAction(() => recheckWiki(), 'Recheck failed');
 			if (!res.ok) {
 				toast.error(res.error.message);
 				return;
@@ -553,12 +590,14 @@ export function BooksTable({
 		);
 		startTransition(async () => {
 			applyOptimistic({ id, field, value });
-			const res = await queueRowSave(
-				saveQueue,
-				id,
-				loadedAt,
-				(at) => patchBook(id, at, { [field]: value }),
-				(r) => (r.ok ? r.data.updated_at : undefined),
+			const res = await callAction(() =>
+				queueRowSave(
+					saveQueue,
+					id,
+					loadedAt,
+					(at) => patchBook(id, at, { [field]: value }),
+					(r) => (r.ok ? r.data.updated_at : undefined),
+				),
 			);
 			if (res.ok) {
 				const { updated_at } = res.data;
@@ -589,6 +628,11 @@ export function BooksTable({
 		onGlobalFilterChange: setGlobalFilter,
 		onRowSelectionChange: setRowSelection,
 		enableRowSelection: true,
+		// No pagination here. Left on, a pending optimistic edit hands the table
+		// a new `data` array every render, each one queues a page-index reset,
+		// and that render loop starves the transition that reverts the edit and
+		// clears every `useTransition` pending flag (Delete stuck spinning, #210).
+		autoResetPageIndex: false,
 		getCoreRowModel: getCoreRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
@@ -707,7 +751,7 @@ export function BooksTable({
 					</Button>
 				</div>
 				{enrichment.error ? (
-					<p className="px-3 text-destructive text-xs">{enrichment.error}</p>
+					<p className="px-3 text-destructive-text text-xs">{enrichment.error}</p>
 				) : (
 					ENRICHMENT_STATUSES.map((status) => (
 						<button
@@ -735,7 +779,7 @@ export function BooksTable({
 							)}
 							{!enrichment.pinsAvailable && <li>Pin file not on this deploy: pins not shown.</li>}
 							{enrichment.pinErrors > 0 && (
-								<li className="text-destructive">
+								<li className="text-destructive-text">
 									data/enrichment-pins.json has {enrichment.pinErrors} invalid pin(s).
 								</li>
 							)}
@@ -746,6 +790,8 @@ export function BooksTable({
 			<div className="min-w-0 flex-1 space-y-3">
 				<div className="flex flex-wrap items-center gap-3">
 					<Input
+						type="search"
+						aria-label="Filter catalog"
 						placeholder="Filter by title, author, series, publisher…"
 						value={globalFilter}
 						onChange={(e) => setGlobalFilter(e.target.value)}

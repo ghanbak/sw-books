@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
+import { callAction } from '@/lib/call-action';
 import { cn } from '@/lib/utils';
 import { createSaveGate, serializeSave } from '@app/serial-save';
 import {
@@ -43,6 +44,12 @@ import { type ReactNode, startTransition, useState, useTransition } from 'react'
 import { toast } from 'sonner';
 
 type BookRow = Database['public']['Tables']['books']['Row'];
+
+const SOURCE_LABELS: Record<Source, string> = {
+	current: 'current record',
+	ol: 'Open Library',
+	gb: 'Google Books',
+};
 
 const LABELS: Record<DiffField, string> = {
 	cover_image: 'Cover',
@@ -90,7 +97,7 @@ export function DiffView({ book }: { book: BookRow }) {
 
 	function runLookup() {
 		startLookup(async () => {
-			const res = await lookupCandidates(book.slug);
+			const res = await callAction(() => lookupCandidates(book.slug));
 			if (res.ok) {
 				setCandidates(res.data);
 				const olEmpty = Object.keys(res.data.ol).length === 0;
@@ -218,12 +225,24 @@ export function DiffView({ book }: { book: BookRow }) {
 						const v = scalar(book, candidates, field, source);
 						if (field === 'cover_image') {
 							return v ? (
-								<img
-									src={v}
-									alt=""
-									className="h-24 w-16 cursor-zoom-in rounded border border-border object-cover"
-									onClick={() => setEnlarged(v)}
-								/>
+								// Sits inside the row's <label>: preventDefault keeps the click from
+								// toggling the radio, stopPropagation keeps it out of the row.
+								<button
+									type="button"
+									aria-label={`Enlarge cover from ${SOURCE_LABELS[source]}`}
+									className="cursor-zoom-in rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+									onClick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+										setEnlarged(v);
+									}}
+								>
+									<img
+										src={v}
+										alt={`Cover from ${SOURCE_LABELS[source]}`}
+										className="h-24 w-16 rounded border border-border object-cover"
+									/>
+								</button>
 							) : (
 								<span className="text-muted-foreground text-xs">—</span>
 							);
@@ -291,6 +310,7 @@ export function DiffView({ book }: { book: BookRow }) {
 					</div>
 					{replaceIsbn && (
 						<Input
+							aria-label="Confirm slug to replace ISBNs"
 							value={confirmSlug}
 							onChange={(e) => setConfirmSlug(e.target.value)}
 							placeholder={`type "${book.slug}" to confirm replace`}
@@ -338,7 +358,7 @@ export function DiffView({ book }: { book: BookRow }) {
 					<span className="text-muted-foreground text-sm">{Object.keys(patch).join(', ')}</span>
 				)}
 				{replaceBlocked && (
-					<span className="text-destructive text-sm">type the slug to confirm replace</span>
+					<span className="text-destructive-text text-sm">type the slug to confirm replace</span>
 				)}
 			</div>
 
@@ -371,6 +391,7 @@ function FieldRow({
 		<div className="grid grid-cols-[120px_1fr_1fr_1fr] items-start gap-3 border-border/60 border-b py-3">
 			<div className="pt-1 font-medium text-sm">{label}</div>
 			<RadioGroup
+				aria-label={label}
 				className="contents"
 				value={selected}
 				onValueChange={(v) => onSelect(v as Source)}
