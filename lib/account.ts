@@ -9,6 +9,7 @@ import {
 	isAppleUser as hasAppleIdentity,
 } from '../supabase/functions/_shared/account-deletion';
 import { requestAppleCredential } from './auth';
+import { endGoogleSession } from './google-session';
 import { shelfQueue } from './shelf-queue';
 import { supabase } from './supabase';
 
@@ -85,7 +86,7 @@ export async function deleteAccount(opts?: {
 	}
 	if (!data?.ok) throw new Error(deleteAccountErrorMessage(data));
 
-	await signOutLocally().catch(() => {});
+	await signOutAfterAccountDeletion().catch(() => {});
 	return { appleRevoked: data.appleRevoked };
 }
 
@@ -111,6 +112,7 @@ export async function signOut(): Promise<{ error: Error | null }> {
 		const { error } = await supabase.auth.signOut();
 		if (!error) {
 			await shelfQueue.clearAll();
+			await endGoogleSession();
 			return { error: null };
 		}
 	} catch {
@@ -124,6 +126,15 @@ export async function signOut(): Promise<{ error: Error | null }> {
 	}
 }
 
+/**
+ * Local sign-out once the account is deleted server-side: also revokes the app's Google
+ * grant (best-effort), then `signOutLocally`.
+ */
+export async function signOutAfterAccountDeletion(): Promise<void> {
+	await endGoogleSession({ revoke: true });
+	await signOutLocally();
+}
+
 type SessionRemover = { _removeSession?: () => Promise<void> };
 
 /**
@@ -132,6 +143,8 @@ type SessionRemover = { _removeSession?: () => Promise<void> };
  */
 export async function signOutLocally(): Promise<void> {
 	deletionAccessToken = undefined;
+	// Best-effort and bounded; after a revoke there is no Google session left, so it no-ops.
+	await endGoogleSession();
 	// First: signOut can return early without clearing anything if the session read fails.
 	await shelfQueue.clearAll();
 	const { error } = await supabase.auth.signOut({ scope: 'local' });
