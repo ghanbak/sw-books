@@ -23,6 +23,7 @@ import {
 } from './shelf';
 import { supabase } from './supabase';
 import type { Database } from './types';
+import { isUuid } from './uuid';
 import { type Enrichment, parseEnrichment } from './wookieepedia/enrichment';
 
 export type Book = Database['public']['Tables']['books']['Row'];
@@ -316,6 +317,10 @@ type BookEnrichmentState = {
 };
 
 function stateFromCache(bookId: string | undefined): BookEnrichmentState {
+	// A non-uuid id can't match a row (`book_id` is a uuid): no enrichment, no request.
+	if (bookId !== undefined && !isUuid(bookId)) {
+		return { bookId, status: 'ready', enrichment: null, fromCache: true };
+	}
 	if (bookId !== undefined && enrichmentCache.has(bookId)) {
 		return {
 			bookId,
@@ -340,7 +345,7 @@ export function useBookEnrichment(bookId: string | undefined) {
 		// `attempt` re-runs the fetch on retry.
 		void attempt;
 		if (bookId === undefined) return;
-		if (enrichmentCache.has(bookId)) {
+		if (!isUuid(bookId) || enrichmentCache.has(bookId)) {
 			setState((prev) =>
 				prev.bookId === bookId && prev.status === 'ready' ? prev : stateFromCache(bookId),
 			);
