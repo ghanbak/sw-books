@@ -30,7 +30,7 @@ export async function getDriftReport(): Promise<Result<DriftReport>> {
 		if (err instanceof DataDirUnavailableError) {
 			return { ok: true, data: { changedRows: [], summary: { rows: 0, fields: 0 } } };
 		}
-		throw err;
+		return backupReadError(err);
 	}
 	if (text === null) {
 		return {
@@ -38,12 +38,28 @@ export async function getDriftReport(): Promise<Result<DriftReport>> {
 			error: { code: 'NO_BACKUP', message: `data/${BACKUP_FILE} is missing.` },
 		};
 	}
+	let backup: ReturnType<typeof parseCsv>;
+	try {
+		backup = parseCsv(text);
+	} catch (err) {
+		return backupReadError(err);
+	}
 
 	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: rows, error } = await supabaseAdmin.from('books').select('*');
 	if (error) return { ok: false, error: dbError('getDriftReport', error) };
 
-	return { ok: true, data: diffAgainstBackup(rows ?? [], parseCsv(text)) };
+	return { ok: true, data: diffAgainstBackup(rows ?? [], backup) };
+}
+
+/** A read or parse failure degrades the drift check instead of rejecting the page. */
+function backupReadError(err: unknown): { ok: false; error: ActionError } {
+	// The raw error can carry absolute paths; it stays in the server log.
+	console.error('[admin:getDriftReport]', err);
+	return {
+		ok: false,
+		error: { code: 'BACKUP_READ', message: `could not read data/${BACKUP_FILE} (see server log)` },
+	};
 }
 
 /**
