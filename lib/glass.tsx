@@ -1,5 +1,5 @@
 import type { GlassViewProps } from 'expo-glass-effect';
-import { Platform, type ViewProps } from 'react-native';
+import { Platform } from 'react-native';
 
 // Safe wrapper around expo-glass-effect.
 //
@@ -28,7 +28,7 @@ if (Platform.OS === 'ios') {
 // so glass surfaces match our tokens regardless of the system appearance — without
 // this, glass renders light when the device is in Light mode.
 // `tintColor` / `isInteractive` pass through for tinted glass buttons (pass a token).
-export function GlassView(props: ViewProps & Pick<GlassViewProps, 'tintColor' | 'isInteractive'>) {
+export function GlassView(props: GlassViewProps) {
 	if (!RealGlassView) return null;
 	return <RealGlassView colorScheme="dark" {...props} />;
 }

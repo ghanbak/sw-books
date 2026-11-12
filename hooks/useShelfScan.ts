@@ -6,8 +6,17 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { AppState } from 'react-native';
 
 import { useAuth } from '@/lib/auth';
-import { useBooks, useUserBooks } from '@/lib/hooks';
+import { type Book, useBooks, useUserBooks } from '@/lib/hooks';
 import { recognizeImage } from '@/lib/ocr';
+import {
+	type BarcodeOutcome,
+	buildIsbnIndex,
+	highConfidenceBooks,
+	isRepeatBarcode,
+	mergeCapturedIntoMatches,
+	prependCaptured,
+	resolveBarcode,
+} from '@/lib/scan-capture';
 import { useScanSession } from '@/lib/scan-session';
 import { ADD_OFFLINE_CODE, defaultSelection, pruneOwned } from '@/lib/shelf';
 import { shelfQueue } from '@/lib/shelf-queue';
@@ -16,7 +25,6 @@ import {
 	atCaptureCap,
 	createCaptureGate,
 	createStillNamer,
-	ghostUri,
 	initialShelfScanState,
 	pendingOcrCount,
 	shelfScanReducer,
@@ -83,6 +91,7 @@ export function useShelfScan({
 	const { draft, setDraft, getDraft } = useScanSession();
 
 	const index = useMemo(() => buildCatalogIndex(books), [books]);
+	const isbnIndex = useMemo(() => buildIsbnIndex(books), [books]);
 
 	// Resume straight into Review when a draft survived a tab switch (the draft lives
 	// in ScanSessionProvider precisely because native tabs unmount this screen).
@@ -101,6 +110,17 @@ export function useShelfScan({
 	// Consecutive capture failures → a user-visible banner (see CAPTURE_FAILURE_LIMIT).
 	const captureFailureStreakRef = useRef(0);
 	const [captureError, setCaptureError] = useState<string | null>(null);
+
+	// Books recognized so far (OCR or barcode), newest first — what the tray shows. The
+	// ref is the truth at call time: a barcode and an OCR match can land in one batch.
+	const [captured, setCapturedState] = useState<Book[]>([]);
+	const capturedRef = useRef<Book[]>(captured);
+	const setCaptured = useCallback((next: Book[]) => {
+		if (next === capturedRef.current) return;
+		capturedRef.current = next;
+		setCapturedState(next);
+	}, []);
+	const lastBarcodeRef = useRef<{ data: string; at: number } | null>(null);
 
 	// The component wires setCameraRef + onCameraReady to its <CameraView>; capture()
 	// calls takePictureAsync via cameraRef. takePictureAsync throws before the camera is
@@ -306,6 +326,22 @@ export function useShelfScan({
 		return () => subscription.remove();
 	}, []);
 
+	// Live tray: re-match the pooled fragments as each still's OCR lands, and prepend any
+	// newly confident book. Fragments only grow within a session (reset empties them).
+	const fragmentCount = state.fragments.length;
+	useEffect(() => {
+		if (fragmentCount === 0) return;
+		const { phase, fragments } = stateRef.current;
+		if (phase !== 'capturing' && phase !== 'interrupted') return;
+		let matches: SpineMatch[] = [];
+		try {
+			matches = matchFragments(fragments, index);
+		} catch (cause) {
+			if (__DEV__) console.warn('[shelf-scan] live matching failed:', cause);
+		}
+		setCaptured(prependCaptured(capturedRef.current, highConfidenceBooks(matches)));
+	}, [fragmentCount, index, setCaptured]);
+
 	// Finish settles → match the pooled fragments and publish the draft. The draft —
 	// not this reducer — is what the review overlay (Phase 4) reads, and what
 	// survives tab switches. Always dispatches `matched`, even if the matcher throws —
@@ -319,17 +355,49 @@ export function useShelfScan({
 		} catch (cause) {
 			if (__DEV__) console.warn('[shelf-scan] matching failed:', cause);
 		}
+		// Every tray book reaches review, incl. barcodes and stills whose OCR settled after
+		// the last live pass.
+		const tray = prependCaptured(capturedRef.current, highConfidenceBooks(matches));
+		setCaptured(tray);
+		const reviewed = mergeCapturedIntoMatches(matches, tray);
 		setDraft(
-			matches.length > 0
+			reviewed.length > 0
 				? {
 						ownerUserId: user?.id ?? null,
-						matches,
-						selected: defaultSelection(matches, userBooks),
+						matches: reviewed,
+						selected: defaultSelection(reviewed, userBooks),
 					}
 				: null,
 		);
-		dispatch({ type: 'matched', matchCount: matches.length });
-	}, [processingSettled, index, setDraft, user?.id, userBooks]);
+		dispatch({ type: 'matched', matchCount: reviewed.length });
+	}, [processingSettled, index, setDraft, setCaptured, user?.id, userBooks]);
+
+	/**
+	 * Continuous ISBN scanning: each catalog barcode prepends to the tray until Finish.
+	 * Returns null for ignored frames (not capturing, or the same code still in view), so
+	 * the caller only reacts to a real outcome.
+	 */
+	const scanBarcode = useCallback(
+		(data: string): BarcodeOutcome | null => {
+			if (stateRef.current.phase !== 'capturing') return null;
+			const now = Date.now();
+			const repeat = isRepeatBarcode(lastBarcodeRef.current, data, now);
+			// Refresh on every frame: a code held in view stays one scan.
+			lastBarcodeRef.current = { data, at: now };
+			if (repeat) return null;
+			const outcome = resolveBarcode(data, isbnIndex, capturedRef.current);
+			if (outcome.type === 'added') {
+				setCaptured(prependCaptured(capturedRef.current, [outcome.book]));
+				Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+			}
+			return outcome;
+		},
+		[isbnIndex, setCaptured],
+	);
+	/** After an error overlay is dismissed, the same code may be scanned again at once. */
+	const rearmBarcode = useCallback(() => {
+		lastBarcodeRef.current = null;
+	}, []);
 
 	/** Batch-add the draft's selection to the owned shelf (Review → Adding → Done). */
 	const addInFlightRef = useRef(false);
@@ -408,9 +476,11 @@ export function useShelfScan({
 		setQueuedCount(0);
 		captureFailureStreakRef.current = 0;
 		setCaptureError(null);
+		setCaptured([]);
+		lastBarcodeRef.current = null;
 		setDraft(null);
 		dispatch({ type: 'reset' });
-	}, [setDraft]);
+	}, [setDraft, setCaptured]);
 
 	// Account-switch safety net: ScanSessionProvider clears the draft when a different
 	// user signs in — a Review with nothing to review must fall back to capturing.
@@ -425,8 +495,11 @@ export function useShelfScan({
 		/** Wire to `<CameraView ref={setCameraRef} onCameraReady={onCameraReady}>`. */
 		setCameraRef,
 		onCameraReady,
-		ghostUri: ghostUri(state),
 		captureCount: state.captures.length,
+		/** Recognized books, newest first (tray order). */
+		captured,
+		scanBarcode,
+		rearmBarcode,
 		atCap: atCaptureCap(state),
 		maxCaptures: SHELF_SCAN_CONSTANTS.MAX_CAPTURES,
 		/** Manual shutter — the VoiceOver/TalkBack path, and an impatience escape hatch. */

@@ -1,8 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CameraView } from 'expo-camera';
-import { Image } from 'expo-image';
+import { type BarcodeScanningResult, CameraView } from 'expo-camera';
 import { SymbolView } from 'expo-symbols';
-import { type MutableRefObject, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, {
 	FadeIn,
@@ -16,6 +15,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+// Swap to '@/components/scan-tray' once #75 lands on the feature branch.
+import { ScanTray } from '@/components/scan-tray-placeholder';
 import { ShelfScanQueued } from '@/components/shelf-scan-queued';
 import { ShelfScanReview } from '@/components/shelf-scan-review';
 import { GlassButton } from '@/components/ui/glass-button';
@@ -23,7 +24,9 @@ import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce, useReduceMotion, useScreenReaderEnabled } from '@/hooks/useAccessibility';
 import { useShelfScan } from '@/hooks/useShelfScan';
-import { finishScanLabel, photosCapturedLabel, shelfIntroCopy } from '@/lib/scan-a11y';
+import { GlassView, liquidGlassAvailable } from '@/lib/glass';
+import { photosCapturedLabel, shelfIntroCopy } from '@/lib/scan-a11y';
+import { finishCapturedLabel } from '@/lib/scan-capture';
 import {
 	SCAN_INTRO_BUTTON,
 	SCAN_INTRO_BUTTON_HINT,
@@ -37,30 +40,26 @@ const INTRO_SEEN_KEY = '@ossus/scan_intro_seen';
 const INTRO_STAGGER_MS = 100;
 const INTRO_ENTER_MS = 240;
 
+/** A barcode result that takes over the screen until dismissed (the old ISBN view's errors). */
+type BarcodeNotice = { type: 'not_star_wars'; isbn: string } | { type: 'invalid' } | null;
+
 /**
- * The shelf-scanner capture experience (plan Phase 3): silent hands-free
- * auto-capture with a ghost of the previous still as the overlap guide, a
- * per-capture flash + counter-pulse flourish, and the Finish → Processing →
- * Review/Empty hand-off, then the Phase 4 review overlay.
+ * The unified scan view (#106): one camera that auto-captures shelf/cover stills for
+ * OCR and reads ISBN barcodes at the same time. Every recognized book prepends to the
+ * tray above the Finish button; Finish hands the tray (plus the final match pass) to
+ * the existing review step. Screen-reader users keep the manual shutter, since the
+ * auto-capture steadiness gate needs sight of the framing.
  *
- * Phase 5: shows a one-time intro before the first capture, reports its chrome
- * state up so the host can place + guard the mode switcher, and surfaces a
- * capture-failure banner.
- *
- * @param enabled tab focus (+ permission, gated by the host).
- * @param onImmersiveChange notifies the host when the review overlay takes/leaves the
- *   screen (drives switcher visibility — lag-tolerant, so a state callback is fine).
- * @param dirtyRef set each commit to whether a switch would discard work; the host's
- *   discard-confirm reads it at tap time, so it must NOT lag a frame behind a capture.
+ * @param enabled screen focus (+ permission and catalog, gated by the host).
+ * @param onImmersiveChange notifies the host when review takes/leaves the screen (it
+ *   hides the close button, since review owns its own navigation).
  */
 export function ShelfScanCapture({
 	enabled,
 	onImmersiveChange,
-	dirtyRef,
 }: {
 	enabled: boolean;
 	onImmersiveChange?: (immersive: boolean) => void;
-	dirtyRef?: MutableRefObject<boolean>;
 }) {
 	const insets = useSafeAreaInsets();
 	const reduceMotion = useReduceMotion();
@@ -81,26 +80,25 @@ export function ShelfScanCapture({
 		};
 	}, []);
 
+	const [barcodeNotice, setBarcodeNotice] = useState<BarcodeNotice>(null);
+
 	// Camera + sensors run only once the intro is dismissed, so auto-capture can't
-	// fire behind the modal.
+	// fire behind the modal. A barcode notice pauses auto-capture but keeps the feed.
 	const active = enabled && introSeen === true;
-	// Screen-reader users get a pure manual-shutter flow — auto-capture's steadiness gate
-	// is unusable without seeing the framing, and a surprise fire is worse than none.
-	const scan = useShelfScan({ enabled: active, manualOnly: screenReaderEnabled });
+	const scan = useShelfScan({
+		enabled: active && barcodeNotice === null,
+		manualOnly: screenReaderEnabled,
+	});
 	const { phase } = scan.state;
 	const showCamera = active && (phase === 'capturing' || phase === 'interrupted');
+	const bookCount = scan.captured.length;
 
-	// `immersive` drives switcher visibility (host state, a one-frame lag is invisible);
-	// `dirty` gates a destructive confirm, so it goes to a ref the host reads at tap time
-	// — the effect flushes before the next touch event, so the ref is never stale.
-	const { immersive, dirty } = deriveShelfChrome(phase, scan.captureCount);
+	const { immersive } = deriveShelfChrome(phase, scan.captureCount);
 	useEffect(() => {
-		if (dirtyRef) dirtyRef.current = dirty;
 		onImmersiveChange?.(immersive);
-	}, [dirtyRef, dirty, onImmersiveChange, immersive]);
+	}, [onImmersiveChange, immersive]);
 
-	// Screen-reader narration of the otherwise-silent flow (a sighted user reads this
-	// off the flash + counter + state overlays; a VoiceOver user can't).
+	// Screen-reader narration of the otherwise-silent flow.
 	const announcedCountRef = useRef(0);
 	useEffect(() => {
 		if (scan.captureCount > announcedCountRef.current) {
@@ -108,13 +106,37 @@ export function ShelfScanCapture({
 		}
 		announcedCountRef.current = scan.captureCount;
 	}, [scan.captureCount]);
+	const newestTitle = scan.captured[0]?.title;
+	const announcedBooksRef = useRef(0);
 	useEffect(() => {
-		if (phase === 'processing') announce('Reading spines. Matching against the Archive.');
+		if (bookCount > announcedBooksRef.current && newestTitle) announce(`Added ${newestTitle}`);
+		announcedBooksRef.current = bookCount;
+	}, [bookCount, newestTitle]);
+	useEffect(() => {
+		if (phase === 'processing') announce('Matching against the Archive.');
 		else if (phase === 'empty') announce('No books recognized. Keep scanning or start over.');
 	}, [phase]);
 	useEffect(() => {
 		if (scan.captureError) announce(scan.captureError);
 	}, [scan.captureError]);
+
+	const { scanBarcode, rearmBarcode } = scan;
+	const onBarcodeScanned = useCallback(
+		({ data }: BarcodeScanningResult) => {
+			const outcome = scanBarcode(data);
+			if (!outcome) return;
+			if (outcome.type === 'duplicate') announce(`${outcome.book.title} is already captured`);
+			else if (outcome.type === 'not_star_wars' || outcome.type === 'invalid') {
+				setBarcodeNotice(outcome);
+				announce(outcome.type === 'invalid' ? 'Invalid barcode' : 'Not in the Archive');
+			}
+		},
+		[scanBarcode],
+	);
+	const dismissNotice = useCallback(() => {
+		setBarcodeNotice(null);
+		rearmBarcode();
+	}, [rearmBarcode]);
 
 	const dismissIntro = useCallback(() => {
 		setIntroSeen(true);
@@ -123,9 +145,8 @@ export function ShelfScanCapture({
 		});
 	}, []);
 
-	// First run: explain the silent auto-capture model before the camera starts. Gated on
-	// `phase === 'capturing'` so a session resumed straight into Review (a draft survived a
-	// tab switch) skips the intro — that user has already scanned.
+	// First run: explain the scan model before the camera starts. Gated on
+	// `phase === 'capturing'` so a session resumed straight into Review skips it.
 	if (enabled && introSeen === false && phase === 'capturing') {
 		return (
 			<View style={styles.container}>
@@ -140,6 +161,8 @@ export function ShelfScanCapture({
 		);
 	}
 
+	const canFinish = bookCount > 0 || scan.captureCount > 0;
+
 	return (
 		<View style={styles.container}>
 			{showCamera && (
@@ -148,40 +171,30 @@ export function ShelfScanCapture({
 					style={StyleSheet.absoluteFill}
 					facing="back"
 					onCameraReady={scan.onCameraReady}
-				/>
-			)}
-
-			{/* Ghost of the previous still — a low-opacity overlap guide while panning. A
-			    short crossfade softens the swap to a freshly captured frame (the previous
-			    still is deleted the moment it stops being the ghost, so we can't hold it
-			    through a full pre-decode). Disabled under reduce-motion. */}
-			{showCamera && scan.ghostUri && (
-				<Image
-					source={{ uri: scan.ghostUri }}
-					style={styles.ghost}
-					contentFit="cover"
-					transition={reduceMotion ? 0 : 120}
-					accessible={false}
+					barcodeScannerSettings={{ barcodeTypes: ['ean13', 'upc_a'] }}
+					onBarcodeScanned={
+						phase === 'capturing' && barcodeNotice === null ? onBarcodeScanned : undefined
+					}
 				/>
 			)}
 
 			{/* Reduce-motion: no flash at all — gated here so the component has no early
-			    return after its hooks (and the difference from the counter is explicit). */}
+			    return after its hooks. */}
 			{showCamera && !reduceMotion && <CaptureFlash captureCount={scan.captureCount} />}
 
-			{/* HUD only while actually capturing — during Interrupted the shutter and
-			    Finish would render alive but dead (the reducer ignores them). */}
-			{showCamera && phase === 'capturing' && (
+			{/* HUD only while actually capturing — during Interrupted the controls would
+			    render alive but dead (the reducer ignores them). */}
+			{showCamera && phase === 'capturing' && barcodeNotice === null && (
 				<View style={styles.hud} pointerEvents="box-none">
 					<View style={[styles.hudTop, { paddingTop: insets.top + 60 }]}>
 						<Text style={styles.hint}>
 							{scan.atCap
-								? 'Photo limit reached — tap Finish to see your books'
+								? 'Photo limit reached. Scan barcodes or tap Finish.'
 								: screenReaderEnabled
-									? // Auto-capture relies on the visual ghost + steadiness; point the
-										// screen-reader path at the reliable manual shutter instead.
-										'Point at a shelf section, then double-tap Take Photo for each one. Tap Finish when done.'
-									: 'Pan slowly across your shelf — photos snap when you hold steady'}
+									? // Auto-capture relies on seeing the framing; point the screen-reader
+										// path at the manual shutter instead.
+										'Point at a shelf section and double-tap Take photo, or point at a barcode. Tap Finish when done.'
+									: 'Pan slowly across your shelf, or point at a book’s barcode'}
 						</Text>
 						{scan.captureCount > 0 && (
 							<CaptureCounter count={scan.captureCount} reduceMotion={reduceMotion} />
@@ -194,29 +207,43 @@ export function ShelfScanCapture({
 						</Animated.View>
 					)}
 
-					<View style={styles.hudBottom}>
-						<Pressable
-							style={styles.shutter}
-							onPress={scan.captureNow}
-							disabled={scan.atCap}
-							accessibilityRole="button"
-							accessibilityLabel="Take photo"
-							accessibilityHint={
-								scan.atCap ? 'Photo limit reached' : 'Captures a photo of your shelf now'
-							}
-							accessibilityState={{ disabled: scan.atCap }}
-						>
-							<View style={[styles.shutterInner, scan.atCap && styles.shutterDisabled]} />
-						</Pressable>
-						{scan.captureCount > 0 && (
+					<View style={[styles.hudBottom, { paddingBottom: insets.bottom + 16 }]}>
+						<ScanTray books={scan.captured} />
+						{screenReaderEnabled && (
 							<Pressable
-								style={styles.finishButton}
+								style={styles.shutter}
+								onPress={scan.captureNow}
+								disabled={scan.atCap}
+								accessibilityRole="button"
+								accessibilityLabel="Take photo"
+								accessibilityHint={
+									scan.atCap ? 'Photo limit reached' : 'Captures a photo of your shelf now'
+								}
+								accessibilityState={{ disabled: scan.atCap }}
+							>
+								<View style={[styles.shutterInner, scan.atCap && styles.shutterDisabled]} />
+							</Pressable>
+						)}
+						{canFinish && (
+							<Pressable
+								style={({ pressed }) => [styles.finishShape, pressed && styles.pressed]}
 								onPress={scan.finish}
 								accessibilityRole="button"
-								accessibilityLabel={finishScanLabel(scan.captureCount)}
-								accessibilityHint="Matches your photos against the Archive"
+								accessibilityLabel={finishCapturedLabel(bookCount)}
+								accessibilityHint="Opens review to add these books to your library"
 							>
-								<Text style={styles.finishText}>Finish</Text>
+								{liquidGlassAvailable ? (
+									<GlassView
+										style={[StyleSheet.absoluteFill, styles.finishGlass]}
+										tintColor={tokens.accent.primary}
+										isInteractive
+									/>
+								) : (
+									<View style={[StyleSheet.absoluteFill, styles.finishButton]} />
+								)}
+								<Text style={liquidGlassAvailable ? styles.finishGlassText : styles.finishText}>
+									Finish
+								</Text>
 							</Pressable>
 						)}
 					</View>
@@ -225,7 +252,45 @@ export function ShelfScanCapture({
 
 			{phase === 'interrupted' && (
 				<Animated.View style={styles.banner} entering={FadeIn.duration(200)}>
-					<Text style={styles.bannerText}>Paused — your captures are saved</Text>
+					<Text style={styles.bannerText}>Paused — your scan is saved</Text>
+				</Animated.View>
+			)}
+
+			{/* The old ISBN view's error states, kept: a barcode outside the catalog. */}
+			{showCamera && barcodeNotice && (
+				<Animated.View
+					style={styles.stateOverlay}
+					entering={FadeIn.duration(200)}
+					exiting={FadeOut.duration(200)}
+				>
+					{barcodeNotice.type === 'not_star_wars' ? (
+						<>
+							<Text style={styles.stateTitle} accessibilityRole="header">
+								Not in the Archive
+							</Text>
+							<Text style={styles.stateText}>
+								If an item does not appear in our records, it does not exist!
+							</Text>
+							<Text style={styles.stateIsbn} selectable>
+								ISBN: {barcodeNotice.isbn}
+							</Text>
+						</>
+					) : (
+						<>
+							<Text style={styles.stateTitle} accessibilityRole="header">
+								Invalid Barcode
+							</Text>
+							<Text style={styles.stateText}>Couldn't read a valid ISBN from that barcode.</Text>
+						</>
+					)}
+					<Pressable
+						style={styles.dismissButton}
+						onPress={dismissNotice}
+						accessibilityRole="button"
+						accessibilityHint="Returns to the scanner. Your captured books are kept."
+					>
+						<Text style={styles.secondaryButtonText}>Scan Another</Text>
+					</Pressable>
 				</Animated.View>
 			)}
 
@@ -259,7 +324,7 @@ export function ShelfScanCapture({
 					</Text>
 					<Text style={styles.stateText}>
 						Get closer so spine text fills more of the frame, check the lighting, and hold steady on
-						each section.
+						each section. A book may also not be in the Archive yet. Try its ISBN barcode.
 					</Text>
 					<Pressable
 						style={styles.primaryButton}
@@ -425,11 +490,6 @@ const styles = StyleSheet.create({
 		// True black behind the camera feed (same documented exception as scan.tsx).
 		backgroundColor: '#000',
 	},
-	ghost: {
-		...StyleSheet.absoluteFill,
-		opacity: 0.18,
-		pointerEvents: 'none',
-	},
 	flash: {
 		...StyleSheet.absoluteFill,
 		// Raw white flash over the live feed — part of the camera-overlay exception.
@@ -468,8 +528,8 @@ const styles = StyleSheet.create({
 		fontWeight: '700',
 	},
 	hudBottom: {
+		// paddingBottom is applied inline from the safe-area inset.
 		alignItems: 'center',
-		paddingBottom: 48,
 		gap: 16,
 	},
 	shutter: {
@@ -491,15 +551,35 @@ const styles = StyleSheet.create({
 	shutterDisabled: {
 		backgroundColor: 'rgba(255,255,255,0.25)',
 	},
+	finishShape: {
+		alignSelf: 'stretch',
+		marginHorizontal: 16,
+		height: 52,
+		borderRadius: 26,
+		borderCurve: 'continuous',
+		overflow: 'hidden',
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	pressed: {
+		opacity: 0.8,
+	},
+	// Glass shapes its rim from its own radius — match the capsule.
+	finishGlass: {
+		borderRadius: 26,
+	},
+	// Fallback fill where Liquid Glass isn't available.
 	finishButton: {
-		paddingHorizontal: 28,
-		paddingVertical: 12,
-		borderRadius: 8,
 		backgroundColor: tokens.accent.primary,
 	},
 	finishText: {
 		color: tokens.text.inverse,
-		fontSize: 15,
+		fontSize: 16,
+		fontWeight: '600',
+	},
+	finishGlassText: {
+		color: tokens.text.primary,
+		fontSize: 16,
 		fontWeight: '600',
 	},
 	errorBanner: {
@@ -620,7 +700,23 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 24,
 		paddingVertical: 12,
 		borderRadius: 8,
-		backgroundColor: 'rgba(255,255,255,0.12)',
+		backgroundColor: tokens.surface.card,
+		borderWidth: 1,
+		borderColor: tokens.border.subtle,
+	},
+	dismissButton: {
+		marginTop: 12,
+		paddingHorizontal: 24,
+		paddingVertical: 12,
+		borderRadius: 8,
+		backgroundColor: tokens.surface.card,
+		borderWidth: 1,
+		borderColor: tokens.border.subtle,
+	},
+	stateIsbn: {
+		color: tokens.text.tertiary,
+		fontSize: 12,
+		fontFamily: 'monospace',
 	},
 	secondaryButtonText: {
 		color: tokens.text.primary,
