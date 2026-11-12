@@ -2,6 +2,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { ActiveSeriesChip } from '@/components/active-series-chip';
 import { BookCard } from '@/components/book-card';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -16,6 +17,7 @@ import {
 	type CanonFilter,
 	DEFAULT_ARCHIVE_FILTERS,
 	type TypeFilter,
+	buildSeriesOptions,
 	filterArchiveBooks,
 } from '@/lib/archive-filters';
 import type { Book } from '@/lib/hooks';
@@ -27,12 +29,19 @@ export default function CatalogScreen() {
 	const [filters, setFilters] = useState<ArchiveFilters>(DEFAULT_ARCHIVE_FILTERS);
 	const setCanon = useCallback((canon: CanonFilter) => setFilters((f) => ({ ...f, canon })), []);
 	const setType = useCallback((type: TypeFilter) => setFilters((f) => ({ ...f, type })), []);
+	const setSeries = useCallback(
+		(series: string | null) => setFilters((f) => ({ ...f, series })),
+		[],
+	);
+	const clearSeries = useCallback(() => setSeries(null), [setSeries]);
 	const { sort, selectSort } = useCatalogSort('@ossus/catalog_sort');
 
 	const filteredBooks = useMemo(
 		() => filterArchiveBooks(books, filters, sort),
 		[books, filters, sort],
 	);
+	// Picker rows count books passing the canon/type pills, so each count is what tapping shows.
+	const seriesOptions = useMemo(() => buildSeriesOptions(books, filters), [books, filters]);
 
 	// Shelf state once per list; equal states share one object, so a toggle re-renders only its row.
 	const { userBooks } = useUserBooks();
@@ -63,7 +72,13 @@ export default function CatalogScreen() {
 	// ScrollView. Rows are recycled — HoloCover's per-row state is keyed to the cover URI.
 	return (
 		<>
-			<TabHeaderActions sort={sort} onSortChange={selectSort} />
+			<TabHeaderActions
+				sort={sort}
+				onSortChange={selectSort}
+				series={filters.series ?? null}
+				seriesOptions={seriesOptions}
+				onSeriesChange={setSeries}
+			/>
 			<FlashList
 				style={styles.list}
 				contentContainerStyle={filteredBooks.length === 0 ? styles.emptyContent : undefined}
@@ -81,6 +96,9 @@ export default function CatalogScreen() {
 							onChange={setCanon}
 						/>
 						<FilterPills options={ARCHIVE_TYPE_OPTIONS} value={filters.type} onChange={setType} />
+						{filters.series ? (
+							<ActiveSeriesChip series={filters.series} onClear={clearSeries} />
+						) : null}
 					</View>
 				}
 				ListEmptyComponent={listEmpty}
@@ -106,7 +124,7 @@ const styles = StyleSheet.create({
 	controls: {
 		paddingHorizontal: 12,
 		paddingVertical: 8,
-		// Each pill row's vertical hitSlop is 7pt; 16 keeps the two rows' tap areas from overlapping.
+		// Each pill row's vertical hitSlop is 7pt; 16 keeps adjacent rows' tap areas from overlapping.
 		gap: 16,
 	},
 });
