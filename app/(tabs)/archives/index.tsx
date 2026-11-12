@@ -2,37 +2,55 @@ import { FlashList } from '@shopify/flash-list';
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { ActiveSeriesChip } from '@/components/active-series-chip';
 import { BookCard } from '@/components/book-card';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { TabHeaderActions } from '@/components/tab-header-actions';
-import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
-import { Text } from '@/components/ui/text';
+import { FilterPills } from '@/components/ui/filter-pills';
 import { tokens } from '@/constants/tokens';
 import { useCatalogSort } from '@/hooks/useCatalogSort';
+import {
+	ARCHIVE_CANON_OPTIONS,
+	ARCHIVE_TYPE_OPTIONS,
+	type ArchiveFilters,
+	type CanonFilter,
+	DEFAULT_ARCHIVE_FILTERS,
+	type TypeFilter,
+	buildSeriesOptions,
+	filterArchiveBooks,
+} from '@/lib/archive-filters';
 import type { Book } from '@/lib/hooks';
-import { useBooks } from '@/lib/hooks';
-import { sortBooks } from '@/lib/sort';
-
-type CanonFilter = 'all' | 'Canon' | 'Legends';
-
-const CANON_OPTIONS: FilterPillOption<CanonFilter>[] = [
-	{ key: 'all', label: 'All' },
-	{ key: 'Canon', label: 'Canon' },
-	{ key: 'Legends', label: 'Legends' },
-];
+import { useBooks, useUserBooks } from '@/lib/hooks';
+import { shelfStatesByBook } from '@/lib/shelf-state';
 
 export default function CatalogScreen() {
 	const { books, loading, error, refetch } = useBooks();
-	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
+	const [filters, setFilters] = useState<ArchiveFilters>(DEFAULT_ARCHIVE_FILTERS);
+	const setCanon = useCallback((canon: CanonFilter) => setFilters((f) => ({ ...f, canon })), []);
+	const setType = useCallback((type: TypeFilter) => setFilters((f) => ({ ...f, type })), []);
+	const setSeries = useCallback(
+		(series: string | null) => setFilters((f) => ({ ...f, series })),
+		[],
+	);
+	const clearSeries = useCallback(() => setSeries(null), [setSeries]);
 	const { sort, selectSort } = useCatalogSort('@ossus/catalog_sort');
 
-	const filteredBooks = useMemo(() => {
-		const result = canonFilter === 'all' ? books : books.filter((b) => b.canon === canonFilter);
-		return sortBooks(result, sort);
-	}, [books, canonFilter, sort]);
+	const filteredBooks = useMemo(
+		() => filterArchiveBooks(books, filters, sort),
+		[books, filters, sort],
+	);
+	// Picker rows count books passing the canon/type pills, so each count is what tapping shows.
+	const seriesOptions = useMemo(() => buildSeriesOptions(books, filters), [books, filters]);
 
-	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
+	// Shelf state once per list; equal states share one object, so a toggle re-renders only its row.
+	const { userBooks } = useUserBooks();
+	const shelfByBook = useMemo(() => shelfStatesByBook(userBooks), [userBooks]);
+
+	const renderItem = useCallback(
+		({ item }: { item: Book }) => <BookCard book={item} shelf={shelfByBook.get(item.id)} />,
+		[shelfByBook],
+	);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
 	// Loading/error/empty render as the list's ListEmptyComponent on an always-mounted FlashList —
@@ -54,7 +72,13 @@ export default function CatalogScreen() {
 	// ScrollView. Rows are recycled — HoloCover's per-row state is keyed to the cover URI.
 	return (
 		<>
-			<TabHeaderActions sort={sort} onSortChange={selectSort} />
+			<TabHeaderActions
+				sort={sort}
+				onSortChange={selectSort}
+				series={filters.series ?? null}
+				seriesOptions={seriesOptions}
+				onSeriesChange={setSeries}
+			/>
 			<FlashList
 				style={styles.list}
 				contentContainerStyle={filteredBooks.length === 0 ? styles.emptyContent : undefined}
@@ -66,7 +90,15 @@ export default function CatalogScreen() {
 				onRefresh={refetch}
 				ListHeaderComponent={
 					<View style={styles.controls}>
-						<FilterPills options={CANON_OPTIONS} value={canonFilter} onChange={setCanonFilter} />
+						<FilterPills
+							options={ARCHIVE_CANON_OPTIONS}
+							value={filters.canon}
+							onChange={setCanon}
+						/>
+						<FilterPills options={ARCHIVE_TYPE_OPTIONS} value={filters.type} onChange={setType} />
+						{filters.series ? (
+							<ActiveSeriesChip series={filters.series} onClear={clearSeries} />
+						) : null}
 					</View>
 				}
 				ListEmptyComponent={listEmpty}
@@ -92,5 +124,7 @@ const styles = StyleSheet.create({
 	controls: {
 		paddingHorizontal: 12,
 		paddingVertical: 8,
+		// Each pill row's vertical hitSlop is 7pt; 16 keeps adjacent rows' tap areas from overlapping.
+		gap: 16,
 	},
 });
