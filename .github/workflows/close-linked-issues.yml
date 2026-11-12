@@ -4,7 +4,9 @@ name: Close linked issues
 # processing for GITHUB_TOKEN-attributed merges, so `Closes #n` never closed
 # anything (#137). This scheduled job closes the issues GitHub links from PRs
 # merged into main. Scheduled runs aren't affected by that GITHUB_TOKEN limit.
-# Idempotent: already-closed issues are skipped.
+# Selection lives in scripts/close-linked-issues.mts: already-closed issues,
+# cross-repo refs, and issues reopened after their PR merged are skipped, so a
+# manual reopen sticks.
 on:
   schedule:
     - cron: '*/30 * * * *'
@@ -13,6 +15,10 @@ on:
       days:
         description: Look back this many days of merged PRs
         default: '3'
+      dry_run:
+        description: List issues that would close without closing them
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -29,15 +35,16 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       REPO: ${{ github.repository }}
       DAYS: ${{ inputs.days || '3' }}
+      DRY_RUN: ${{ inputs.dry_run || false }}
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
       - name: Close issues linked from merged PRs
         run: |
-          since=$(date -u -d "$DAYS days ago" +%Y-%m-%d)
-          gh pr list -R "$REPO" --state merged --base main --search "merged:>=$since" --limit 500 \
-            --json number,closingIssuesReferences \
-            --jq '.[] | .number as $pr | .closingIssuesReferences[] | "\($pr) \(.number)"' |
-          while read -r pr issue; do
-            [ "$(gh issue view "$issue" -R "$REPO" --json state -q .state)" = OPEN ] || continue
-            gh issue close "$issue" -R "$REPO" --reason completed --comment "🤖 close-linked-issues: closed by #$pr."
-            echo "closed #$issue (#$pr)"
-          done
+          if [ "$DRY_RUN" = true ]; then
+            node scripts/close-linked-issues.mts --dry-run
+          else
+            node scripts/close-linked-issues.mts
+          fi
