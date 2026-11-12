@@ -4,9 +4,11 @@ import { getDriftReport } from '@/app/_actions/export';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { IS_HOSTED } from '@/lib/admin-allowlist';
+import { type DriftChipTone, driftChip } from '@/lib/drift-chip';
 import { contextPageIds, deriveStates, getWikiInfo, loadEnrichmentContext } from '@/lib/enrichment';
 import { ISSUE_DEFS, type IssueKey, issuesFor } from '@/lib/issues';
 import { getDbTarget, getSupabaseAdmin } from '@/lib/supabase-admin';
+import { cn } from '@/lib/utils';
 import { dbError } from '@app/action-errors';
 import { ENRICHMENT_STATUSES, type EnrichmentStatus } from '@app/wookieepedia/enrichment-status';
 import { Plus } from 'lucide-react';
@@ -16,6 +18,13 @@ import { DbTargetSwitch } from './_components/db-target-switch';
 
 // Always read live from the local DB; never cache/pre-render the catalog.
 export const dynamic = 'force-dynamic';
+
+// Same tones as the enrichment status chips (saber-yellow pinned, destructive flagged).
+const DRIFT_TONES: Record<DriftChipTone, string> = {
+	clean: 'text-muted-foreground',
+	unsaved: 'border-saber-yellow/40 bg-saber-yellow/10 text-saber-yellow',
+	error: 'border-destructive/50 bg-destructive/15 text-destructive-text',
+};
 
 // Slugs whose cover hash landed in a duplicate cluster (placeholder detector).
 // The report is gitignored/optional — absent means the filter is simply empty.
@@ -93,7 +102,7 @@ export default async function BooksPage() {
 		pinErrors: enrichmentCtx.ok ? enrichmentCtx.data.pins.errors.length : 0,
 	};
 
-	const driftRows = drift?.ok ? drift.data.summary.rows : 0;
+	const chip = driftChip(drift);
 
 	return (
 		<main className="mx-auto max-w-[1600px] p-6">
@@ -110,20 +119,18 @@ export default async function BooksPage() {
 					</div>
 				</div>
 				<div className="flex items-center gap-3">
-					{IS_HOSTED ? null : (
+					{chip ? (
 						<Link href="/admin/diff">
 							<Badge
 								variant="outline"
-								className={
-									driftRows > 0
-										? 'border-saber-yellow/40 bg-saber-yellow/10 text-saber-yellow tabular-nums'
-										: 'text-muted-foreground tabular-nums'
-								}
+								className={cn(DRIFT_TONES[chip.tone], 'tabular-nums')}
+								title={chip.title}
 							>
-								{driftRows > 0 ? `${driftRows} unsaved` : 'Matches backup'}
+								{chip.label}
+								{chip.title ? <span className="sr-only">: {chip.title}</span> : null}
 							</Badge>
 						</Link>
-					)}
+					) : null}
 					<Button size="sm" asChild>
 						<Link href="/admin/books/new">
 							<Plus className="size-4" />
