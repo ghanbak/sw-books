@@ -45,6 +45,36 @@ export function useReduceMotion(): boolean {
 	return reduceMotion;
 }
 
+/** Last Reduce Transparency value seen, shared app-wide like `lastKnownReduceMotion`. */
+let lastKnownReduceTransparency: boolean | null = null;
+
+/**
+ * True while the iOS "Reduce Transparency" setting is on; live-updates on change.
+ *
+ * There is no synchronous read, so before the first resolve it returns `true` (the opaque
+ * fallback): a blur never flashes on for someone who turned it off. Later mounts start from
+ * the app-wide cache. Always `false` on Android, where `AccessibilityInfo` reports false.
+ */
+export function useReduceTransparency(): boolean {
+	const [reduceTransparency, setReduceTransparency] = useState(
+		() => lastKnownReduceTransparency ?? true,
+	);
+	useEffect(() => {
+		let alive = true;
+		const update = (value: boolean) => {
+			lastKnownReduceTransparency = value;
+			if (alive) setReduceTransparency(value);
+		};
+		AccessibilityInfo.isReduceTransparencyEnabled().then(update);
+		const sub = AccessibilityInfo.addEventListener('reduceTransparencyChanged', update);
+		return () => {
+			alive = false;
+			sub.remove();
+		};
+	}, []);
+	return reduceTransparency;
+}
+
 /** True while VoiceOver/TalkBack is active; live-updates on change. */
 export function useScreenReaderEnabled(): boolean {
 	const [enabled, setEnabled] = useState(false);

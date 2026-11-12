@@ -51,6 +51,21 @@ export function trayHeight(coverHeight: number): number {
 }
 
 /**
+ * Gradient stops shared by the scrim and the blur mask, over the tray's height: 0 is the
+ * tray's top edge (TRAY_SPACING.top above the covers, fully clear), 1 the tray's bottom,
+ * from where both hold at full strength to the screen bottom.
+ */
+export const TRAY_RAMP_LOCATIONS = [0, 0.3, 0.65, 1] as const;
+
+/**
+ * Whether the tray draws its progressive blur (#294). Reduce Transparency keeps the scrim
+ * only. Callers pass `true` until the setting resolves, so the blur never flashes on.
+ */
+export function trayUsesBlur(reduceTransparency: boolean): boolean {
+	return !reduceTransparency;
+}
+
+/**
  * Which tray motions run. Reduce Motion skips the scale-in drop and the neighbour shift
  * (books appear in place) and jumps the scroll back to the newest cover instead of gliding.
  * Transparency and the scrim are static, so they are unchanged.
