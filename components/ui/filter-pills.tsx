@@ -5,7 +5,11 @@ import { tokens } from '@/constants/tokens';
 import { GlassView, liquidGlassAvailable } from '@/lib/glass';
 import { FILTER_PILL_HIT_SLOP, FILTER_PILL_PADDING_V, slopBoundsStyle } from '@/lib/tap-target';
 
-export type FilterPillOption<K extends string> = { key: K; label: string };
+export type FilterPillOption<K extends string> = {
+	key: K;
+	label: string;
+	accessibilityLabel?: string;
+};
 
 /**
  * Horizontal segmented filter pills (Figma 130:642 / 134:1450). Active pill is
@@ -24,7 +28,7 @@ export function FilterPills<K extends string>({
 }) {
 	return (
 		<View style={styles.row}>
-			{options.map(({ key, label }) => {
+			{options.map(({ key, label, accessibilityLabel }) => {
 				const active = key === value;
 				return (
 					<Pressable
@@ -34,6 +38,7 @@ export function FilterPills<K extends string>({
 						// Vertical only (~30pt pill -> 44pt), so side-by-side pills don't overlap.
 						hitSlop={FILTER_PILL_HIT_SLOP}
 						accessibilityRole="button"
+						accessibilityLabel={accessibilityLabel}
 						accessibilityState={{ selected: active }}
 					>
 						{!active && liquidGlassAvailable && <GlassView style={StyleSheet.absoluteFill} />}
