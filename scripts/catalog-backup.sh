@@ -11,6 +11,7 @@ git add data/catalog-backup.csv
 if git diff --cached --quiet -- data/catalog-backup.csv; then
   echo "catalog-backup.csv unchanged — nothing to commit"
 else
-  git commit -m "chore(catalog): backup catalog-backup.csv"
+  # Pathspec commits only the backup; anything else already staged stays staged.
+  git commit -m "chore(catalog): backup catalog-backup.csv" -- data/catalog-backup.csv
   echo "Committed catalog backup."
 fi
