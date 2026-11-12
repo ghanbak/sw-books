@@ -6,32 +6,33 @@ import { BookCard } from '@/components/book-card';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { TabHeaderActions } from '@/components/tab-header-actions';
-import { type FilterPillOption, FilterPills } from '@/components/ui/filter-pills';
-import { Text } from '@/components/ui/text';
+import { FilterPills } from '@/components/ui/filter-pills';
 import { tokens } from '@/constants/tokens';
 import { useCatalogSort } from '@/hooks/useCatalogSort';
+import {
+	ARCHIVE_CANON_OPTIONS,
+	ARCHIVE_TYPE_OPTIONS,
+	type ArchiveFilters,
+	type CanonFilter,
+	DEFAULT_ARCHIVE_FILTERS,
+	type TypeFilter,
+	filterArchiveBooks,
+} from '@/lib/archive-filters';
 import type { Book } from '@/lib/hooks';
 import { useBooks, useUserBooks } from '@/lib/hooks';
 import { shelfStatesByBook } from '@/lib/shelf-state';
-import { sortBooks } from '@/lib/sort';
-
-type CanonFilter = 'all' | 'Canon' | 'Legends';
-
-const CANON_OPTIONS: FilterPillOption<CanonFilter>[] = [
-	{ key: 'all', label: 'All' },
-	{ key: 'Canon', label: 'Canon' },
-	{ key: 'Legends', label: 'Legends' },
-];
 
 export default function CatalogScreen() {
 	const { books, loading, error, refetch } = useBooks();
-	const [canonFilter, setCanonFilter] = useState<CanonFilter>('all');
+	const [filters, setFilters] = useState<ArchiveFilters>(DEFAULT_ARCHIVE_FILTERS);
+	const setCanon = useCallback((canon: CanonFilter) => setFilters((f) => ({ ...f, canon })), []);
+	const setType = useCallback((type: TypeFilter) => setFilters((f) => ({ ...f, type })), []);
 	const { sort, selectSort } = useCatalogSort('@ossus/catalog_sort');
 
-	const filteredBooks = useMemo(() => {
-		const result = canonFilter === 'all' ? books : books.filter((b) => b.canon === canonFilter);
-		return sortBooks(result, sort);
-	}, [books, canonFilter, sort]);
+	const filteredBooks = useMemo(
+		() => filterArchiveBooks(books, filters, sort),
+		[books, filters, sort],
+	);
 
 	// Shelf state once per list; equal states share one object, so a toggle re-renders only its row.
 	const { userBooks } = useUserBooks();
@@ -74,7 +75,12 @@ export default function CatalogScreen() {
 				onRefresh={refetch}
 				ListHeaderComponent={
 					<View style={styles.controls}>
-						<FilterPills options={CANON_OPTIONS} value={canonFilter} onChange={setCanonFilter} />
+						<FilterPills
+							options={ARCHIVE_CANON_OPTIONS}
+							value={filters.canon}
+							onChange={setCanon}
+						/>
+						<FilterPills options={ARCHIVE_TYPE_OPTIONS} value={filters.type} onChange={setType} />
 					</View>
 				}
 				ListEmptyComponent={listEmpty}
@@ -100,5 +106,7 @@ const styles = StyleSheet.create({
 	controls: {
 		paddingHorizontal: 12,
 		paddingVertical: 8,
+		// Each pill row's vertical hitSlop is 7pt; 16 keeps the two rows' tap areas from overlapping.
+		gap: 16,
 	},
 });
