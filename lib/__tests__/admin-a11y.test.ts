@@ -4,8 +4,15 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { editCellLabel } from '../../admin/lib/table-a11y';
 
-const read = (p: string) => readFileSync(resolve(__dirname, '../../admin', p), 'utf-8');
+const read = (p: string) => {
+	try {
+		return readFileSync(resolve(__dirname, '../../admin', p), 'utf-8');
+	} catch {
+		return '';
+	}
+};
 
 /** The JSX source of the first `function <name>(` declaration, up to the next top-level function. */
 function fnBody(src: string, name: string): string {
@@ -159,5 +166,67 @@ describe('books-table inline edit (#178)', () => {
 		);
 		expect(editable).not.toMatch(/onBlur=\{\(\) => \{?\s*(if \([^)]*\) )?commit\(true\)/);
 		expect(editable).not.toMatch(/onBlur=\{[^}]*close\(true\)/);
+	});
+});
+
+describe('diff-view source radios name their source (#324)', () => {
+	const src = read('app/admin/books/[slug]/_components/diff-view.tsx');
+
+	it('each FieldRow label puts an sr-only source name before the value', () => {
+		const row = fnBody(src, 'FieldRow');
+		const label = /<label\b[\s\S]*?<\/label>/.exec(row)?.[0] ?? '';
+		expect(label).toMatch(
+			/<span\s+className="sr-only">\s*\{\s*SOURCE_LABELS\[\s*source\s*\]\s*\}:\s*<\/span>\s*\{\s*render\(\s*source\s*\)\s*\}/,
+		);
+		const span = label.indexOf('className="sr-only"');
+		expect(span).toBeGreaterThan(label.indexOf('<RadioGroupItem'));
+		expect(span).toBeLessThan(label.indexOf('render('));
+	});
+
+	it('every SOURCE_LABELS entry is non-empty', () => {
+		const block =
+			/const SOURCE_LABELS: Record<Source, string> = \{([\s\S]*?)\};/.exec(src)?.[1] ?? '';
+		for (const key of ['current', 'ol', 'gb']) {
+			expect(block, key).toMatch(new RegExp(`\\b${key}: '[^']+'`));
+		}
+	});
+
+	it('the visual column-header row is aria-hidden', () => {
+		expect(src).toMatch(
+			/<div\s+aria-hidden="true"\s+className="grid grid-cols-\[120px_1fr_1fr_1fr\][^"]*"\s*>\s*<div>Field<\/div>\s*<div>Current<\/div>/,
+		);
+	});
+});
+
+describe('inline-edit display buttons are named (#324)', () => {
+	it('editCellLabel names field, book and value', () => {
+		expect(editCellLabel('Publisher', 'Thrawn', 'Del Rey')).toBe(
+			'Edit Publisher of Thrawn: Del Rey',
+		);
+	});
+
+	it('editCellLabel says "empty" for null, undefined, empty and whitespace values', () => {
+		for (const v of [null, undefined, '', '   ']) {
+			expect(editCellLabel('Era', 'Thrawn', v)).toBe('Edit Era of Thrawn: empty');
+		}
+	});
+
+	it('editCellLabel gives distinct names per field and per book', () => {
+		const names = new Set([
+			editCellLabel('Publisher', 'Thrawn', null),
+			editCellLabel('Era', 'Thrawn', null),
+			editCellLabel('Publisher', 'Ahsoka', null),
+		]);
+		expect(names.size).toBe(3);
+	});
+
+	it('the EditableText display button takes its aria-label from editCellLabel', () => {
+		const src = read('app/admin/books/_components/books-table.tsx');
+		expect(src).toMatch(/import \{[^}]*\beditCellLabel\b[^}]*\} from '@\/lib\/table-a11y'/);
+		const editable = src.includes('function EditableText') ? fnBody(src, 'EditableText') : '';
+		const button = /<button\b[\s\S]*?>\s*\{value \?\? '—'\}\s*<\/button>/.exec(editable)?.[0] ?? '';
+		expect(button).toMatch(
+			/aria-label=\{\s*editCellLabel\(\s*FIELD_LABELS\[field\],\s*bookTitle,\s*value,?\s*\)\s*\}/,
+		);
 	});
 });

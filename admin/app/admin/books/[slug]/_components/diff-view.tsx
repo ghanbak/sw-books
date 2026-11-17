@@ -207,8 +207,11 @@ export function DiffView({ book }: { book: BookRow }) {
 				</div>
 			)}
 
-			{/* column header */}
-			<div className="grid grid-cols-[120px_1fr_1fr_1fr] gap-3 border-border border-b pb-2 font-medium text-muted-foreground text-xs uppercase tracking-wide">
+			{/* column header: visual only; each radio's name carries its source */}
+			<div
+				aria-hidden="true"
+				className="grid grid-cols-[120px_1fr_1fr_1fr] gap-3 border-border border-b pb-2 font-medium text-muted-foreground text-xs uppercase tracking-wide"
+			>
 				<div>Field</div>
 				<div>Current</div>
 				<div>Open Library</div>
@@ -409,7 +412,10 @@ function FieldRow({
 							)}
 						>
 							<RadioGroupItem value={source} disabled={disabled} className="mt-0.5" />
-							<div className="min-w-0 flex-1">{render(source)}</div>
+							<div className="min-w-0 flex-1">
+								<span className="sr-only">{SOURCE_LABELS[source]}: </span>
+								{render(source)}
+							</div>
 						</label>
 					);
 				})}
