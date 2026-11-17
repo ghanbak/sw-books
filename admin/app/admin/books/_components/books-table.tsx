@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/table';
 import { callAction } from '@/lib/call-action';
 import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
-import { ariaSortFor, selectRowLabel } from '@/lib/table-a11y';
+import { ariaSortFor, editCellLabel, selectRowLabel } from '@/lib/table-a11y';
 import { cn } from '@/lib/utils';
 import { type BulkItemResult, runBulkSequential } from '@app/bulk-run';
 import { isValidIsbn } from '@app/isbn';
@@ -248,6 +248,7 @@ function EditableText({
 					}
 				}}
 				type="button"
+				aria-label={editCellLabel(FIELD_LABELS[field], bookTitle, value)}
 				className={cn(
 					'w-full cursor-text rounded px-1 py-0.5 text-left hover:bg-secondary/60',
 					mono && 'font-mono text-xs',

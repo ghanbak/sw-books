@@ -23,8 +23,10 @@ import type { Book } from '@/lib/hooks';
 import { useBookEnrichment, useBooks, useUserBooks } from '@/lib/hooks';
 import { displayIsbn } from '@/lib/isbn';
 import { formatPublishedDate } from '@/lib/published-date';
+import { createRequestGuard } from '@/lib/request-guard';
 import { supabase } from '@/lib/supabase';
 import { eraLabel } from '@/lib/timeline';
+import { isUuid } from '@/lib/uuid';
 import { parseTimeline } from '@/lib/wookieepedia/enrichment-display';
 
 /** Detail hero card width (points); the 3D rig and the fallback face are sized from it. */
@@ -32,11 +34,17 @@ const HERO_CARD_W = 200;
 
 export default function BookDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
+	// `books.id` is a uuid: anything else (a slug deep link, a typo) is not-found, no request.
+	const validId = isUuid(id);
 	const { books } = useBooks();
-	const cached = useMemo(() => books.find((b) => b.id === id) ?? null, [books, id]);
+	const cached = useMemo(
+		() => (validId ? (books.find((b) => b.id === id) ?? null) : null),
+		[books, id, validId],
+	);
 	const [book, setBook] = useState<Book | null>(cached);
-	const [loading, setLoading] = useState(!cached);
-	const [error, setError] = useState<string | null>(null);
+	const [loading, setLoading] = useState(validId && !cached);
+	const [failed, setFailed] = useState(false);
+	const [requests] = useState(createRequestGuard);
 	const insets = useSafeAreaInsets();
 	const router = useRouter();
 	// In a long-press peek the header isn't shown and navigation.setOptions is a warning no-op,
@@ -47,38 +55,50 @@ export default function BookDetailScreen() {
 	const amazonUrl = book ? buildAmazonSearchUrl(displayIsbn(book)) : null;
 
 	const fetchBook = useCallback(async () => {
+		const isCurrent = requests.begin();
+		setFailed(false);
+		if (!validId) {
+			setBook(null);
+			setLoading(false);
+			return;
+		}
 		setLoading(true);
-		setError(null);
 		const { data, error: fetchError } = await supabase
 			.from('books')
 			.select('*')
 			.eq('id', id)
 			.maybeSingle();
+		if (!isCurrent()) return;
 		if (fetchError) {
-			setError(fetchError.message);
+			// Raw Postgres text stays in the log; the error state shows its generic copy.
+			console.warn('[book] fetch failed:', fetchError.message);
+			setFailed(true);
 			setBook(null);
 		} else {
 			setBook(data);
 		}
 		setLoading(false);
-	}, [id]);
+	}, [id, validId, requests]);
 
 	useEffect(() => {
 		// Use the catalog cache when available; only hit the network on cache miss.
 		if (cached) {
 			setBook(cached);
+			setFailed(false);
 			setLoading(false);
-			return;
+		} else {
+			fetchBook();
 		}
-		fetchBook();
-	}, [cached, fetchBook]);
+		// Unmount, an id change, or the catalog landing: drop any in-flight result.
+		return () => requests.cancel();
+	}, [cached, fetchBook, requests]);
 
 	if (loading) {
 		return <BookDetailSkeleton />;
 	}
 
-	if (error) {
-		return <ErrorState title="Couldn't load this book" message={error} onRetry={fetchBook} />;
+	if (failed) {
+		return <ErrorState title="Couldn't load this book" onRetry={fetchBook} />;
 	}
 
 	if (!book) {
