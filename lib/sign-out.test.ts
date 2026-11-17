@@ -15,6 +15,7 @@ vi.mock('./supabase', () => ({
 }));
 vi.mock('./shelf-queue', () => ({ shelfQueue: { clearAll: mocks.clearAll } }));
 vi.mock('./auth', () => ({ requestAppleCredential: vi.fn() }));
+vi.mock('./google-session', () => ({ endGoogleSession: vi.fn(async () => {}) }));
 
 import { signOut } from './account';
 
