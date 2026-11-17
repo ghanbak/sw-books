@@ -15,3 +15,16 @@ export function ariaSortFor(sorted: SortState): 'ascending' | 'descending' | 'no
 export function selectRowLabel(title: string): string {
 	return `Select ${title}`;
 }
+
+/**
+ * Accessible name for an inline-edit cell's display button: field, book and value, with
+ * "empty" in place of the visual "—" (screen readers skip it at default punctuation).
+ */
+export function editCellLabel(
+	fieldLabel: string,
+	bookTitle: string,
+	value: string | null | undefined,
+): string {
+	const shown = value?.trim() ? value : 'empty';
+	return `Edit ${fieldLabel} of ${bookTitle}: ${shown}`;
+}
