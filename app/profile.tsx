@@ -14,7 +14,7 @@ import {
 	isAppleUser,
 	reauthenticateWithAppleForDeletion,
 	signOut,
-	signOutLocally,
+	signOutAfterAccountDeletion,
 } from '@/lib/account';
 import { useAuth } from '@/lib/auth';
 import { runDeleteAccountFlow } from '@/lib/delete-account-flow';
@@ -65,7 +65,7 @@ export default function ProfileScreen() {
 				onBusy: () => setIsDeleting(true),
 				deleteAccount,
 				isAccountGone,
-				signOutLocally,
+				signOutLocally: signOutAfterAccountDeletion,
 			});
 			if (outcome.status === 'deleted') {
 				// Signed out locally (also when a lost response hid a server-side delete); the
