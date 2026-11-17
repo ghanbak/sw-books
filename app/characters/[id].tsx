@@ -15,6 +15,7 @@ import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
 import { useBookEnrichment } from '@/lib/hooks';
+import { isUuid } from '@/lib/uuid';
 import type { Enrichment } from '@/lib/wookieepedia/enrichment';
 import {
 	type CharacterListRow,
@@ -45,6 +46,8 @@ export default function CharactersSheet() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
 	const { status, enrichment, retry } = useBookEnrichment(id);
+	// A non-uuid id (slug deep link, typo) has no enrichment: skip straight to the empty state.
+	const validId = isUuid(id);
 
 	const close = useCallback(() => {
 		if (router.canGoBack()) router.back();
@@ -59,11 +62,11 @@ export default function CharactersSheet() {
 	return (
 		<View style={styles.root}>
 			<SheetHeader total={status === 'ready' && enrichment ? total : null} onClose={close} />
-			{status === 'loading' ? (
+			{validId && status === 'loading' ? (
 				<View style={styles.center}>
 					<ActivityIndicator color={tokens.text.secondary} />
 				</View>
-			) : status === 'error' ? (
+			) : validId && status === 'error' ? (
 				<ErrorState title="Couldn't load characters" onRetry={retry} />
 			) : enrichment ? (
 				<CharacterList enrichment={enrichment} />
