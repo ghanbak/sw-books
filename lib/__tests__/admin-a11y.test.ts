@@ -230,3 +230,44 @@ describe('inline-edit display buttons are named (#324)', () => {
 		);
 	});
 });
+
+describe('/admin/diff field rows speak old vs new (#334)', () => {
+	const src = read('app/admin/diff/page.tsx');
+	// The JSX of one field row: the body of `row.fields.map((f) => (...))`.
+	const fieldRow = /row\.fields\.map\(\(f\) => \(([\s\S]*?)\)\)\}/.exec(src)?.[1] ?? '';
+	const SP = String.raw`(?: |\{' '\})`;
+
+	it('the old value is a <del> led by sr-only "was "', () => {
+		expect(fieldRow).toMatch(
+			new RegExp(
+				String.raw`<del\s+className="text-muted-foreground line-through">\s*<span\s+className="sr-only">\s*was${SP}\s*</span>\s*<DiffValue\s+value=\{f\.from\}\s*/>\s*</del>`,
+			),
+		);
+	});
+
+	it('the new value is an <ins> led by sr-only "now ", with the UA underline removed', () => {
+		expect(fieldRow).toMatch(
+			new RegExp(
+				String.raw`<ins\s+className="text-saber-blue no-underline">\s*<span\s+className="sr-only">\s*now${SP}\s*</span>\s*<DiffValue\s+value=\{f\.to\}\s*/>\s*</ins>`,
+			),
+		);
+	});
+
+	it('reads "<field> was <old> now <new>" in DOM order', () => {
+		const field = fieldRow.indexOf('{f.field}');
+		const del = fieldRow.indexOf('<del');
+		const ins = fieldRow.indexOf('<ins');
+		expect(field).toBeGreaterThan(-1);
+		expect(del).toBeGreaterThan(field);
+		expect(ins).toBeGreaterThan(del);
+		expect(fieldRow).not.toMatch(/<span[^>]*>\s*\{f\.(from|to)\}\s*<\/span>/);
+	});
+
+	it('DiffValue hides the ∅ glyph and speaks "empty"', () => {
+		const body = src.includes('function DiffValue') ? fnBody(src, 'DiffValue') : '';
+		expect(body).toMatch(/value === '∅'/);
+		expect(body).toMatch(
+			/<span\s+aria-hidden="true">∅<\/span>\s*<span\s+className="sr-only">empty<\/span>/,
+		);
+	});
+});
