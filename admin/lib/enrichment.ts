@@ -30,7 +30,11 @@ export type PinsLoad =
 	| { available: true; pins: Map<string, EnrichmentPin>; errors: string[] }
 	| { available: false; pins: Map<string, EnrichmentPin>; errors: [] };
 
-/** The pin file; empty when absent, `available: false` when data/ is not on this deploy. */
+/**
+ * The pin file; empty when absent, `available: false` when data/ is not on this
+ * deploy. Never rejects: any other read error (EACCES, EISDIR) is logged and
+ * returned as a pin error, so pages and pin actions degrade instead of crashing.
+ */
 export async function loadPins(): Promise<PinsLoad> {
 	let text: string | null;
 	try {
@@ -39,7 +43,12 @@ export async function loadPins(): Promise<PinsLoad> {
 		if (err instanceof DataDirUnavailableError) {
 			return { available: false, pins: new Map(), errors: [] };
 		}
-		throw err;
+		console.error('[admin:loadPins]', err);
+		return {
+			available: true,
+			pins: new Map(),
+			errors: ['could not read data/enrichment-pins.json (see server log)'],
+		};
 	}
 	if (text === null) return { available: true, pins: new Map(), errors: [] };
 	try {
