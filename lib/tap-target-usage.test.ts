@@ -20,10 +20,4 @@ describe('tap-target wiring', () => {
 		expect(count(src, 'hitSlop={FILTER_PILL_HIT_SLOP}')).toBe(1);
 		expect(count(src, 'slopBoundsStyle(FILTER_PILL_HIT_SLOP)')).toBe(1);
 	});
-
-	it('both added-books sheet icon buttons pass the slop and grow the header', () => {
-		const src = source('components/added-books-sheet.tsx');
-		expect(count(src, 'hitSlop={SHEET_ICON_BUTTON_HIT_SLOP}')).toBe(2);
-		expect(count(src, 'slopBoundsStyle(SHEET_ICON_BUTTON_HIT_SLOP)')).toBe(1);
-	});
 });

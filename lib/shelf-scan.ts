@@ -286,27 +286,20 @@ export function atCaptureCap(state: ShelfScanState): boolean {
 	return state.captures.length >= SHELF_SCAN_CONSTANTS.MAX_CAPTURES;
 }
 
-/** What the mode host needs to place + guard the floating switcher (plan Phase 5). */
+/** What the scan host needs to place its chrome. */
 export type ShelfChrome = {
-	/** The review overlay owns the screen — the host hides the floating switcher. */
+	/** The review overlay owns the screen — the host hides its close button. */
 	immersive: boolean;
-	/** Un-Finished work a mode switch would discard — the host confirms first. */
-	dirty: boolean;
 };
 
 /**
- * Derive the host chrome from the capture phase. Pure so the immersive/dirty table is
- * unit-tested rather than reasoned about by hand. `dirty` is true whenever a switch
- * would lose work: any phase that isn't pristine capture (0 photos) and isn't `done`
- * or `queued` (already saved). Note a published draft only exists in the immersive phases
- * (review/adding/done/queued), where the switcher is hidden — so the host never needs to
- * clear a draft on a switch it actually allows.
+ * Derive the host chrome from the capture phase. Pure so the immersive table is
+ * unit-tested rather than reasoned about by hand.
  */
-export function deriveShelfChrome(phase: ShelfScanPhase, captureCount: number): ShelfChrome {
-	const saved = phase === 'done' || phase === 'queued';
-	const immersive = phase === 'review' || phase === 'adding' || saved;
-	const dirty = !saved && !(phase === 'capturing' && captureCount === 0);
-	return { immersive, dirty };
+export function deriveShelfChrome(phase: ShelfScanPhase): ShelfChrome {
+	const immersive =
+		phase === 'review' || phase === 'adding' || phase === 'done' || phase === 'queued';
+	return { immersive };
 }
 
 export type CaptureGateConfig = {

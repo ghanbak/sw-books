@@ -15,8 +15,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Swap to '@/components/scan-tray' once #75 lands on the feature branch.
-import { ScanTray } from '@/components/scan-tray-placeholder';
+import { ScanTray } from '@/components/scan-tray';
 import { ShelfScanQueued } from '@/components/shelf-scan-queued';
 import { ShelfScanReview } from '@/components/shelf-scan-review';
 import { GlassButton } from '@/components/ui/glass-button';
@@ -93,7 +92,7 @@ export function ShelfScanCapture({
 	const showCamera = active && (phase === 'capturing' || phase === 'interrupted');
 	const bookCount = scan.captured.length;
 
-	const { immersive } = deriveShelfChrome(phase, scan.captureCount);
+	const { immersive } = deriveShelfChrome(phase);
 	useEffect(() => {
 		onImmersiveChange?.(immersive);
 	}, [onImmersiveChange, immersive]);
@@ -208,6 +207,9 @@ export function ShelfScanCapture({
 					)}
 
 					<View style={[styles.hudBottom, { paddingBottom: insets.bottom + 16 }]}>
+						{/* The tray's ScrollView overhangs 24pt above the covers (drop headroom) and
+						    catches touches there on iOS. Keep every control after it in the tree so
+						    later siblings win hit-testing, and keep that band free of controls. */}
 						<ScanTray books={scan.captured} />
 						{screenReaderEnabled && (
 							<Pressable

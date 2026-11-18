@@ -1,6 +1,6 @@
 /**
  * Profile "Delete account" flow, as pure orchestration over injected steps so it
- * unit-tests in the node vitest env (no React/native imports, like `lib/scan-mode.ts`).
+ * unit-tests in the node vitest env (no React/native imports, like `lib/scan-a11y.ts`).
  * The screen wires the real steps: an Alert for `confirm`, `lib/account.ts` for the rest.
  *
  * Order: confirm → (Apple users) fresh Apple authorization → delete. Cancelling either

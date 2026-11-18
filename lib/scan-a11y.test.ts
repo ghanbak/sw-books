@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
 	addToOwnedLabel,
-	barcodeResultAnnouncement,
-	finishScanLabel,
 	hiddenDecorationProps,
 	photosCapturedLabel,
 	reviewMatchLabel,
@@ -14,8 +12,6 @@ describe('scan a11y labels', () => {
 	it('pluralizes photo counts', () => {
 		expect(photosCapturedLabel(1)).toBe('1 photo captured');
 		expect(photosCapturedLabel(3)).toBe('3 photos captured');
-		expect(finishScanLabel(1)).toBe('Finish scanning, 1 photo taken');
-		expect(finishScanLabel(20)).toBe('Finish scanning, 20 photos taken');
 	});
 
 	it('matches the visible add-button text when nothing is selected', () => {
@@ -55,13 +51,5 @@ describe('scan a11y labels', () => {
 			accessibilityElementsHidden: true,
 			importantForAccessibility: 'no-hide-descendants',
 		});
-	});
-
-	it('announces every barcode result kind', () => {
-		expect(barcodeResultAnnouncement('found', 'Dune')).toBe('Found Dune');
-		expect(barcodeResultAnnouncement('found')).toBe('Book found');
-		expect(barcodeResultAnnouncement('not_found')).toBe('Not in the Archive');
-		expect(barcodeResultAnnouncement('invalid')).toBe('Invalid barcode');
-		expect(barcodeResultAnnouncement('error')).toMatch(/^Lookup failed/);
 	});
 });
