@@ -1,15 +1,16 @@
 'use client';
 
+import { signInWithDevPassword } from '@/app/_actions/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createBrowserClient } from '@supabase/ssr';
 import { Loader2 } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 
 /**
  * Email/password sign-in for a build whose auth points at the LOCAL Supabase
- * stack (the login page renders it only then). Used to sign in as the seeded dev
+ * stack (the login page renders it only then, and the action refuses any other
+ * stack). Used to sign in as the seeded dev
  * admin for screenshots; the hosted deploy never shows it. See admin/README.md.
  */
 export function DevSignInForm({ defaultEmail }: { defaultEmail: string }) {
@@ -18,21 +19,21 @@ export function DevSignInForm({ defaultEmail }: { defaultEmail: string }) {
 
 	async function signIn(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-		const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-		if (!url || !key) {
-			setError('Auth is not configured (NEXT_PUBLIC_SUPABASE_URL / _ANON_KEY).');
-			return;
-		}
 		const form = new FormData(event.currentTarget);
 		setPending(true);
 		setError(null);
-		const { error: signInError } = await createBrowserClient(url, key).auth.signInWithPassword({
-			email: String(form.get('email') ?? ''),
-			password: String(form.get('password') ?? ''),
-		});
-		if (signInError) {
-			setError(signInError.message);
+		let message: string | null = null;
+		try {
+			const result = await signInWithDevPassword({
+				email: String(form.get('email') ?? ''),
+				password: String(form.get('password') ?? ''),
+			});
+			if (!result.ok) message = result.error.message;
+		} catch {
+			message = 'Sign-in request did not complete. Please try again.';
+		}
+		if (message) {
+			setError(message);
 			setPending(false);
 			return;
 		}
