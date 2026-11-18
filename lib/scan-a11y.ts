@@ -14,11 +14,6 @@ export function photosCapturedLabel(count: number): string {
 	return `${plural(count, 'photo', 'photos')} captured`;
 }
 
-/** Shelf HUD Finish button. */
-export function finishScanLabel(count: number): string {
-	return `Finish scanning, ${plural(count, 'photo', 'photos')} taken`;
-}
-
 /**
  * Shelf-scan first-run intro paragraphs. With a screen reader on, `useShelfScan` runs
  * `manualOnly` (no auto-capture), so that path describes the manual shutter by its
@@ -78,22 +73,6 @@ export function swapCandidateLabel({
 	if (authors.length > 0) label += ` by ${authors.join(', ')}`;
 	if (owned) label += ', already owned';
 	return label;
-}
-
-export type BarcodeResultKind = 'found' | 'not_found' | 'invalid' | 'error';
-
-/** Spoken when a barcode lookup settles (the result swaps in silently over the camera). */
-export function barcodeResultAnnouncement(kind: BarcodeResultKind, bookTitle?: string): string {
-	switch (kind) {
-		case 'found':
-			return bookTitle ? `Found ${bookTitle}` : 'Book found';
-		case 'not_found':
-			return 'Not in the Archive';
-		case 'invalid':
-			return 'Invalid barcode';
-		case 'error':
-			return 'Lookup failed. Check your connection and try again.';
-	}
 }
 
 /**

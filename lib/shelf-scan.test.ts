@@ -358,17 +358,16 @@ describe('createCaptureGate', () => {
 
 describe('deriveShelfChrome', () => {
 	it.each([
-		['capturing', 0, { immersive: false, dirty: false }], // pristine — nothing to lose
-		['capturing', 3, { immersive: false, dirty: true }], // captures pending
-		['interrupted', 2, { immersive: false, dirty: true }],
-		['processing', 4, { immersive: false, dirty: true }],
-		['empty', 2, { immersive: false, dirty: true }],
-		['review', 0, { immersive: true, dirty: true }], // resumed draft, no captures
-		['adding', 5, { immersive: true, dirty: true }],
-		['done', 5, { immersive: true, dirty: false }], // already saved
-		['queued', 5, { immersive: true, dirty: false }], // saved to the offline queue
-	] as const)('phase=%s captures=%d → %o', (phase, count, expected) => {
-		expect(deriveShelfChrome(phase, count)).toEqual(expected);
+		['capturing', { immersive: false }],
+		['interrupted', { immersive: false }],
+		['processing', { immersive: false }],
+		['empty', { immersive: false }],
+		['review', { immersive: true }],
+		['adding', { immersive: true }],
+		['done', { immersive: true }], // already saved
+		['queued', { immersive: true }], // saved to the offline queue
+	] as const)('phase=%s → %o', (phase, expected) => {
+		expect(deriveShelfChrome(phase)).toEqual(expected);
 	});
 });
 

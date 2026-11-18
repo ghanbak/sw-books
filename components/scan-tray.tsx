@@ -180,7 +180,10 @@ export function ScanTray({ books }: { books: Book[] }) {
 }
 
 const styles = StyleSheet.create({
+	// Stretch: the tray owns its full-width scrim/blur, so it must not shrink to its covers
+	// under a parent that centres its children.
 	tray: {
+		alignSelf: 'stretch',
 		height: TRAY_HEIGHT,
 	},
 	// Covers the tray from its top edge (8pt above the covers) and runs past the screen bottom.
