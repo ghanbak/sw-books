@@ -19,7 +19,8 @@ describe('toaster stays off the public pages (#250)', () => {
 		expect(src).not.toMatch(/<Toaster\b/);
 	});
 
-	it.each(['admin/layout.tsx', 'login/layout.tsx'])('%s mounts the toaster', (path) => {
+	// /login shows sign-in errors inline instead (#337, admin-login-bundle.test.ts).
+	it.each(['admin/layout.tsx'])('%s mounts the toaster', (path) => {
 		const src = read(path);
 		expect(src).toMatch(TOASTER_IMPORT);
 		expect(src).toMatch(TOASTER_ELEMENT);
