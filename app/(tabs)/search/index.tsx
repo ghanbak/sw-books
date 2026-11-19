@@ -11,10 +11,11 @@ import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
 import { useScrollResetOnChange } from '@/hooks/useScrollResetOnChange';
 import type { Book } from '@/lib/hooks';
-import { useBooks } from '@/lib/hooks';
+import { useBooks, useUserBooks } from '@/lib/hooks';
 import { selectListState } from '@/lib/list-state';
 import { searchBooks } from '@/lib/search';
 import { searchAnnouncement } from '@/lib/search-a11y';
+import { shelfStatesByBook } from '@/lib/shelf-state';
 
 /** Wait for typing to settle before speaking the result count. */
 const ANNOUNCE_DELAY_MS = 600;
@@ -52,7 +53,14 @@ export default function SearchScreen() {
 	const listRef = useRef<FlashListRef<Book>>(null);
 	const scrollReset = useScrollResetOnChange(listRef, trimmed);
 
-	const renderItem = useCallback(({ item }: { item: Book }) => <BookCard book={item} />, []);
+	// Shelf state once per list; equal states share one object, so a toggle re-renders only its row.
+	const { userBooks } = useUserBooks();
+	const shelfByBook = useMemo(() => shelfStatesByBook(userBooks), [userBooks]);
+
+	const renderItem = useCallback(
+		({ item }: { item: Book }) => <BookCard book={item} shelf={shelfByBook.get(item.id)} />,
+		[shelfByBook],
+	);
 	const keyExtractor = useCallback((item: Book) => item.id, []);
 
 	return (
