@@ -79,7 +79,8 @@ describe('login sign-in runs in server actions (#333)', () => {
 		const form = read('app/login/_components/dev-sign-in-form.tsx');
 		expect(button).toMatch(/import\s*\{\s*signInWithGoogle\s*\}\s*from\s*'@\/app\/_actions\/auth'/);
 		expect(button).toMatch(/await\s+signInWithGoogle\(\s*\)/);
-		expect(button).toMatch(/toast\.error\(/);
+		// Errors surface inline, not via toast (#337).
+		expect(button).toMatch(/setError\(\s*result\.error\.message\s*\)/);
 		expect(form).toMatch(
 			/import\s*\{\s*signInWithDevPassword\s*\}\s*from\s*'@\/app\/_actions\/auth'/,
 		);
