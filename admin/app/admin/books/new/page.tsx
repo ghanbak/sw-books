@@ -15,9 +15,9 @@ export default function NewBookPage() {
 						page afterwards.
 					</p>
 				</div>
-				<Link href="/admin/books">
-					<Button variant="ghost">Back</Button>
-				</Link>
+				<Button variant="ghost" asChild>
+					<Link href="/admin/books">Back</Link>
+				</Button>
 			</header>
 			<NewBookForm />
 		</main>
