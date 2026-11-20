@@ -1,4 +1,4 @@
-import { clampIndex } from '@/lib/timeline';
+import { clampIndex, railTranslateX } from '@/lib/timeline';
 
 /**
  * Screen-reader model for the Timeline rail: one `adjustable` element whose swipe
@@ -19,4 +19,21 @@ export function railA11yStep(actionName: string, shownIndex: number, count: numb
 	if (delta === 0) return null;
 	const next = clampIndex(shownIndex + delta, count);
 	return next === shownIndex ? null : next;
+}
+
+/**
+ * Whether a marker pill is on screen for the date the rail shows, so off-screen pills can
+ * drop out of the VoiceOver / TalkBack focus order. `pillX` is the pill's row-local center
+ * (as from `layoutAnchorPills`); the row sits at `railTranslateX(width, shownIndex)`.
+ * `halfWidth` is half the pill's footprint: a pill counts while any of it overlaps
+ * `[0, width]`, so a partly visible pill stays focusable.
+ */
+export function pillOnScreen(
+	pillX: number,
+	shownIndex: number,
+	width: number,
+	halfWidth: number,
+): boolean {
+	const screenX = pillX + railTranslateX(width, shownIndex);
+	return screenX + halfWidth > 0 && screenX - halfWidth < width;
 }
