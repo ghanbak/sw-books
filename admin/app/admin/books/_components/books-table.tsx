@@ -851,7 +851,11 @@ export function BooksTable({
 						</Button>
 						{bulk && (
 							<div className="ml-auto flex items-center gap-2">
-								<Progress value={(bulk.done / Math.max(bulk.total, 1)) * 100} className="w-32" />
+								<Progress
+									aria-label={bulk.label}
+									value={(bulk.done / Math.max(bulk.total, 1)) * 100}
+									className="w-32"
+								/>
 								<span className="text-muted-foreground text-xs tabular-nums">
 									{bulk.label} {bulk.done}/{bulk.total}
 								</span>
