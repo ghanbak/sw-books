@@ -1,8 +1,8 @@
 // Static regression checks for the admin's a11y fixes (#166). The admin package has its
 // own toolchain and no test runner, and its `@/` alias collides with the app's, so its
 // components can't be imported here; these tests read the source instead.
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { editCellLabel } from '../../admin/lib/table-a11y';
 
@@ -269,5 +269,62 @@ describe('/admin/diff field rows speak old vs new (#334)', () => {
 		expect(body).toMatch(
 			/<span\s+aria-hidden="true">∅<\/span>\s*<span\s+className="sr-only">empty<\/span>/,
 		);
+	});
+});
+
+describe('bulk-run progress bar and Back link (#345)', () => {
+	it('Progress passes value to ProgressPrimitive.Root, so Radix sets aria-valuenow', () => {
+		const src = read('components/ui/progress.tsx');
+		const body = src.includes('function Progress') ? fnBody(src, 'Progress') : '';
+		// Opening tag only; props are `{…}` expressions without `>`.
+		const root = /<ProgressPrimitive\.Root\b((?:[^>{]|\{[^}]*\})*)>/.exec(body)?.[1];
+		expect(root, 'ProgressPrimitive.Root opening tag').toBeDefined();
+		expect(root ?? '').toMatch(/\bvalue=\{\s*value\s*\}/);
+	});
+
+	it('the books-table bulk progress bar has an accessible name', () => {
+		const src = read('app/admin/books/_components/books-table.tsx');
+		const bar = /<Progress\b((?:[^>{]|\{[^}]*\})*)\/>/.exec(src)?.[1];
+		expect(bar, '<Progress … /> in books-table').toBeDefined();
+		const props = bar ?? '';
+		const label = /\baria-label=(?:"[^"]+"|\{\s*[^}\s][^}]*\})/.test(props);
+		const labelledBy = /\baria-labelledby=(?:"([^"]+)"|\{\s*([^}]+?)\s*\})/.exec(props);
+		const target = labelledBy?.[1] ?? labelledBy?.[2];
+		const targetExists =
+			target !== undefined &&
+			(labelledBy?.[1] !== undefined
+				? src.includes(`id="${target}"`)
+				: new RegExp(`\\bid=\\{\\s*${target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\}`).test(
+						src,
+					));
+		expect(label || targetExists).toBe(true);
+	});
+
+	it('"Back" on /admin/books/new is a Button asChild wrapping the Link', () => {
+		const src = read('app/admin/books/new/page.tsx');
+		const header = /<header\b[\s\S]*?<\/header>/.exec(src)?.[0];
+		expect(header, '<header> in new/page.tsx').toBeDefined();
+		expect(header ?? '').toMatch(
+			/<Button\b[^>]*\basChild\b[^>]*>\s*<Link\s+href="\/admin\/books"\s*>\s*Back\s*<\/Link>\s*<\/Button>/,
+		);
+	});
+
+	it('no admin/app page nests a <Button> directly inside a <Link>', () => {
+		const root = resolve(__dirname, '../../admin/app');
+		const files: string[] = [];
+		const walk = (dir: string) => {
+			for (const entry of readdirSync(dir, { withFileTypes: true })) {
+				const p = join(dir, entry.name);
+				if (entry.isDirectory()) walk(p);
+				else if (entry.name.endsWith('.tsx')) files.push(p);
+			}
+		};
+		walk(root);
+		expect(files.length).toBeGreaterThan(10);
+		const nested = /<Link\b(?:[^>{]|\{[^}]*\})*>\s*<Button\b/;
+		const offenders = files
+			.filter((f) => nested.test(readFileSync(f, 'utf-8')))
+			.map((f) => relative(root, f));
+		expect(offenders).toEqual([]);
 	});
 });

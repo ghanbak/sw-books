@@ -26,7 +26,12 @@ import {
 	layoutAnchorPills,
 	truncateAnchorTitle,
 } from '@/lib/timeline-anchors';
-import { RAIL_A11Y_ACTIONS, RAIL_A11Y_LABEL, railA11yStep } from '@/lib/timeline-rail-a11y';
+import {
+	RAIL_A11Y_ACTIONS,
+	RAIL_A11Y_LABEL,
+	pillOnScreen,
+	railA11yStep,
+} from '@/lib/timeline-rail-a11y';
 
 // Wide enough for the longest (24-char) pill label.
 const PILL_SLOT_W = 180;
@@ -217,6 +222,7 @@ export function TimelineRail({
 									row={p.row}
 									kind={p.kind}
 									label={p.label}
+									onScreen={pillOnScreen(p.x, shownIndex, width, PILL_SLOT_W / 2)}
 									onPress={p.members.length > 1 ? () => setExpandedKey(p.key) : undefined}
 									accessibilityLabel={
 										p.members.length > 1
@@ -236,6 +242,7 @@ export function TimelineRail({
 								kind={m.kind}
 								label={truncateAnchorTitle(m.title)}
 								raised
+								onScreen={pillOnScreen(expanded.x, shownIndex, width, PILL_SLOT_W / 2)}
 								onPress={() => setExpandedKey(null)}
 								accessibilityLabel={`${m.title}. Collapses the list.`}
 							/>
@@ -286,6 +293,7 @@ function MarkerPill({
 	kind,
 	label,
 	raised,
+	onScreen,
 	onPress,
 	accessibilityLabel,
 }: {
@@ -295,12 +303,19 @@ function MarkerPill({
 	label: string;
 	/** Drawn above other pills (an expanded set) — more opaque so it reads over them. */
 	raised?: boolean;
+	/**
+	 * False when the rail has carried this pill off screen: it drops out of the screen-reader
+	 * focus order (from `pillOnScreen`, keyed to the date the rail shows).
+	 */
+	onScreen: boolean;
 	onPress?: () => void;
 	accessibilityLabel: string;
 }) {
 	return (
 		<View
 			pointerEvents="box-none"
+			accessibilityElementsHidden={!onScreen}
+			importantForAccessibility={onScreen ? 'auto' : 'no-hide-descendants'}
 			style={[styles.pillSlot, { left: x - PILL_SLOT_W / 2, bottom: row * PILL_ROW_H + STEM_GAP }]}
 		>
 			<Pressable
