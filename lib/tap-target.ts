@@ -28,6 +28,16 @@ export function squareHitSlop(size: number) {
 }
 
 /**
+ * Top/bottom slop to 44pt when the room above is capped (e.g. a card's padding under
+ * `overflow: 'hidden'`): the top takes what fits, the bottom takes the rest.
+ */
+export function cappedVerticalHitSlop(height: number, maxTop: number) {
+	const total = Math.max(0, MIN_TAP_TARGET - height);
+	const top = Math.min(maxTop, Math.ceil(total / 2));
+	return { top, bottom: total - top };
+}
+
+/**
  * Padding + equal negative margin: widens a container's hit-test bounds by `slop`
  * on the given sides without moving anything on screen.
  */
