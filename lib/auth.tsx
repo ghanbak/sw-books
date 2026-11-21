@@ -24,6 +24,26 @@ const AuthContext = createContext<AuthContextValue>({
 	loading: true,
 });
 
+/**
+ * Read the stored session at launch. Never rejects: a failed storage read
+ * (full disk, corrupt AsyncStorage DB) resolves to `null` so the auth gate
+ * clears its spinner and falls through to login instead of hanging.
+ */
+export async function resolveInitialSession(
+	getSession: () => Promise<{ data: { session: Session | null } }>,
+): Promise<Session | null> {
+	let result: Awaited<ReturnType<typeof getSession>>;
+	try {
+		result = await getSession();
+	} catch (err) {
+		console.warn('[auth] getSession failed:', err);
+		return null;
+	}
+	const { session } = result.data;
+	if (session) flushPendingAppleName().catch(() => {});
+	return session;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
 	const [session, setSession] = useState<Session | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -34,10 +54,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 			iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
 		});
 
-		supabase.auth.getSession().then(({ data }) => {
-			setSession(data.session);
+		resolveInitialSession(() => supabase.auth.getSession()).then((initialSession) => {
+			setSession(initialSession);
 			setLoading(false);
-			if (data.session) flushPendingAppleName().catch(() => {});
 		});
 
 		const {
