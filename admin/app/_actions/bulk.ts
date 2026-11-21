@@ -4,7 +4,11 @@ import { getAdmin } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { headCheckCover } from '@app/sources/covers';
 import { fetchVolumes } from '@app/sources/google-books';
-import { buildFillEmptyArrayPatch, buildFillEmptyScalarPatch } from '@app/sources/lookup-selection';
+import {
+	buildFillEmptyArrayPatch,
+	buildFillEmptyScalarPatch,
+	pickFillEmptyCover,
+} from '@app/sources/lookup-selection';
 import { coverByIsbnUrl } from '@app/sources/open-library';
 import { patchBook } from './books';
 import { lookupCandidates } from './lookup';
@@ -82,8 +86,14 @@ export async function fillEmpty(slug: string): Promise<FillResult> {
 	if (!book) return { slug, status: 'error', message: 'not found' };
 
 	// Same source rule as the per-book Fill empty: first non-blank of OL, GB.
+	const { cover_image, ...scalars } = buildFillEmptyScalarPatch(book, look.data);
+	// OL's ISBN cover URL can 404: write only a cover that passes the head
+	// check, falling back to GB, else leave cover_image empty (#353).
+	const cover =
+		cover_image === undefined ? null : await pickFillEmptyCover(look.data, headCheckCover);
 	const patch = {
-		...buildFillEmptyScalarPatch(book, look.data),
+		...(cover ? { cover_image: cover } : {}),
+		...scalars,
 		...buildFillEmptyArrayPatch(book, look.data),
 	};
 
