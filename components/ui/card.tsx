@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { cappedVerticalHitSlop, slopBoundsStyle } from '@/lib/tap-target';
 
 export const CARD_RADIUS = 12;
 export const CARD_PADDING = 12;
@@ -55,12 +56,25 @@ type CardTitleTrailing =
 			accessibilityHint?: string;
 	  };
 
-const LINK_HIT_SLOP = { top: 16, bottom: 16, left: 8, right: 8 } as const;
+const TITLE_LINE_HEIGHT = 13;
+const TITLE_ROW_PADDING_BOTTOM = 4;
+
+// 44pt tall: the top slop stops at the card edge (overflow: 'hidden' clips past it), the
+// bottom takes the rest, over the top of the first row below.
+const LINK_HIT_SLOP = {
+	...cappedVerticalHitSlop(TITLE_LINE_HEIGHT, CARD_PADDING),
+	left: 8,
+	right: 8,
+} as const;
 
 /**
  * Card title row (Figma `Enrichment / Card Title` 259:16): 11/13 bold uppercase,
  * `text.secondary`. Optional trailing count (tabular-nums) or "See all" text link in
  * `accent.primary` (no chevron, per frame 248:1397; ≥44pt hit target via hitSlop).
+ *
+ * The link's row grows by the slop (`linkRow`, layout-neutral) so native hit-testing
+ * reaches it; `zIndex` tests it before the row rendered after it, and `box-none` lets
+ * touches outside the link's slop fall through to that row.
  */
 export function CardTitle({
 	children,
@@ -82,8 +96,12 @@ export function CardTitle({
 			</View>
 		);
 	}
+	const hasLink = trailing?.kind === 'link';
 	return (
-		<View style={styles.titleRow}>
+		<View
+			style={hasLink ? [styles.titleRow, styles.linkRow] : styles.titleRow}
+			pointerEvents={hasLink ? 'box-none' : 'auto'}
+		>
 			<Text style={[styles.title, styles.titleText]} accessibilityRole="header">
 				{children}
 			</Text>
@@ -145,11 +163,16 @@ const styles = StyleSheet.create({
 		flexDirection: 'row',
 		alignItems: 'center',
 		gap: 8,
-		paddingBottom: 4,
+		paddingBottom: TITLE_ROW_PADDING_BOTTOM,
+	},
+	linkRow: {
+		...slopBoundsStyle(LINK_HIT_SLOP),
+		paddingBottom: TITLE_ROW_PADDING_BOTTOM + LINK_HIT_SLOP.bottom,
+		zIndex: 1,
 	},
 	title: {
 		fontSize: 11,
-		lineHeight: 13,
+		lineHeight: TITLE_LINE_HEIGHT,
 		fontWeight: '700',
 		letterSpacing: 1.2,
 	},
