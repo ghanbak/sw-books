@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	type LookupBook,
 	buildFillEmptyArrayPatch,
+	buildFillEmptyScalarPatch,
 	fillEmptySource,
 } from '../sources/lookup-selection';
 import type { LookupResult } from '../sources/types';
@@ -72,6 +73,51 @@ describe('fillEmptySource / buildFillEmptyArrayPatch', () => {
 	});
 });
 
+// #350: bulk scalars used `ol[f] ?? gb[f]`, so an OL '' blocked GB. Scalars now
+// share fillEmptySource too; a blank (empty or whitespace-only) string is no value.
+const blankScalars: LookupBook = {
+	...emptyBook,
+	cover_image: null,
+	publisher: null,
+	date_published: null,
+	language: null,
+	synopsis: null,
+};
+
+describe('fillEmptySource / buildFillEmptyScalarPatch (#350)', () => {
+	it("falls through an OL '' scalar to GB", () => {
+		const c = cand({ publisher: '' }, { publisher: 'X' });
+		expect(fillEmptySource(c, 'publisher')).toBe('gb');
+		expect(buildFillEmptyScalarPatch(blankScalars, c)).toEqual({ publisher: 'X' });
+	});
+
+	it('falls through a whitespace-only OL scalar to GB', () => {
+		const c = cand({ synopsis: '  \n\t' }, { synopsis: 'X' });
+		expect(fillEmptySource(c, 'synopsis')).toBe('gb');
+		expect(buildFillEmptyScalarPatch(blankScalars, c)).toEqual({ synopsis: 'X' });
+	});
+
+	it('takes OL when it has a value', () => {
+		const c = cand(
+			{ publisher: 'Del Rey', language: 'en' },
+			{ publisher: 'Random House', language: 'fr' },
+		);
+		expect(fillEmptySource(c, 'publisher')).toBe('ol');
+		expect(buildFillEmptyScalarPatch(blankScalars, c)).toEqual({
+			publisher: 'Del Rey',
+			language: 'en',
+		});
+	});
+
+	it('writes no key when both sources are blank or the field is filled', () => {
+		const c = cand({ publisher: '', synopsis: ' ' }, { publisher: '  ', language: 'en' });
+		expect(fillEmptySource(c, 'publisher')).toBeNull();
+		expect(fillEmptySource(c, 'cover_image')).toBeNull();
+		expect(buildFillEmptyScalarPatch(blankScalars, c)).toEqual({ language: 'en' });
+		expect(buildFillEmptyScalarPatch(emptyBook, cand({}, { publisher: 'X' }))).toEqual({});
+	});
+});
+
 // Drives the real admin `fillEmpty` with a recording fake Supabase client (same
 // harness as bulk-refetch-cover.test.ts); only I/O modules are mocked.
 type Call = { op: string; args: unknown[] };
@@ -133,6 +179,18 @@ describe('bulk fillEmpty (#348)', () => {
 		const update = db.calls.flat().find((x) => x.op === 'update');
 		expect(update?.args[0]).toEqual({ isbn: [ISBN], primary_isbn: ISBN });
 	});
+
+	it("writes the GB scalar when OL returns '' (#350)", async () => {
+		db.look = cand({ publisher: '' }, { publisher: 'X' });
+		const row = { id: 'b1', updated_at: '2026-11-01T00:00:00Z', ...emptyBook, publisher: null };
+		db.replies.push({ data: row, error: null }, { data: { ...row }, error: null });
+		const { fillEmpty } = await load();
+		const res = await fillEmpty('some-book');
+
+		expect(res.status).toBe('updated');
+		const update = db.calls.flat().find((x) => x.op === 'update');
+		expect(update?.args[0]).toEqual({ publisher: 'X' });
+	});
 });
 
 // Wiring: bulk.ts and the per-book diff view both consume the shared rule.
@@ -147,6 +205,18 @@ describe('Fill empty wiring (#348)', () => {
 		expect(src).toMatch(/buildFillEmptyArrayPatch\(\s*book,\s*look\.data\s*\)/);
 		expect(src).not.toMatch(/ol\.isbn\s*\?\?\s*gb\.isbn/);
 		expect(src).not.toMatch(/ol\.format\s*\?\?\s*gb\.format/);
+	});
+
+	it('bulk.ts uses buildFillEmptyScalarPatch, not `??` scalar picks (#350)', () => {
+		const src = read('admin/app/_actions/bulk.ts');
+		expect(src).toMatch(/buildFillEmptyScalarPatch\(\s*book,\s*look\.data\s*\)/);
+		expect(src).not.toMatch(/\?\?\s*gb\[/);
+	});
+
+	it('the per-book diff view picks scalars with fillEmptySource (#350)', () => {
+		const src = read('admin/app/admin/books/[slug]/_components/diff-view.tsx');
+		expect(src).not.toMatch(/scalar\(\s*book,\s*candidates,\s*f,\s*'ol'\s*\)/);
+		expect(src.match(/fillEmptySource\(\s*candidates,\s*f\s*\)/g)?.length).toBe(2);
 	});
 
 	it('the per-book diff view uses fillEmptySource', () => {

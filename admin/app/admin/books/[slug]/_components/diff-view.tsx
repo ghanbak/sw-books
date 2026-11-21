@@ -115,8 +115,8 @@ export function DiffView({ book }: { book: BookRow }) {
 			const next = { ...prev };
 			for (const f of SCALAR_FIELDS) {
 				if ((book[f] ?? null) !== null) continue;
-				if (scalar(book, candidates, f, 'ol')) next[f] = 'ol';
-				else if (scalar(book, candidates, f, 'gb')) next[f] = 'gb';
+				const src = fillEmptySource(candidates, f);
+				if (src) next[f] = src;
 			}
 			for (const f of ARRAY_FIELDS) {
 				if ((book[f] ?? []).length > 0) continue;
