@@ -32,6 +32,7 @@ import {
 	type Source,
 	arr,
 	buildLookupPatch,
+	fillEmptySource,
 	previewIsbns,
 	pruneLookupSelection,
 	scalar,
@@ -119,8 +120,8 @@ export function DiffView({ book }: { book: BookRow }) {
 			}
 			for (const f of ARRAY_FIELDS) {
 				if ((book[f] ?? []).length > 0) continue;
-				if (arr(book, candidates, f, 'ol').length) next[f] = 'ol';
-				else if (arr(book, candidates, f, 'gb').length) next[f] = 'gb';
+				const src = fillEmptySource(candidates, f);
+				if (src) next[f] = src;
 			}
 			return next;
 		});
