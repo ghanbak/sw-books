@@ -59,14 +59,35 @@ export function arr(
 	return candidateFor(cand, source)[field] ?? [];
 }
 
+function fillEmptyHasValue(
+	cand: LookupResult | null,
+	field: DiffField,
+	source: LookupSource,
+): boolean {
+	const v = candidateFor(cand, source)[field];
+	return typeof v === 'string' ? v.trim().length > 0 : Boolean(v?.length);
+}
+
 /**
- * Fill empty's source for an array field: OL when it has values, else GB. An
- * empty list is no value, so `[]` from OL falls through to GB (#348).
+ * Fill empty's source for a field: OL when it has a value, else GB. An empty
+ * list (#348) or a blank (empty or whitespace-only) string (#350) is no value,
+ * so it falls through to GB.
  */
-export function fillEmptySource(cand: LookupResult | null, field: ArrayField): LookupSource | null {
-	if (sourceHasValue(cand, field, 'ol')) return 'ol';
-	if (sourceHasValue(cand, field, 'gb')) return 'gb';
+export function fillEmptySource(cand: LookupResult | null, field: DiffField): LookupSource | null {
+	if (fillEmptyHasValue(cand, field, 'ol')) return 'ol';
+	if (fillEmptyHasValue(cand, field, 'gb')) return 'gb';
 	return null;
+}
+
+/** Bulk Fill empty's write for the scalar fields the book has empty. */
+export function buildFillEmptyScalarPatch(book: LookupBook, cand: LookupResult | null): BookPatch {
+	const patch: BookPatch = {};
+	for (const f of SCALAR_FIELDS) {
+		if (book[f] != null) continue;
+		const src = fillEmptySource(cand, f);
+		if (src) patch[f] = scalar(book, cand, f, src);
+	}
+	return patch;
 }
 
 /** Bulk Fill empty's write for the array fields the book has empty. */

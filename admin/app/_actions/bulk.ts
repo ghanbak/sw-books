@@ -4,7 +4,7 @@ import { getAdmin } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { headCheckCover } from '@app/sources/covers';
 import { fetchVolumes } from '@app/sources/google-books';
-import { buildFillEmptyArrayPatch } from '@app/sources/lookup-selection';
+import { buildFillEmptyArrayPatch, buildFillEmptyScalarPatch } from '@app/sources/lookup-selection';
 import { coverByIsbnUrl } from '@app/sources/open-library';
 import { patchBook } from './books';
 import { lookupCandidates } from './lookup';
@@ -81,17 +81,11 @@ export async function fillEmpty(slug: string): Promise<FillResult> {
 		.single();
 	if (!book) return { slug, status: 'error', message: 'not found' };
 
-	const { ol, gb } = look.data;
-	const patch: Record<string, unknown> = {};
-
-	for (const f of ['cover_image', 'publisher', 'date_published', 'language', 'synopsis'] as const) {
-		if (book[f] == null) {
-			const v = ol[f] ?? gb[f] ?? null;
-			if (v != null) patch[f] = v;
-		}
-	}
-	// Same source rule as the per-book Fill empty: first non-empty of OL, GB.
-	Object.assign(patch, buildFillEmptyArrayPatch(book, look.data));
+	// Same source rule as the per-book Fill empty: first non-blank of OL, GB.
+	const patch = {
+		...buildFillEmptyScalarPatch(book, look.data),
+		...buildFillEmptyArrayPatch(book, look.data),
+	};
 
 	if (Object.keys(patch).length === 0) return { slug, status: 'unchanged' };
 	// Guarded on the updated_at read above: an edit that lands during the
