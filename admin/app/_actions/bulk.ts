@@ -4,6 +4,7 @@ import { getAdmin } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { headCheckCover } from '@app/sources/covers';
 import { fetchVolumes } from '@app/sources/google-books';
+import { buildFillEmptyArrayPatch } from '@app/sources/lookup-selection';
 import { coverByIsbnUrl } from '@app/sources/open-library';
 import { patchBook } from './books';
 import { lookupCandidates } from './lookup';
@@ -89,18 +90,8 @@ export async function fillEmpty(slug: string): Promise<FillResult> {
 			if (v != null) patch[f] = v;
 		}
 	}
-	if ((book.format?.length ?? 0) === 0) {
-		const v = ol.format ?? gb.format;
-		if (v?.length) patch.format = v;
-	}
-	if ((book.isbn?.length ?? 0) === 0) {
-		const v = ol.isbn ?? gb.isbn;
-		if (v?.length) {
-			patch.isbn = v;
-			patch.primary_isbn =
-				book.primary_isbn && v.includes(book.primary_isbn) ? book.primary_isbn : v[0];
-		}
-	}
+	// Same source rule as the per-book Fill empty: first non-empty of OL, GB.
+	Object.assign(patch, buildFillEmptyArrayPatch(book, look.data));
 
 	if (Object.keys(patch).length === 0) return { slug, status: 'unchanged' };
 	// Guarded on the updated_at read above: an edit that lands during the

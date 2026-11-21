@@ -59,6 +59,33 @@ export function arr(
 	return candidateFor(cand, source)[field] ?? [];
 }
 
+/**
+ * Fill empty's source for an array field: OL when it has values, else GB. An
+ * empty list is no value, so `[]` from OL falls through to GB (#348).
+ */
+export function fillEmptySource(cand: LookupResult | null, field: ArrayField): LookupSource | null {
+	if (sourceHasValue(cand, field, 'ol')) return 'ol';
+	if (sourceHasValue(cand, field, 'gb')) return 'gb';
+	return null;
+}
+
+/** Bulk Fill empty's write for the array fields the book has empty. */
+export function buildFillEmptyArrayPatch(book: LookupBook, cand: LookupResult | null): BookPatch {
+	const patch: BookPatch = {};
+	for (const f of ARRAY_FIELDS) {
+		if ((book[f]?.length ?? 0) > 0) continue;
+		const src = fillEmptySource(cand, f);
+		if (!src) continue;
+		const v = arr(book, cand, f, src);
+		patch[f] = v;
+		if (f === 'isbn') {
+			patch.primary_isbn =
+				book.primary_isbn && v.includes(book.primary_isbn) ? book.primary_isbn : v[0];
+		}
+	}
+	return patch;
+}
+
 /** The ISBN list and primary ISBN that the given source would leave on the book. */
 export function previewIsbns(
 	book: LookupBook,
