@@ -28,3 +28,17 @@ export function editCellLabel(
 	const shown = value?.trim() ? value : 'empty';
 	return `Edit ${fieldLabel} of ${bookTitle}: ${shown}`;
 }
+
+/**
+ * Spoken text for the catalog filter's `role="status"` count (#356): "4 of 185 books",
+ * "All 185 books", "No books match", or with a sidebar filter "4 books match Missing ISBN".
+ */
+export function filterStatusLabel(shown: number, total: number, activeLabel: string): string {
+	if (activeLabel) {
+		if (shown === 0) return `No books match ${activeLabel}`;
+		return shown === 1 ? `1 book matches ${activeLabel}` : `${shown} books match ${activeLabel}`;
+	}
+	if (shown === 0) return 'No books match';
+	if (shown === total) return `All ${total} books`;
+	return `${shown} of ${total} books`;
+}

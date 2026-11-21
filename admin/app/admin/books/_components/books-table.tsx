@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/table';
 import { callAction } from '@/lib/call-action';
 import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
-import { ariaSortFor, editCellLabel, selectRowLabel } from '@/lib/table-a11y';
+import { ariaSortFor, editCellLabel, filterStatusLabel, selectRowLabel } from '@/lib/table-a11y';
 import { cn } from '@/lib/utils';
 import { type BulkItemResult, runBulkSequential } from '@app/bulk-run';
 import { isValidIsbn } from '@app/isbn';
@@ -803,10 +803,16 @@ export function BooksTable({
 						onChange={(e) => setGlobalFilter(e.target.value)}
 						className="max-w-sm"
 					/>
-					<span className="text-muted-foreground text-sm tabular-nums">
-						{table.getFilteredRowModel().rows.length}
-						{activeLabel ? ` · ${activeLabel}` : ` of ${data.length}`}
-					</span>
+					{/* <output> is role="status": announces each new count, zero included (#356). */}
+					<output aria-live="polite" className="text-muted-foreground text-sm tabular-nums">
+						<span aria-hidden="true">
+							{table.getFilteredRowModel().rows.length}
+							{activeLabel ? ` · ${activeLabel}` : ` of ${data.length}`}
+						</span>
+						<span className="sr-only">
+							{filterStatusLabel(table.getFilteredRowModel().rows.length, data.length, activeLabel)}
+						</span>
+					</output>
 				</div>
 
 				{selectedCount > 0 && (

@@ -13,6 +13,7 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { callAction } from '@/lib/call-action';
+import { candidateIsEmpty, prefillLabel, searchStatusLabel } from '@/lib/search-a11y';
 import { numOrNull } from '@app/book-schema';
 import { slugify } from '@app/slug';
 import type { BookCandidate, LookupResult } from '@app/sources/types';
@@ -207,6 +208,10 @@ export function NewBookForm() {
 					)}
 					Search
 				</Button>
+				{/* <output> is role="status"; always mounted so the first result set is announced (#356). */}
+				<output aria-live="polite" className="sr-only">
+					{searchStatusLabel(results)}
+				</output>
 
 				{results && (
 					<div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -434,23 +439,42 @@ function Candidate({
 	candidate: BookCandidate;
 	onUse: () => void;
 }) {
-	const empty = !candidate.isbn?.length && !candidate.publisher && !candidate.date_published;
+	const empty = candidateIsEmpty(candidate);
 	return (
 		<div className="rounded-md border border-border p-3 text-sm">
 			<div className="mb-2 flex items-center justify-between">
 				<span className="font-medium">{label}</span>
-				<Button size="sm" variant="outline" onClick={onUse} disabled={empty}>
+				<Button
+					size="sm"
+					variant="outline"
+					onClick={onUse}
+					disabled={empty}
+					aria-label={prefillLabel(label)}
+				>
 					Prefill
 				</Button>
 			</div>
 			{empty ? (
 				<p className="text-muted-foreground text-xs">No match</p>
 			) : (
+				// Inline dt/dd keep the one-line "Term: value" rows (#356).
 				<dl className="space-y-1 text-muted-foreground text-xs">
-					<div>ISBNs: {candidate.isbn?.join(', ') || '—'}</div>
-					<div>Publisher: {candidate.publisher || '—'}</div>
-					<div>Published: {candidate.date_published || '—'}</div>
-					<div>Language: {candidate.language || '—'}</div>
+					<div>
+						<dt className="inline">ISBNs:</dt>{' '}
+						<dd className="inline">{candidate.isbn?.join(', ') || '—'}</dd>
+					</div>
+					<div>
+						<dt className="inline">Publisher:</dt>{' '}
+						<dd className="inline">{candidate.publisher || '—'}</dd>
+					</div>
+					<div>
+						<dt className="inline">Published:</dt>{' '}
+						<dd className="inline">{candidate.date_published || '—'}</dd>
+					</div>
+					<div>
+						<dt className="inline">Language:</dt>{' '}
+						<dd className="inline">{candidate.language || '—'}</dd>
+					</div>
 				</dl>
 			)}
 		</div>
