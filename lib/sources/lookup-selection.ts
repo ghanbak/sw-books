@@ -172,3 +172,24 @@ export function pruneLookupSelection(
 	}
 	return { selection: next, isbnDropped };
 }
+
+/**
+ * Bulk Fill empty's cover: the fillEmptySource pick (OL, else GB), kept only if
+ * it passes `headCheck`; a failing OL URL falls back to GB's cover, also
+ * checked. Null means write no cover (#353). OL's ISBN URL is built even when
+ * the edition has no cover and 404s, so it can't be trusted unchecked.
+ * Same order as refetchCover; the head check is injected so this stays pure.
+ */
+export async function pickFillEmptyCover(
+	cand: LookupResult | null,
+	headCheck: (url: string) => Promise<boolean>,
+): Promise<string | null> {
+	const tried = new Set<string>();
+	for (const src of ['ol', 'gb'] as const) {
+		const url = candidateFor(cand, src).cover_image;
+		if (!url?.trim() || tried.has(url)) continue;
+		tried.add(url);
+		if (await headCheck(url)) return url;
+	}
+	return null;
+}
