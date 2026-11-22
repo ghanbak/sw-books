@@ -11,6 +11,7 @@ import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import pLimit from 'p-limit';
+import { fetchAllBooks } from './_supabase';
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -116,11 +117,14 @@ function classify(probe: Probe, rowTitle: string, rowAuthors: string[]): Verdict
 
 async function main() {
 	const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-	const { data, error } = await supabase
-		.from('books')
-		.select('slug, title, author, primary_isbn')
-		.not('primary_isbn', 'is', null);
-	if (error || !data) {
+	type Row = { slug: string; title: string; author: string[]; primary_isbn: string };
+	let data: Row[];
+	try {
+		data = await fetchAllBooks<Row>(supabase, {
+			columns: 'slug, title, author, primary_isbn',
+			notNull: ['primary_isbn'],
+		});
+	} catch (error) {
 		console.error('DB query failed:', error);
 		process.exit(1);
 	}
