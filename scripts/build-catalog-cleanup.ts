@@ -71,7 +71,7 @@ import {
 import { fetchPagesByIds } from '../lib/wookieepedia/client';
 import { type CatalogBook, createTitleIndex } from '../lib/wookieepedia/match';
 import { parseBookInfobox, stripWikiMarkup } from '../lib/wookieepedia/parse';
-import { makeClient, productionEnv } from './_supabase';
+import { fetchAllBooks, makeClient, productionEnv } from './_supabase';
 import { loadDiscovered } from './lib/load-discovered';
 
 const ROOT = resolve(__dirname, '..');
@@ -795,9 +795,9 @@ export async function runCleanup(opts: CleanupOptions): Promise<CleanupRun> {
 		);
 	} else {
 		const supabase = makeClient(opts.prod);
-		const res = await supabase.from('books').select('*').order('slug');
-		if (res.error) throw new Error(`catalog read failed: ${res.error.message}`);
-		data = res.data ?? [];
+		data = await fetchAllBooks(supabase).catch((err: unknown) => {
+			throw new Error(`catalog read failed: ${err instanceof Error ? err.message : String(err)}`);
+		});
 	}
 	const catalog = data as unknown as Array<CatalogBook & CleanupRow>;
 	const label = opts.fromBackup

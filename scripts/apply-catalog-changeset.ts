@@ -56,7 +56,14 @@ import {
 } from '../lib/wookieepedia/apply-plan';
 import type { Changeset } from '../lib/wookieepedia/changeset';
 import { CLEANUP_KIND, type CleanupChangeset } from '../lib/wookieepedia/cleanup';
-import { isLocal, makeClient, resolveCredentials } from './_supabase';
+import {
+	backupRefusal,
+	countBooks,
+	fetchAllBooks,
+	isLocal,
+	makeClient,
+	resolveCredentials,
+} from './_supabase';
 
 const ROOT = resolve(__dirname, '..');
 const args = process.argv.slice(2);
@@ -76,9 +83,11 @@ const supabase = makeClient(PROD);
 const w = (s: string) => process.stdout.write(`${s}\n`);
 
 async function readLive(): Promise<LiveState[]> {
-	const { data, error } = await supabase.from('books').select(LIVE_COLUMNS);
-	if (error) throw new Error(`live read failed: ${error.message}`);
-	return (data ?? []) as LiveState[];
+	try {
+		return await fetchAllBooks<LiveState>(supabase, { columns: LIVE_COLUMNS });
+	} catch (err) {
+		throw new Error(`live read failed: ${err instanceof Error ? err.message : String(err)}`);
+	}
 }
 
 async function readOne(column: 'id' | 'slug', value: string): Promise<LiveState | null> {
@@ -112,8 +121,12 @@ async function confirmTarget(url: string): Promise<void> {
 	}
 }
 
-/** Run `npm run catalog:backup` and verify it produced a fresh, complete backup. */
-function backupOrRefuse(liveCount: number): void {
+/**
+ * Run `npm run catalog:backup` and verify it produced a fresh, complete backup. The row
+ * count is checked against an exact count query: a list read is capped by PostgREST
+ * `max_rows`, so comparing against it would accept a truncated backup (#363).
+ */
+async function backupOrRefuse(): Promise<void> {
 	w('\nRunning npm run catalog:backup …');
 	const res = spawnSync('npm', ['run', 'catalog:backup'], { cwd: ROOT, stdio: 'inherit' });
 	if (res.status !== 0) {
@@ -128,10 +141,10 @@ function backupOrRefuse(liveCount: number): void {
 	} catch {
 		// fall through to refusal
 	}
-	if (age > BACKUP_MAX_AGE_MS || rows !== liveCount) {
-		console.error(
-			`Refusing: backup not fresh/complete (age ${Math.round(age / 1000)}s, ${rows} rows vs ${liveCount} live) — no changes written.`,
-		);
+	const liveCount = await countBooks(supabase);
+	const refusal = backupRefusal({ ageMs: age, rows, liveCount, maxAgeMs: BACKUP_MAX_AGE_MS });
+	if (refusal) {
+		console.error(refusal);
 		process.exit(1);
 	}
 	w(`Backup OK: data/catalog-backup.csv (${rows} rows).`);
@@ -288,7 +301,7 @@ async function main(): Promise<void> {
 	}
 
 	await confirmTarget(url);
-	backupOrRefuse(live.length);
+	await backupOrRefuse();
 
 	w(`\nWriting ${todo.length} step(s)…`);
 	let done = 0;

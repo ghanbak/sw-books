@@ -8,6 +8,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
+import { fetchAllBooks } from './_supabase';
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -77,11 +78,20 @@ function parseReport(): { weak: Map<string, Entry>; nodata: Map<string, Entry> }
 
 async function main() {
 	const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-	const { data, error } = await supabase
-		.from('books')
-		.select('slug, title, author, primary_isbn, isbn')
-		.order('title');
-	if (error || !data) {
+	type Row = {
+		slug: string;
+		title: string;
+		author: string[];
+		primary_isbn: string | null;
+		isbn: string[] | null;
+	};
+	let data: Row[];
+	try {
+		data = await fetchAllBooks<Row>(supabase, {
+			columns: 'slug, title, author, primary_isbn, isbn',
+			orderBy: ['title'],
+		});
+	} catch (error) {
 		console.error('DB query failed:', error);
 		process.exit(1);
 	}

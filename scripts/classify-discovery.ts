@@ -28,6 +28,7 @@ import {
 	classify,
 	unmatchedCatalog,
 } from '../lib/wookieepedia/match';
+import { fetchAllBooks } from './_supabase';
 import { loadDiscovered } from './lib/load-discovered';
 
 const ROOT = resolve(__dirname, '..');
@@ -100,9 +101,7 @@ async function loadCatalog(): Promise<CatalogSource> {
 
 	try {
 		const supabase = createClient<Database>(url, key, { auth: { persistSession: false } });
-		const { data, error } = await supabase.from('books').select('*');
-		if (error) throw new Error(error.message);
-		const books = (data ?? []) as unknown as CatalogBook[];
+		const books = await fetchAllBooks<CatalogBook>(supabase);
 		return { label: `DB (${url})`, books, authoritative: true };
 	} catch (err) {
 		console.warn(

@@ -11,19 +11,20 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { serializeBackup } from '../lib/csv/backup';
-import { makeClient } from './_supabase';
+import { fetchAllBooks, makeClient } from './_supabase';
 
 const PROD = process.argv.includes('--production');
 const OUT = resolve(__dirname, '..', 'data', 'catalog-backup.csv');
 
 async function main(): Promise<void> {
 	const supabase = makeClient(PROD);
-	const { data, error } = await supabase.from('books').select('*').order('slug');
-	if (error) {
-		console.error(`Export failed: ${error.message}`);
+	let rows: Parameters<typeof serializeBackup>[0];
+	try {
+		rows = await fetchAllBooks(supabase);
+	} catch (err) {
+		console.error(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
 		process.exit(1);
 	}
-	const rows = data ?? [];
 	if (rows.length === 0) {
 		console.error(
 			'Refusing to write an empty backup (0 rows returned) — aborting to protect the existing file. ' +
