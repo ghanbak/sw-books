@@ -13,6 +13,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { firstInvalidField } from '@/lib/form-a11y';
 import {
 	CANON_VALUES,
 	type ManualBook,
@@ -28,6 +29,7 @@ import { createSaveGate, serializeSave } from '@app/serial-save';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { type ReactNode, startTransition, useState, useTransition } from 'react';
+import { flushSync } from 'react-dom';
 import { toast } from 'sonner';
 
 const LABELS: Record<ManualField, string> = {
@@ -44,6 +46,22 @@ const LABELS: Record<ManualField, string> = {
 	canon: 'Canon',
 	type: 'Type',
 };
+
+/** Render order (row by row on the two-column grid): the first invalid one gets focus. */
+const FIELD_ORDER = [
+	'title',
+	'author',
+	'canon',
+	'type',
+	'era',
+	'series_name',
+	'series_order',
+	'timeline_order',
+	'publisher',
+	'date_published',
+	'cover_image',
+	'synopsis',
+] as const satisfies readonly ManualField[];
 
 type Errors = Partial<Record<string, string>>;
 
@@ -87,7 +105,11 @@ export function ManualFieldsForm({
 		if (gate.held || changed.length === 0) return;
 		const parsed = patchSchema.safeParse(patch);
 		if (!parsed.success) {
-			setErrors(issuesByField(parsed.error));
+			const fieldErrors = issuesByField(parsed.error);
+			// Commit aria-invalid/aria-describedby first so focus reads the error.
+			flushSync(() => setErrors(fieldErrors));
+			const first = firstInvalidField(fieldErrors, FIELD_ORDER);
+			if (first) document.getElementById(`manual-${first}`)?.focus();
 			return;
 		}
 		setErrors({});
