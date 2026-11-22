@@ -43,7 +43,7 @@ import {
 } from '../lib/wookieepedia/enrich-sync';
 import { type CatalogBook, classify } from '../lib/wookieepedia/match';
 import { PINS_FILE, type PinMap, parsePins } from '../lib/wookieepedia/pins';
-import { isLocal, makeClient, resolveCredentials } from './_supabase';
+import { fetchAllBooks, isLocal, makeClient, resolveCredentials } from './_supabase';
 import { discoveryPageIds, loadDiscovered } from './lib/load-discovered';
 
 const args = process.argv.slice(2);
@@ -78,9 +78,8 @@ async function requireTable(url: string): Promise<void> {
 }
 
 async function readCatalog(): Promise<CatalogBook[]> {
-	const { data, error } = await supabase.from('books').select('*').order('slug');
-	if (error) throw new Error(`books read failed: ${error.message}`);
-	return (data ?? []) as unknown as CatalogBook[];
+	// Throws `books read failed (rows …): …` on any page error.
+	return fetchAllBooks<CatalogBook>(supabase);
 }
 
 /** Existing rows, paged (each carries a 14–50 KB `appearances`). */

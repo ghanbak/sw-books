@@ -51,7 +51,7 @@ import {
 	parseBookInfobox,
 	wikiDatePrecision,
 } from '../lib/wookieepedia/parse';
-import { makeClient, productionEnv } from './_supabase';
+import { fetchAllBooks, makeClient, productionEnv } from './_supabase';
 import { DISCOVERY_CSV, discoveryCsvSha256, loadDiscovered } from './lib/load-discovered';
 
 const ROOT = resolve(__dirname, '..');
@@ -356,9 +356,9 @@ async function main(): Promise<void> {
 	const discovered = loadDiscovered();
 	const sha = discoveryCsvSha256();
 	const supabase = makeClient(PROD);
-	const { data, error } = await supabase.from('books').select('*').order('slug');
-	if (error) throw new Error(`catalog read failed: ${error.message}`);
-	const catalog = (data ?? []) as unknown as LiveBook[];
+	const catalog = await fetchAllBooks<LiveBook>(supabase).catch((err: unknown) => {
+		throw new Error(`catalog read failed: ${err instanceof Error ? err.message : String(err)}`);
+	});
 	const label = PROD ? 'PRODUCTION' : 'LOCAL';
 	console.log(
 		`Catalog: ${label}, ${catalog.length} rows (read-only). Discovery: ${discovered.length} rows.`,
