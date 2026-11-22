@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { Alert } from 'react-native';
 import { useAuth } from './auth';
+import { fetchAllCatalogBooks } from './fetch-all-pages';
 import { type Result, err } from './result';
 import {
 	type ShelfField,
@@ -56,10 +57,8 @@ export function BooksProvider({ children }: { children: ReactNode }) {
 		setLoading(true);
 		setError(null);
 
-		const { data, error: err } = await supabase
-			.from('books')
-			.select('*')
-			.order('timeline_order', { ascending: true });
+		// Paged: an unranged read stops silently at PostgREST max_rows (#364).
+		const { data, error: err } = await fetchAllCatalogBooks(supabase);
 
 		if (err) {
 			setError(err.message);
