@@ -26,7 +26,17 @@ export function useCatalogSort(storageKey: string) {
 	useEffect(() => {
 		if (hydrated.current) return;
 		hydrated.current = true;
-		AsyncStorage.getItem(storageKey).then((raw) => setSort(parseStoredSort(raw)));
+		let alive = true;
+		AsyncStorage.getItem(storageKey)
+			.then((raw) => {
+				if (alive) setSort(parseStoredSort(raw));
+			})
+			.catch(() => {
+				if (alive) setSort(parseStoredSort(null));
+			});
+		return () => {
+			alive = false;
+		};
 	}, [storageKey]);
 
 	const selectSort = useCallback(
