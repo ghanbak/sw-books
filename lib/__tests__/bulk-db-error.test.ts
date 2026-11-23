@@ -33,12 +33,9 @@ vi.mock('../sources/google-books', () => ({ fetchVolumes: async () => null }));
 vi.mock('../sources/open-library', () => ({
 	coverByIsbnUrl: (isbn: string) => `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`,
 }));
-// fillEmpty's own read comes after the lookup; let the lookup succeed.
-vi.mock('../../admin/app/_actions/lookup', () => ({
-	lookupCandidates: async () => ({
-		ok: true,
-		data: { ol: {}, gb: {}, fetchedAt: '2026-11-22T00:00:00Z' },
-	}),
+// fillEmpty reads the row before the lookup; keep the lookup off the network.
+vi.mock('../sources/lookup', () => ({
+	lookupCandidatesFor: async () => ({ ol: {}, gb: {}, fetchedAt: '2026-11-22T00:00:00Z' }),
 }));
 
 // Non-literal path keeps the admin file out of the root typecheck.
