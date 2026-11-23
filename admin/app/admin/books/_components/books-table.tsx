@@ -29,7 +29,13 @@ import {
 } from '@/components/ui/table';
 import { callAction } from '@/lib/call-action';
 import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
-import { ariaSortFor, editCellLabel, filterStatusLabel, selectRowLabel } from '@/lib/table-a11y';
+import {
+	ariaSortFor,
+	editCellLabel,
+	filterStatusLabel,
+	focusTargetAfterRemove,
+	selectRowLabel,
+} from '@/lib/table-a11y';
 import { cn } from '@/lib/utils';
 import { type BulkItemResult, runBulkSequential } from '@app/bulk-run';
 import { isValidIsbn } from '@app/isbn';
@@ -134,6 +140,7 @@ declare module '@tanstack/react-table' {
 	interface TableMeta<TData extends RowData> {
 		updateField: (id: string, field: EditableField, value: string | null) => void;
 		removeRow: (id: string) => void;
+		focusAfterRemove: () => void;
 	}
 }
 
@@ -142,15 +149,19 @@ function DeleteBookCell({
 	slug,
 	title,
 	onDeleted,
+	onFocusAfterDelete,
 }: {
 	id: string;
 	slug: string;
 	title: string;
 	onDeleted: () => void;
+	/** Moves focus once the row is gone; the trigger that Radix would refocus is detached. */
+	onFocusAfterDelete: () => void;
 }) {
 	const [open, setOpen] = useState(false);
 	const [typed, setTyped] = useState('');
 	const [pending, startDelete] = useTransition();
+	const deleted = useRef(false);
 
 	return (
 		<AlertDialog
@@ -166,11 +177,20 @@ function DeleteBookCell({
 					size="sm"
 					className="h-7 text-muted-foreground hover:text-destructive-text"
 					aria-label={`Delete ${title}`}
+					data-row-delete={id}
 				>
 					<Trash2 className="size-3.5" />
 				</Button>
 			</AlertDialogTrigger>
-			<AlertDialogContent>
+			<AlertDialogContent
+				// Runs after the dialog (and, on delete, its row) unmounts (#387).
+				onCloseAutoFocus={(e) => {
+					if (!deleted.current) return;
+					deleted.current = false;
+					e.preventDefault();
+					onFocusAfterDelete();
+				}}
+			>
 				<AlertDialogHeader>
 					<AlertDialogTitle>Delete “{title}”?</AlertDialogTitle>
 					<AlertDialogDescription>
@@ -196,6 +216,7 @@ function DeleteBookCell({
 								const res = await callAction(() => deleteBook(id, typed.trim()), 'Delete failed');
 								if (res.ok) {
 									toast.success(`Deleted “${title}”`);
+									deleted.current = true;
 									setOpen(false);
 									onDeleted();
 								} else {
@@ -510,6 +531,7 @@ const columns = [
 					slug={row.original.slug}
 					title={row.original.title}
 					onDeleted={() => table.options.meta?.removeRow(row.original.id)}
+					onFocusAfterDelete={() => table.options.meta?.focusAfterRemove()}
 				/>
 			</div>
 		),
@@ -622,14 +644,38 @@ export function BooksTable({
 		});
 	};
 
-	const removeRow = (id: string) => setData((prev) => prev.filter((r) => r.id !== id));
+	const filterRef = useRef<HTMLInputElement>(null);
+	const tableWrapRef = useRef<HTMLDivElement>(null);
+	// Row id to focus once a deleted row unmounts; picked from the visible (sorted,
+	// filtered) order while the row is still in it (#387).
+	const focusAfterRemoveId = useRef<string | null>(null);
+
+	const removeRow = (id: string) => {
+		focusAfterRemoveId.current = focusTargetAfterRemove(
+			table.getRowModel().rows.map((r) => r.id),
+			id,
+		);
+		setData((prev) => prev.filter((r) => r.id !== id));
+	};
+
+	// Read after the row unmounts, so the lookup only finds controls still on the page.
+	const focusAfterRemove = () => {
+		const targetId = focusAfterRemoveId.current;
+		focusAfterRemoveId.current = null;
+		const target = targetId
+			? tableWrapRef.current?.querySelector<HTMLElement>(
+					`[data-row-delete="${CSS.escape(targetId)}"]`,
+				)
+			: null;
+		(target ?? filterRef.current)?.focus();
+	};
 
 	const table = useReactTable({
 		data: visibleData,
 		columns,
 		state: { sorting, globalFilter, rowSelection },
 		getRowId: (row) => row.id,
-		meta: { updateField, removeRow },
+		meta: { updateField, removeRow, focusAfterRemove },
 		onSortingChange: setSorting,
 		onGlobalFilterChange: setGlobalFilter,
 		onRowSelectionChange: setRowSelection,
@@ -798,6 +844,7 @@ export function BooksTable({
 					<Input
 						type="search"
 						aria-label="Filter catalog"
+						ref={filterRef}
 						placeholder="Filter by title, author, series, publisher…"
 						value={globalFilter}
 						onChange={(e) => setGlobalFilter(e.target.value)}
@@ -870,7 +917,7 @@ export function BooksTable({
 					</div>
 				)}
 
-				<div className="overflow-hidden rounded-lg border border-border">
+				<div ref={tableWrapRef} className="overflow-hidden rounded-lg border border-border">
 					<Table>
 						<TableHeader>
 							{table.getHeaderGroups().map((headerGroup) => (
