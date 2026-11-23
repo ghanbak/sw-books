@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { dbError } from '@app/action-errors';
 import { headCheckCover } from '@app/sources/covers';
 import { fetchVolumes } from '@app/sources/google-books';
+import { lookupCandidatesFor } from '@app/sources/lookup';
 import {
 	buildFillEmptyArrayPatch,
 	buildFillEmptyScalarPatch,
@@ -12,7 +13,6 @@ import {
 } from '@app/sources/lookup-selection';
 import { coverByIsbnUrl } from '@app/sources/open-library';
 import { patchBook } from './books';
-import { lookupCandidates } from './lookup';
 
 export type CoverResult = {
 	slug: string;
@@ -77,14 +77,13 @@ export async function refetchCover(slug: string): Promise<CoverResult> {
 /** Fill only the empty fields of one book from OL/GB candidates. */
 export async function fillEmpty(slug: string): Promise<FillResult> {
 	if (!(await getAdmin())) return { slug, status: 'error', message: 'not authorized' };
-	const look = await lookupCandidates(slug);
-	if (!look.ok) return { slug, status: 'error', message: look.error.message };
-
+	// One read, before any lookup: the search, the empty-field check and the
+	// stale-write guard all use this row (#384).
 	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: book, error } = await supabaseAdmin
 		.from('books')
 		.select(
-			'id, updated_at, cover_image, publisher, date_published, language, synopsis, format, isbn, primary_isbn',
+			'id, updated_at, title, author, cover_image, publisher, date_published, language, synopsis, format, isbn, primary_isbn',
 		)
 		.eq('slug', slug)
 		.single();
@@ -93,21 +92,28 @@ export async function fillEmpty(slug: string): Promise<FillResult> {
 	}
 	if (!book) return { slug, status: 'error', message: 'not found' };
 
+	// Same probe as lookupCandidates: anchor on the ISBN, else title + author.
+	const candidates = await lookupCandidatesFor({
+		isbn: book.primary_isbn ?? book.isbn?.[0] ?? null,
+		title: book.title,
+		author: book.author?.[0] ?? '',
+	});
+
 	// Same source rule as the per-book Fill empty: first non-blank of OL, GB.
-	const { cover_image, ...scalars } = buildFillEmptyScalarPatch(book, look.data);
+	const { cover_image, ...scalars } = buildFillEmptyScalarPatch(book, candidates);
 	// OL's ISBN cover URL can 404: write only a cover that passes the head
 	// check, falling back to GB, else leave cover_image empty (#353).
 	const cover =
-		cover_image === undefined ? null : await pickFillEmptyCover(look.data, headCheckCover);
+		cover_image === undefined ? null : await pickFillEmptyCover(candidates, headCheckCover);
 	const patch = {
 		...(cover ? { cover_image: cover } : {}),
 		...scalars,
-		...buildFillEmptyArrayPatch(book, look.data),
+		...buildFillEmptyArrayPatch(book, candidates),
 	};
 
 	if (Object.keys(patch).length === 0) return { slug, status: 'unchanged' };
-	// Guarded on the updated_at read above: an edit that lands during the
-	// (slow) lookup is not overwritten.
+	// Guarded on the updated_at read before the lookup: an edit that lands
+	// during the (slow) lookup or cover probes fails with CONFLICT (#384).
 	const res = await patchBook(book.id, book.updated_at, patch);
 	if (!res.ok) return { slug, status: 'error', message: res.error.message };
 	return { slug, status: 'updated', fields: Object.keys(patch) };

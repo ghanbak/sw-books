@@ -44,9 +44,7 @@ vi.mock('../sources/google-books', () => ({ fetchVolumes: async () => null }));
 vi.mock('../sources/open-library', () => ({
 	coverByIsbnUrl: (isbn: string) => db.coverUrl(isbn),
 }));
-vi.mock('../../admin/app/_actions/lookup', () => ({
-	lookupCandidates: async () => ({ ok: false }),
-}));
+vi.mock('../sources/lookup', () => ({ lookupCandidatesFor: async () => null }));
 
 // Non-literal path keeps the admin file out of the root typecheck (its
 // `@app/*` aliases only resolve under admin/tsconfig.json).
