@@ -19,6 +19,7 @@
 			"@/*": ["./*"],
 			"isbn3": ["./node_modules/isbn3"],
 			"zod": ["./node_modules/zod"],
+			"@supabase/supabase-js": ["./node_modules/@supabase/supabase-js"],
 			"csv-parse/sync": ["./node_modules/csv-parse/lib/sync"],
 			"csv-stringify/sync": ["./node_modules/csv-stringify/lib/sync"],
 			"@app/types": ["../lib/types.ts"],
