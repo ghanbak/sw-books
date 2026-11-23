@@ -28,6 +28,7 @@
 			"@app/csv/*": ["../lib/csv/*"],
 			"@app/isbn": ["../lib/isbn.ts"],
 			"@app/result": ["../lib/result.ts"],
+			"@app/fetch-all-pages": ["../lib/fetch-all-pages.ts"],
 			"@app/action-errors": ["../lib/action-errors.ts"],
 			"@app/stale-write": ["../lib/stale-write.ts"],
 			"@app/serial-save": ["../lib/serial-save.ts"],
