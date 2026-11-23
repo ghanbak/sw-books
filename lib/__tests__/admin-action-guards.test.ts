@@ -37,15 +37,20 @@ vi.mock('../../admin/lib/supabase-admin', () => ({
 	getSupabaseAdmin: async () => ({
 		from: () => {
 			const q: Record<string, (...args: unknown[]) => unknown> = {};
-			for (const op of ['select', 'eq', 'in']) q[op] = () => q;
+			// `order`/`range`: exportToCsv pages books via fetchAllPages (#376).
+			for (const op of ['select', 'eq', 'in', 'order', 'range']) q[op] = () => q;
 			q.maybeSingle = async () => ({
 				data: { id: 'b1', slug: 'new-book', book_enrichment: null },
 				error: null,
 			});
-			// `owners()` awaits the builder itself.
+			// `owners()` awaits the builder itself; `count` serves exportToCsv's exact-count guard.
 			// biome-ignore lint/suspicious/noThenProperty: fake postgrest builder is thenable
 			q.then = (done: unknown) =>
-				(done as (r: unknown) => unknown)({ data: state.bookRows, error: null });
+				(done as (r: unknown) => unknown)({
+					data: state.bookRows,
+					count: state.bookRows.length,
+					error: null,
+				});
 			return q;
 		},
 	}),

@@ -21,7 +21,15 @@ vi.mock('../../admin/lib/safe-fs', () => ({
 vi.mock('../../admin/lib/supabase-admin', () => ({
 	getDbTarget: async () => 'local',
 	getSupabaseAdmin: async () => ({
-		from: () => ({ select: async () => ({ data: [], error: null }) }),
+		// getDriftReport pages books via fetchAllPages (#376): select → order → range.
+		from: () => {
+			const q = {
+				select: () => q,
+				order: () => q,
+				range: async () => ({ data: [], error: null }),
+			};
+			return q;
+		},
 	}),
 }));
 vi.mock('../csv/read', async (importOriginal) => {
