@@ -152,9 +152,7 @@ vi.mock('../../admin/node_modules/next/cache.js', () => ({ revalidateTag: () => 
 vi.mock('../sources/covers', () => ({ headCheckCover: async () => false }));
 vi.mock('../sources/google-books', () => ({ fetchVolumes: async () => null }));
 vi.mock('../sources/open-library', () => ({ coverByIsbnUrl: (i: string) => i }));
-vi.mock('../../admin/app/_actions/lookup', () => ({
-	lookupCandidates: async () => ({ ok: true, data: db.look }),
-}));
+vi.mock('../sources/lookup', () => ({ lookupCandidatesFor: async () => db.look }));
 
 const bulkPath = resolve(__dirname, '../../admin/app/_actions/bulk.ts');
 type Bulk = {
@@ -202,14 +200,14 @@ const read = (p: string) => {
 describe('Fill empty wiring (#348)', () => {
 	it('bulk.ts uses buildFillEmptyArrayPatch, not `??` source picks', () => {
 		const src = read('admin/app/_actions/bulk.ts');
-		expect(src).toMatch(/buildFillEmptyArrayPatch\(\s*book,\s*look\.data\s*\)/);
+		expect(src).toMatch(/buildFillEmptyArrayPatch\(\s*book,\s*candidates\s*\)/);
 		expect(src).not.toMatch(/ol\.isbn\s*\?\?\s*gb\.isbn/);
 		expect(src).not.toMatch(/ol\.format\s*\?\?\s*gb\.format/);
 	});
 
 	it('bulk.ts uses buildFillEmptyScalarPatch, not `??` scalar picks (#350)', () => {
 		const src = read('admin/app/_actions/bulk.ts');
-		expect(src).toMatch(/buildFillEmptyScalarPatch\(\s*book,\s*look\.data\s*\)/);
+		expect(src).toMatch(/buildFillEmptyScalarPatch\(\s*book,\s*candidates\s*\)/);
 		expect(src).not.toMatch(/\?\?\s*gb\[/);
 	});
 

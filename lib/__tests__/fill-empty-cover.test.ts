@@ -99,9 +99,7 @@ vi.mock('../sources/covers', () => ({
 }));
 vi.mock('../sources/google-books', () => ({ fetchVolumes: async () => null }));
 vi.mock('../sources/open-library', () => ({ coverByIsbnUrl: (i: string) => i }));
-vi.mock('../../admin/app/_actions/lookup', () => ({
-	lookupCandidates: async () => ({ ok: true, data: db.look }),
-}));
+vi.mock('../sources/lookup', () => ({ lookupCandidatesFor: async () => db.look }));
 
 const bulkPath = resolve(__dirname, '../../admin/app/_actions/bulk.ts');
 type Bulk = {
@@ -166,6 +164,6 @@ const read = (p: string) => {
 describe('Fill empty cover wiring (#353)', () => {
 	it('bulk.ts head-checks the cover via pickFillEmptyCover', () => {
 		const src = read('admin/app/_actions/bulk.ts');
-		expect(src).toMatch(/pickFillEmptyCover\(\s*look\.data,\s*headCheckCover\s*\)/);
+		expect(src).toMatch(/pickFillEmptyCover\(\s*candidates,\s*headCheckCover\s*\)/);
 	});
 });
