@@ -42,3 +42,17 @@ export function filterStatusLabel(shown: number, total: number, activeLabel: str
 	if (shown === total) return `All ${total} books`;
 	return `${shown} of ${total} books`;
 }
+
+/**
+ * Row to focus after `removedId` leaves the table (#387): the next row in visible
+ * (sorted, filtered) order, else the previous one, else null (focus the filter input).
+ * An id not in `rowIds` also gives null.
+ */
+export function focusTargetAfterRemove(
+	rowIds: readonly string[],
+	removedId: string,
+): string | null {
+	const i = rowIds.indexOf(removedId);
+	if (i === -1) return null;
+	return rowIds[i + 1] ?? rowIds[i - 1] ?? null;
+}
