@@ -8,6 +8,7 @@ import { dbError } from '@app/action-errors';
 import { serializeBackup } from '@app/csv/backup';
 import { type DriftReport, diffAgainstBackup } from '@app/csv/drift';
 import { parseCsv } from '@app/csv/read';
+import { fetchAllPages } from '@app/fetch-all-pages';
 import { revalidateTag } from 'next/cache';
 
 export type { DriftReport, DriftRow } from '@app/csv/drift';
@@ -46,10 +47,17 @@ export async function getDriftReport(): Promise<Result<DriftReport>> {
 	}
 
 	const supabaseAdmin = await getSupabaseAdmin();
-	const { data: rows, error } = await supabaseAdmin.from('books').select('*');
+	const { data: rows, error } = await fetchAllBooks(supabaseAdmin);
 	if (error) return { ok: false, error: dbError('getDriftReport', error) };
 
-	return { ok: true, data: diffAgainstBackup(rows ?? [], backup) };
+	return { ok: true, data: diffAgainstBackup(rows, backup) };
+}
+
+/** Every `books` row, paged past PostgREST's max_rows; `slug` (unique) keeps pages stable. */
+function fetchAllBooks(supabaseAdmin: Awaited<ReturnType<typeof getSupabaseAdmin>>) {
+	return fetchAllPages(() =>
+		supabaseAdmin.from('books').select('*').order('slug', { ascending: true }),
+	);
 }
 
 /** A read or parse failure degrades the drift check instead of rejecting the page. */
@@ -86,15 +94,30 @@ export async function exportToCsv(): Promise<Result<{ rows: number }>> {
 		};
 	}
 	const supabaseAdmin = await getSupabaseAdmin();
-	const { data: rows, error } = await supabaseAdmin.from('books').select('*');
+	const { data: rows, error } = await fetchAllBooks(supabaseAdmin);
 	if (error) return { ok: false, error: dbError('exportToCsv', error) };
-	if (!rows?.length) {
+	if (!rows.length) {
 		// Same guard as scripts/export-db-to-csv.ts: never overwrite with nothing.
 		return {
 			ok: false,
 			error: {
 				code: 'EMPTY',
 				message: 'The database returned 0 rows; the backup was not written.',
+			},
+		};
+	}
+	// Same guard as scripts' backupRefusal: an exact count (unaffected by max_rows)
+	// must match the rows read, or the backup would silently drop rows.
+	const { count, error: countError } = await supabaseAdmin
+		.from('books')
+		.select('*', { count: 'exact', head: true });
+	if (countError) return { ok: false, error: dbError('exportToCsv:count', countError) };
+	if (count !== rows.length) {
+		return {
+			ok: false,
+			error: {
+				code: 'INCOMPLETE',
+				message: `Read ${rows.length} rows but the database has ${count ?? 'an unknown number'}; the backup was not written.`,
 			},
 		};
 	}

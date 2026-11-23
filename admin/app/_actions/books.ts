@@ -78,10 +78,16 @@ export async function createBook(raw: unknown): Promise<Result<BookRow>> {
 		.eq('slug', input.slug)
 		.maybeSingle();
 	if (clash) {
-		const { data: all } = await supabaseAdmin.from('books').select('slug');
+		// Only `<slug>…` can collide with a `<slug>-N` suggestion; slugs are kebab-case,
+		// so the prefix has no LIKE wildcards to escape.
+		const { data: similar, error: similarError } = await supabaseAdmin
+			.from('books')
+			.select('slug')
+			.like('slug', `${input.slug}%`);
+		if (similarError) return { ok: false, error: dbError('createBook:suggest', similarError) };
 		const suggestion = ensureUniqueSlug(
 			input.slug,
-			(all ?? []).map((r) => r.slug),
+			similar.map((r) => r.slug),
 		);
 		return {
 			ok: false,
