@@ -2,6 +2,7 @@
 
 import { getAdmin } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { dbError } from '@app/action-errors';
 import { headCheckCover } from '@app/sources/covers';
 import { fetchVolumes } from '@app/sources/google-books';
 import {
@@ -38,11 +39,15 @@ type GbCover = {
 export async function refetchCover(slug: string): Promise<CoverResult> {
 	if (!(await getAdmin())) return { slug, status: 'error', message: 'not authorized' };
 	const supabaseAdmin = await getSupabaseAdmin();
-	const { data: book } = await supabaseAdmin
+	const { data: book, error } = await supabaseAdmin
 		.from('books')
 		.select('id, updated_at, primary_isbn, isbn, cover_image')
 		.eq('slug', slug)
 		.single();
+	// PGRST116 is zero rows; any other error is a failed read, not a missing book.
+	if (error && error.code !== 'PGRST116') {
+		return { slug, status: 'error', message: dbError('refetchCover', error).message };
+	}
 	if (!book) return { slug, status: 'error', message: 'not found' };
 
 	const isbn = book.primary_isbn ?? book.isbn?.[0] ?? null;
@@ -76,13 +81,16 @@ export async function fillEmpty(slug: string): Promise<FillResult> {
 	if (!look.ok) return { slug, status: 'error', message: look.error.message };
 
 	const supabaseAdmin = await getSupabaseAdmin();
-	const { data: book } = await supabaseAdmin
+	const { data: book, error } = await supabaseAdmin
 		.from('books')
 		.select(
 			'id, updated_at, cover_image, publisher, date_published, language, synopsis, format, isbn, primary_isbn',
 		)
 		.eq('slug', slug)
 		.single();
+	if (error && error.code !== 'PGRST116') {
+		return { slug, status: 'error', message: dbError('fillEmpty', error).message };
+	}
 	if (!book) return { slug, status: 'error', message: 'not found' };
 
 	// Same source rule as the per-book Fill empty: first non-blank of OL, GB.
