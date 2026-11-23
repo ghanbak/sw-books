@@ -95,7 +95,7 @@
 		"patch-package": "8.0.1",
 		"tsx": "^4.23.15",
 		"typescript": "~6.0.3",
-		"vitest": "^4.1.11",
+		"vitest": "^4.1.12",
 		"zod": "^4.6.6"
 	},
 	"overrides": {
