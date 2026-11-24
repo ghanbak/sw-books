@@ -9,6 +9,7 @@ import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
 import { type BarcodeLookupResult, selectBarcodeLookupResult } from '@/lib/barcode-lookup';
+import { addFailureCopy } from '@/lib/error-copy';
 import { type Book, useUserBooks } from '@/lib/hooks';
 import { normalizeIsbn } from '@/lib/isbn';
 import { barcodeResultAnnouncement } from '@/lib/scan-a11y';
@@ -125,7 +126,8 @@ export function BarcodeScanPanel() {
 		async (book: Book) => {
 			const res = await addOwned([book.id]);
 			dismissResult();
-			if (!res.ok) Alert.alert('Could not add to library', res.error.message);
+			// Same copy as the shelf-scan Add; raw RPC text is logged by the provider (#393).
+			if (!res.ok) Alert.alert('Could not add to library', addFailureCopy(res.error));
 		},
 		[addOwned, dismissResult],
 	);

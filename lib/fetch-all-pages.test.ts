@@ -164,7 +164,13 @@ describe('BooksProvider wiring', () => {
 		expect(body).not.toMatch(/\.from\(\s*['"]books['"]\s*\)/);
 	});
 
-	it('fetchBooks keeps the setError(message) path and never sets a partial catalog', () => {
-		expect(body).toMatch(/if\s*\(\s*err\s*\)\s*\{\s*setError\(\s*err\.message\s*\);/);
+	it('fetchBooks keeps the setError path and never sets a partial catalog', () => {
+		// #393 maps the message to display copy; the branch shape is what this pins.
+		const branch = body.match(/if\s*\(\s*err\s*\)\s*\{([^}]*)\}\s*else\s*\{([^}]*)\}/);
+		expect(branch).not.toBeNull();
+		const [, onError, onSuccess] = branch ?? [];
+		expect(onError).toMatch(/setError\(\s*errorCopy\(/);
+		expect(onError).not.toMatch(/setBooks/);
+		expect(onSuccess).toMatch(/setBooks\(\s*data\s*\?\?\s*\[\]\s*\)/);
 	});
 });
