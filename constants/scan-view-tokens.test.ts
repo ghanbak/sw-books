@@ -17,10 +17,8 @@ const capture = 'components/shelf-scan-capture.tsx';
 const scan = 'app/scan.tsx';
 
 describe('scan view secondary buttons use surface tokens (triage AC)', () => {
-	it.each([
-		[capture, 'secondaryButton'],
-		[capture, 'dismissButton'],
-	])('%s: %s', (file, style) => {
+	// Capture's secondary/dismiss styles moved into the shared Button's secondary variant (#401).
+	it.each([['components/ui/button.tsx', 'secondary']])('%s: %s', (file, style) => {
 		const src = source(file);
 		expect(styleValue(src, style, 'backgroundColor')).toBe('tokens.surface.card');
 		expect(styleValue(src, style, 'borderWidth')).toBe('1');

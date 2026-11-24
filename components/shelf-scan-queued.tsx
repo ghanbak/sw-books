@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
+import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce, useReduceMotion } from '@/hooks/useAccessibility';
@@ -47,22 +48,18 @@ export function ShelfScanQueued({ count, onReset }: { count: number; onReset: ()
 					{title}
 				</Text>
 				<Text style={styles.detail}>{detail}</Text>
-				<Pressable
-					style={styles.primaryButton}
+				<Button
+					label="Done"
 					onPress={finish}
-					accessibilityRole="button"
+					style={styles.firstAction}
 					accessibilityHint="Closes the scanner and opens your library"
-				>
-					<Text style={styles.primaryButtonText}>Done</Text>
-				</Pressable>
-				<Pressable
-					style={styles.secondaryButton}
+				/>
+				<Button
+					label="Scan More"
+					variant="secondary"
 					onPress={onReset}
-					accessibilityRole="button"
 					accessibilityHint="Starts a new shelf scan"
-				>
-					<Text style={styles.secondaryButtonText}>Scan More</Text>
-				</Pressable>
+				/>
 			</View>
 		</Animated.View>
 	);
@@ -100,30 +97,8 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		textAlign: 'center',
 	},
-	primaryButton: {
+	// Spacing above an overlay's first action (on top of the column gap).
+	firstAction: {
 		marginTop: 12,
-		paddingHorizontal: 28,
-		paddingVertical: 12,
-		borderRadius: 8,
-		backgroundColor: tokens.accent.primary,
-	},
-	primaryButtonText: {
-		color: tokens.text.inverse,
-		fontSize: 14,
-		fontWeight: '600',
-	},
-	secondaryButton: {
-		paddingHorizontal: 24,
-		paddingVertical: 12,
-		borderRadius: 8,
-		backgroundColor: tokens.surface.card,
-		borderWidth: 1,
-		borderColor: tokens.border.subtle,
-		alignItems: 'center',
-	},
-	secondaryButtonText: {
-		color: tokens.text.primary,
-		fontSize: 14,
-		fontWeight: '500',
 	},
 });
