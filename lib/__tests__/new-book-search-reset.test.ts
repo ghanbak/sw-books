@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { runResettingSearch } from '../../admin/lib/new-book-search';
+import { runResettingSearch } from '../../admin/lib/resetting-search';
 import { searchStatusLabel } from '../../admin/lib/search-a11y';
 
 type Results = Parameters<typeof searchStatusLabel>[0] & object;
@@ -89,7 +89,7 @@ describe('new-book form search wiring', () => {
 
 	it('runSearch goes through runResettingSearch with setResults and startSearch', () => {
 		expect(form).toMatch(
-			/import\s*\{\s*runResettingSearch\s*\}\s*from\s*'@\/lib\/new-book-search'/,
+			/import\s*\{\s*runResettingSearch\s*\}\s*from\s*'@\/lib\/resetting-search'/,
 		);
 		expect(runSearch).toMatch(/runResettingSearch\(\s*setResults,\s*startSearch,/);
 		expect(runSearch).toMatch(/searchForNewBook\(\s*query\s*\)/);

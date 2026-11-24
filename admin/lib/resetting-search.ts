@@ -1,5 +1,5 @@
-// New-book Search state transition (issue 362). Dependency-free so the root Vitest
-// suite can cover it.
+// Search state transition shared by new-book search (#362) and the pin editor (#390).
+// Dependency-free so the root Vitest suite can cover it.
 
 type SearchOutcome<T, E> = { ok: true; data: T } | { ok: false; error: E };
 
@@ -8,7 +8,7 @@ type SearchOutcome<T, E> = { ok: true; data: T } | { ok: false; error: E };
  * The clear happens before `start`, outside the transition, so it commits on its
  * own: the status region empties then refills (a repeat search with the same
  * per-source outcome is announced again), and a failed search leaves no stale
- * candidate cards or Prefill buttons.
+ * candidate cards or action buttons (Prefill, Pin).
  */
 export function runResettingSearch<T, E>(
 	setResults: (results: T | null) => void,
