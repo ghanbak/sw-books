@@ -10,9 +10,12 @@ import {
 } from 'react';
 import { Alert } from 'react-native';
 import { useAuth } from './auth';
+import { errorCopy } from './error-copy';
+import { fetchAllCatalogBooks } from './fetch-all-pages';
 import { type Result, err } from './result';
 import {
 	type ShelfField,
+	classifyShelfWriteError,
 	createOwnedAdder,
 	createShelfToggler,
 	createShelfWriteScope,
@@ -56,13 +59,13 @@ export function BooksProvider({ children }: { children: ReactNode }) {
 		setLoading(true);
 		setError(null);
 
-		const { data, error: err } = await supabase
-			.from('books')
-			.select('*')
-			.order('timeline_order', { ascending: true });
+		// Paged: an unranged read stops silently at PostgREST max_rows (#364).
+		const { data, error: err } = await fetchAllCatalogBooks(supabase);
 
 		if (err) {
-			setError(err.message);
+			// Raw PostgREST text stays in the log; the error state shows mapped copy (#393).
+			console.warn('[books] fetch failed:', err.message);
+			setError(errorCopy(classifyShelfWriteError(err)));
 		} else {
 			setBooks(data ?? []);
 		}
@@ -138,7 +141,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 		const startSeq = writes.seq();
 		setLoading(true);
 		setError(null);
-		const { data, error: fetchError } = await supabase.from('user_books').select('*');
+		const { data, error: fetchError, status } = await supabase.from('user_books').select('*');
 		const current = isFetchCurrent({
 			requestId,
 			latestRequestId: latestFetchRef.current,
@@ -149,7 +152,7 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 		if (!current) return;
 		if (fetchError) {
 			console.warn('[user_books] fetch failed:', fetchError.message);
-			setError(fetchError.message);
+			setError(errorCopy(classifyShelfWriteError(fetchError, status)));
 			setLoading(false);
 			return;
 		}

@@ -13,6 +13,7 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { callAction } from '@/lib/call-action';
+import { runResettingSearch } from '@/lib/resetting-search';
 import { candidateIsEmpty, prefillLabel, searchStatusLabel } from '@/lib/search-a11y';
 import { numOrNull } from '@app/book-schema';
 import { slugify } from '@app/slug';
@@ -101,14 +102,13 @@ export function NewBookForm() {
 			title: form.title.trim() || undefined,
 			author: form.author.split(',')[0]?.trim() || undefined,
 		};
-		startSearch(async () => {
-			const res = await callAction(() => searchForNewBook(query), 'Search failed');
-			if (!res.ok) {
-				toast.error(res.error.message);
-				return;
-			}
-			setResults(res.data);
-		});
+		// Clears results first so a repeat search re-announces and a failed one leaves no stale cards.
+		runResettingSearch(
+			setResults,
+			startSearch,
+			() => callAction(() => searchForNewBook(query), 'Search failed'),
+			(error) => toast.error(error.message),
+		);
 	}
 
 	function prefill(c: BookCandidate, label: string) {

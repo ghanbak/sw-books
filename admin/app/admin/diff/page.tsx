@@ -8,6 +8,19 @@ import { ExportButton } from './_components/export-button';
 
 export const dynamic = 'force-dynamic';
 
+/** A drift cell; `∅` (lib/csv/drift.ts's empty marker) is spoken as "empty". */
+function DiffValue({ value }: { value: string }) {
+	if (value === '∅') {
+		return (
+			<>
+				<span aria-hidden="true">∅</span>
+				<span className="sr-only">empty</span>
+			</>
+		);
+	}
+	return value;
+}
+
 export default async function DiffPage() {
 	if (IS_HOSTED) {
 		return (
@@ -89,9 +102,15 @@ export default async function DiffPage() {
 												className="grid grid-cols-[120px_1fr_auto_1fr] items-start gap-2 text-sm"
 											>
 												<span className="font-medium text-muted-foreground">{f.field}</span>
-												<span className="text-muted-foreground line-through">{f.from}</span>
+												<del className="text-muted-foreground line-through">
+													<span className="sr-only">was </span>
+													<DiffValue value={f.from} />
+												</del>
 												<ArrowRight className="size-3.5 self-center text-muted-foreground" />
-												<span className="text-saber-blue">{f.to}</span>
+												<ins className="text-saber-blue no-underline">
+													<span className="sr-only">now </span>
+													<DiffValue value={f.to} />
+												</ins>
 											</div>
 										))}
 									</div>

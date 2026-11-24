@@ -10,6 +10,7 @@ import { ISSUE_DEFS, type IssueKey, issuesFor } from '@/lib/issues';
 import { getDbTarget, getSupabaseAdmin } from '@/lib/supabase-admin';
 import { cn } from '@/lib/utils';
 import { dbError } from '@app/action-errors';
+import { fetchAllPages } from '@app/fetch-all-pages';
 import { ENRICHMENT_STATUSES, type EnrichmentStatus } from '@app/wookieepedia/enrichment-status';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
@@ -47,12 +48,16 @@ async function loadPlaceholderSlugs(): Promise<Set<string>> {
 export default async function BooksPage() {
 	const [supabaseAdmin, target] = await Promise.all([getSupabaseAdmin(), getDbTarget()]);
 	const [{ data, error }, placeholderSlugs, enrichmentCtx, drift] = await Promise.all([
-		supabaseAdmin
-			.from('books')
-			.select(
-				'id, slug, title, author, canon, era, type, series_name, series_order, timeline_order, primary_isbn, isbn, format, publisher, date_published, cover_image, synopsis, updated_at',
-			)
-			.order('title', { ascending: true }),
+		// Paged past PostgREST's max_rows; `slug` (unique) breaks title ties so pages are stable.
+		fetchAllPages(() =>
+			supabaseAdmin
+				.from('books')
+				.select(
+					'id, slug, title, author, canon, era, type, series_name, series_order, timeline_order, primary_isbn, isbn, format, publisher, date_published, cover_image, synopsis, updated_at',
+				)
+				.order('title', { ascending: true })
+				.order('slug', { ascending: true }),
+		),
 		loadPlaceholderSlugs(),
 		loadEnrichmentContext(supabaseAdmin),
 		// Drift is N/A on hosted: there's no data/catalog-backup.csv to compare against.

@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { callAction } from '@/lib/call-action';
+import { runResettingSearch } from '@/lib/resetting-search';
 import { cn } from '@/lib/utils';
 import { createSaveGate, serializeSave } from '@app/serial-save';
 import {
@@ -96,18 +97,31 @@ export function DiffView({ book }: { book: BookRow }) {
 
 	const hasCandidates = candidates !== null;
 
+	// Candidates clear before the lookup, so the OL/GB columns, Apply and the
+	// fetched time never show a previous run's data. Selections survive a pending
+	// or successful re-run (pruned in render, #240) and clear on failure (#395).
 	function runLookup() {
-		startLookup(async () => {
-			const res = await callAction(() => lookupCandidates(book.slug));
-			if (res.ok) {
-				setCandidates(res.data);
-				const olEmpty = Object.keys(res.data.ol).length === 0;
-				const gbEmpty = Object.keys(res.data.gb).length === 0;
-				toast.success(`Lookup done${olEmpty ? ' · OL empty' : ''}${gbEmpty ? ' · GB empty' : ''}`);
-			} else {
-				toast.error(`Lookup failed: ${res.error.message}`);
-			}
-		});
+		runResettingSearch(
+			setCandidates,
+			startLookup,
+			async () => {
+				const res = await callAction(() => lookupCandidates(book.slug));
+				if (res.ok) {
+					const olEmpty = Object.keys(res.data.ol).length === 0;
+					const gbEmpty = Object.keys(res.data.gb).length === 0;
+					toast.success(
+						`Lookup done${olEmpty ? ' · OL empty' : ''}${gbEmpty ? ' · GB empty' : ''}`,
+					);
+				}
+				return res;
+			},
+			(error) => {
+				setSelection({});
+				setReplaceIsbn(false);
+				setConfirmSlug('');
+				toast.error(`Lookup failed: ${error.message}`);
+			},
+		);
 	}
 
 	function fillEmpty() {

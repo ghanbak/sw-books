@@ -1,5 +1,6 @@
 import 'server-only';
 import { dbError } from '@app/action-errors';
+import { fetchAllPages } from '@app/fetch-all-pages';
 import type { Database } from '@app/types';
 import { type PageInfo, fetchPageInfo } from '@app/wookieepedia/client';
 import type { MapBook } from '@app/wookieepedia/enrich-sync';
@@ -117,16 +118,24 @@ export type EnrichmentContext = {
 export async function loadEnrichmentContext(
 	supabase: SupabaseClient<Database>,
 ): Promise<{ ok: true; data: EnrichmentContext } | { ok: false; message: string }> {
+	// Paged past PostgREST's max_rows, each ordered by its unique key.
 	const [books, rows, pins] = await Promise.all([
-		supabase.from('books').select('id, slug, title, canon'),
-		supabase.from('book_enrichment').select('book_id, source_pageid'),
+		fetchAllPages(() =>
+			supabase.from('books').select('id, slug, title, canon').order('slug', { ascending: true }),
+		),
+		fetchAllPages(() =>
+			supabase
+				.from('book_enrichment')
+				.select('book_id, source_pageid')
+				.order('book_id', { ascending: true }),
+		),
 		loadPins(),
 	]);
 	if (books.error) return { ok: false, message: dbError('enrichment:books', books.error).message };
 	if (rows.error) {
 		return { ok: false, message: dbError('enrichment:book_enrichment', rows.error).message };
 	}
-	return { ok: true, data: { catalog: books.data ?? [], existing: rows.data ?? [], pins } };
+	return { ok: true, data: { catalog: books.data, existing: rows.data, pins } };
 }
 
 /** Pageids whose health matters: every persisted row and every pin. */

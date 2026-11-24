@@ -11,11 +11,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { callAction } from '@/lib/call-action';
+import { runResettingSearch } from '@/lib/resetting-search';
 import { cn } from '@/lib/utils';
 import type { EnrichmentPin } from '@app/wookieepedia/pins';
 import { Check, ExternalLink, Loader2, Pin, PinOff, Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
 /** Why a candidate can't be pinned (mirrors the server-side refusals), or null. */
@@ -68,14 +69,19 @@ export function PinEditor({
 	const [savingId, setSavingId] = useState<number | null>(null);
 	// On an enriched book a pin only requests a re-point, so keep search tucked away.
 	const [searchOpen, setSearchOpen] = useState(storedPageid === null);
+	// Pin and Remove pin unmount the focused button (results cleared, `pin` refreshed), so
+	// park focus on the section heading first; Tab then continues inside the pin section (#387).
+	const headingRef = useRef<HTMLHeadingElement>(null);
 
 	function search(e: React.FormEvent) {
 		e.preventDefault();
-		startSearch(async () => {
-			const res = await callAction(() => searchPinCandidates(slug, query), 'Search failed');
-			if (res.ok) setResults(res.data);
-			else toast.error(res.error.message);
-		});
+		// Clear first so a failed search leaves no stale Pin buttons and a repeat re-announces (#390).
+		runResettingSearch(
+			setResults,
+			startSearch,
+			() => callAction(() => searchPinCandidates(slug, query), 'Search failed'),
+			(error) => toast.error(error.message),
+		);
 	}
 
 	function save(c: PinCandidate) {
@@ -92,6 +98,7 @@ export function PinEditor({
 			}
 			toast.success(`Pinned “${res.data.pin.title}” (${res.data.pin.pageid})`);
 			if (res.data.warning) toast.warning(res.data.warning);
+			headingRef.current?.focus();
 			setResults(null);
 			setNote('');
 			router.refresh();
@@ -106,6 +113,7 @@ export function PinEditor({
 				return;
 			}
 			toast.success('Pin removed');
+			headingRef.current?.focus();
 			router.refresh();
 		});
 	}
@@ -115,7 +123,10 @@ export function PinEditor({
 	return (
 		<div className="space-y-3 border-border border-t pt-4">
 			<div className="flex items-center gap-2">
-				<h3 className="font-medium text-sm">Manual page pin</h3>
+				{/* Programmatic focus target only: not in the Tab order, no ring (#387). */}
+				<h3 ref={headingRef} tabIndex={-1} className="font-medium text-sm outline-none">
+					Manual page pin
+				</h3>
 				<span className="text-muted-foreground text-xs">data/enrichment-pins.json</span>
 			</div>
 

@@ -65,3 +65,63 @@ export function makeClient(prod: boolean): SupabaseClient<Database> {
 	const { url, key } = resolveCredentials(prod);
 	return createClient<Database>(url, key, { auth: { persistSession: false } });
 }
+
+/**
+ * PostgREST truncates an unranged response at `max_rows` (1000 locally, see
+ * supabase/config.toml, and the hosted default) with no error. Keep this at or below
+ * `max_rows`: a lower server cap would end the loop early on a short page.
+ */
+export const BOOKS_PAGE_SIZE = 1000;
+
+type BooksClient = Pick<SupabaseClient<Database>, 'from'>;
+
+export type FetchAllBooksOptions = {
+	/** PostgREST column list; default `*`. */
+	columns?: string;
+	/** Sort columns, ascending. `slug` (unique) is appended as the tiebreaker so paging is stable. */
+	orderBy?: string[];
+	/** Columns that must be non-null (`.not(col, 'is', null)`). */
+	notNull?: string[];
+};
+
+/**
+ * Every `books` row, read in `.range()` pages until a short page. Rejects on any page
+ * error, so a caller never sees a partial catalog.
+ */
+export async function fetchAllBooks<T = Record<string, unknown>>(
+	client: BooksClient,
+	{ columns = '*', orderBy = [], notNull = [] }: FetchAllBooksOptions = {},
+): Promise<T[]> {
+	const order = orderBy.includes('slug') ? orderBy : [...orderBy, 'slug'];
+	const out: T[] = [];
+	for (let from = 0; ; from += BOOKS_PAGE_SIZE) {
+		const to = from + BOOKS_PAGE_SIZE - 1;
+		let q = client.from('books').select(columns);
+		for (const col of notNull) q = q.not(col, 'is', null);
+		for (const col of order) q = q.order(col);
+		const { data, error } = await q.range(from, to);
+		if (error) throw new Error(`books read failed (rows ${from}–${to}): ${error.message}`);
+		const page = (data ?? []) as unknown as T[];
+		for (const row of page) out.push(row);
+		if (page.length < BOOKS_PAGE_SIZE) return out;
+	}
+}
+
+/** Exact `books` row count (`count: 'exact', head: true`), unaffected by `max_rows`. */
+export async function countBooks(client: BooksClient): Promise<number> {
+	const { count, error } = await client.from('books').select('*', { count: 'exact', head: true });
+	if (error) throw new Error(`books count failed: ${error.message}`);
+	if (count == null) throw new Error('books count failed: no count returned');
+	return count;
+}
+
+/** Refusal message when a backup is stale or its row count differs from the live count; null when OK. */
+export function backupRefusal(b: {
+	ageMs: number;
+	rows: number;
+	liveCount: number;
+	maxAgeMs: number;
+}): string | null {
+	if (b.ageMs <= b.maxAgeMs && b.rows === b.liveCount) return null;
+	return `Refusing: backup not fresh/complete (age ${Math.round(b.ageMs / 1000)}s, ${b.rows} rows vs ${b.liveCount} live) — no changes written.`;
+}

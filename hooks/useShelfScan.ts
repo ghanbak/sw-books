@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { AppState } from 'react-native';
 
 import { useAuth } from '@/lib/auth';
+import { ADD_FAILED_COPY } from '@/lib/error-copy';
 import { useBooks, useUserBooks } from '@/lib/hooks';
 import { recognizeImage } from '@/lib/ocr';
 import { useScanSession } from '@/lib/scan-session';
@@ -371,7 +372,7 @@ export function useShelfScan({
 				setAddError(
 					result.error.code === 'not_signed_in'
 						? result.error.message
-						: "Couldn't save — check your connection and try again. Your scan is safe.",
+						: `${ADD_FAILED_COPY} Your scan is safe.`,
 				);
 				Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
 				dispatch({ type: 'add_blocked' });
@@ -380,7 +381,7 @@ export function useShelfScan({
 			// addOwned returns Result and shouldn't throw — but a throw here would
 			// otherwise strand the user in `adding` behind a disabled UI forever.
 			if (__DEV__) console.warn('[shelf-scan] add threw:', cause);
-			setAddError("Couldn't save — check your connection and try again. Your scan is safe.");
+			setAddError(`${ADD_FAILED_COPY} Your scan is safe.`);
 			Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
 			dispatch({ type: 'add_blocked' });
 		} finally {
