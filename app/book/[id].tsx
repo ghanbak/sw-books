@@ -18,6 +18,7 @@ import { tokens } from '@/constants/tokens';
 import { useToolbarIcon } from '@/hooks/useToolbarIcon';
 import { buildAmazonSearchUrl } from '@/lib/amazon';
 import { detailRowLabel } from '@/lib/book-a11y';
+import { enrichmentSlot } from '@/lib/book-enrichment-slot';
 import { getCoverColor } from '@/lib/cover';
 import { RIG_HEIGHT, RIG_LIFT } from '@/lib/holo3d/pager';
 import { useHoloStatus } from '@/lib/holo3d/status';
@@ -53,7 +54,7 @@ export default function BookDetailScreen() {
 	// so skip the screen options and toolbars there.
 	const isPreview = useIsPreview();
 	// Separate from the catalog cache: enrichment rows are large and never embedded in the list query.
-	const { enrichment, fromCache } = useBookEnrichment(id);
+	const { status, enrichment, fromCache, retry: retryEnrichment } = useBookEnrichment(id);
 	const amazonUrl = book ? buildAmazonSearchUrl(displayIsbn(book)) : null;
 
 	const fetchBook = useCallback(async () => {
@@ -116,6 +117,7 @@ export default function BookDetailScreen() {
 	const isbns = book.isbn ?? [];
 	// The enrichment Timeline card replaces the Details "Timeline" row when it's shown.
 	const showsEnrichmentTimeline = parseTimeline(enrichment?.timeline_notes).length > 0;
+	const slot = enrichmentSlot(status, enrichment);
 
 	return (
 		<View style={styles.container}>
@@ -165,16 +167,24 @@ export default function BookDetailScreen() {
 					</View>
 				)}
 
-				{/* Wookieepedia enrichment: Timeline, Characters, source + attribution */}
-				{enrichment && (
+				{/* Wookieepedia enrichment: Timeline, Characters, source + attribution.
+				    A failed fetch with nothing cached gets an inline Retry instead of vanishing. */}
+				{slot.kind === 'content' ? (
 					<EnrichmentSection
-						enrichment={enrichment}
+						enrichment={slot.enrichment}
 						fromCache={fromCache}
 						onSeeAllCharacters={() =>
 							router.push({ pathname: '/characters/[id]', params: { id: book.id } })
 						}
 					/>
-				)}
+				) : slot.kind === 'error' ? (
+					<ErrorState
+						variant="inline"
+						title="Couldn't load Wookieepedia details"
+						onRetry={retryEnrichment}
+						style={styles.enrichmentError}
+					/>
+				) : null}
 
 				{/* Details */}
 				<Card style={styles.card}>
@@ -363,6 +373,10 @@ const styles = StyleSheet.create({
 		marginBottom: 20,
 	},
 	amazon: {
+		marginBottom: 20,
+	},
+	enrichmentError: {
+		// Same gap below as the enrichment stack it stands in for.
 		marginBottom: 20,
 	},
 	card: {
