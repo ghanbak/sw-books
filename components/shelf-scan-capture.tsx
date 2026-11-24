@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScanTray } from '@/components/scan-tray';
 import { ShelfScanQueued } from '@/components/shelf-scan-queued';
 import { ShelfScanReview } from '@/components/shelf-scan-review';
+import { Button } from '@/components/ui/button';
 import { GlassButton } from '@/components/ui/glass-button';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
@@ -285,14 +286,13 @@ export function ShelfScanCapture({
 							<Text style={styles.stateText}>Couldn't read a valid ISBN from that barcode.</Text>
 						</>
 					)}
-					<Pressable
-						style={styles.dismissButton}
+					<Button
+						label="Scan Another"
+						variant="secondary"
 						onPress={dismissNotice}
-						accessibilityRole="button"
+						style={styles.firstAction}
 						accessibilityHint="Returns to the scanner. Your captured books are kept."
-					>
-						<Text style={styles.secondaryButtonText}>Scan Another</Text>
-					</Pressable>
+					/>
 				</Animated.View>
 			)}
 
@@ -328,22 +328,18 @@ export function ShelfScanCapture({
 						Get closer so spine text fills more of the frame, check the lighting, and hold steady on
 						each section. A book may also not be in the Archive yet. Try its ISBN barcode.
 					</Text>
-					<Pressable
-						style={styles.primaryButton}
+					<Button
+						label="Keep Scanning"
 						onPress={scan.keepScanning}
-						accessibilityRole="button"
+						style={styles.firstAction}
 						accessibilityHint="Returns to the camera. Your photos are kept."
-					>
-						<Text style={styles.primaryButtonText}>Keep Scanning</Text>
-					</Pressable>
-					<Pressable
-						style={styles.secondaryButton}
+					/>
+					<Button
+						label="Start Over"
+						variant="secondary"
 						onPress={scan.reset}
-						accessibilityRole="button"
 						accessibilityHint="Discards the photos from this scan"
-					>
-						<Text style={styles.secondaryButtonText}>Start Over</Text>
-					</Pressable>
+					/>
 				</Animated.View>
 			)}
 
@@ -686,43 +682,13 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		textAlign: 'center',
 	},
-	primaryButton: {
+	// Spacing above an overlay's first action (on top of the column gap).
+	firstAction: {
 		marginTop: 12,
-		paddingHorizontal: 24,
-		paddingVertical: 12,
-		borderRadius: 8,
-		backgroundColor: tokens.accent.primary,
-	},
-	primaryButtonText: {
-		color: tokens.text.inverse,
-		fontSize: 14,
-		fontWeight: '600',
-	},
-	secondaryButton: {
-		paddingHorizontal: 24,
-		paddingVertical: 12,
-		borderRadius: 8,
-		backgroundColor: tokens.surface.card,
-		borderWidth: 1,
-		borderColor: tokens.border.subtle,
-	},
-	dismissButton: {
-		marginTop: 12,
-		paddingHorizontal: 24,
-		paddingVertical: 12,
-		borderRadius: 8,
-		backgroundColor: tokens.surface.card,
-		borderWidth: 1,
-		borderColor: tokens.border.subtle,
 	},
 	stateIsbn: {
 		color: tokens.text.tertiary,
 		fontSize: 12,
 		fontFamily: 'monospace',
-	},
-	secondaryButtonText: {
-		color: tokens.text.primary,
-		fontSize: 14,
-		fontWeight: '500',
 	},
 });

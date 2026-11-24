@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/empty-state';
 import { DecorativeCover, OwnedBadge } from '@/components/shelf-scan-parts';
+import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
@@ -192,22 +193,18 @@ export function ShelfScanReview({
 						{addedCount === 1 ? '1 book added to Owned' : `${addedCount} books added to Owned`}
 					</Text>
 					<Text style={styles.doneText}>Your archive grows.</Text>
-					<Pressable
-						style={styles.primaryButton}
+					<Button
+						label="View Shelf"
 						onPress={goToShelf}
-						accessibilityRole="button"
+						style={styles.firstAction}
 						accessibilityHint="Closes the scanner and opens your library"
-					>
-						<Text style={styles.primaryButtonText}>View Shelf</Text>
-					</Pressable>
-					<Pressable
-						style={styles.secondaryButton}
+					/>
+					<Button
+						label="Scan More"
+						variant="secondary"
 						onPress={onReset}
-						accessibilityRole="button"
 						accessibilityHint="Starts a new shelf scan"
-					>
-						<Text style={styles.secondaryButtonText}>Scan More</Text>
-					</Pressable>
+					/>
 				</View>
 			</Animated.View>
 		);
@@ -591,14 +588,12 @@ function SwapSheet({
 						)}
 						style={styles.sheetList}
 					/>
-					<Pressable
-						style={styles.secondaryButton}
+					<Button
+						label="Cancel"
+						variant="secondary"
 						onPress={onClose}
-						accessibilityRole="button"
 						accessibilityHint="Keeps the current match"
-					>
-						<Text style={styles.secondaryButtonText}>Cancel</Text>
-					</Pressable>
+					/>
 				</View>
 			</KeyboardAvoidingView>
 		</Animated.View>
@@ -821,31 +816,9 @@ const styles = StyleSheet.create({
 		color: tokens.text.secondary,
 		fontSize: 14,
 	},
-	primaryButton: {
+	// Spacing above an overlay's first action (on top of the column gap).
+	firstAction: {
 		marginTop: 12,
-		paddingHorizontal: 28,
-		paddingVertical: 12,
-		borderRadius: 8,
-		backgroundColor: tokens.accent.primary,
-	},
-	primaryButtonText: {
-		color: tokens.text.inverse,
-		fontSize: 14,
-		fontWeight: '600',
-	},
-	secondaryButton: {
-		paddingHorizontal: 24,
-		paddingVertical: 12,
-		borderRadius: 8,
-		backgroundColor: tokens.surface.card,
-		borderWidth: 1,
-		borderColor: tokens.border.subtle,
-		alignItems: 'center',
-	},
-	secondaryButtonText: {
-		color: tokens.text.primary,
-		fontSize: 14,
-		fontWeight: '500',
 	},
 	// Swap sheet
 	sheetBackdrop: {

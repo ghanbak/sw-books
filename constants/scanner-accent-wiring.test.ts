@@ -37,9 +37,9 @@ describe('scanner content on accent.primary fills uses text.inverse', () => {
 		// The intro's solid button became the tinted GlassButton (#105); its no-glass fallback
 		// is the solid accent fill now.
 		['components/ui/glass-button.tsx', 'fallback', 'label'],
-		[capture, 'primaryButton', 'primaryButtonText'],
+		// Capture's and review's primary actions render the shared Button's primary variant (#401).
+		['components/ui/button.tsx', 'primary', 'primaryLabel'],
 		[review, 'addButton', 'addButtonText'],
-		[review, 'primaryButton', 'primaryButtonText'],
 	])('%s: %s label', (file, fill, label) => {
 		const src = source(file);
 		expect(styleToken(src, fill, 'backgroundColor')).toBe('tokens.accent.primary');
