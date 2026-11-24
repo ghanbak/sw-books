@@ -26,3 +26,25 @@ export function bookRowLabel({
 	if (canon) label += `, ${canon}`;
 	return label;
 }
+
+/** ISBN-10 or ISBN-13 once hyphens and spaces are dropped; ISBN-10 may end in X. */
+const ISBN_SHAPE = /^(\d{13}|\d{9}[\dX])$/;
+
+/**
+ * Book detail row (#403): one VoiceOver stop that speaks "<label>, <value>".
+ * With `isbn`, the digits are spaced so they read one by one instead of as a
+ * 13-digit number; a value that isn't ISBN-shaped passes through as shown.
+ */
+export function detailRowLabel(
+	label: string,
+	value: string | number,
+	{ isbn = false }: { isbn?: boolean } = {},
+): string {
+	const text = String(value).trim();
+	if (!text) return label;
+	if (isbn) {
+		const chars = text.replace(/[\s-]/g, '').toUpperCase();
+		if (ISBN_SHAPE.test(chars)) return `${label}, ${chars.split('').join(' ')}`;
+	}
+	return `${label}, ${text}`;
+}
