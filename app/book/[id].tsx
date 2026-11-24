@@ -15,6 +15,7 @@ import { HoloStage, type StageBook, type StageFace } from '@/components/holo-sta
 import { Card, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { useToolbarIcon } from '@/hooks/useToolbarIcon';
 import { buildAmazonSearchUrl } from '@/lib/amazon';
 import { detailRowLabel } from '@/lib/book-a11y';
 import { getCoverColor } from '@/lib/cover';
@@ -269,14 +270,17 @@ export default function BookDetailScreen() {
 function FavoriteHeaderButton({ bookId }: { bookId: string }) {
 	const { userBooks, toggleShelf } = useUserBooks();
 	const active = userBooks.get(bookId)?.favorite ?? false;
+	const starIcon = useToolbarIcon(active ? 'star.fill' : 'star');
 	return (
 		<Stack.Toolbar placement="right">
-			<Stack.Toolbar.Button
-				icon={active ? 'star.fill' : 'star'}
-				tintColor={active ? tokens.accent.primary : undefined}
-				accessibilityLabel={active ? 'Remove from favorites' : 'Add to favorites'}
-				onPress={() => toggleShelf(bookId, 'favorite')}
-			/>
+			{starIcon && (
+				<Stack.Toolbar.Button
+					icon={starIcon}
+					tintColor={active ? tokens.accent.primary : undefined}
+					accessibilityLabel={active ? 'Remove from favorites' : 'Add to favorites'}
+					onPress={() => toggleShelf(bookId, 'favorite')}
+				/>
+			)}
 		</Stack.Toolbar>
 	);
 }
