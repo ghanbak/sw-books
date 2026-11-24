@@ -38,6 +38,10 @@ const nextConfig: NextConfig = {
 	// via the @app/* path aliases in tsconfig.json.
 	experimental: {
 		externalDir: true,
+		// The shadcn components import from the `radix-ui` umbrella barrel, which
+		// isn't in Next's default list. Without this, every admin route ships one
+		// shared chunk holding every primitive (DropdownMenu, Select, ScrollArea…).
+		optimizePackageImports: ['radix-ui'],
 		// `serverActions.allowedOrigins` lives under `experimental` in Next 15;
 		// at the top level it's rejected as an unrecognized key.
 		...(allowedOrigin ? { serverActions: { allowedOrigins: [allowedOrigin] } } : {}),
