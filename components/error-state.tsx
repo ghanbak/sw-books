@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
@@ -8,6 +8,12 @@ type ErrorStateProps = {
 	message?: string | null;
 	retryLabel?: string;
 	onRetry?: () => void | Promise<void>;
+	/**
+	 * `screen` (default) fills the area and centers the card. `inline` sits in a scroll
+	 * flow (e.g. one failed section of a detail screen): no fill, no background, smaller title.
+	 */
+	variant?: 'screen' | 'inline';
+	style?: StyleProp<ViewStyle>;
 };
 
 /**
@@ -22,10 +28,13 @@ export function ErrorState({
 	message,
 	retryLabel = 'Retry',
 	onRetry,
+	variant = 'screen',
+	style,
 }: ErrorStateProps) {
+	const inline = variant === 'inline';
 	return (
-		<View style={styles.container}>
-			<Text style={styles.title}>{title}</Text>
+		<View style={[inline ? styles.inline : styles.container, style]}>
+			<Text style={[styles.title, inline && styles.titleInline]}>{title}</Text>
 			{message ? <Text style={styles.message}>{message}</Text> : null}
 			{onRetry ? (
 				<Pressable
@@ -50,6 +59,12 @@ const styles = StyleSheet.create({
 		paddingVertical: 48,
 		backgroundColor: tokens.surface.background,
 	},
+	inline: {
+		alignSelf: 'stretch',
+		alignItems: 'center',
+		paddingHorizontal: 24,
+		paddingVertical: 16,
+	},
 	title: {
 		maxWidth: 320,
 		fontSize: 20,
@@ -58,6 +73,11 @@ const styles = StyleSheet.create({
 		color: tokens.text.primary,
 		marginBottom: 8,
 		textAlign: 'center',
+	},
+	titleInline: {
+		fontSize: 16,
+		lineHeight: 24,
+		marginBottom: 12,
 	},
 	message: {
 		maxWidth: 320,
