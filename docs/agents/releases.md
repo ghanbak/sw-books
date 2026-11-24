@@ -43,5 +43,6 @@ eas submit --platform ios --profile production --latest
 After the version ships: close the milestone and the release issue, tag `v<version>` on the release commit, and from then on matching pushes to `main` ship OTA again.
 
 ## Agents and EAS
+- Until Dec 1, 2026 the free EAS plan has no CI/CD minutes left, so every EAS workflow fails at start (OTA on merge, `pr-preview`, `release-dev-build`). Don't add `device-review`, and don't read a failed EAS workflow as a code problem. Launch plan: `docs/plans/2026-11-19-launch-plan.md`.
 - Read-only EAS commands are fine: `eas build:list`, `eas build:view`, `eas fingerprint:compare`, `eas update:list`.
 - Agents never run `eas build`, `eas submit`, `eas update`, `eas metadata:push`, `eas env:create|update|delete` or `eas credentials`. OTA publishing belongs to the EAS workflow, not to an agent session.
