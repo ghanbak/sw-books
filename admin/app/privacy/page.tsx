@@ -102,6 +102,17 @@ export default function PrivacyPolicy() {
 					for Sign in with Apple. Deletion is permanent and applies regardless of where you are
 					located.
 				</p>
+				<p>
+					Our auth provider (Supabase) may keep security logs and backups for a limited period
+					before they expire.
+				</p>
+				<p>
+					For step-by-step instructions, see{' '}
+					<Link className="text-saber-blue underline underline-offset-2" href="/delete-account">
+						Delete your account
+					</Link>
+					.
+				</p>
 			</Section>
 
 			<Section title="Children">
