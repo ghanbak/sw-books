@@ -16,6 +16,8 @@ import { Card, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { buildAmazonSearchUrl } from '@/lib/amazon';
+import { detailRowLabel } from '@/lib/book-a11y';
+import { enrichmentSlot } from '@/lib/book-enrichment-slot';
 import { getCoverColor } from '@/lib/cover';
 import { RIG_HEIGHT, RIG_LIFT } from '@/lib/holo3d/pager';
 import { useHoloStatus } from '@/lib/holo3d/status';
@@ -51,7 +53,7 @@ export default function BookDetailScreen() {
 	// so skip the screen options and toolbars there.
 	const isPreview = useIsPreview();
 	// Separate from the catalog cache: enrichment rows are large and never embedded in the list query.
-	const { enrichment, fromCache } = useBookEnrichment(id);
+	const { status, enrichment, fromCache, retry: retryEnrichment } = useBookEnrichment(id);
 	const amazonUrl = book ? buildAmazonSearchUrl(displayIsbn(book)) : null;
 
 	const fetchBook = useCallback(async () => {
@@ -114,6 +116,7 @@ export default function BookDetailScreen() {
 	const isbns = book.isbn ?? [];
 	// The enrichment Timeline card replaces the Details "Timeline" row when it's shown.
 	const showsEnrichmentTimeline = parseTimeline(enrichment?.timeline_notes).length > 0;
+	const slot = enrichmentSlot(status, enrichment);
 
 	return (
 		<View style={styles.container}>
@@ -163,16 +166,24 @@ export default function BookDetailScreen() {
 					</View>
 				)}
 
-				{/* Wookieepedia enrichment: Timeline, Characters, source + attribution */}
-				{enrichment && (
+				{/* Wookieepedia enrichment: Timeline, Characters, source + attribution.
+				    A failed fetch with nothing cached gets an inline Retry instead of vanishing. */}
+				{slot.kind === 'content' ? (
 					<EnrichmentSection
-						enrichment={enrichment}
+						enrichment={slot.enrichment}
 						fromCache={fromCache}
 						onSeeAllCharacters={() =>
 							router.push({ pathname: '/characters/[id]', params: { id: book.id } })
 						}
 					/>
-				)}
+				) : slot.kind === 'error' ? (
+					<ErrorState
+						variant="inline"
+						title="Couldn't load Wookieepedia details"
+						onRetry={retryEnrichment}
+						style={styles.enrichmentError}
+					/>
+				) : null}
 
 				{/* Details */}
 				<Card style={styles.card}>
@@ -241,7 +252,7 @@ export default function BookDetailScreen() {
 					<Card style={styles.card}>
 						<CardTitle>Identifiers</CardTitle>
 						{isbns.map((isbn) => (
-							<DetailRow key={isbn} label="ISBN" value={isbn} mono />
+							<DetailRow key={isbn} label="ISBN" value={isbn} mono isbn />
 						))}
 					</Card>
 				)}
@@ -280,19 +291,30 @@ function FavoriteHeaderButton({ bookId }: { bookId: string }) {
 	);
 }
 
+/**
+ * One VoiceOver stop per row: the icon, label and value are grouped and spoken as
+ * "<label>, <value>" (#403). `isbn` spaces the digits so they read one by one.
+ */
 function DetailRow({
 	icon,
 	label,
 	value,
 	mono,
+	isbn,
 }: {
 	icon?: React.ReactNode;
 	label: string;
 	value: string;
 	mono?: boolean;
+	isbn?: boolean;
 }) {
 	return (
-		<View style={styles.detailRow}>
+		<View
+			style={styles.detailRow}
+			accessible
+			accessibilityRole="text"
+			accessibilityLabel={detailRowLabel(label, value, { isbn })}
+		>
 			{icon ?? <View style={styles.iconSpacer} />}
 			<Text style={styles.detailLabel}>{label}</Text>
 			<Text style={[styles.detailValue, mono && styles.mono]}>{value}</Text>
@@ -347,6 +369,10 @@ const styles = StyleSheet.create({
 		marginBottom: 20,
 	},
 	amazon: {
+		marginBottom: 20,
+	},
+	enrichmentError: {
+		// Same gap below as the enrichment stack it stands in for.
 		marginBottom: 20,
 	},
 	card: {

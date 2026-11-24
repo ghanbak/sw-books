@@ -170,13 +170,18 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 		gap: 10,
-		height: 52,
+		// Grows with Larger Text; 52pt at default size (16pt label ≈ 19pt line + 2×12).
+		minHeight: 52,
+		paddingVertical: 12,
+		paddingHorizontal: 16,
 		borderRadius: 12,
 	},
 	appleButton: {
 		backgroundColor: '#FFFFFF',
 	},
 	appleButtonText: {
+		flexShrink: 1,
+		textAlign: 'center',
 		fontSize: 16,
 		fontWeight: '600',
 		color: '#000',
@@ -185,6 +190,8 @@ const styles = StyleSheet.create({
 		backgroundColor: '#FFFFFF',
 	},
 	googleButtonText: {
+		flexShrink: 1,
+		textAlign: 'center',
 		fontSize: 16,
 		fontWeight: '600',
 		color: '#1F1F1F',
@@ -195,6 +202,8 @@ const styles = StyleSheet.create({
 		borderColor: tokens.border.subtle,
 	},
 	devButtonText: {
+		flexShrink: 1,
+		textAlign: 'center',
 		fontSize: 14,
 		fontWeight: '500',
 		color: tokens.text.secondary,

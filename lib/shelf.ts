@@ -1,3 +1,4 @@
+import { errorCopy } from '@/lib/error-copy';
 import type { Book, UserBook } from '@/lib/hooks';
 import { type Result, err, ok } from '@/lib/result';
 import type { SpineMatch } from '@/lib/spine-match';
@@ -531,8 +532,12 @@ export function createOwnedAdder(deps: AddOwnedDeps) {
 						return next;
 					});
 				}
-				const offline = classifyShelfWriteError(error, status) === 'connectivity';
-				return err({ code: offline ? ADD_OFFLINE_CODE : 'add_failed', message: error.message });
+				// Raw RPC text is logged by the caller's rpc; the Result carries display copy.
+				const failure = classifyShelfWriteError(error, status);
+				return err({
+					code: failure === 'connectivity' ? ADD_OFFLINE_CODE : 'add_failed',
+					message: errorCopy(failure),
+				});
 			}
 			const result = rows ?? [];
 			if (!stale) deps.update((prev) => mergeServerRows(prev, result));
