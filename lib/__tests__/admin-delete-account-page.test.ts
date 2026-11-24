@@ -104,7 +104,10 @@ describe('/delete-account content and wiring', () => {
 			resolve(__dirname, '../../components/tab-header-actions.tsx'),
 			'utf8',
 		);
-		const label = header.match(/icon="person\.crop\.circle"\s*accessibilityLabel="([^"]+)"/)?.[1];
+		// Anchor on the button that opens /profile: its icon prop is platform-mapped on Android.
+		const label = header.match(
+			/accessibilityLabel="([^"]+)"\s*onPress=\{\(\) => router\.push\('\/profile'\)\}/,
+		)?.[1];
 		expect(label).toBe('Account and settings');
 		expect(page).toContain(`profile icon at the top right (${label})`);
 		expect(page).toMatch(/Tap Delete account, then Delete to confirm/);
