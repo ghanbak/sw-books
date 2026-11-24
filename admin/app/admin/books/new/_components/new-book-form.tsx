@@ -13,7 +13,7 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { callAction } from '@/lib/call-action';
-import { runResettingSearch } from '@/lib/new-book-search';
+import { runResettingSearch } from '@/lib/resetting-search';
 import { candidateIsEmpty, prefillLabel, searchStatusLabel } from '@/lib/search-a11y';
 import { numOrNull } from '@app/book-schema';
 import { slugify } from '@app/slug';
