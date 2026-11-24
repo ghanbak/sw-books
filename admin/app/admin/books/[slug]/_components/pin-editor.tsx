@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { callAction } from '@/lib/call-action';
+import { runResettingSearch } from '@/lib/resetting-search';
 import { cn } from '@/lib/utils';
 import type { EnrichmentPin } from '@app/wookieepedia/pins';
 import { Check, ExternalLink, Loader2, Pin, PinOff, Search, X } from 'lucide-react';
@@ -74,11 +75,13 @@ export function PinEditor({
 
 	function search(e: React.FormEvent) {
 		e.preventDefault();
-		startSearch(async () => {
-			const res = await callAction(() => searchPinCandidates(slug, query), 'Search failed');
-			if (res.ok) setResults(res.data);
-			else toast.error(res.error.message);
-		});
+		// Clear first so a failed search leaves no stale Pin buttons and a repeat re-announces (#390).
+		runResettingSearch(
+			setResults,
+			startSearch,
+			() => callAction(() => searchPinCandidates(slug, query), 'Search failed'),
+			(error) => toast.error(error.message),
+		);
 	}
 
 	function save(c: PinCandidate) {
