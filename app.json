@@ -14,7 +14,7 @@
 			"url": "https://u.expo.dev/d3eb2684-ad86-490c-8089-a07203ad7027"
 		},
 		"ios": {
-			"supportsTablet": true,
+			"supportsTablet": false,
 			"bundleIdentifier": "com.ghanbak.ossusarchives",
 			"icon": "./assets/images/App-Icon.icon",
 			"infoPlist": {

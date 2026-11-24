@@ -42,7 +42,10 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 		gap: 10,
-		height: 52,
+		// Grows with Larger Text; 52pt at default size (16pt label ≈ 19pt line + 2×12).
+		minHeight: 52,
+		paddingVertical: 12,
+		paddingHorizontal: 24,
 		borderRadius: 100,
 		backgroundColor: tokens.accent.primary,
 	},
@@ -50,6 +53,8 @@ const styles = StyleSheet.create({
 		opacity: 0.85,
 	},
 	label: {
+		flexShrink: 1,
+		textAlign: 'center',
 		color: tokens.text.inverse,
 		fontSize: 16,
 		fontWeight: '600',
