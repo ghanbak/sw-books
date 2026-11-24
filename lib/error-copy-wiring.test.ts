@@ -55,7 +55,9 @@ describe('error copy wiring', () => {
 	});
 
 	it('barcode Add goes through the shelf-scan Add (no raw-error alert of its own)', () => {
-		expect(scanBarcode).toMatch(/setCaptured\(\s*prependCaptured\([^)]*\[outcome\.book\]\s*\)\s*\)/);
+		expect(scanBarcode).toMatch(
+			/setCaptured\(\s*prependCaptured\([^)]*\[outcome\.book\]\s*\)\s*\)/,
+		);
 		expect(scanBarcode).not.toMatch(/addOwned\(|Alert\.alert\(|\.error\.message/);
 	});
 
