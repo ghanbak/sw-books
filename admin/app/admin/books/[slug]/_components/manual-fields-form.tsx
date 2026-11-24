@@ -2,7 +2,7 @@
 
 import { patchBook } from '@/app/_actions/books';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -184,81 +184,90 @@ export function ManualFieldsForm({
 	const coverPreview = coverValid.success ? draft.cover_image.trim() : null;
 
 	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>Edit fields</CardTitle>
-				<CardDescription>
-					Hand-sourced values. Saves only changed fields to the selected database.
-				</CardDescription>
-			</CardHeader>
-			<CardContent>
-				<form onSubmit={save} noValidate className="flex flex-col gap-6">
-					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						{text('title')}
-						{text('author')}
-						<div className="grid grid-cols-2 gap-3">
-							{enumSelect('canon', CANON_VALUES)}
-							{enumSelect('type', TYPE_VALUES)}
+		<section aria-labelledby="manual-fields-heading">
+			<Card>
+				<CardHeader>
+					{/* CardTitle renders a div; same classes on an h2 for the page outline. */}
+					<h2
+						id="manual-fields-heading"
+						data-slot="card-title"
+						className="font-semibold leading-none"
+					>
+						Edit fields
+					</h2>
+					<CardDescription>
+						Hand-sourced values. Saves only changed fields to the selected database.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<form onSubmit={save} noValidate className="flex flex-col gap-6">
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							{text('title')}
+							{text('author')}
+							<div className="grid grid-cols-2 gap-3">
+								{enumSelect('canon', CANON_VALUES)}
+								{enumSelect('type', TYPE_VALUES)}
+							</div>
+							{text('era')}
+							{text('series_name')}
+							<div className="grid grid-cols-2 gap-3">
+								{text('series_order', { inputMode: 'numeric' })}
+								{text('timeline_order', { inputMode: 'decimal' })}
+							</div>
+							{text('publisher')}
+							{text('date_published', { placeholder: 'YYYY-MM-DD' })}
 						</div>
-						{text('era')}
-						{text('series_name')}
-						<div className="grid grid-cols-2 gap-3">
-							{text('series_order', { inputMode: 'numeric' })}
-							{text('timeline_order', { inputMode: 'decimal' })}
-						</div>
-						{text('publisher')}
-						{text('date_published', { placeholder: 'YYYY-MM-DD' })}
-					</div>
 
-					<div className="flex gap-4">
-						<div className="min-w-0 flex-1">
-							{text('cover_image', {
-								type: 'url',
-								placeholder: 'https://…',
-								className: 'font-mono text-xs',
-							})}
+						<div className="flex gap-4">
+							<div className="min-w-0 flex-1">
+								{text('cover_image', {
+									type: 'url',
+									placeholder: 'https://…',
+									className: 'font-mono text-xs',
+								})}
+							</div>
+							<div className="flex h-24 w-16 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted">
+								{coverPreview ? (
+									<img src={coverPreview} alt="Cover preview" className="size-full object-cover" />
+								) : (
+									<span className="text-muted-foreground text-xs">—</span>
+								)}
+							</div>
 						</div>
-						<div className="flex h-24 w-16 shrink-0 items-center justify-center overflow-hidden rounded border border-border bg-muted">
-							{coverPreview ? (
-								<img src={coverPreview} alt="Cover preview" className="size-full object-cover" />
-							) : (
-								<span className="text-muted-foreground text-xs">—</span>
+
+						<Field field="synopsis" error={errors.synopsis} dirty={'synopsis' in patch}>
+							<textarea
+								{...fieldProps('synopsis')}
+								rows={6}
+								onChange={(e) => set('synopsis', e.target.value)}
+								className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive"
+							/>
+						</Field>
+
+						<div className="flex flex-wrap items-center gap-3">
+							<Button type="submit" disabled={saving || changed.length === 0}>
+								{saving && <Loader2 className="size-4 animate-spin" />}
+								Save {changed.length > 0 ? `${changed.length} field(s)` : 'changes'}
+							</Button>
+							<Button
+								type="button"
+								variant="ghost"
+								disabled={saving || changed.length === 0}
+								onClick={() => {
+									setDraft(draftFromBook(book));
+									setErrors({});
+								}}
+							>
+								Discard
+							</Button>
+							{changed.length > 0 && (
+								<span className="text-muted-foreground text-sm">{changed.join(', ')}</span>
 							)}
 						</div>
-					</div>
-
-					<Field field="synopsis" error={errors.synopsis} dirty={'synopsis' in patch}>
-						<textarea
-							{...fieldProps('synopsis')}
-							rows={6}
-							onChange={(e) => set('synopsis', e.target.value)}
-							className="min-h-24 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive"
-						/>
-					</Field>
-
-					<div className="flex flex-wrap items-center gap-3">
-						<Button type="submit" disabled={saving || changed.length === 0}>
-							{saving && <Loader2 className="size-4 animate-spin" />}
-							Save {changed.length > 0 ? `${changed.length} field(s)` : 'changes'}
-						</Button>
-						<Button
-							type="button"
-							variant="ghost"
-							disabled={saving || changed.length === 0}
-							onClick={() => {
-								setDraft(draftFromBook(book));
-								setErrors({});
-							}}
-						>
-							Discard
-						</Button>
-						{changed.length > 0 && (
-							<span className="text-muted-foreground text-sm">{changed.join(', ')}</span>
-						)}
-					</div>
-				</form>
-			</CardContent>
-		</Card>
+					</form>
+				</CardContent>
+			</Card>
+		</section>
 	);
 }
 
