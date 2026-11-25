@@ -12,7 +12,7 @@ import { tokens } from '@/constants/tokens';
 export function useMaterialSymbolSource(
 	symbol: AndroidSymbol | null,
 	size = 24,
-	color = tokens.text.primary,
+	color: string = tokens.text.primary,
 ): ImageSourcePropType | undefined {
 	const [source, setSource] = useState<ImageSourcePropType>();
 
