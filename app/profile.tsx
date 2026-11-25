@@ -1,12 +1,13 @@
 import { FieldGroup, Host, Icon, ListItem, Switch, Text } from '@expo/ui';
-import { DisclosureGroup, ProgressView } from '@expo/ui/swift-ui';
-import { disabled } from '@expo/ui/swift-ui/modifiers';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import { useRef, useState } from 'react';
 import { Alert } from 'react-native';
 
 import { tokens } from '@/constants/tokens';
+
+// SwiftUI on iOS, Compose on Android (components/profile-disclosure.android.tsx).
+import { DisclosureGroup, ProgressView, disabled } from '@/components/profile-disclosure';
 
 import {
 	deleteAccount,
