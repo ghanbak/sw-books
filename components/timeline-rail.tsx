@@ -1,5 +1,5 @@
+import { SymbolView } from '@/components/ui/symbol-view';
 import * as Haptics from 'expo-haptics';
-import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { type AccessibilityActionEvent, Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -12,6 +12,7 @@ import Animated, {
 
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { symbolName } from '@/lib/app-symbols';
 import {
 	RAIL_PITCH,
 	type TimelineGroup,
@@ -331,7 +332,7 @@ function MarkerPill({
 				]}
 			>
 				<SymbolView
-					name={kind === 'film' ? 'film' : 'tv'}
+					name={symbolName(kind === 'film' ? 'film' : 'tv')}
 					size={10}
 					tintColor={tokens.text.secondary}
 					weight="semibold"

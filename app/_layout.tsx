@@ -10,6 +10,7 @@ import { ShelfQueueSync } from '@/components/shelf-queue-sync';
 import { tokens } from '@/constants/tokens';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { FontProvider, loadAurebeshPref, useFontPref } from '@/lib/font-prefs';
+import { headerTitleStyle } from '@/lib/header-title-style';
 import { BooksProvider, UserBooksProvider } from '@/lib/hooks';
 import { ScanSessionProvider } from '@/lib/scan-session';
 
@@ -76,7 +77,7 @@ function NavigationStack() {
 		<Stack
 			screenOptions={{
 				headerShadowVisible: true,
-				headerTitleStyle: { fontFamily },
+				headerTitleStyle: headerTitleStyle(fontFamily, Platform.OS),
 				headerLargeTitleStyle: { fontFamily },
 				...(Platform.OS === 'ios'
 					? {

@@ -36,7 +36,10 @@ function objectConstant(name: string): string {
 }
 
 function iconSize(symbol: string): number {
-	const match = src.match(new RegExp(`name="${symbol}"\\s+size=\\{(\\d+)\\}`));
+	// #430: names go through symbolName() so Android gets a Material glyph.
+	const match = src.match(
+		new RegExp(`name=\\{symbolName\\(\\s*'${symbol}'\\s*\\)\\}\\s+size=\\{(\\d+)\\}`),
+	);
 	expect(match, `icon ${symbol}`).not.toBeNull();
 	return Number(match?.[1]);
 }

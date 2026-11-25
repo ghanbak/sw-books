@@ -1,5 +1,5 @@
+import { SymbolView } from '@/components/ui/symbol-view';
 import { useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -7,6 +7,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce, useReduceMotion } from '@/hooks/useAccessibility';
+import { symbolName } from '@/lib/app-symbols';
 import { exitScanTo } from '@/lib/scan-exit';
 
 /** Shown when Add happened offline: the books are saved locally and sync on reconnect. */
@@ -37,7 +38,7 @@ export function ShelfScanQueued({ count, onReset }: { count: number; onReset: ()
 					importantForAccessibility="no-hide-descendants"
 				>
 					<SymbolView
-						name="clock.arrow.circlepath"
+						name={symbolName('clock.arrow.circlepath')}
 						size={32}
 						tintColor={tokens.accent.secondary}
 						weight="semibold"

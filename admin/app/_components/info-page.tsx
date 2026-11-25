@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-// Shared shell for the public text pages (/privacy, /support).
+// Shared shell for the public text pages (/privacy, /support, /delete-account).
 
 export const CONTACT = 'privacy@ossusarchives.com';
 

@@ -1,8 +1,9 @@
-import { SymbolView } from 'expo-symbols';
+import { SymbolView } from '@/components/ui/symbol-view';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { symbolName } from '@/lib/app-symbols';
 import { openInAppBrowser } from '@/lib/external-link';
 
 type Props = {
@@ -19,7 +20,7 @@ export function BuyOnAmazonButton({ url }: Props) {
 				accessibilityLabel="Find this book on Amazon"
 			>
 				<SymbolView
-					name="arrow.up.forward.app"
+					name={symbolName('arrow.up.forward.app')}
 					size={18}
 					tintColor={tokens.text.inverse}
 					weight="semibold"

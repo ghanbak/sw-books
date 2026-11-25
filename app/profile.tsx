@@ -1,12 +1,15 @@
-import { FieldGroup, Host, Icon, ListItem, Switch, Text } from '@expo/ui';
-import { DisclosureGroup, ProgressView } from '@expo/ui/swift-ui';
-import { disabled } from '@expo/ui/swift-ui/modifiers';
+import { FieldGroup, Host, ListItem, Switch, Text } from '@expo/ui';
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import { useRef, useState } from 'react';
 import { Alert } from 'react-native';
 
 import { tokens } from '@/constants/tokens';
+
+// SwiftUI on iOS, Compose on Android (components/profile-disclosure.android.tsx).
+import { DisclosureGroup, ProgressView, disabled } from '@/components/profile-disclosure';
+// SF Symbol on iOS, its Material Symbol on Android (components/sf-icon.android.tsx).
+import { SFIcon } from '@/components/sf-icon';
 
 import {
 	deleteAccount,
@@ -100,7 +103,9 @@ export default function ProfileScreen() {
 					<ListItem trailing={<Text>{`v${APP_VERSION}`}</Text>}>Version</ListItem>
 					<ListItem
 						onPress={() => openInAppBrowser(PRIVACY_POLICY_URL)}
-						trailing={<Icon name="arrow.up.right" color={tokens.text.tertiary} />}
+						trailing={
+							<SFIcon name="arrow.up.right" android="open_in_new" color={tokens.text.tertiary} />
+						}
 					>
 						Privacy Policy
 					</ListItem>
@@ -117,7 +122,11 @@ export default function ProfileScreen() {
 					<ListItem
 						onPress={handleSignOut}
 						trailing={
-							<Icon name="rectangle.portrait.and.arrow.right" color={tokens.status.error} />
+							<SFIcon
+								name="rectangle.portrait.and.arrow.right"
+								android="logout"
+								color={tokens.status.error}
+							/>
 						}
 					>
 						Logout
@@ -129,7 +138,11 @@ export default function ProfileScreen() {
 						onPress={handleDeleteAccount}
 						modifiers={[disabled(isDeleting)]}
 						trailing={
-							isDeleting ? <ProgressView /> : <Icon name="trash" color={tokens.status.error} />
+							isDeleting ? (
+								<ProgressView />
+							) : (
+								<SFIcon name="trash" android="delete" color={tokens.status.error} />
+							)
 						}
 					>
 						<Text textStyle={{ color: tokens.status.error }}>

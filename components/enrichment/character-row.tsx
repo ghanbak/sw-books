@@ -1,9 +1,10 @@
-import { SymbolView } from 'expo-symbols';
 import { memo, useCallback } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 
+import { SymbolView } from '@/components/ui/symbol-view';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { symbolName } from '@/lib/app-symbols';
 import { openInAppBrowser } from '@/lib/external-link';
 import {
 	type CharacterItem,
@@ -41,7 +42,7 @@ export const CharacterRow = memo(function CharacterRow({ item }: { item: Charact
 			<View style={styles.chevronSlot}>
 				{page ? (
 					<SymbolView
-						name="chevron.forward"
+						name={symbolName('chevron.forward')}
 						size={15}
 						weight="medium"
 						tintColor={tokens.text.tertiary}

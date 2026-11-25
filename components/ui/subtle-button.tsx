@@ -1,14 +1,15 @@
-import { type SFSymbol, SymbolView } from 'expo-symbols';
+import { SymbolView } from '@/components/ui/symbol-view';
 import { type AccessibilityRole, Pressable, StyleSheet } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { type AppSymbol, symbolName } from '@/lib/app-symbols';
 
 type Props = {
 	label: string;
 	onPress: () => void;
-	/** Leading SF Symbol, tinted with the primary accent. */
-	icon?: SFSymbol;
+	/** Leading SF Symbol, tinted with the primary accent. Must have a Material twin in `ANDROID_SYMBOLS`. */
+	icon?: AppSymbol;
 	/** On a `Card`: background fill (+ hairline border unless `fullWidth`). Default: card fill on the page. */
 	onCard?: boolean;
 	/** Stretch to the container width with centered content (the Wookieepedia card button). */
@@ -54,7 +55,12 @@ export function SubtleButton({
 			]}
 		>
 			{icon && (
-				<SymbolView name={icon} size={15} weight="medium" tintColor={tokens.accent.primary} />
+				<SymbolView
+					name={symbolName(icon)}
+					size={15}
+					weight="medium"
+					tintColor={tokens.accent.primary}
+				/>
 			)}
 			<Text style={styles.label}>{label}</Text>
 		</Pressable>

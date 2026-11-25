@@ -1,5 +1,5 @@
+import { SymbolView } from '@/components/ui/symbol-view';
 import { useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
 	ActivityIndicator,
@@ -19,6 +19,7 @@ import { DecorativeCover, OwnedBadge } from '@/components/shelf-scan-parts';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
+import { symbolName } from '@/lib/app-symbols';
 import { type Book, useBooks, useUserBooks } from '@/lib/hooks';
 import { addToOwnedLabel, reviewMatchLabel, swapCandidateLabel } from '@/lib/scan-a11y';
 import { exitScanTo } from '@/lib/scan-exit';
@@ -186,7 +187,12 @@ export function ShelfScanReview({
 						accessibilityElementsHidden
 						importantForAccessibility="no-hide-descendants"
 					>
-						<SymbolView name="checkmark" size={36} tintColor={tokens.text.inverse} weight="bold" />
+						<SymbolView
+							name={symbolName('checkmark')}
+							size={36}
+							tintColor={tokens.text.inverse}
+							weight="bold"
+						/>
 					</View>
 					<Text style={styles.doneTitle} accessibilityRole="header">
 						{addedCount === 1 ? '1 book added to Owned' : `${addedCount} books added to Owned`}
@@ -248,7 +254,7 @@ export function ShelfScanReview({
 						accessibilityState={{ selected: view === 'list' }}
 					>
 						<SymbolView
-							name="list.bullet"
+							name={symbolName('list.bullet')}
 							size={16}
 							tintColor={view === 'list' ? tokens.text.inverse : tokens.text.secondary}
 						/>
@@ -262,7 +268,7 @@ export function ShelfScanReview({
 						accessibilityState={{ selected: view === 'grid' }}
 					>
 						<SymbolView
-							name="square.grid.2x2"
+							name={symbolName('square.grid.2x2')}
 							size={16}
 							tintColor={view === 'grid' ? tokens.text.inverse : tokens.text.secondary}
 						/>
@@ -408,7 +414,12 @@ function ReviewRow({
 			>
 				<View style={[styles.checkbox, selected && styles.checkboxOn]}>
 					{selected && (
-						<SymbolView name="checkmark" size={14} tintColor={tokens.text.inverse} weight="bold" />
+						<SymbolView
+							name={symbolName('checkmark')}
+							size={14}
+							tintColor={tokens.text.inverse}
+							weight="bold"
+						/>
 					)}
 				</View>
 				{/* Cover is decorative here, so taps reach the row
@@ -432,7 +443,11 @@ function ReviewRow({
 				accessibilityLabel={`Wrong match? Swap ${book.title}`}
 				accessibilityHint="Opens alternates and catalog search"
 			>
-				<SymbolView name="arrow.left.arrow.right" size={16} tintColor={tokens.text.secondary} />
+				<SymbolView
+					name={symbolName('arrow.left.arrow.right')}
+					size={16}
+					tintColor={tokens.text.secondary}
+				/>
 			</Pressable>
 		</View>
 	);
@@ -468,7 +483,12 @@ function ReviewTile({
 				<DecorativeCover book={book} width={84} height={126} />
 				{selected && (
 					<View style={styles.tileCheck}>
-						<SymbolView name="checkmark" size={14} tintColor={tokens.text.inverse} weight="bold" />
+						<SymbolView
+							name={symbolName('checkmark')}
+							size={14}
+							tintColor={tokens.text.inverse}
+							weight="bold"
+						/>
 					</View>
 				)}
 				{match.bucket === 'low' && !owned && (
@@ -541,7 +561,11 @@ function SwapSheet({
 						Not “{match.book.title}”?
 					</Text>
 					<View style={styles.searchBox}>
-						<SymbolView name="magnifyingglass" size={16} tintColor={tokens.text.hint} />
+						<SymbolView
+							name={symbolName('magnifyingglass')}
+							size={16}
+							tintColor={tokens.text.hint}
+						/>
 						<TextInput
 							style={styles.searchInput}
 							value={query}

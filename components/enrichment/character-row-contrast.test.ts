@@ -7,7 +7,11 @@ import { describe, expect, it } from 'vitest';
 // (pinned in constants/tokens.test.ts).
 const path = resolve(__dirname, 'character-row.tsx');
 const source = existsSync(path) ? readFileSync(path, 'utf8') : '';
-const chevron = source.match(/<SymbolView\s[^>]*?name="chevron\.forward"[^>]*?\/>/)?.[0] ?? '';
+// #430: the name goes through symbolName() so Android gets its Material twin.
+const chevron =
+	source.match(
+		/<SymbolView\s[^>]*?name=\{symbolName\(\s*'chevron\.forward'\s*\)\}[^>]*?\/>/,
+	)?.[0] ?? '';
 
 describe('character-row chevron contrast', () => {
 	it('renders the chevron.forward symbol', () => {

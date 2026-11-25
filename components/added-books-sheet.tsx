@@ -1,10 +1,11 @@
-import { SymbolView } from 'expo-symbols';
+import { SymbolView } from '@/components/ui/symbol-view';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HoloCover } from '@/components/holo-cover';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { symbolName } from '@/lib/app-symbols';
 import type { Book } from '@/lib/hooks';
 import {
 	SHEET_ICON_BUTTON_HIT_SLOP,
@@ -43,7 +44,12 @@ export function AddedBooksSheet({
 					accessibilityLabel="Dismiss"
 					accessibilityHint="Returns to the scanner without adding"
 				>
-					<SymbolView name="xmark" size={18} tintColor={tokens.text.primary} weight="medium" />
+					<SymbolView
+						name={symbolName('xmark')}
+						size={18}
+						tintColor={tokens.text.primary}
+						weight="medium"
+					/>
 				</Pressable>
 				<Text style={styles.title} accessibilityRole="header">
 					{title}
@@ -56,7 +62,7 @@ export function AddedBooksSheet({
 					accessibilityLabel="Add to library"
 				>
 					<SymbolView
-						name="checkmark"
+						name={symbolName('checkmark')}
 						size={18}
 						tintColor={tokens.text.inverse}
 						weight="semibold"

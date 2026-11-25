@@ -49,13 +49,13 @@ describe('scanner content on accent.primary fills uses text.inverse', () => {
 		[
 			'active list toggle',
 			'viewToggleActive',
-			'name="list.bullet"',
+			"name={symbolName('list.bullet')}",
 			"view === 'list' ? tokens.text.inverse : tokens.text.secondary",
 		],
 		[
 			'active grid toggle',
 			'viewToggleActive',
-			'name="square.grid.2x2"',
+			"name={symbolName('square.grid.2x2')}",
 			"view === 'grid' ? tokens.text.inverse : tokens.text.secondary",
 		],
 		['add-button spinner', 'addButton', '{adding ? (', 'tokens.text.inverse'],

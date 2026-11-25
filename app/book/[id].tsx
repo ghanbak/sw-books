@@ -1,5 +1,5 @@
+import { SymbolView } from '@/components/ui/symbol-view';
 import { Link, Stack, useIsPreview, useLocalSearchParams, useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,9 @@ import { HoloStage, type StageBook, type StageFace } from '@/components/holo-sta
 import { Card, CardTitle } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { useToolbarIcon } from '@/hooks/useToolbarIcon';
 import { buildAmazonSearchUrl } from '@/lib/amazon';
+import { type AppSymbol, symbolName } from '@/lib/app-symbols';
 import { detailRowLabel } from '@/lib/book-a11y';
 import { enrichmentSlot } from '@/lib/book-enrichment-slot';
 import { getCoverColor } from '@/lib/cover';
@@ -188,30 +190,12 @@ export default function BookDetailScreen() {
 				{/* Details */}
 				<Card style={styles.card}>
 					<CardTitle>Details</CardTitle>
-					<DetailRow
-						icon={<SymbolView name="square.stack.3d.up" size={14} tintColor={tokens.text.hint} />}
-						label="Continuity"
-						value={book.canon}
-					/>
-					<DetailRow
-						icon={<SymbolView name="book" size={14} tintColor={tokens.text.hint} />}
-						label="Type"
-						value={book.type}
-					/>
+					<DetailRow symbol="square.stack.3d.up" label="Continuity" value={book.canon} />
+					<DetailRow symbol="book" label="Type" value={book.type} />
 					{book.publisher && (
-						<DetailRow
-							icon={<SymbolView name="building.columns" size={14} tintColor={tokens.text.hint} />}
-							label="Publisher"
-							value={book.publisher}
-						/>
+						<DetailRow symbol="building.columns" label="Publisher" value={book.publisher} />
 					)}
-					{publishedDate && (
-						<DetailRow
-							icon={<SymbolView name="calendar" size={14} tintColor={tokens.text.hint} />}
-							label="Published"
-							value={publishedDate}
-						/>
-					)}
+					{publishedDate && <DetailRow symbol="calendar" label="Published" value={publishedDate} />}
 					{book.language && <DetailRow label="Language" value={book.language} />}
 					{book.timeline_order != null && !showsEnrichmentTimeline && (
 						<DetailRow label="Timeline" value={eraLabel(book.timeline_order)} mono />
@@ -224,11 +208,7 @@ export default function BookDetailScreen() {
 						<CardTitle>Series</CardTitle>
 						<DetailRow label="Name" value={book.series_name} />
 						{book.series_order != null && book.series_order > 0 && (
-							<DetailRow
-								icon={<SymbolView name="number" size={14} tintColor={tokens.text.hint} />}
-								label="Book"
-								value={`#${book.series_order}`}
-							/>
+							<DetailRow symbol="number" label="Book" value={`#${book.series_order}`} />
 						)}
 					</Card>
 				)}
@@ -279,14 +259,17 @@ export default function BookDetailScreen() {
 function FavoriteHeaderButton({ bookId }: { bookId: string }) {
 	const { userBooks, toggleShelf } = useUserBooks();
 	const active = userBooks.get(bookId)?.favorite ?? false;
+	const starIcon = useToolbarIcon(active ? 'star.fill' : 'star');
 	return (
 		<Stack.Toolbar placement="right">
-			<Stack.Toolbar.Button
-				icon={active ? 'star.fill' : 'star'}
-				tintColor={active ? tokens.accent.primary : undefined}
-				accessibilityLabel={active ? 'Remove from favorites' : 'Add to favorites'}
-				onPress={() => toggleShelf(bookId, 'favorite')}
-			/>
+			{starIcon && (
+				<Stack.Toolbar.Button
+					icon={starIcon}
+					tintColor={active ? tokens.accent.primary : undefined}
+					accessibilityLabel={active ? 'Remove from favorites' : 'Add to favorites'}
+					onPress={() => toggleShelf(bookId, 'favorite')}
+				/>
+			)}
 		</Stack.Toolbar>
 	);
 }
@@ -296,13 +279,14 @@ function FavoriteHeaderButton({ bookId }: { bookId: string }) {
  * "<label>, <value>" (#403). `isbn` spaces the digits so they read one by one.
  */
 function DetailRow({
-	icon,
+	symbol,
 	label,
 	value,
 	mono,
 	isbn,
 }: {
-	icon?: React.ReactNode;
+	/** Leading SF Symbol (hint tint); rows without one keep the icon column with a spacer. */
+	symbol?: AppSymbol;
 	label: string;
 	value: string;
 	mono?: boolean;
@@ -315,7 +299,11 @@ function DetailRow({
 			accessibilityRole="text"
 			accessibilityLabel={detailRowLabel(label, value, { isbn })}
 		>
-			{icon ?? <View style={styles.iconSpacer} />}
+			{symbol ? (
+				<SymbolView name={symbolName(symbol)} size={14} tintColor={tokens.text.hint} />
+			) : (
+				<View style={styles.iconSpacer} />
+			)}
 			<Text style={styles.detailLabel}>{label}</Text>
 			<Text style={[styles.detailValue, mono && styles.mono]}>{value}</Text>
 		</View>
