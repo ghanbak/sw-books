@@ -2,11 +2,15 @@ import { isAllowlisted } from '@/lib/admin-allowlist';
 import { authConfig, createAuthServerClient } from '@/lib/supabase-auth';
 import { DEV_ADMIN_EMAIL } from '@app/admin-screenshot-env';
 import { isLocalUrl } from '@app/seed-guard';
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { DevSignInForm } from './_components/dev-sign-in-form';
 import { SignInButton } from './_components/sign-in-button';
 
 export const dynamic = 'force-dynamic';
+
+// Outside /admin, so the admin title template doesn't reach it; spelled out to match.
+export const metadata: Metadata = { title: 'Sign in — Ossus Archives Admin' };
 
 // Mapped from the callback's `?error=` codes — never echo the raw param into JSX.
 const ERROR_MESSAGES: Record<string, string> = {

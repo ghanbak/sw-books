@@ -1,8 +1,11 @@
 import { Button } from '@/components/ui/button';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { NewBookForm } from './_components/new-book-form';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = { title: 'Add a book' };
 
 export default function NewBookPage() {
 	return (

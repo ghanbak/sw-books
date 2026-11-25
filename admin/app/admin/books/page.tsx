@@ -13,12 +13,15 @@ import { dbError } from '@app/action-errors';
 import { fetchAllPages } from '@app/fetch-all-pages';
 import { ENRICHMENT_STATUSES, type EnrichmentStatus } from '@app/wookieepedia/enrichment-status';
 import { Plus } from 'lucide-react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { BooksTable, type CatalogRow, type EnrichmentSummary } from './_components/books-table';
 import { DbTargetSwitch } from './_components/db-target-switch';
 
 // Always read live from the local DB; never cache/pre-render the catalog.
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = { title: 'Catalog' };
 
 // Same tones as the enrichment status chips (saber-yellow pinned, destructive flagged).
 const DRIFT_TONES: Record<DriftChipTone, string> = {
