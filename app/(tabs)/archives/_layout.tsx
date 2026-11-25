@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
 
 import { useFontPref } from '@/lib/font-prefs';
+import { headerTitleStyle } from '@/lib/header-title-style';
 
 function getIOSVersion(): number {
 	if (Platform.OS !== 'ios') return 0;
@@ -20,7 +21,7 @@ export default function ArchivesLayout() {
 			screenOptions={{
 				headerLargeTitle: true,
 				headerShadowVisible: false,
-				headerTitleStyle: { fontFamily },
+				headerTitleStyle: headerTitleStyle(fontFamily, Platform.OS),
 				headerLargeTitleStyle: { fontFamily },
 				headerTransparent: Platform.OS === 'ios',
 				headerBlurEffect: isIOS26OrLater() ? undefined : 'regular',
