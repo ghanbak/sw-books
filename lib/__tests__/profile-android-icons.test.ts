@@ -31,7 +31,7 @@ describe('Profile row icons on Android (#428)', () => {
 		['rectangle.portrait.and.arrow.right', 'logout'],
 		['trash', 'delete'],
 	])('%s maps to the Material Symbol %s', (sf, material) => {
-		const escaped = sf.replace(/\./g, '\\.');
+		const escaped = sf.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 		expect(PROFILE).toMatch(
 			new RegExp(`<SFIcon\\s+name="${escaped}"\\s+android="${material}"\\s+color=\\{`),
 		);
