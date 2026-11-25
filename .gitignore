@@ -9,6 +9,7 @@ dist/
 *.p12
 *.key
 *.mobileprovision
+/.secrets/
 *.orig.*
 web-build/
 
