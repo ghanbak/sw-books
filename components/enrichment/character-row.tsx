@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { symbolName } from '@/lib/app-symbols';
 import { openInAppBrowser } from '@/lib/external-link';
 import {
 	type CharacterItem,
@@ -41,7 +42,7 @@ export const CharacterRow = memo(function CharacterRow({ item }: { item: Charact
 			<View style={styles.chevronSlot}>
 				{page ? (
 					<SymbolView
-						name="chevron.forward"
+						name={symbolName('chevron.forward')}
 						size={15}
 						weight="medium"
 						tintColor={tokens.text.tertiary}

@@ -14,6 +14,7 @@ import { GlassIconButton } from '@/components/ui/glass-icon-button';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
+import { symbolName } from '@/lib/app-symbols';
 import { useBookEnrichment } from '@/lib/hooks';
 import { isUuid } from '@/lib/uuid';
 import type { Enrichment } from '@/lib/wookieepedia/enrichment';
@@ -200,7 +201,7 @@ const SearchField = memo(function SearchField({
 		<View style={styles.searchWrap}>
 			<View style={styles.searchField}>
 				<SymbolView
-					name="magnifyingglass"
+					name={symbolName('magnifyingglass')}
 					size={17}
 					weight="medium"
 					tintColor={tokens.text.secondary}
