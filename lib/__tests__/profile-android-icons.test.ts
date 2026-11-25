@@ -44,8 +44,11 @@ describe('Profile row icons on Android (#428)', () => {
 	});
 
 	it('Android renders the mapped Material Symbol source, tinted with the row colour', () => {
-		expect(ICON_ANDROID).toMatch(/useMaterialSymbolSource\(\s*android,\s*24,\s*color\s*\)/);
-		expect(ICON_ANDROID).toMatch(/<Icon\s+name=\{\s*source\s*\}/);
+		// #435: the bitmap is seeded opaque; the row colour reaches the user as the Icon tint.
+		expect(ICON_ANDROID).toMatch(/useMaterialSymbolSource\(\s*android,\s*24,\s*OPAQUE_SEED\s*\)/);
+		expect(ICON_ANDROID).toMatch(
+			/<Icon\s+name=\{\s*source\s*\}\s+size=\{\s*24\s*\}\s+color=\{\s*color\s*\}/,
+		);
 	});
 
 	it('iOS keeps the SF name and never renders a Material bitmap', () => {
