@@ -1,14 +1,15 @@
-import { type SFSymbol, SymbolView } from 'expo-symbols';
+import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { tokens } from '@/constants/tokens';
+import { type AppSymbol, symbolName } from '@/lib/app-symbols';
 import { GlassView, liquidGlassAvailable } from '@/lib/glass';
 
 const SIZE = 36;
 
 type Props = {
-	/** SF Symbol name, e.g. `xmark`. */
-	icon: SFSymbol;
+	/** SF Symbol name, e.g. `xmark`. Must have a Material twin in `ANDROID_SYMBOLS`. */
+	icon: AppSymbol;
 	onPress: () => void;
 	accessibilityLabel: string;
 	/** Tints the icon with the primary accent (e.g. an active favorite). */
@@ -43,7 +44,12 @@ export function GlassIconButton({ icon, onPress, accessibilityLabel, active, siz
 					style={[StyleSheet.absoluteFill, styles.fallback, shape && { borderRadius: size / 2 }]}
 				/>
 			)}
-			<SymbolView name={icon} size={Math.round(size / 2)} tintColor={iconColor} weight="medium" />
+			<SymbolView
+				name={symbolName(icon)}
+				size={Math.round(size / 2)}
+				tintColor={iconColor}
+				weight="medium"
+			/>
 		</Pressable>
 	);
 }

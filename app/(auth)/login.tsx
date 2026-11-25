@@ -57,7 +57,8 @@ export default function LoginScreen() {
 						onPress={handleApple}
 						accessibilityRole="button"
 					>
-						<SymbolView name="apple.logo" size={18} tintColor="#000" />
+						{/* iOS-only button; Material Symbols has no Apple logo. */}
+						<SymbolView name={{ ios: 'apple.logo' }} size={18} tintColor="#000" />
 						<Text style={styles.appleButtonText}>Continue with Apple</Text>
 					</Pressable>
 				)}
