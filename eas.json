@@ -43,6 +43,11 @@
 				"appleId": "ghanbak@icloud.com",
 				"ascAppId": "6766580620",
 				"appleTeamId": "CFRQCUM2P9"
+			},
+			"android": {
+				"serviceAccountKeyPath": "./.secrets/play-service-account.json",
+				"track": "internal",
+				"releaseStatus": "draft"
 			}
 		}
 	}

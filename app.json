@@ -29,7 +29,7 @@
 				"monochromeImage": "./assets/images/android-icon-monochrome.png"
 			},
 			"predictiveBackGestureEnabled": false,
-			"permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"],
+			"permissions": ["android.permission.CAMERA"],
 			"package": "com.ghanbak.ossusarchives"
 		},
 		"web": {
@@ -50,7 +50,8 @@
 				"expo-camera",
 				{
 					"cameraPermission": "Allow OssusArchives to scan book barcodes",
-					"barcodeScannerEnabled": true
+					"barcodeScannerEnabled": true,
+					"recordAudioAndroid": false
 				}
 			],
 			[
