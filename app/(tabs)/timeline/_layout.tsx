@@ -1,6 +1,8 @@
 import { Stack } from 'expo-router';
+import { Platform } from 'react-native';
 
 import { useFontPref } from '@/lib/font-prefs';
+import { headerTitleStyle } from '@/lib/header-title-style';
 
 export default function TimelineLayout() {
 	const { fontFamily } = useFontPref();
@@ -18,7 +20,7 @@ export default function TimelineLayout() {
 				// being cut off by an opaque bar. The screen already pads its content by
 				// useHeaderHeight(), so nothing slides under the title.
 				headerTransparent: true,
-				headerTitleStyle: { fontFamily },
+				headerTitleStyle: headerTitleStyle(fontFamily, Platform.OS),
 				// Large-but-compact: shrink the native large title from its ~34pt default so it
 				// occupies less vertical space (this screen is a horizontal pager, so the title
 				// never collapses on scroll and would otherwise permanently eat room). UIKit fixes
