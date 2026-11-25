@@ -1,6 +1,6 @@
 import { Link } from 'expo-router';
 import { memo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { HoloCover } from '@/components/holo-cover';
 import { CanonBadge } from '@/components/ui/canon-badge';
@@ -9,12 +9,14 @@ import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { bookRowLabel } from '@/lib/book-a11y';
 import type { Book } from '@/lib/hooks';
+import { labelColumnLayout } from '@/lib/label-column';
 import { eraLabel } from '@/lib/timeline';
 
 /**
  * Row geometry (#149). The cover is the widest element in the row, so the data column stays
  * narrower than it. 2:3 cover; the leading column (2-line title, author, 2-line series) and
- * the data column (badge + timeline) both stay under the cover height.
+ * the data column (badge + timeline) both stay under the cover height at default text size.
+ * Larger text widens the data column, and accessibility sizes stack it under the row (#431).
  */
 export const BOOK_CARD_COVER = { width: 88, height: 132 } as const;
 export const BOOK_CARD_DATA_WIDTH = 80;
@@ -30,6 +32,8 @@ export const BOOK_CARD_DATA_WIDTH = 80;
  * long-press peeks the detail (`Link.Preview`). Android and web get the plain push.
  */
 export const BookCard = memo(function BookCard({ book }: { book: Book }) {
+	const { fontScale } = useWindowDimensions();
+	const column = labelColumnLayout({ width: BOOK_CARD_DATA_WIDTH, fontScale });
 	return (
 		// Link merges props into its child via Slot, which spreads `style`: the Pressable keeps a
 		// plain style object (a style function is dropped, an array throws in dev) and the press
@@ -69,18 +73,19 @@ export const BookCard = memo(function BookCard({ book }: { book: Book }) {
 											</Text>
 										) : null}
 									</View>
-									<View style={styles.data}>
-										<CanonBadge canon={book.canon} style={styles.badge} />
-										{book.timeline_order != null ? (
-											<View>
-												<Text style={styles.dataLabel}>TIMELINE</Text>
-												<Text style={styles.dataValue} numberOfLines={2}>
-													{eraLabel(book.timeline_order)}
-												</Text>
+									{column.stacked ? null : (
+										<View style={{ width: column.width }}>
+											<View style={styles.data}>
+												<BookCardData book={book} />
 											</View>
-										) : null}
-									</View>
+										</View>
+									)}
 								</View>
+								{column.stacked ? (
+									<View style={styles.dataStacked}>
+										<BookCardData book={book} />
+									</View>
+								) : null}
 							</Card>
 						</View>
 					)}
@@ -90,6 +95,23 @@ export const BookCard = memo(function BookCard({ book }: { book: Book }) {
 		</Link>
 	);
 });
+
+/** The data column's fields, shared by the side column and the stacked layout. */
+function BookCardData({ book }: { book: Book }) {
+	return (
+		<>
+			<CanonBadge canon={book.canon} style={styles.badge} />
+			{book.timeline_order != null ? (
+				<View style={styles.timeline}>
+					<Text style={styles.dataLabel}>TIMELINE</Text>
+					<Text style={styles.dataValue} numberOfLines={2}>
+						{eraLabel(book.timeline_order)}
+					</Text>
+				</View>
+			) : null}
+		</>
+	);
+}
 
 const styles = StyleSheet.create({
 	wrap: {
@@ -126,11 +148,26 @@ const styles = StyleSheet.create({
 		alignSelf: 'flex-start',
 	},
 	data: {
-		width: BOOK_CARD_DATA_WIDTH,
 		gap: 8,
 		borderLeftWidth: StyleSheet.hairlineWidth,
 		borderLeftColor: tokens.border.subtle,
 		paddingLeft: 12,
+	},
+	// Accessibility sizes: full card width under the cover row; badge and timeline share a
+	// line while they fit, then wrap.
+	dataStacked: {
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		alignItems: 'flex-start',
+		columnGap: 16,
+		rowGap: 8,
+		marginTop: 12,
+		paddingTop: 12,
+		borderTopWidth: StyleSheet.hairlineWidth,
+		borderTopColor: tokens.border.subtle,
+	},
+	timeline: {
+		flexShrink: 1,
 	},
 	dataLabel: {
 		fontSize: 11,
