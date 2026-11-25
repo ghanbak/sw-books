@@ -3,10 +3,13 @@ import { Badge } from '@/components/ui/badge';
 import { IS_HOSTED } from '@/lib/admin-allowlist';
 import { getDbTarget } from '@/lib/supabase-admin';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ExportButton } from './_components/export-button';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = { title: 'Unsaved changes' };
 
 /** A drift cell; `∅` (lib/csv/drift.ts's empty marker) is spoken as "empty". */
 function DiffValue({ value }: { value: string }) {

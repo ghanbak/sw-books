@@ -1,14 +1,30 @@
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
 import { dbError } from '@app/action-errors';
 import { ArrowLeft } from 'lucide-react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, cache } from 'react';
 import { DiffView } from './_components/diff-view';
 import { EnrichmentCard, EnrichmentShell } from './_components/enrichment-card';
 import { ManualFieldsForm } from './_components/manual-fields-form';
 
 export const dynamic = 'force-dynamic';
+
+type Props = { params: Promise<{ slug: string }> };
+
+// One read per request, shared by generateMetadata and the page.
+const loadBook = cache(async (slug: string) => {
+	const supabaseAdmin = await getSupabaseAdmin();
+	return supabaseAdmin.from('books').select('*').eq('slug', slug).maybeSingle();
+});
+
+// The page renders the error / 404; the title only needs a non-empty fallback.
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+	const { slug } = await params;
+	const { data } = await loadBook(slug);
+	return { title: data?.title || 'Book' };
+}
 
 const catalogLink = (
 	<Link
@@ -19,14 +35,9 @@ const catalogLink = (
 	</Link>
 );
 
-export default async function BookDiffPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function BookDiffPage({ params }: Props) {
 	const { slug } = await params;
-	const supabaseAdmin = await getSupabaseAdmin();
-	const { data, error } = await supabaseAdmin
-		.from('books')
-		.select('*')
-		.eq('slug', slug)
-		.maybeSingle();
+	const { data, error } = await loadBook(slug);
 
 	if (error) {
 		return (
