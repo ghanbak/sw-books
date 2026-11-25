@@ -1,6 +1,6 @@
-import { SymbolView } from 'expo-symbols';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { SymbolView } from '@/components/ui/symbol-view';
 import { tokens } from '@/constants/tokens';
 import { type AppSymbol, symbolName } from '@/lib/app-symbols';
 import { GlassView, liquidGlassAvailable } from '@/lib/glass';

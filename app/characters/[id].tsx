@@ -1,6 +1,5 @@
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SymbolView } from 'expo-symbols';
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +10,7 @@ import { WookieepediaCard } from '@/components/enrichment/wookieepedia-card';
 import { ErrorState } from '@/components/error-state';
 import { CARD_PADDING, CARD_RADIUS, CardNotch, CardTitle } from '@/components/ui/card';
 import { GlassIconButton } from '@/components/ui/glass-icon-button';
+import { SymbolView } from '@/components/ui/symbol-view';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { announce } from '@/hooks/useAccessibility';
