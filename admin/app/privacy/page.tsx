@@ -10,7 +10,7 @@ export const metadata = {
 	description: 'How Ossus Archives collects, uses, and protects your data.',
 };
 
-const EFFECTIVE = 'November 6, 2026';
+const EFFECTIVE = 'November 24, 2026';
 
 export default function PrivacyPolicy() {
 	return (
@@ -29,15 +29,24 @@ export default function PrivacyPolicy() {
 					a private relay email; we store whatever the provider returns.
 				</p>
 				<p>
+					<strong className="text-foreground">Name.</strong> Sign in with Apple asks for your name.
+					If you share it, we store it with your account.
+				</p>
+				<p>
 					<strong className="text-foreground">Your library.</strong> The books you add to your
-					shelves and their status (owned, read, want to read) are stored so your collection syncs
-					to your account.
+					shelves and their status (owned, read, want to read, favorite) are stored so your
+					collection syncs to your account.
 				</p>
 				<p>
 					<strong className="text-foreground">Camera and scanning.</strong> Barcode and shelf
 					scanning use your camera. Text and barcode recognition run on your device (Apple Vision on
 					iOS, ML Kit on Android); camera images are not uploaded or stored by us. When you scan an
 					ISBN, only that number is sent to look up the matching book in our catalog.
+				</p>
+				<p>
+					<strong className="text-foreground">App updates.</strong> To deliver app updates, each
+					update check sends Expo a random ID created for this installation, along with the platform
+					and app version. This ID is not linked to your account.
 				</p>
 				<p>
 					The app does not collect location, contacts, or advertising identifiers, and we do not
@@ -77,6 +86,10 @@ export default function PrivacyPolicy() {
 					<li>
 						<strong className="text-foreground">Apple and Google</strong> — sign-in providers.
 					</li>
+					<li>
+						<strong className="text-foreground">Expo</strong> — app update delivery (receives the
+						per-installation update ID).
+					</li>
 				</ul>
 				<p>
 					These providers are bound to protect your data and use it only to provide their services.
@@ -93,14 +106,14 @@ export default function PrivacyPolicy() {
 
 			<Section title="Data retention and deletion">
 				<p>
-					We keep your account and library until you delete your account. You can delete your
-					account and all associated data from within the app (Account → Delete account), or by
-					emailing us at <ContactLink />.
+					We keep your account and library until you delete your account. To delete your account and
+					all associated data in the app, tap the person icon at the top right of any tab to open
+					the Account sheet, then tap Delete account. You can also email us at <ContactLink />.
 				</p>
 				<p>
-					Deletion removes your account identifier and your shelves, and revokes the sign-in token
-					for Sign in with Apple. Deletion is permanent and applies regardless of where you are
-					located.
+					Deletion removes your account identifier, name, email address, and shelves, and revokes
+					the sign-in token for Sign in with Apple. Deletion is permanent and applies regardless of
+					where you are located.
 				</p>
 			</Section>
 

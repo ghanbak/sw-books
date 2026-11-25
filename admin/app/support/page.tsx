@@ -27,16 +27,16 @@ export default function Support() {
 
 			<Section title="How do I delete my account?">
 				<p>
-					In the app, open Account → Delete account. This permanently removes your account and
-					shelves. If you can no longer sign in, email <ContactLink /> from the address on your
-					account.
+					In the app, tap the person icon at the top right of any tab to open the Account sheet,
+					then tap Delete account. This permanently removes your account and shelves. If you can no
+					longer sign in, email <ContactLink /> from the address on your account.
 				</p>
 			</Section>
 
 			<Section title="What data do you keep?">
 				<p>
-					Your sign-in identifier, email address (as returned by Apple or Google), and the books on
-					your shelves. See the{' '}
+					Your sign-in identifier, email address (as returned by Apple or Google), your name if you
+					share it with Sign in with Apple, and the books on your shelves. See the{' '}
 					<Link className="text-saber-blue underline underline-offset-2" href="/privacy">
 						Privacy Policy
 					</Link>{' '}
