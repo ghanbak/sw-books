@@ -15,8 +15,9 @@ export function BuyOnAmazonButton({ url }: Props) {
 			<Pressable
 				style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
 				onPress={() => openInAppBrowser(url)}
-				accessibilityRole="button"
-				accessibilityLabel="Find this book on Amazon"
+				accessibilityRole="link"
+				accessibilityLabel="Find on Amazon"
+				accessibilityHint="Opens Amazon"
 			>
 				<SymbolView
 					name="arrow.up.forward.app"
