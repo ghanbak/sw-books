@@ -12,15 +12,19 @@ import { useFontPref } from '@/lib/font-prefs';
 // longer tabs — they open as a full-screen modal / bottom sheet from each tab's
 // header action buttons.
 //
-// Icons are SF Symbols on iOS only. Android currently shows tab labels without
-// icons — add `drawable`/`md` icons or a VectorIcon family when we ship Android.
+// Icons: `sf` on iOS, `md` (a Material Symbol rendered by expo-symbols) on Android. Material 3
+// hides unselected labels with four tabs, so without `md` the other tabs would be blank there.
+// The bundled Material font has no fill axis, so one glyph covers both states.
 
 export default function TabLayout() {
 	const { fontFamily } = useFontPref();
 	return (
 		<NativeTabs tintColor={tokens.accent.primary} labelStyle={{ fontFamily }}>
 			<NativeTabs.Trigger name="archives">
-				<NativeTabs.Trigger.Icon sf={{ default: 'pyramid', selected: 'pyramid.fill' }} />
+				<NativeTabs.Trigger.Icon
+					sf={{ default: 'pyramid', selected: 'pyramid.fill' }}
+					md="account_balance"
+				/>
 				<NativeTabs.Trigger.Label>Archives</NativeTabs.Trigger.Label>
 			</NativeTabs.Trigger>
 
@@ -30,6 +34,7 @@ export default function TabLayout() {
 						default: 'lines.measurement.horizontal',
 						selected: 'lines.measurement.horizontal',
 					}}
+					md="timeline"
 				/>
 				<NativeTabs.Trigger.Label>Timeline</NativeTabs.Trigger.Label>
 			</NativeTabs.Trigger>
@@ -37,13 +42,14 @@ export default function TabLayout() {
 			<NativeTabs.Trigger name="library">
 				<NativeTabs.Trigger.Icon
 					sf={{ default: 'rectangle.stack', selected: 'rectangle.stack.fill' }}
+					md="library_books"
 				/>
 				<NativeTabs.Trigger.Label>Library</NativeTabs.Trigger.Label>
 			</NativeTabs.Trigger>
 
 			{/* biome-ignore lint/a11y/useSemanticElements: NativeTabsTabBarItemRole, not ARIA */}
 			<NativeTabs.Trigger name="search" role="search">
-				<NativeTabs.Trigger.Icon sf="magnifyingglass" />
+				<NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
 				<NativeTabs.Trigger.Label>Search</NativeTabs.Trigger.Label>
 			</NativeTabs.Trigger>
 		</NativeTabs>
