@@ -98,9 +98,11 @@ describe('profile sign-out wiring', () => {
 	it('imports and calls the account signOut helper', () => {
 		expect(profile).toMatch(/import\s*\{[^}]*\bsignOut\b[^}]*\}\s*from\s*'@\/lib\/account'/);
 		expect(profile).toMatch(/const\s*\{\s*error\s*\}\s*=\s*await\s+signOut\(\s*\)/);
+		// #398: the alert body is mapped copy; the raw message only reaches console.warn.
 		expect(profile).toMatch(
-			/if\s*\(\s*error\s*\)\s*Alert\.alert\(\s*'Sign-out failed',\s*error\.message\s*\)/,
+			/if\s*\(\s*error\s*\)\s*Alert\.alert\(\s*'Sign-out failed',\s*reportAuthError\(\s*'sign-out',\s*error\s*\)\s*\)/,
 		);
+		expect(profile).not.toMatch(/'Sign-out failed',\s*error\.message/);
 	});
 
 	it('no longer calls supabase.auth.signOut directly', () => {

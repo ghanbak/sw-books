@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
 import { signInWithApple, signInWithGoogle } from '@/lib/auth';
+import { reportAuthError } from '@/lib/auth-error-copy';
 import { signInAsDevUser } from '@/lib/supabase';
 
 export default function LoginScreen() {
@@ -15,7 +16,7 @@ export default function LoginScreen() {
 		try {
 			await signInWithGoogle();
 		} catch (error) {
-			Alert.alert('Google sign-in failed', errorMessage(error));
+			Alert.alert('Google sign-in failed', reportAuthError('Google sign-in', error));
 		}
 	}
 
@@ -24,7 +25,7 @@ export default function LoginScreen() {
 			await signInWithApple();
 		} catch (error) {
 			if (isAppleCancellation(error)) return;
-			Alert.alert('Apple sign-in failed', errorMessage(error));
+			Alert.alert('Apple sign-in failed', reportAuthError('Apple sign-in', error));
 		}
 	}
 
@@ -87,10 +88,6 @@ export default function LoginScreen() {
 			</Text>
 		</View>
 	);
-}
-
-function errorMessage(error: unknown) {
-	return error instanceof Error ? error.message : String(error);
 }
 
 function isAppleCancellation(error: unknown) {
