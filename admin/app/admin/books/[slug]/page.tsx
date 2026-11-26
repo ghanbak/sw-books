@@ -19,10 +19,12 @@ const loadBook = cache(async (slug: string) => {
 	return supabaseAdmin.from('books').select('*').eq('slug', slug).maybeSingle();
 });
 
-// The page renders the error / 404; the title only needs a non-empty fallback.
+// The page renders the error / 404. Browsers get this streamed title even when the
+// page hits notFound(), so a missing row matches not-found.tsx's title.
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const { slug } = await params;
-	const { data } = await loadBook(slug);
+	const { data, error } = await loadBook(slug);
+	if (!data && !error) return { title: 'Book not found' };
 	return { title: data?.title || 'Book' };
 }
 
