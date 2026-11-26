@@ -87,12 +87,20 @@ export default async function DiffPage() {
 							{res.data.changedRows.map((row) => (
 								<div key={row.slug} className="rounded-lg border border-border bg-card p-4">
 									<div className="mb-2 flex items-baseline gap-2">
-										<Link
-											href={`/admin/books/${row.slug}`}
-											className="font-medium hover:text-saber-blue"
-										>
-											{row.title}
-										</Link>
+										{row.status === 'removed' ? (
+											// No DB row, so /admin/books/<slug> would 404.
+											<>
+												<span className="font-medium text-muted-foreground">{row.title}</span>
+												<Badge variant="secondary">removed</Badge>
+											</>
+										) : (
+											<Link
+												href={`/admin/books/${row.slug}`}
+												className="font-medium hover:text-saber-blue"
+											>
+												{row.title}
+											</Link>
+										)}
 										<span className="font-mono text-muted-foreground text-xs">{row.slug}</span>
 										<Badge variant="outline" className="ml-auto tabular-nums">
 											{row.fields.length} field(s)
