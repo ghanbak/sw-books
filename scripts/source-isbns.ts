@@ -32,8 +32,10 @@
  *     win at seed time.
  *
  * Cache:
- *   - schema_version 2 (rich EditionRecord per ISBN). Older cache entries are
- *     discarded on read; first run after refactor is cold (~10–15 min wall time).
+ *   - schema_version 10 (rich EditionRecord per ISBN, checksum-validated). Other
+ *     versions, and entries holding a checksum-invalid ISBN, are discarded on
+ *     read (scripts/lib/isbn-cache.ts); first run after a bump is cold
+ *     (~10–15 min wall time).
  *
  * Concurrency:
  *   - p-limit(3) over rows. Sequential fetches inside a row stay in order.
@@ -51,6 +53,7 @@ import { resolve } from 'node:path';
 import pLimit from 'p-limit';
 import { parseCsv } from '../lib/csv/read';
 import { normalizeSourcedIsbn } from '../lib/isbn';
+import { CACHE_SCHEMA_VERSION, type CacheEntry, filterCacheEntries } from './lib/isbn-cache';
 import {
 	type BookFormat,
 	type EditionRecord,
@@ -70,7 +73,6 @@ const FORMAT_OVERRIDES_PATH = resolve(__dirname, '..', 'data', 'format-overrides
 const CSV_ISBN_REJECTED_PATH = resolve(__dirname, '..', 'data', 'csv-isbn-rejected.json');
 const REPORT_PATH = resolve(__dirname, 'isbn-report.txt');
 
-const CACHE_SCHEMA_VERSION = 9;
 const CONCURRENCY = 3;
 const POLITE_DELAY_MS = 150;
 const TIMEOUT_MS = 12000;
@@ -451,20 +453,6 @@ async function probeIsbn(isbn: string): Promise<{ title: string; authors: string
 }
 
 // --- Cache ---
-type CacheEntry = {
-	schema_version: typeof CACHE_SCHEMA_VERSION;
-	fetched_at: string;
-	current_isbn: string;
-	ol_work_id: string | null;
-	editions: EditionRecord[];
-	source: 'ol' | 'google-books' | 'none';
-	// True when the CSV ISBN's OL metadata named a different book — we
-	// substituted via title-search and the CSV ISBN should be discarded.
-	csv_isbn_rejected: boolean;
-	// What OL said the CSV ISBN actually was, for the report.
-	csv_isbn_ol_title: string | null;
-};
-
 type Cache = { entries: Record<string, CacheEntry> };
 type Collisions = { collisions: string[] };
 
@@ -474,18 +462,15 @@ function loadCache(): Cache {
 		const parsed = JSON.parse(readFileSync(CACHE_PATH, 'utf-8')) as {
 			entries?: Record<string, Partial<CacheEntry>>;
 		};
-		const entries: Record<string, CacheEntry> = {};
-		let dropped = 0;
-		for (const [slug, entry] of Object.entries(parsed.entries ?? {})) {
-			if (entry?.schema_version === CACHE_SCHEMA_VERSION && Array.isArray(entry.editions)) {
-				entries[slug] = entry as CacheEntry;
-			} else {
-				dropped++;
-			}
-		}
-		if (dropped > 0) {
+		const { entries, stale, invalidIsbn } = filterCacheEntries(parsed.entries ?? {});
+		if (stale > 0) {
 			process.stdout.write(
-				`Cache: dropped ${dropped} pre-v${CACHE_SCHEMA_VERSION} entries (will re-fetch)\n`,
+				`Cache: dropped ${stale} pre-v${CACHE_SCHEMA_VERSION} entries (will re-fetch)\n`,
+			);
+		}
+		if (invalidIsbn > 0) {
+			process.stdout.write(
+				`Cache: dropped ${invalidIsbn} entries with checksum-invalid ISBNs (will re-fetch)\n`,
 			);
 		}
 		return { entries };
