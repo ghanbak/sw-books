@@ -33,8 +33,8 @@
  *
  * Cache:
  *   - schema_version 10 (rich EditionRecord per ISBN, checksum-validated). Other
- *     versions, and entries holding a checksum-invalid ISBN, are discarded on
- *     read (scripts/lib/isbn-cache.ts); first run after a bump is cold
+ *     versions, and entries holding a checksum-invalid or non-English ISBN, are
+ *     discarded on read (scripts/lib/isbn-cache.ts); first run after a bump is cold
  *     (~10–15 min wall time).
  *
  * Concurrency:
@@ -52,7 +52,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import pLimit from 'p-limit';
 import { parseCsv } from '../lib/csv/read';
-import { normalizeSourcedIsbn } from '../lib/isbn';
+import { isEnglishIsbn, normalizeSourcedIsbn } from '../lib/isbn';
 import { CACHE_SCHEMA_VERSION, type CacheEntry, filterCacheEntries } from './lib/isbn-cache';
 import {
 	type BookFormat,
@@ -183,20 +183,11 @@ type OLEdition = {
 	languages?: Array<{ key?: string }>;
 };
 
-// ISBN prefixes registered for English-language publishers worldwide. The first
-// digit after the 978/979 EAN tells you the language group: 0/1 = English, 2 =
-// French, 3 = German, 84 = Spain, 605 = Turkey, 83 = Poland, etc. We use this as
-// the primary English-language signal because OL's `languages` field is absent
-// from a high fraction of records (especially older catalog entries) — the
-// language-tag check alone lets too many translations through.
-function isEnglishLanguageIsbn(isbn: string): boolean {
-	if (!/^\d{13}$/.test(isbn)) return false;
-	const eanPrefix = isbn.slice(0, 3);
-	if (eanPrefix !== '978' && eanPrefix !== '979') return false;
-	const languageGroup = isbn[3];
-	return languageGroup === '0' || languageGroup === '1';
-}
-
+// The ISBN registration group is the primary English-language signal
+// (`isEnglishIsbn`: 978-0 / 978-1 only; 979-10/11/12 are France/Korea/Italy,
+// 979-8 is US-only and excluded) because OL's `languages` field is absent from
+// a high fraction of records — the language-tag check alone lets too many
+// translations through.
 function olEditionMostLikelyEnglish(e: OLEdition): boolean {
 	const langs = e.languages ?? [];
 	if (langs.length > 0) return langs.some((l) => l.key === '/languages/eng');
@@ -206,7 +197,7 @@ function olEditionMostLikelyEnglish(e: OLEdition): boolean {
 		.map((s) => normalizeSourcedIsbn(s))
 		.filter((s): s is string => s != null);
 	if (normalized.length === 0) return true;
-	return normalized.some(isEnglishLanguageIsbn);
+	return normalized.some(isEnglishIsbn);
 }
 
 function olCoverUrl(coverId: number | undefined, isbn: string): string {
@@ -222,7 +213,7 @@ function parseOlEditionToRecords(e: OLEdition): EditionRecord[] {
 	const isbns = new Set<string>();
 	for (const s of [...(e.isbn_13 ?? []), ...(e.isbn_10 ?? [])]) {
 		const n = normalizeSourcedIsbn(s);
-		if (n && isEnglishLanguageIsbn(n)) isbns.add(n);
+		if (n && isEnglishIsbn(n)) isbns.add(n);
 	}
 	for (const isbn of isbns) {
 		out.push({
@@ -401,7 +392,7 @@ async function googleBooksEditionsFor(row: Row): Promise<EditionRecord[]> {
 		const cover = pickGoogleCover(v.imageLinks);
 		for (const id of v.industryIdentifiers ?? []) {
 			const n = normalizeSourcedIsbn(id.identifier);
-			if (!n || seen.has(n) || !isEnglishLanguageIsbn(n)) continue;
+			if (!n || seen.has(n) || !isEnglishIsbn(n)) continue;
 			seen.add(n);
 			out.push({
 				isbn: n,
@@ -462,7 +453,9 @@ function loadCache(): Cache {
 		const parsed = JSON.parse(readFileSync(CACHE_PATH, 'utf-8')) as {
 			entries?: Record<string, Partial<CacheEntry>>;
 		};
-		const { entries, stale, invalidIsbn } = filterCacheEntries(parsed.entries ?? {});
+		const { entries, stale, invalidIsbn, nonEnglishIsbn } = filterCacheEntries(
+			parsed.entries ?? {},
+		);
 		if (stale > 0) {
 			process.stdout.write(
 				`Cache: dropped ${stale} pre-v${CACHE_SCHEMA_VERSION} entries (will re-fetch)\n`,
@@ -471,6 +464,11 @@ function loadCache(): Cache {
 		if (invalidIsbn > 0) {
 			process.stdout.write(
 				`Cache: dropped ${invalidIsbn} entries with checksum-invalid ISBNs (will re-fetch)\n`,
+			);
+		}
+		if (nonEnglishIsbn > 0) {
+			process.stdout.write(
+				`Cache: dropped ${nonEnglishIsbn} entries with non-English ISBNs (will re-fetch)\n`,
 			);
 		}
 		return { entries };
