@@ -4,8 +4,9 @@
  * values, keyed by infobox parameter name) plus the page metadata.
  *
  * ISBN normalization is deliberately NOT reimplemented here — it reuses the
- * validated `normalizeIsbn` in `lib/isbn.ts` (10→13 + check-digit validation,
- * idempotent on 13, rejects invalid), re-exported so the parse surface the plan
+ * validated `normalizeIsbn` in `lib/isbn.ts` (ISBN-10 mod-11 / ISBN-13 check
+ * digits validated, 10→13, idempotent on 13, null on invalid), re-exported so
+ * the parse surface the plan
  * describes stays intact.
  */
 import { parseDate } from '../catalog';

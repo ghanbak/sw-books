@@ -27,20 +27,33 @@ export function isValidIsbn13(isbn: string): boolean {
 }
 
 /**
+ * Validate an ISBN-10 string: 9 digits plus a mod-11 check character (`X` = 10,
+ * last position only). Expects uppercase input.
+ */
+export function isValidIsbn10(isbn: string): boolean {
+	if (!/^\d{9}[\dX]$/.test(isbn)) return false;
+	let sum = 0;
+	for (let i = 0; i < 10; i++) {
+		const c = isbn[i] ?? '0';
+		sum += (c === 'X' ? 10 : Number.parseInt(c, 10)) * (10 - i);
+	}
+	return sum % 11 === 0;
+}
+
+/**
  * Normalize a scanned barcode value to ISBN-13.
- * Handles ISBN-10 (10 digits) and ISBN-13 (13 digits).
- * Returns null if the value is not a valid ISBN.
+ * Handles ISBN-10 (10 chars, `X`/`x` check digit) and ISBN-13 (13 digits).
+ * Returns null if the value is not a valid ISBN (including a bad check digit).
  */
 export function normalizeIsbn(raw: string): string | null {
-	const digits = raw.replace(/[^0-9X]/gi, '');
+	const digits = raw.replace(/[^0-9X]/gi, '').toUpperCase();
 
 	if (digits.length === 13) {
 		return isValidIsbn13(digits) ? digits : null;
 	}
 
 	if (digits.length === 10) {
-		const isbn13 = isbn10to13(digits);
-		return isValidIsbn13(isbn13) ? isbn13 : null;
+		return isValidIsbn10(digits) ? isbn10to13(digits) : null;
 	}
 
 	return null;

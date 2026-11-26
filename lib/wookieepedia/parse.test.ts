@@ -97,8 +97,8 @@ describe('normalizeIsbn (reused from lib/isbn)', () => {
 	});
 
 	it('converts a valid ISBN-10 to ISBN-13', () => {
-		// 0-345-38400-4 → prepend 978, recompute check digit → 978-0-345-38400-3
-		expect(normalizeIsbn('0345384004')).toBe('9780345384003');
+		// 0-345-38400-8 → prepend 978, recompute check digit → 978-0-345-38400-3
+		expect(normalizeIsbn('0345384008')).toBe('9780345384003');
 	});
 
 	it('strips hyphens and spaces', () => {
