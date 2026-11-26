@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/table';
 import { callAction } from '@/lib/call-action';
 import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
+import { missingAsUndefined } from '@/lib/sort-missing';
 import {
 	ariaSortFor,
 	editCellLabel,
@@ -444,7 +445,9 @@ const columns = [
 			cell: ({ getValue }) => <span className="text-muted-foreground text-sm">{getValue()}</span>,
 		},
 	),
-	columnHelper.accessor('timeline_order', {
+	// null -> undefined so sortUndefined: 'last' applies (#457).
+	columnHelper.accessor((r) => missingAsUndefined(r.timeline_order), {
+		id: 'timeline_order',
 		header: ({ column }) => <SortHeader column={column} label="Timeline" />,
 		sortUndefined: 'last',
 		cell: ({ getValue }) => {
@@ -502,7 +505,8 @@ const columns = [
 		enableSorting: false,
 		cell: editableCell('era', { nullable: true }),
 	}),
-	columnHelper.accessor('enrichment', {
+	columnHelper.accessor((r) => missingAsUndefined(r.enrichment), {
+		id: 'enrichment',
 		header: ({ column }) => <SortHeader column={column} label="Wiki" />,
 		sortUndefined: 'last',
 		cell: ({ getValue, row }) => {
