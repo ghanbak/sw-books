@@ -60,6 +60,19 @@ export function normalizeIsbn(raw: string): string | null {
 }
 
 /**
+ * Normalize an ISBN from an external API (Open Library, Google Books) to a
+ * checksum-valid ISBN-13. Strips only hyphens and spaces, unlike
+ * `normalizeIsbn`, so non-ISBN identifiers such as Google's `OTHER` type
+ * (`UOM:39015…`) can't collapse into a digit run that passes a check digit.
+ */
+export function normalizeSourcedIsbn(raw: string): string | null {
+	const s = raw.replace(/[-\s]/g, '').toUpperCase();
+	if (isValidIsbn13(s)) return s;
+	if (isValidIsbn10(s)) return isbn10to13(s);
+	return null;
+}
+
+/**
  * isbn3-backed helpers for catalog tooling (admin app + seed scripts). These
  * handle ISBN-10/13, hyphens, spaces, and the `X` check digit, and validate
  * registration-group ranges — richer than the barcode-scanner path above,

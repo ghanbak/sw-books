@@ -50,6 +50,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import pLimit from 'p-limit';
 import { parseCsv } from '../lib/csv/read';
+import { normalizeSourcedIsbn } from '../lib/isbn';
 import {
 	type BookFormat,
 	type EditionRecord,
@@ -99,29 +100,7 @@ function loadRows(): Row[] {
 	return rows;
 }
 
-// --- ISBN utilities ---
-function isIsbn13(s: string): boolean {
-	return /^\d{13}$/.test(s);
-}
-
-function isIsbn10(s: string): boolean {
-	return /^\d{9}[\dX]$/.test(s);
-}
-
-function isbn10to13(isbn10: string): string {
-	const base = `978${isbn10.slice(0, 9)}`;
-	let sum = 0;
-	for (let i = 0; i < 12; i++) sum += Number.parseInt(base[i], 10) * (i % 2 === 0 ? 1 : 3);
-	return `${base}${(10 - (sum % 10)) % 10}`;
-}
-
-function normalizeIsbn13(raw: string): string | null {
-	const s = raw.replace(/[-\s]/g, '').toUpperCase();
-	if (isIsbn13(s)) return s;
-	if (isIsbn10(s)) return isbn10to13(s);
-	return null;
-}
-
+// --- Utilities ---
 function dedupe<T>(arr: T[]): T[] {
 	return [...new Set(arr)];
 }
@@ -221,7 +200,9 @@ function olEditionMostLikelyEnglish(e: OLEdition): boolean {
 	if (langs.length > 0) return langs.some((l) => l.key === '/languages/eng');
 	const isbns = [...(e.isbn_13 ?? []), ...(e.isbn_10 ?? [])];
 	if (isbns.length === 0) return true; // record with no ISBNs at all — keep
-	const normalized = isbns.map((s) => normalizeIsbn13(s)).filter((s): s is string => s != null);
+	const normalized = isbns
+		.map((s) => normalizeSourcedIsbn(s))
+		.filter((s): s is string => s != null);
 	if (normalized.length === 0) return true;
 	return normalized.some(isEnglishLanguageIsbn);
 }
@@ -238,7 +219,7 @@ function parseOlEditionToRecords(e: OLEdition): EditionRecord[] {
 	const out: EditionRecord[] = [];
 	const isbns = new Set<string>();
 	for (const s of [...(e.isbn_13 ?? []), ...(e.isbn_10 ?? [])]) {
-		const n = normalizeIsbn13(s);
+		const n = normalizeSourcedIsbn(s);
 		if (n && isEnglishLanguageIsbn(n)) isbns.add(n);
 	}
 	for (const isbn of isbns) {
@@ -417,7 +398,7 @@ async function googleBooksEditionsFor(row: Row): Promise<EditionRecord[]> {
 		if (!externalTitleMatchesRow(v.title, v.authors ?? [], row)) continue;
 		const cover = pickGoogleCover(v.imageLinks);
 		for (const id of v.industryIdentifiers ?? []) {
-			const n = normalizeIsbn13(id.identifier);
+			const n = normalizeSourcedIsbn(id.identifier);
 			if (!n || seen.has(n) || !isEnglishLanguageIsbn(n)) continue;
 			seen.add(n);
 			out.push({
