@@ -36,6 +36,7 @@ import {
 	focusTargetAfterRemove,
 	selectRowLabel,
 } from '@/lib/table-a11y';
+import { thumbUrl } from '@/lib/thumb-url';
 import { cn } from '@/lib/utils';
 import { type BulkItemResult, runBulkSequential } from '@app/bulk-run';
 import { isValidIsbn } from '@app/isbn';
@@ -380,7 +381,7 @@ const columns = [
 			const url = getValue();
 			return url ? (
 				<img
-					src={url}
+					src={thumbUrl(url) ?? undefined}
 					alt=""
 					className="h-12 w-8 rounded-sm border border-border object-cover"
 					loading="lazy"
