@@ -12,6 +12,7 @@ import Animated, {
 
 import { Text } from '@/components/ui/text';
 import { tokens } from '@/constants/tokens';
+import { cappedVerticalHitSlop, slopBoundsStyle } from '@/lib/tap-target';
 import {
 	RAIL_PITCH,
 	type TimelineGroup,
@@ -38,6 +39,17 @@ const PILL_SLOT_W = 180;
 // One stacked row of marker pills, and the gap between the lowest row and the notches.
 const PILL_ROW_H = 22;
 const STEM_GAP = 4;
+const PILL_H = 18;
+// Pressable pills get a 44pt hit area without moving anything (rows stay 22pt apart, so
+// it has to overlap the row above). The bottom slop stops at the slot edge (half the 4pt
+// gap to the row below, and STEM_GAP clear of the rail, which renders later and so keeps
+// its touches); the top takes the rest. Higher rows hit-test first (zIndex: row), so a
+// pill's top slop only claims space the pill stacked over it doesn't.
+// cappedVerticalHitSlop caps its top side; flipped here so the capped side faces down.
+const PILL_INSET = (PILL_ROW_H - PILL_H) / 2;
+const PILL_CAPPED_SLOP = cappedVerticalHitSlop(PILL_H, PILL_INSET);
+const PILL_VERTICAL_SLOP = { top: PILL_CAPPED_SLOP.bottom, bottom: PILL_CAPPED_SLOP.top };
+const PILL_HIT_SLOP = { ...PILL_VERTICAL_SLOP, left: 6, right: 6 };
 
 /**
  * The notch rail beneath the Timeline hero. One tick per year-with-books, evenly
@@ -316,12 +328,18 @@ function MarkerPill({
 			pointerEvents="box-none"
 			accessibilityElementsHidden={!onScreen}
 			importantForAccessibility={onScreen ? 'auto' : 'no-hide-descendants'}
-			style={[styles.pillSlot, { left: x - PILL_SLOT_W / 2, bottom: row * PILL_ROW_H + STEM_GAP }]}
+			style={[
+				styles.pillSlot,
+				// Native hit-testing drops touches outside the slot before the pill's hitSlop
+				// applies, so a pressable pill's slot grows by the same slop (net zero layout).
+				onPress && styles.pillSlotHit,
+				{ left: x - PILL_SLOT_W / 2, bottom: row * PILL_ROW_H + STEM_GAP, zIndex: row },
+			]}
 		>
 			<Pressable
 				onPress={onPress}
 				disabled={!onPress}
-				hitSlop={6}
+				hitSlop={onPress ? PILL_HIT_SLOP : 6}
 				accessibilityRole={onPress ? 'button' : 'text'}
 				accessibilityLabel={accessibilityLabel}
 				style={({ pressed }) => [
@@ -388,11 +406,15 @@ const styles = StyleSheet.create({
 		alignItems: 'center',
 		justifyContent: 'center',
 	},
+	pillSlotHit: {
+		...slopBoundsStyle(PILL_VERTICAL_SLOP),
+		height: PILL_ROW_H + PILL_VERTICAL_SLOP.top + PILL_VERTICAL_SLOP.bottom,
+	},
 	pill: {
 		flexDirection: 'row',
 		alignItems: 'center',
 		gap: 3,
-		height: 18,
+		height: PILL_H,
 		paddingHorizontal: 6,
 		borderRadius: 9,
 		backgroundColor: tokens.rail.anchorPill,
