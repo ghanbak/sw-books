@@ -17,7 +17,9 @@
  *              cover payload or unreachable cover host (--head only; network
  *              flakes must not fail the loop).
  */
-import { isValidIsbn13, isbn10to13 } from './isbn';
+import { isValidIsbn10, isValidIsbn13, isbn10to13 } from './isbn';
+
+export { isValidIsbn10 };
 
 export type Severity = 'error' | 'warning';
 
@@ -50,17 +52,6 @@ export type HealthRow = {
 	cover_image?: string | null;
 	synopsis?: string | null;
 };
-
-/** ISBN-10 mod-11 check (last char may be `X`). */
-export function isValidIsbn10(isbn: string): boolean {
-	if (!/^\d{9}[\dX]$/.test(isbn)) return false;
-	let sum = 0;
-	for (let i = 0; i < 10; i++) {
-		const c = isbn[i] ?? '0';
-		sum += (c === 'X' ? 10 : Number.parseInt(c, 10)) * (10 - i);
-	}
-	return sum % 11 === 0;
-}
 
 export type IsbnVerdict = 'valid-13' | 'valid-10' | 'bad-check-digit' | 'malformed';
 
