@@ -7,7 +7,8 @@
  * Severity:
  *  - error   — breaks the app or a DB write: duplicate slug, one ISBN on two
  *              books (scan can return the wrong book), invalid/malformed ISBN
- *              (normalizeIsbn rejects it, so a scan never matches),
+ *              (normalizeIsbn rejects it, so a scan never matches), ISBN-10
+ *              stored as-is (scan normalizes to 13 digits, so it never matches),
  *              primary_isbn not in isbn[] (merge_books raises), cover URL that
  *              returns 4xx/5xx or a non-image (--head only).
  *  - warning — degraded but not broken: shared cover URL (often a
@@ -127,14 +128,19 @@ export function checkInvalidIsbns(rows: HealthRow[]): Finding[] {
 		const primary = isBlank(r.primary_isbn) ? null : (r.primary_isbn as string).trim();
 		for (const isbn of rowIsbns(r)) {
 			const verdict = classifyIsbn(isbn);
-			if (verdict === 'valid-13' || verdict === 'valid-10') continue;
+			if (verdict === 'valid-13') continue;
 			const role = isbn === primary ? 'primary_isbn' : 'isbn[]';
-			const what = verdict === 'malformed' ? 'malformed ISBN' : 'invalid check digit';
+			// A valid ISBN-10 still fails: the scanner normalizes to 13 digits and
+			// matches exactly. isbnKey keeps folding it for collision checks.
+			const what =
+				verdict === 'valid-10'
+					? `ISBN-10 ${isbn} not in ISBN-13 form, scan can't match`
+					: `${verdict === 'malformed' ? 'malformed ISBN' : 'invalid check digit'} ${isbn}`;
 			out.push({
 				severity: 'error',
 				check: 'invalid-isbn',
 				slugs: [r.slug],
-				message: `${r.slug}: ${what} ${isbn} (${role})`,
+				message: `${r.slug}: ${what} (${role})`,
 			});
 		}
 	}
