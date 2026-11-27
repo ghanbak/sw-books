@@ -25,6 +25,7 @@
 			"@app/types": ["../lib/types.ts"],
 			"@app/bulk-run": ["../lib/bulk-run.ts"],
 			"@app/catalog": ["../lib/catalog.ts"],
+			"@app/catalog-health": ["../lib/catalog-health.ts"],
 			"@app/sources/*": ["../lib/sources/*"],
 			"@app/csv/*": ["../lib/csv/*"],
 			"@app/isbn": ["../lib/isbn.ts"],

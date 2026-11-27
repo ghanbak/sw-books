@@ -122,16 +122,41 @@ export function checkIsbnCollisions(rows: HealthRow[]): Finding[] {
 	}));
 }
 
+export type IsbnProblemVerdict = Exclude<IsbnVerdict, 'valid-13'>;
+
+export type IsbnProblem = {
+	isbn: string;
+	role: 'isbn[]' | 'primary_isbn';
+	verdict: IsbnProblemVerdict;
+};
+
+/** Short reason per verdict, for admin UI copy. */
+export const ISBN_PROBLEM_LABEL: Record<IsbnProblemVerdict, string> = {
+	'valid-10': 'ISBN-10',
+	malformed: 'malformed',
+	'bad-check-digit': 'bad check digit',
+};
+
+/** Every isbn[] / primary_isbn value on a row the scanner can't match: anything
+ *  but a bare, valid ISBN-13. A valid ISBN-10 still fails: the scanner
+ *  normalizes to 13 digits and matches exactly. Shared by catalog:health and
+ *  the admin Validate ISBNs button. */
+export function scannerIsbnProblems(r: HealthRow): IsbnProblem[] {
+	const primary = isBlank(r.primary_isbn) ? null : (r.primary_isbn as string).trim();
+	const out: IsbnProblem[] = [];
+	for (const isbn of rowIsbns(r)) {
+		const verdict = classifyIsbn(isbn);
+		if (verdict === 'valid-13') continue;
+		out.push({ isbn, role: isbn === primary ? 'primary_isbn' : 'isbn[]', verdict });
+	}
+	return out;
+}
+
 export function checkInvalidIsbns(rows: HealthRow[]): Finding[] {
 	const out: Finding[] = [];
 	for (const r of rows) {
-		const primary = isBlank(r.primary_isbn) ? null : (r.primary_isbn as string).trim();
-		for (const isbn of rowIsbns(r)) {
-			const verdict = classifyIsbn(isbn);
-			if (verdict === 'valid-13') continue;
-			const role = isbn === primary ? 'primary_isbn' : 'isbn[]';
-			// A valid ISBN-10 still fails: the scanner normalizes to 13 digits and
-			// matches exactly. isbnKey keeps folding it for collision checks.
+		for (const { isbn, role, verdict } of scannerIsbnProblems(r)) {
+			// isbnKey keeps folding ISBN-10s for collision checks.
 			const what =
 				verdict === 'valid-10'
 					? `ISBN-10 ${isbn} not in ISBN-13 form, scan can't match`

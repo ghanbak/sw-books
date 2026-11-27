@@ -39,7 +39,7 @@ import {
 import { thumbUrl } from '@/lib/thumb-url';
 import { cn } from '@/lib/utils';
 import { type BulkItemResult, runBulkSequential } from '@app/bulk-run';
-import { isValidIsbn } from '@app/isbn';
+import { ISBN_PROBLEM_LABEL, scannerIsbnProblems } from '@app/catalog-health';
 import { createRowSaveQueue, newerUpdatedAt, queueRowSave } from '@app/serial-save';
 import type { Database } from '@app/types';
 import {
@@ -734,15 +734,19 @@ export function BooksTable({
 	}
 
 	function validateIsbns() {
-		const bad = selectedRows.filter((r) => (r.isbn ?? []).some((i) => !isValidIsbn(i)));
+		// Same predicate as catalog:health: only a bare, valid ISBN-13 scans (#477).
+		const bad = selectedRows.flatMap((r) => {
+			const problems = scannerIsbnProblems(r);
+			if (problems.length === 0) return [];
+			const reasons = [...new Set(problems.map((p) => ISBN_PROBLEM_LABEL[p.verdict]))];
+			return [`${r.slug} (${reasons.join(', ')})`];
+		});
 		if (bad.length === 0) {
 			toast.success(`All ISBNs valid across ${selectedCount} selected`);
 		} else {
+			const more = bad.length > 5 ? `, +${bad.length - 5} more` : '';
 			toast.error(
-				`${bad.length} row(s) with invalid ISBN check digits: ${bad
-					.map((r) => r.slug)
-					.slice(0, 5)
-					.join(', ')}`,
+				`${bad.length} row(s) with unscannable ISBNs: ${bad.slice(0, 5).join(', ')}${more}`,
 			);
 		}
 	}
