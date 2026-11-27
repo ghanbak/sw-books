@@ -3,7 +3,13 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ariaSortFor, focusTargetAfterRemove, selectRowLabel } from '../../admin/lib/table-a11y';
+import {
+	RECHECK_WOOKIEEPEDIA_LABEL,
+	ariaSortFor,
+	diffLinkLabel,
+	focusTargetAfterRemove,
+	selectRowLabel,
+} from '../../admin/lib/table-a11y';
 
 const table = readFileSync(
 	resolve(__dirname, '../../admin/app/admin/books/_components/books-table.tsx'),
@@ -25,7 +31,35 @@ describe('selectRowLabel', () => {
 	});
 });
 
+// #480: each row's Diff link needs a distinct name (WCAG 2.4.4), and Recheck's name must
+// contain its visible text (WCAG 2.5.3).
+describe('diffLinkLabel', () => {
+	it('starts with the visible "Diff" and names the book', () => {
+		expect(diffLinkLabel('Heir to the Empire')).toBe('Diff Heir to the Empire');
+		expect(diffLinkLabel('Thrawn: Alliances')).not.toBe(diffLinkLabel('Thrawn'));
+	});
+});
+
+describe('RECHECK_WOOKIEEPEDIA_LABEL', () => {
+	it('starts with the visible "Recheck"', () => {
+		expect(RECHECK_WOOKIEEPEDIA_LABEL).toMatch(/^recheck/i);
+	});
+});
+
 describe('books-table wiring', () => {
+	it('Diff link is named via diffLinkLabel; its icon stays decorative', () => {
+		const actions = table.slice(table.indexOf("id: 'actions',"));
+		const link = /<Link\b([^>]*)>\s*Diff\s*<ExternalLink\b([^>]*)\/>/.exec(actions);
+		expect(link, 'Diff <Link> found').not.toBeNull();
+		expect(link?.[1]).toMatch(/aria-label=\{diffLinkLabel\(\s*row\.original\.title\s*\)\}/);
+		expect(link?.[2]).not.toMatch(/aria-|title=/);
+	});
+
+	it('Recheck button is named via RECHECK_WOOKIEEPEDIA_LABEL', () => {
+		expect(table).toMatch(/aria-label=\{\s*RECHECK_WOOKIEEPEDIA_LABEL\s*\}/);
+		expect(table).not.toContain('Re-check Wookieepedia');
+	});
+
 	it('each sortable <TableHead> gets aria-sort from ariaSortFor', () => {
 		const head = /<TableHead\b([^>]*?)>\s*\{header\.isPlaceholder/.exec(table)?.[1] ?? '';
 		expect(head).toMatch(
