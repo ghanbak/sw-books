@@ -62,7 +62,9 @@ describe('createSchema ISBN normalization', () => {
 
 	it('rejects an invalid primary_isbn on the primary_isbn path', () => {
 		const err = createIssues({ isbn: ['9780345391803'], primary_isbn: '9780345391804' });
-		expect(firstIssueMessage(err, '')).toBe('primary_isbn: expected a valid ISBN-10 or ISBN-13');
+		expect(firstIssueMessage(err, '')).toBe(
+			'primary_isbn: expected a valid ISBN-10 or ISBN-13, got "9780345391804"',
+		);
 	});
 
 	it('still rejects a valid primary_isbn that is not in isbn[]', () => {

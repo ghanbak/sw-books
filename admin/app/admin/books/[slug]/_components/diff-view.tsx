@@ -143,12 +143,11 @@ export function DiffView({ book }: { book: BookRow }) {
 
 	// Resulting ISBN list + primary preview given the current selection.
 	const isbnSource = selection.isbn ?? 'current';
-	const { isbns: resultingIsbns, primary: primaryPreview } = previewIsbns(
-		book,
-		candidates,
-		isbnSource,
-		replaceIsbn,
-	);
+	const {
+		isbns: resultingIsbns,
+		primary: primaryPreview,
+		dropped: droppedIsbns,
+	} = previewIsbns(book, candidates, isbnSource, replaceIsbn);
 
 	const patch = buildLookupPatch(book, candidates, selection, replaceIsbn);
 	const changeCount = Object.keys(patch).length;
@@ -341,6 +340,14 @@ export function DiffView({ book }: { book: BookRow }) {
 						<br />
 						primary_isbn →{' '}
 						<span className="font-mono text-saber-blue">{primaryPreview ?? '—'}</span>
+						{droppedIsbns.length > 0 && (
+							<>
+								<br />
+								<span className="text-destructive-text">
+									will remove invalid <span className="font-mono">{droppedIsbns.join(', ')}</span>
+								</span>
+							</>
+						)}
 					</p>
 				</div>
 			)}

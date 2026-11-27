@@ -33,7 +33,7 @@ export const INVALID_ISBN_MESSAGE = 'expected a valid ISBN-10 or ISBN-13';
 const ISBN = z.string().transform((raw, ctx) => {
 	const isbn13 = normalizeSourcedIsbn(raw.trim());
 	if (isbn13 === null) {
-		ctx.addIssue({ code: 'custom', message: INVALID_ISBN_MESSAGE });
+		ctx.addIssue({ code: 'custom', message: `${INVALID_ISBN_MESSAGE}, got "${raw}"` });
 		return z.NEVER;
 	}
 	return isbn13;

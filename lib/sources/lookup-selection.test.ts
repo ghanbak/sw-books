@@ -17,7 +17,8 @@ const BOOK: LookupBook = {
 	language: 'English',
 	synopsis: 'Current synopsis',
 	format: ['Paperback'],
-	isbn: ['9780000000001', '9780000000002'],
+	// Check-digit-valid: merge drops stored values that fail normalization (#476).
+	isbn: ['9780000000019', '9780000000002'],
 	primary_isbn: '9780000000002',
 };
 
@@ -123,12 +124,12 @@ describe('buildLookupPatch isbn', () => {
 		expect(
 			buildLookupPatch(
 				BOOK,
-				lookup({ isbn: ['9780000000002', '9780000000009'] }),
+				lookup({ isbn: ['9780000000002', '9780000000026'] }),
 				{ isbn: 'gb' },
 				false,
 			),
 		).toEqual({
-			isbn: ['9780000000001', '9780000000002', '9780000000009'],
+			isbn: ['9780000000019', '9780000000002', '9780000000026'],
 			primary_isbn: '9780000000002',
 		});
 	});
