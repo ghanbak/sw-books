@@ -16,6 +16,14 @@ export function selectRowLabel(title: string): string {
 	return `Select ${title}`;
 }
 
+/** Accessible name for a row's Diff link (#480): starts with the visible "Diff". */
+export function diffLinkLabel(title: string): string {
+	return `Diff ${title}`;
+}
+
+/** Accessible name for the Wookieepedia Recheck button; starts with its visible text (#480). */
+export const RECHECK_WOOKIEEPEDIA_LABEL = 'Recheck Wookieepedia page status';
+
 /**
  * Accessible name for an inline-edit cell's display button: field, book and value, with
  * "empty" in place of the visual "—" (screen readers skip it at default punctuation).

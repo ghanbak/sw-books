@@ -30,7 +30,9 @@ import {
 import { callAction } from '@/lib/call-action';
 import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
 import {
+	RECHECK_WOOKIEEPEDIA_LABEL,
 	ariaSortFor,
+	diffLinkLabel,
 	editCellLabel,
 	filterStatusLabel,
 	focusTargetAfterRemove,
@@ -523,7 +525,10 @@ const columns = [
 		cell: ({ row, table }) => (
 			<div className="flex items-center justify-end gap-1">
 				<Button asChild variant="ghost" size="sm" className="h-7 gap-1 text-saber-blue">
-					<Link href={`/admin/books/${row.original.slug}`}>
+					<Link
+						href={`/admin/books/${row.original.slug}`}
+						aria-label={diffLinkLabel(row.original.title)}
+					>
 						Diff <ExternalLink className="size-3.5" />
 					</Link>
 				</Button>
@@ -800,7 +805,7 @@ export function BooksTable({
 						className="-mr-2 h-6 px-2 text-muted-foreground text-xs"
 						onClick={recheck}
 						disabled={rechecking}
-						aria-label="Re-check Wookieepedia page status"
+						aria-label={RECHECK_WOOKIEEPEDIA_LABEL}
 						title="Re-check every mapped page (cached 6 h)"
 					>
 						<RefreshCw className={cn('size-3', rechecking && 'animate-spin')} />
