@@ -4,6 +4,7 @@
  * neither the patch nor the pruned selection may treat an empty source as a
  * value: the UI never offers clearing a field (#240).
  */
+import { normalizeSourcedIsbn } from '../isbn';
 import type { Database } from '../types';
 import type { BookCandidate, BookPatch, LookupResult } from './types';
 
@@ -107,24 +108,38 @@ export function buildFillEmptyArrayPatch(book: LookupBook, cand: LookupResult | 
 	return patch;
 }
 
-/** The ISBN list and primary ISBN that the given source would leave on the book. */
+/**
+ * The ISBN list and primary ISBN that the given source would leave on the book.
+ * Merge runs every value through save-time normalization (#476): stored values
+ * that fail it are dropped (listed in `dropped`), ISBN-10s fold to their
+ * ISBN-13, and duplicates collapse, so patchSchema accepts the result.
+ */
 export function previewIsbns(
 	book: LookupBook,
 	cand: LookupResult | null,
 	source: Source,
 	replaceIsbn: boolean,
-): { isbns: string[]; primary: string | null } {
+): { isbns: string[]; primary: string | null; dropped: string[] } {
 	const current = book.isbn ?? [];
-	const incoming = arr(book, cand, 'isbn', source);
-	const isbns =
-		source === 'current'
-			? current
-			: replaceIsbn
-				? incoming
-				: [...new Set([...current, ...incoming])];
-	const primary =
-		book.primary_isbn && isbns.includes(book.primary_isbn) ? book.primary_isbn : (isbns[0] ?? null);
-	return { isbns, primary };
+	if (source === 'current' || replaceIsbn) {
+		const isbns = source === 'current' ? current : arr(book, cand, 'isbn', source);
+		const primary =
+			book.primary_isbn && isbns.includes(book.primary_isbn)
+				? book.primary_isbn
+				: (isbns[0] ?? null);
+		return { isbns, primary, dropped: [] };
+	}
+	const merged = new Set<string>();
+	const dropped: string[] = [];
+	for (const raw of [...current, ...arr(book, cand, 'isbn', source)]) {
+		const isbn13 = normalizeSourcedIsbn(raw.trim());
+		if (isbn13) merged.add(isbn13);
+		else if (!dropped.includes(raw)) dropped.push(raw);
+	}
+	const isbns = [...merged];
+	const storedPrimary = book.primary_isbn ? normalizeSourcedIsbn(book.primary_isbn.trim()) : null;
+	const primary = storedPrimary && merged.has(storedPrimary) ? storedPrimary : (isbns[0] ?? null);
+	return { isbns, primary, dropped };
 }
 
 /** The write for `selection`. Its keys are exactly what Apply counts. */
