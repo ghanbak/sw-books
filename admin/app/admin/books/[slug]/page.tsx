@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getDbTarget, getSupabaseAdmin } from '@/lib/supabase-admin';
 import { dbError } from '@app/action-errors';
 import { ArrowLeft } from 'lucide-react';
 import type { Metadata } from 'next';
@@ -39,7 +39,8 @@ const catalogLink = (
 
 export default async function BookDiffPage({ params }: Props) {
 	const { slug } = await params;
-	const { data, error } = await loadBook(slug);
+	// The target is sent back with each save so a switch in another tab is refused (#487).
+	const [{ data, error }, target] = await Promise.all([loadBook(slug), getDbTarget()]);
 
 	if (error) {
 		return (
@@ -56,7 +57,7 @@ export default async function BookDiffPage({ params }: Props) {
 	return (
 		<main className="mx-auto max-w-6xl p-6">
 			{catalogLink}
-			<DiffView book={data} />
+			<DiffView book={data} dbTarget={target} />
 			<div className="mt-10">
 				{/* Keyed on updated_at: any save (here, diff apply, bulk) resets the drafts. */}
 				<ManualFieldsForm
@@ -64,6 +65,7 @@ export default async function BookDiffPage({ params }: Props) {
 					bookId={data.id}
 					updatedAt={data.updated_at}
 					book={data}
+					dbTarget={target}
 				/>
 			</div>
 			<div className="mt-10">

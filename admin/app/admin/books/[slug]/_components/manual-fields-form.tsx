@@ -14,6 +14,7 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { firstInvalidField } from '@/lib/form-a11y';
+import type { DbTarget } from '@/lib/supabase-admin';
 import {
 	CANON_VALUES,
 	type ManualBook,
@@ -77,10 +78,13 @@ export function ManualFieldsForm({
 	bookId,
 	updatedAt,
 	book,
+	dbTarget,
 }: {
 	bookId: string;
 	updatedAt: string | null;
 	book: ManualBook;
+	/** The DB target the page rendered with; a switch since is refused (#487). */
+	dbTarget: DbTarget;
 }) {
 	const router = useRouter();
 	const [draft, setDraft] = useState<ManualDraft>(() => draftFromBook(book));
@@ -119,7 +123,7 @@ export function ManualFieldsForm({
 			try {
 				res = await serializeSave(
 					gate,
-					() => patchBook(bookId, updatedAt, patch),
+					() => patchBook(bookId, updatedAt, patch, dbTarget),
 					(r) => r.ok,
 				);
 			} catch {
@@ -132,7 +136,7 @@ export function ManualFieldsForm({
 			if (res.ok) {
 				toast.success(`Saved ${changed.length} field(s)`);
 				startTransition(() => router.refresh());
-			} else if (res.error.code === 'CONFLICT') {
+			} else if (res.error.code === 'CONFLICT' || res.error.code === 'TARGET_CHANGED') {
 				toast.error(res.error.message, {
 					action: { label: 'Reload', onClick: () => router.refresh() },
 				});

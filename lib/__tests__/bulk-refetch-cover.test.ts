@@ -33,6 +33,7 @@ function query(): Record<string, (...args: unknown[]) => unknown> {
 
 vi.mock('../../admin/lib/auth', () => ({ getAdmin: async () => ({ id: 'admin' }) }));
 vi.mock('../../admin/lib/supabase-admin', () => ({
+	getDbTarget: async () => 'prod',
 	getSupabaseAdmin: async () => ({ from: () => query() }),
 }));
 // Root has no `next`. Bare id covers CI (no admin deps, import stays
@@ -50,7 +51,10 @@ vi.mock('../sources/lookup', () => ({ lookupCandidatesFor: async () => null }));
 // `@app/*` aliases only resolve under admin/tsconfig.json).
 const bulkPath = resolve(__dirname, '../../admin/app/_actions/bulk.ts');
 type Bulk = {
-	refetchCover: (slug: string) => Promise<{ slug: string; status: string; message?: string }>;
+	refetchCover: (
+		slug: string,
+		expectedTarget: string,
+	) => Promise<{ slug: string; status: string; message?: string }>;
 };
 const load = async (): Promise<Bulk> => (await import(/* @vite-ignore */ bulkPath)) as Bulk;
 
@@ -78,7 +82,7 @@ describe('refetchCover stale-write guard (#194)', () => {
 			{ data: { updated_at: '2026-11-02T00:00:00Z' }, error: null }, // re-read
 		);
 		const { refetchCover } = await load();
-		const res = await refetchCover('some-book');
+		const res = await refetchCover('some-book', 'prod');
 
 		expect(res).toEqual({ slug: 'some-book', status: 'error', message: CONFLICT_ERROR.message });
 		const updates = db.calls.filter((c) => c.some((x) => x.op === 'update'));
@@ -91,7 +95,7 @@ describe('refetchCover stale-write guard (#194)', () => {
 	it('reads updated_at with the row it guards on', async () => {
 		db.replies.push({ data: book, error: null }, { data: { ...book }, error: null });
 		const { refetchCover } = await load();
-		const res = await refetchCover('some-book');
+		const res = await refetchCover('some-book', 'prod');
 		expect(res.status).toBe('updated');
 		const select = db.calls[0].find((x) => x.op === 'select');
 		expect(String(select?.args[0])).toMatch(/\bupdated_at\b/);
@@ -101,7 +105,7 @@ describe('refetchCover stale-write guard (#194)', () => {
 		db.coverUrl = () => 'javascript:alert(1)';
 		db.replies.push({ data: book, error: null });
 		const { refetchCover } = await load();
-		const res = await refetchCover('some-book');
+		const res = await refetchCover('some-book', 'prod');
 		expect(res.status).toBe('error');
 		expect(db.calls.some((c) => c.some((x) => x.op === 'update'))).toBe(false);
 	});

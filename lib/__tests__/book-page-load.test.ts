@@ -19,6 +19,7 @@ const nav = vi.hoisted(() => ({
 }));
 
 vi.mock('../../admin/lib/supabase-admin', () => ({
+	getDbTarget: async () => 'prod',
 	getSupabaseAdmin: async () => {
 		const q = {
 			from: () => q,

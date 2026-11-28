@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { getDbTarget } from '@/lib/supabase-admin';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { DbTargetLabel } from '../_components/db-target-label';
 import { NewBookForm } from './_components/new-book-form';
 
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,9 @@ export default async function NewBookPage() {
 					<p className="text-muted-foreground text-sm">
 						Search Open Library / Google Books to prefill, then create. Enrich further on the book
 						page afterwards.
+					</p>
+					<p className="mt-1">
+						<DbTargetLabel target={target} />
 					</p>
 				</div>
 				<Button variant="ghost" asChild>

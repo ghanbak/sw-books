@@ -87,6 +87,7 @@ function query(): Record<string, (...args: unknown[]) => unknown> {
 
 vi.mock('../../admin/lib/auth', () => ({ getAdmin: async () => ({ id: 'admin' }) }));
 vi.mock('../../admin/lib/supabase-admin', () => ({
+	getDbTarget: async () => 'prod',
 	getSupabaseAdmin: async () => ({ from: () => query() }),
 }));
 vi.mock('next/cache', () => ({ revalidateTag: () => {} }));
@@ -103,7 +104,10 @@ vi.mock('../sources/lookup', () => ({ lookupCandidatesFor: async () => db.look }
 
 const bulkPath = resolve(__dirname, '../../admin/app/_actions/bulk.ts');
 type Bulk = {
-	fillEmpty: (slug: string) => Promise<{ slug: string; status: string; fields?: string[] }>;
+	fillEmpty: (
+		slug: string,
+		expectedTarget: string,
+	) => Promise<{ slug: string; status: string; fields?: string[] }>;
 };
 const load = async (): Promise<Bulk> => (await import(/* @vite-ignore */ bulkPath)) as Bulk;
 
@@ -124,7 +128,7 @@ async function run(ok: string[]) {
 	const row = { id: 'b1', updated_at: '2026-11-01T00:00:00Z', ...book };
 	db.replies.push({ data: row, error: null }, { data: { ...row }, error: null });
 	const { fillEmpty } = await load();
-	const res = await fillEmpty('some-book');
+	const res = await fillEmpty('some-book', 'prod');
 	const update = db.calls.flat().find((x) => x.op === 'update');
 	return { res, written: update?.args[0] };
 }

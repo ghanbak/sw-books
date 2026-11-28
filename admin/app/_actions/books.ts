@@ -1,7 +1,8 @@
 'use server';
 
 import { getAdmin } from '@/lib/auth';
-import { type DbTarget, getDbTarget, getSupabaseAdmin } from '@/lib/supabase-admin';
+import { targetChanged } from '@/lib/db-target-guard';
+import { type DbTarget, getSupabaseAdmin } from '@/lib/supabase-admin';
 import { type ActionError, dbError } from '@app/action-errors';
 import { createSchema, firstIssueMessage, patchSchema } from '@app/book-schema';
 import { ensureUniqueSlug } from '@app/slug';
@@ -17,30 +18,22 @@ type Result<T> = { ok: true; data: T } | { ok: false; error: ActionError };
 const expectedUpdatedAt = z.string().min(1).max(64).nullable();
 
 /**
- * The DB target cookie is shared by every tab, and switching it refreshes only
- * the tab that switched. A destructive action therefore takes the target its
- * page rendered with and refuses when the request resolves to another one, so a
- * tab still showing Local can't write to Production (#483).
- */
-async function targetChanged(expected: DbTarget): Promise<ActionError | null> {
-	if (expected === (await getDbTarget())) return null;
-	return {
-		code: 'TARGET_CHANGED',
-		message: 'Database target changed in another tab. Reload first.',
-	};
-}
-
-/**
  * Patch a book. `loadedUpdatedAt` is the row's `updated_at` as the caller loaded
  * it; if the row has been written since, the update is rejected with CONFLICT
- * instead of overwriting the newer data.
+ * instead of overwriting the newer data. `expectedTarget` is the DB target the
+ * page rendered with; a mismatch returns TARGET_CHANGED without reading or
+ * writing (#487: a matching `updated_at` alone, e.g. after a restore, would let
+ * a Local tab write Production).
  */
 export async function patchBook(
 	id: string,
 	loadedUpdatedAt: string | null,
 	raw: unknown,
+	expectedTarget: DbTarget,
 ): Promise<Result<BookRow>> {
 	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
+	const changed = await targetChanged(expectedTarget);
+	if (changed) return { ok: false, error: changed };
 	const expected = expectedUpdatedAt.safeParse(loadedUpdatedAt);
 	if (!expected.success) {
 		return { ok: false, error: { code: 'INVALID', message: 'missing updated_at' } };
@@ -164,13 +157,18 @@ export async function deleteBook(
  * (atomic: repoints + OR-merges user shelves, unions isbn[]/format[], applies
  * scalar overrides, deletes losers). `resolution` carries optional scalar
  * overrides (e.g. `{ primary_isbn, canon, title, … }`); arrays are auto-unioned.
+ * `expectedTarget` is the DB target the page rendered with; a mismatch returns
+ * TARGET_CHANGED before the RPC, since the merge deletes the losers (#487).
  */
 export async function mergeBooks(
 	survivorId: string,
 	loserIds: string[],
+	expectedTarget: DbTarget,
 	resolution: Json = {},
 ): Promise<Result<BookRow>> {
 	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
+	const changed = await targetChanged(expectedTarget);
+	if (changed) return { ok: false, error: changed };
 	if (loserIds.length === 0) {
 		return { ok: false, error: { code: 'EMPTY', message: 'no books to merge' } };
 	}

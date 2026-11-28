@@ -22,6 +22,7 @@ function query(): Record<string, (...args: unknown[]) => unknown> {
 
 vi.mock('../../admin/lib/auth', () => ({ getAdmin: async () => ({ id: 'admin' }) }));
 vi.mock('../../admin/lib/supabase-admin', () => ({
+	getDbTarget: async () => 'prod',
 	getSupabaseAdmin: async () => ({ from: () => query() }),
 }));
 // Root has no `next`. Bare id covers CI (no admin deps); the path covers a
@@ -42,8 +43,8 @@ vi.mock('../sources/lookup', () => ({
 const bulkPath = resolve(__dirname, '../../admin/app/_actions/bulk.ts');
 type Res = { slug: string; status: string; message?: string };
 type Bulk = {
-	refetchCover: (slug: string) => Promise<Res>;
-	fillEmpty: (slug: string) => Promise<Res>;
+	refetchCover: (slug: string, expectedTarget: string) => Promise<Res>;
+	fillEmpty: (slug: string, expectedTarget: string) => Promise<Res>;
 };
 const load = async (): Promise<Bulk> => (await import(/* @vite-ignore */ bulkPath)) as Bulk;
 
@@ -63,7 +64,7 @@ afterEach(() => log.mockRestore());
 describe.each(['refetchCover', 'fillEmpty'] as const)('%s DB read errors (#377)', (name) => {
 	it('surfaces a non-PGRST116 error as the DB error, not "not found"', async () => {
 		db.replies.push({ data: null, error: CONN });
-		const res = await (await load())[name]('some-book');
+		const res = await (await load())[name]('some-book', 'prod');
 		expect(res).toEqual({ slug: 'some-book', status: 'error', message: DB_ERROR.message });
 		expect(log).toHaveBeenCalledWith(
 			`[admin:${name}]`,
@@ -73,14 +74,14 @@ describe.each(['refetchCover', 'fillEmpty'] as const)('%s DB read errors (#377)'
 
 	it('still reports "not found" for PGRST116', async () => {
 		db.replies.push({ data: null, error: NO_ROWS });
-		const res = await (await load())[name]('some-book');
+		const res = await (await load())[name]('some-book', 'prod');
 		expect(res).toEqual({ slug: 'some-book', status: 'error', message: 'not found' });
 		expect(log).not.toHaveBeenCalled();
 	});
 
 	it('still reports "not found" for null data with no error', async () => {
 		db.replies.push({ data: null, error: null });
-		const res = await (await load())[name]('some-book');
+		const res = await (await load())[name]('some-book', 'prod');
 		expect(res).toEqual({ slug: 'some-book', status: 'error', message: 'not found' });
 		expect(log).not.toHaveBeenCalled();
 	});

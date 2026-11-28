@@ -3,10 +3,20 @@
  * A rejecting item counts as that item's failure and the run continues; a rejecting
  * probe is advisory and never blocks the run. `onSettled` always fires (finally), so
  * the caller can unlock its toolbar and refresh rows even if something throws.
+ * An item that comes back with code TARGET_CHANGED stops the run: every later
+ * item would be refused the same way, so the summary carries it as `stopped`.
  */
-export type BulkItemResult = { status: string; message?: string };
+export type BulkItemResult = { status: string; code?: string; message?: string };
 
-export type BulkSummary = { updated: number; failures: string[]; total: number };
+export type BulkSummary = {
+	updated: number;
+	failures: string[];
+	total: number;
+	/** Set when an item refused the whole run (TARGET_CHANGED, #487). */
+	stopped?: { code: string; message: string };
+};
+
+const STOPS_RUN = new Set(['TARGET_CHANGED']);
 
 export async function runBulkSequential<T extends { slug: string }>(opts: {
 	items: readonly T[];
@@ -34,6 +44,10 @@ export async function runBulkSequential<T extends { slug: string }>(opts: {
 			if (!item) continue;
 			try {
 				const res = await fn(item);
+				if (res.code && STOPS_RUN.has(res.code)) {
+					summary.stopped = { code: res.code, message: res.message ?? res.code };
+					break;
+				}
 				if (res.status === 'updated') summary.updated++;
 				if (res.status === 'error') summary.failures.push(item.slug);
 			} catch (error) {
