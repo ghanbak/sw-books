@@ -751,7 +751,9 @@ describe('createShelfToggler — delete when another device added flags (#484)',
 		expect(h.state().has('b1')).toBe(false);
 		expect(h.table.size).toBe(0);
 		expect(h.db.insert).not.toHaveBeenCalled();
-		expect(h.readRow).not.toHaveBeenCalled();
+		// #489: confirms by unique key that no newer row still holds the flag.
+		expect(h.readRow).toHaveBeenCalledTimes(1);
+		expect(h.readRow).toHaveBeenCalledWith('user-a', 'b1');
 		expect(h.deps.onError).not.toHaveBeenCalled();
 	});
 
@@ -778,6 +780,120 @@ describe('createShelfToggler — delete when another device added flags (#484)',
 		expect(h.table.get(local.id)).toMatchObject({ owned: true, read: false });
 		expect(h.state().has('b1')).toBe(false);
 		expect(h.deps.onError).not.toHaveBeenCalled();
+	});
+});
+
+describe('createShelfToggler — clear when another device recreated the row (#489)', () => {
+	function recreatedHarness(local: UserBook[], server: UserBook[]) {
+		const h = writerHarness(local, server);
+		const readRow = vi.fn<ShelfToggleDeps['readRow']>(async (uid, bookId) => ({
+			row: [...h.table.values()].find((r) => r.user_id === uid && r.book_id === bookId) ?? null,
+			error: null,
+		}));
+		h.deps.readRow = readRow;
+		return { ...h, readRow, toggle: createShelfToggler(h.deps) };
+	}
+
+	it('deletes the newer row when it holds only the cleared flag', async () => {
+		const local = row({ id: 'X', book_id: 'b1', owned: true });
+		const server = row({ id: 'Y', book_id: 'b1', owned: true });
+		const h = recreatedHarness([local], [server]);
+
+		expect(await h.toggle('b1', 'owned', 'user-a')).toBe('ok');
+		expect([...h.table.values()].filter((r) => r.book_id === 'b1')).toEqual([]);
+		expect(h.state().has('b1')).toBe(false);
+		expect(h.readRow).toHaveBeenCalledWith('user-a', 'b1');
+		expect(h.db.remove).toHaveBeenLastCalledWith('Y', {
+			owned: true,
+			read: false,
+			want_to_read: false,
+			favorite: false,
+		});
+		expect(h.db.insert).not.toHaveBeenCalled();
+		expect(h.deps.onError).not.toHaveBeenCalled();
+	});
+
+	it('clears only the tapped flag on a newer row with other flags, and adopts it', async () => {
+		const local = row({ id: 'X', book_id: 'b1', owned: true });
+		const server = row({ id: 'Y', book_id: 'b1', owned: true, read: true });
+		const h = recreatedHarness([local], [server]);
+
+		expect(await h.toggle('b1', 'owned', 'user-a')).toBe('ok');
+		const live = h.table.get('Y');
+		expect(live).toMatchObject({ owned: false, read: true });
+		expect(h.state().get('b1')).toEqual(live);
+		expect(h.db.update).toHaveBeenLastCalledWith('Y', { owned: false });
+		expect(h.db.insert).not.toHaveBeenCalled();
+		expect(h.deps.onError).not.toHaveBeenCalled();
+	});
+
+	it('adopts a newer row that already lacks the tapped flag, without writing it', async () => {
+		const local = row({ id: 'X', book_id: 'b1', owned: true });
+		const server = row({ id: 'Y', book_id: 'b1', read: true });
+		const h = recreatedHarness([local], [server]);
+
+		expect(await h.toggle('b1', 'owned', 'user-a')).toBe('ok');
+		expect(h.table.get('Y')).toEqual(server);
+		expect(h.state().get('b1')).toEqual(server);
+		expect(h.db.update).not.toHaveBeenCalledWith('Y', expect.anything());
+		expect(h.db.remove).not.toHaveBeenCalledWith('Y', expect.anything());
+		expect(h.deps.onError).not.toHaveBeenCalled();
+	});
+
+	it('a failed re-read rolls back and alerts instead of reporting ok', async () => {
+		const local = row({ id: 'X', book_id: 'b1', owned: true });
+		const server = row({ id: 'Y', book_id: 'b1', owned: true });
+		const h = recreatedHarness([local], [server]);
+		h.readRow.mockResolvedValueOnce({ row: null, error: { message: 'offline' } });
+
+		expect(await h.toggle('b1', 'owned', 'user-a')).toBe('failed');
+		expect(h.state().get('b1')).toEqual(local);
+		expect(h.table.get('Y')).toEqual(server);
+		expect(h.deps.onError).toHaveBeenCalledTimes(1);
+		expect(h.writes.touchedSince('b1', h.writes.seq())).toBe(false);
+	});
+
+	it('a failed write to the newer row rolls back and alerts', async () => {
+		const local = row({ id: 'X', book_id: 'b1', owned: true });
+		const server = row({ id: 'Y', book_id: 'b1', owned: true, read: true });
+		const h = recreatedHarness([local], [server]);
+		h.db.update.mockImplementation(async (id, patch) => {
+			if (id === 'Y') return { data: null, error: { message: 'network' } };
+			const hit = h.table.get(id);
+			if (!hit) return { data: [], error: null };
+			h.table.set(id, { ...hit, ...patch });
+			return { data: [{ id }], error: null };
+		});
+
+		expect(await h.toggle('b1', 'owned', 'user-a')).toBe('failed');
+		expect(h.state().get('b1')).toEqual(local);
+		expect(h.table.get('Y')).toEqual(server);
+		expect(h.deps.onError).toHaveBeenCalledWith({ message: 'network' });
+		expect(h.deps.onError).toHaveBeenCalledTimes(1);
+	});
+
+	it('a delete on the newer row that matches nothing rolls back and alerts', async () => {
+		const local = row({ id: 'X', book_id: 'b1', owned: true });
+		const server = row({ id: 'Y', book_id: 'b1', owned: true });
+		const h = recreatedHarness([local], [server]);
+		h.db.remove.mockImplementation(async () => ({ data: [], error: null }));
+
+		expect(await h.toggle('b1', 'owned', 'user-a')).toBe('failed');
+		expect(h.db.remove).toHaveBeenLastCalledWith('Y', expect.anything());
+		expect(h.state().get('b1')).toEqual(local);
+		expect(h.deps.onError).toHaveBeenCalledTimes(1);
+	});
+
+	it('an update on the newer row that matches nothing rolls back and alerts', async () => {
+		const local = row({ id: 'X', book_id: 'b1', owned: true });
+		const server = row({ id: 'Y', book_id: 'b1', owned: true, read: true });
+		const h = recreatedHarness([local], [server]);
+		h.db.update.mockImplementation(async () => ({ data: [], error: null }));
+
+		expect(await h.toggle('b1', 'owned', 'user-a')).toBe('failed');
+		expect(h.db.update).toHaveBeenLastCalledWith('Y', { owned: false });
+		expect(h.state().get('b1')).toEqual(local);
+		expect(h.deps.onError).toHaveBeenCalledTimes(1);
 	});
 });
 

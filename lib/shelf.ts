@@ -347,6 +347,30 @@ function settleConflict(
 		: revertToggle(current, undefined, optimistic, field);
 }
 
+/**
+ * Clear `field` on a live row found under a newer id after the tapped row vanished
+ * (#489): a conditional delete if it holds only that flag, else an update. Returns the
+ * row to show (`null` = off every shelf), or the error to roll back on. A write that
+ * matches nothing (the row changed again) is an error: one retry, then the user retaps.
+ */
+async function clearNewerRow(
+	deps: ShelfToggleDeps,
+	live: UserBook,
+	field: ShelfField,
+): Promise<{ row: UserBook | null } | { error: { message: string } }> {
+	if (!live[field]) return { row: live };
+	const cleared = { ...live, [field]: false };
+	const onlyFlag = !cleared.owned && !cleared.read && !cleared.want_to_read && !cleared.favorite;
+	const result = await deps.write(
+		onlyFlag
+			? { kind: 'delete', id: live.id, field }
+			: { kind: 'update', id: live.id, patch: { [field]: false } },
+	);
+	if (result.error) return { error: result.error };
+	if (result.missing) return { error: { message: 'Shelf row changed during the clear' } };
+	return { row: onlyFlag ? null : cleared };
+}
+
 export type ShelfToggleDeps = {
 	/** Latest local row for a book (must reflect `set` immediately, not after a render). */
 	get: (bookId: string) => UserBook | undefined;
@@ -383,7 +407,9 @@ export type ToggleOutcome = 'ok' | 'failed' | 'ignored' | 'stale';
  * tap heals the row the same way.
  * A delete that matched no row (gone, or another device added flags, #484) falls back to
  * clearing just the tapped flag; if that update matched a row, the live row is re-read
- * and adopted so the other device's flags stay. A row that is truly gone stays removed.
+ * and adopted so the other device's flags stay. If it matched nothing, the row is re-read
+ * by its unique key: a newer row (another device's recreate) gets the clear applied and
+ * adopted (#489); a row that is truly gone stays removed; a failed re-read rolls back.
  * A write that settles after the user changed touches nothing (`'stale'`).
  */
 export function createShelfToggler(deps: ShelfToggleDeps) {
@@ -415,15 +441,31 @@ export function createShelfToggler(deps: ShelfToggleDeps) {
 				});
 				if (!deps.isCurrentUser(userId)) return 'stale';
 				error = cleared.error;
-				// `missing` here: the row is truly gone, so removing it locally was right.
-				if (!error && !cleared.missing) {
+				if (!error) {
 					const live = await readLiveRow(deps, bookId, userId);
 					if (!deps.isCurrentUser(userId)) return 'stale';
-					// A failed re-read leaves the row removed; the next tap heals it (#206).
-					if (live) {
-						deps.writes.adoptFetchedRow(bookId, live);
-						deps.set(bookId, settleInsert(deps.get(bookId), null, live));
+					if (!cleared.missing) {
+						// A failed re-read leaves the row removed; the next tap heals it (#206).
+						if (live) {
+							deps.writes.adoptFetchedRow(bookId, live);
+							deps.set(bookId, settleInsert(deps.get(bookId), null, live));
+						}
+					} else if (live === undefined) {
+						// The old id is gone, but a newer row may still hold the flag (#489).
+						error = { message: 'Shelf row could not be re-read' };
+					} else if (live) {
+						// Another device recreated the row under a new id (#489).
+						const settled = await clearNewerRow(deps, live, field);
+						if (!deps.isCurrentUser(userId)) return 'stale';
+						if ('error' in settled) error = settled.error;
+						else {
+							deps.writes.adoptFetchedRow(bookId, settled.row);
+							if (settled.row) {
+								deps.set(bookId, settleInsert(deps.get(bookId), null, settled.row));
+							}
+						}
 					}
+					// `live === null`: the row is truly gone, so removing it locally was right.
 				}
 			}
 			// A plain insert or a recreate hit UNIQUE(user_id, book_id).
