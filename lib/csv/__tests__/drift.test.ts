@@ -62,6 +62,7 @@ describe('diffAgainstBackup', () => {
 			{
 				slug: 'a',
 				title: 'X2',
+				status: 'changed',
 				fields: [
 					{ field: 'title', from: 'X', to: 'X2' },
 					{ field: 'era', from: 'Old', to: 'New' },

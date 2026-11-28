@@ -15,7 +15,9 @@ import type { CsvRecord } from './read';
 type BookRow = Database['public']['Tables']['books']['Row'];
 
 export type DriftField = { field: string; from: string; to: string };
-export type DriftRow = { slug: string; title: string; fields: DriftField[] };
+/** `added`: only in the DB. `removed`: only in the backup (no book page to link to). */
+export type DriftStatus = 'added' | 'removed' | 'changed';
+export type DriftRow = { slug: string; title: string; status: DriftStatus; fields: DriftField[] };
 export type DriftReport = { changedRows: DriftRow[]; summary: { rows: number; fields: number } };
 
 const SKIPPED = new Set<string>(['id', 'slug', 'created_at']);
@@ -43,6 +45,7 @@ export function diffAgainstBackup(dbRows: BookRow[], backup: CsvRecord[]): Drift
 			changedRows.push({
 				slug: db.slug,
 				title: db.title,
+				status: 'added',
 				fields: [{ field: '(row)', from: 'not in backup', to: 'in DB' }],
 			});
 			continue;
@@ -56,7 +59,8 @@ export function diffAgainstBackup(dbRows: BookRow[], backup: CsvRecord[]): Drift
 				fields.push({ field: f, from: display(f, was), to: display(f, now) });
 			}
 		}
-		if (fields.length) changedRows.push({ slug: db.slug, title: db.title, fields });
+		if (fields.length)
+			changedRows.push({ slug: db.slug, title: db.title, status: 'changed', fields });
 	}
 
 	for (const saved of backup) {
@@ -64,6 +68,7 @@ export function diffAgainstBackup(dbRows: BookRow[], backup: CsvRecord[]): Drift
 		changedRows.push({
 			slug: saved.slug ?? '',
 			title: saved.title ?? '',
+			status: 'removed',
 			fields: [{ field: '(row)', from: 'in backup', to: 'not in DB' }],
 		});
 	}
