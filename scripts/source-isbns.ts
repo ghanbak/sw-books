@@ -32,8 +32,10 @@
  *     win at seed time.
  *
  * Cache:
- *   - schema_version 2 (rich EditionRecord per ISBN). Older cache entries are
- *     discarded on read; first run after refactor is cold (~10–15 min wall time).
+ *   - schema_version 10 (rich EditionRecord per ISBN, checksum-validated). Other
+ *     versions, and entries holding a checksum-invalid or non-English ISBN, are
+ *     discarded on read (scripts/lib/isbn-cache.ts); first run after a bump is cold
+ *     (~10–15 min wall time).
  *
  * Concurrency:
  *   - p-limit(3) over rows. Sequential fetches inside a row stay in order.
@@ -50,6 +52,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import pLimit from 'p-limit';
 import { parseCsv } from '../lib/csv/read';
+import { isEnglishIsbn, normalizeSourcedIsbn } from '../lib/isbn';
+import { CACHE_SCHEMA_VERSION, type CacheEntry, filterCacheEntries } from './lib/isbn-cache';
 import {
 	type BookFormat,
 	type EditionRecord,
@@ -69,7 +73,6 @@ const FORMAT_OVERRIDES_PATH = resolve(__dirname, '..', 'data', 'format-overrides
 const CSV_ISBN_REJECTED_PATH = resolve(__dirname, '..', 'data', 'csv-isbn-rejected.json');
 const REPORT_PATH = resolve(__dirname, 'isbn-report.txt');
 
-const CACHE_SCHEMA_VERSION = 9;
 const CONCURRENCY = 3;
 const POLITE_DELAY_MS = 150;
 const TIMEOUT_MS = 12000;
@@ -99,29 +102,7 @@ function loadRows(): Row[] {
 	return rows;
 }
 
-// --- ISBN utilities ---
-function isIsbn13(s: string): boolean {
-	return /^\d{13}$/.test(s);
-}
-
-function isIsbn10(s: string): boolean {
-	return /^\d{9}[\dX]$/.test(s);
-}
-
-function isbn10to13(isbn10: string): string {
-	const base = `978${isbn10.slice(0, 9)}`;
-	let sum = 0;
-	for (let i = 0; i < 12; i++) sum += Number.parseInt(base[i], 10) * (i % 2 === 0 ? 1 : 3);
-	return `${base}${(10 - (sum % 10)) % 10}`;
-}
-
-function normalizeIsbn13(raw: string): string | null {
-	const s = raw.replace(/[-\s]/g, '').toUpperCase();
-	if (isIsbn13(s)) return s;
-	if (isIsbn10(s)) return isbn10to13(s);
-	return null;
-}
-
+// --- Utilities ---
 function dedupe<T>(arr: T[]): T[] {
 	return [...new Set(arr)];
 }
@@ -202,28 +183,21 @@ type OLEdition = {
 	languages?: Array<{ key?: string }>;
 };
 
-// ISBN prefixes registered for English-language publishers worldwide. The first
-// digit after the 978/979 EAN tells you the language group: 0/1 = English, 2 =
-// French, 3 = German, 84 = Spain, 605 = Turkey, 83 = Poland, etc. We use this as
-// the primary English-language signal because OL's `languages` field is absent
-// from a high fraction of records (especially older catalog entries) — the
-// language-tag check alone lets too many translations through.
-function isEnglishLanguageIsbn(isbn: string): boolean {
-	if (!/^\d{13}$/.test(isbn)) return false;
-	const eanPrefix = isbn.slice(0, 3);
-	if (eanPrefix !== '978' && eanPrefix !== '979') return false;
-	const languageGroup = isbn[3];
-	return languageGroup === '0' || languageGroup === '1';
-}
-
+// The ISBN registration group is the primary English-language signal
+// (`isEnglishIsbn`: 978-0 / 978-1 only; 979-10/11/12 are France/Korea/Italy,
+// 979-8 is US-only and excluded) because OL's `languages` field is absent from
+// a high fraction of records — the language-tag check alone lets too many
+// translations through.
 function olEditionMostLikelyEnglish(e: OLEdition): boolean {
 	const langs = e.languages ?? [];
 	if (langs.length > 0) return langs.some((l) => l.key === '/languages/eng');
 	const isbns = [...(e.isbn_13 ?? []), ...(e.isbn_10 ?? [])];
 	if (isbns.length === 0) return true; // record with no ISBNs at all — keep
-	const normalized = isbns.map((s) => normalizeIsbn13(s)).filter((s): s is string => s != null);
+	const normalized = isbns
+		.map((s) => normalizeSourcedIsbn(s))
+		.filter((s): s is string => s != null);
 	if (normalized.length === 0) return true;
-	return normalized.some(isEnglishLanguageIsbn);
+	return normalized.some(isEnglishIsbn);
 }
 
 function olCoverUrl(coverId: number | undefined, isbn: string): string {
@@ -238,8 +212,8 @@ function parseOlEditionToRecords(e: OLEdition): EditionRecord[] {
 	const out: EditionRecord[] = [];
 	const isbns = new Set<string>();
 	for (const s of [...(e.isbn_13 ?? []), ...(e.isbn_10 ?? [])]) {
-		const n = normalizeIsbn13(s);
-		if (n && isEnglishLanguageIsbn(n)) isbns.add(n);
+		const n = normalizeSourcedIsbn(s);
+		if (n && isEnglishIsbn(n)) isbns.add(n);
 	}
 	for (const isbn of isbns) {
 		out.push({
@@ -417,8 +391,8 @@ async function googleBooksEditionsFor(row: Row): Promise<EditionRecord[]> {
 		if (!externalTitleMatchesRow(v.title, v.authors ?? [], row)) continue;
 		const cover = pickGoogleCover(v.imageLinks);
 		for (const id of v.industryIdentifiers ?? []) {
-			const n = normalizeIsbn13(id.identifier);
-			if (!n || seen.has(n) || !isEnglishLanguageIsbn(n)) continue;
+			const n = normalizeSourcedIsbn(id.identifier);
+			if (!n || seen.has(n) || !isEnglishIsbn(n)) continue;
 			seen.add(n);
 			out.push({
 				isbn: n,
@@ -470,20 +444,6 @@ async function probeIsbn(isbn: string): Promise<{ title: string; authors: string
 }
 
 // --- Cache ---
-type CacheEntry = {
-	schema_version: typeof CACHE_SCHEMA_VERSION;
-	fetched_at: string;
-	current_isbn: string;
-	ol_work_id: string | null;
-	editions: EditionRecord[];
-	source: 'ol' | 'google-books' | 'none';
-	// True when the CSV ISBN's OL metadata named a different book — we
-	// substituted via title-search and the CSV ISBN should be discarded.
-	csv_isbn_rejected: boolean;
-	// What OL said the CSV ISBN actually was, for the report.
-	csv_isbn_ol_title: string | null;
-};
-
 type Cache = { entries: Record<string, CacheEntry> };
 type Collisions = { collisions: string[] };
 
@@ -493,18 +453,22 @@ function loadCache(): Cache {
 		const parsed = JSON.parse(readFileSync(CACHE_PATH, 'utf-8')) as {
 			entries?: Record<string, Partial<CacheEntry>>;
 		};
-		const entries: Record<string, CacheEntry> = {};
-		let dropped = 0;
-		for (const [slug, entry] of Object.entries(parsed.entries ?? {})) {
-			if (entry?.schema_version === CACHE_SCHEMA_VERSION && Array.isArray(entry.editions)) {
-				entries[slug] = entry as CacheEntry;
-			} else {
-				dropped++;
-			}
-		}
-		if (dropped > 0) {
+		const { entries, stale, invalidIsbn, nonEnglishIsbn } = filterCacheEntries(
+			parsed.entries ?? {},
+		);
+		if (stale > 0) {
 			process.stdout.write(
-				`Cache: dropped ${dropped} pre-v${CACHE_SCHEMA_VERSION} entries (will re-fetch)\n`,
+				`Cache: dropped ${stale} pre-v${CACHE_SCHEMA_VERSION} entries (will re-fetch)\n`,
+			);
+		}
+		if (invalidIsbn > 0) {
+			process.stdout.write(
+				`Cache: dropped ${invalidIsbn} entries with checksum-invalid ISBNs (will re-fetch)\n`,
+			);
+		}
+		if (nonEnglishIsbn > 0) {
+			process.stdout.write(
+				`Cache: dropped ${nonEnglishIsbn} entries with non-English ISBNs (will re-fetch)\n`,
 			);
 		}
 		return { entries };

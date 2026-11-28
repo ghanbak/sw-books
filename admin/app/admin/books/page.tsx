@@ -147,7 +147,7 @@ export default async function BooksPage() {
 					</Button>
 				</div>
 			</header>
-			<BooksTable rows={rows} counts={counts} enrichment={enrichment} />
+			<BooksTable rows={rows} counts={counts} enrichment={enrichment} dbTarget={target} />
 		</main>
 	);
 }

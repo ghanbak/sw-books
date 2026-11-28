@@ -30,16 +30,20 @@ import {
 import { callAction } from '@/lib/call-action';
 import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
 import { missingAsUndefined } from '@/lib/sort-missing';
+import type { DbTarget } from '@/lib/supabase-admin';
 import {
+	RECHECK_WOOKIEEPEDIA_LABEL,
 	ariaSortFor,
+	diffLinkLabel,
 	editCellLabel,
 	filterStatusLabel,
 	focusTargetAfterRemove,
 	selectRowLabel,
 } from '@/lib/table-a11y';
+import { thumbUrl } from '@/lib/thumb-url';
 import { cn } from '@/lib/utils';
 import { type BulkItemResult, runBulkSequential } from '@app/bulk-run';
-import { isValidIsbn } from '@app/isbn';
+import { ISBN_PROBLEM_LABEL, scannerIsbnProblems } from '@app/catalog-health';
 import { createRowSaveQueue, newerUpdatedAt, queueRowSave } from '@app/serial-save';
 import type { Database } from '@app/types';
 import {
@@ -142,6 +146,8 @@ declare module '@tanstack/react-table' {
 		updateField: (id: string, field: EditableField, value: string | null) => void;
 		removeRow: (id: string) => void;
 		focusAfterRemove: () => void;
+		/** The DB target this page rendered with; destructive actions send it back (#483). */
+		dbTarget: DbTarget;
 	}
 }
 
@@ -149,16 +155,19 @@ function DeleteBookCell({
 	id,
 	slug,
 	title,
+	dbTarget,
 	onDeleted,
 	onFocusAfterDelete,
 }: {
 	id: string;
 	slug: string;
 	title: string;
+	dbTarget: DbTarget;
 	onDeleted: () => void;
 	/** Moves focus once the row is gone; the trigger that Radix would refocus is detached. */
 	onFocusAfterDelete: () => void;
 }) {
+	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const [typed, setTyped] = useState('');
 	const [pending, startDelete] = useTransition();
@@ -214,12 +223,20 @@ function DeleteBookCell({
 						disabled={typed.trim() !== slug || pending}
 						onClick={() =>
 							startDelete(async () => {
-								const res = await callAction(() => deleteBook(id, typed.trim()), 'Delete failed');
+								const res = await callAction(
+									() => deleteBook(id, typed.trim(), dbTarget),
+									'Delete failed',
+								);
 								if (res.ok) {
 									toast.success(`Deleted “${title}”`);
 									deleted.current = true;
 									setOpen(false);
 									onDeleted();
+								} else if (res.error.code === 'TARGET_CHANGED') {
+									setOpen(false);
+									toast.error(res.error.message, {
+										action: { label: 'Reload', onClick: () => router.refresh() },
+									});
 								} else {
 									toast.error(res.error.message);
 								}
@@ -381,7 +398,7 @@ const columns = [
 			const url = getValue();
 			return url ? (
 				<img
-					src={url}
+					src={thumbUrl(url) ?? undefined}
 					alt=""
 					className="h-12 w-8 rounded-sm border border-border object-cover"
 					loading="lazy"
@@ -526,7 +543,10 @@ const columns = [
 		cell: ({ row, table }) => (
 			<div className="flex items-center justify-end gap-1">
 				<Button asChild variant="ghost" size="sm" className="h-7 gap-1 text-saber-blue">
-					<Link href={`/admin/books/${row.original.slug}`}>
+					<Link
+						href={`/admin/books/${row.original.slug}`}
+						aria-label={diffLinkLabel(row.original.title)}
+					>
 						Diff <ExternalLink className="size-3.5" />
 					</Link>
 				</Button>
@@ -534,6 +554,7 @@ const columns = [
 					id={row.original.id}
 					slug={row.original.slug}
 					title={row.original.title}
+					dbTarget={table.options.meta!.dbTarget}
 					onDeleted={() => table.options.meta?.removeRow(row.original.id)}
 					onFocusAfterDelete={() => table.options.meta?.focusAfterRemove()}
 				/>
@@ -546,10 +567,12 @@ export function BooksTable({
 	rows,
 	counts,
 	enrichment,
+	dbTarget,
 }: {
 	rows: RowWithIssues[];
 	counts: Record<IssueKey, number>;
 	enrichment: EnrichmentSummary;
+	dbTarget: DbTarget;
 }) {
 	const router = useRouter();
 	const [data, setData] = useState<RowWithIssues[]>(rows);
@@ -679,7 +702,7 @@ export function BooksTable({
 		columns,
 		state: { sorting, globalFilter, rowSelection },
 		getRowId: (row) => row.id,
-		meta: { updateField, removeRow, focusAfterRemove },
+		meta: { updateField, removeRow, focusAfterRemove, dbTarget },
 		onSortingChange: setSorting,
 		onGlobalFilterChange: setGlobalFilter,
 		onRowSelectionChange: setRowSelection,
@@ -737,15 +760,19 @@ export function BooksTable({
 	}
 
 	function validateIsbns() {
-		const bad = selectedRows.filter((r) => (r.isbn ?? []).some((i) => !isValidIsbn(i)));
+		// Same predicate as catalog:health: only a bare, valid ISBN-13 scans (#477).
+		const bad = selectedRows.flatMap((r) => {
+			const problems = scannerIsbnProblems(r);
+			if (problems.length === 0) return [];
+			const reasons = [...new Set(problems.map((p) => ISBN_PROBLEM_LABEL[p.verdict]))];
+			return [`${r.slug} (${reasons.join(', ')})`];
+		});
 		if (bad.length === 0) {
 			toast.success(`All ISBNs valid across ${selectedCount} selected`);
 		} else {
+			const more = bad.length > 5 ? `, +${bad.length - 5} more` : '';
 			toast.error(
-				`${bad.length} row(s) with invalid ISBN check digits: ${bad
-					.map((r) => r.slug)
-					.slice(0, 5)
-					.join(', ')}`,
+				`${bad.length} row(s) with unscannable ISBNs: ${bad.slice(0, 5).join(', ')}${more}`,
 			);
 		}
 	}
@@ -799,7 +826,7 @@ export function BooksTable({
 						className="-mr-2 h-6 px-2 text-muted-foreground text-xs"
 						onClick={recheck}
 						disabled={rechecking}
-						aria-label="Re-check Wookieepedia page status"
+						aria-label={RECHECK_WOOKIEEPEDIA_LABEL}
 						title="Re-check every mapped page (cached 6 h)"
 					>
 						<RefreshCw className={cn('size-3', rechecking && 'animate-spin')} />

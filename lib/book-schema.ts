@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { normalizeSourcedIsbn } from './isbn';
 import type { Database } from './types';
 
 /**
@@ -22,6 +23,25 @@ const DATE = z
 /** http(s) only; `z.url` alone also accepts javascript:, data:, ftp: … */
 const COVER_URL = z.url({ protocol: /^https?$/, error: 'expected an http(s) URL' }).nullable();
 
+export const INVALID_ISBN_MESSAGE = 'expected a valid ISBN-10 or ISBN-13';
+
+/**
+ * One ISBN as typed → bare ISBN-13, the only form the app scanner's exact
+ * `.contains('isbn', [isbn])` can match. Same checksum rule as the scanner;
+ * strips only hyphens/spaces so stray text can't collapse into a valid digit run.
+ */
+const ISBN = z.string().transform((raw, ctx) => {
+	const isbn13 = normalizeSourcedIsbn(raw.trim());
+	if (isbn13 === null) {
+		ctx.addIssue({ code: 'custom', message: `${INVALID_ISBN_MESSAGE}, got "${raw}"` });
+		return z.NEVER;
+	}
+	return isbn13;
+});
+
+/** ISBN list, normalized then deduped (an ISBN-10 and its ISBN-13 collapse). */
+const ISBN_LIST = z.array(ISBN).transform((list) => [...new Set(list)]);
+
 /** Shared field rules — patch and create derive from these so they never drift. */
 export const bookFields = {
 	title: z.string().min(1),
@@ -32,8 +52,8 @@ export const bookFields = {
 	language: z.string().nullable(),
 	format: z.array(z.string()),
 	synopsis: z.string().nullable(),
-	isbn: z.array(z.string()),
-	primary_isbn: z.string().nullable(),
+	isbn: ISBN_LIST,
+	primary_isbn: ISBN.nullable(),
 	canon: z.enum(CANON_VALUES),
 	type: z.enum(TYPE_VALUES),
 	era: z.string().nullable(),
@@ -53,6 +73,7 @@ export const patchSchema = z
 	.object({ ...bookFields, author: bookFields.author.min(1, AUTHOR_REQUIRED_MESSAGE) })
 	.partial()
 	// Lenient: a patch may omit isbn while setting primary_isbn (partial update).
+	// Runs on the normalized values, so '0345391802' matches '978-0-345-39180-3'.
 	.refine((p) => !p.isbn || !p.primary_isbn || p.isbn.includes(p.primary_isbn), {
 		message: 'primary_isbn must be one of isbn[]',
 		path: ['primary_isbn'],
@@ -73,14 +94,14 @@ export const createSchema = z
 			.string()
 			.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'slug must be kebab-case (a-z, 0-9, hyphens)'),
 		author: bookFields.author.default([]),
-		isbn: z.array(z.string()).default([]),
+		isbn: ISBN_LIST.default([]),
 		format: z.array(z.string()).default([]),
 		cover_image: COVER_URL.default(null),
 		publisher: z.string().nullable().default(null),
 		date_published: DATE.default(null),
 		language: z.string().nullable().default(null),
 		synopsis: z.string().nullable().default(null),
-		primary_isbn: z.string().nullable().default(null),
+		primary_isbn: ISBN.nullable().default(null),
 		era: z.string().nullable().default(null),
 		series_name: z.string().nullable().default(null),
 		series_order: z.number().int().nullable().default(null),

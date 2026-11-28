@@ -590,7 +590,7 @@ describe('planToggle', () => {
 		const existing = row({ book_id: 'b1', owned: true });
 		expect(planToggle(existing, 'b1', 'owned', 'user-a')).toEqual({
 			optimistic: null,
-			write: { kind: 'delete', id: existing.id },
+			write: { kind: 'delete', id: existing.id, field: 'owned' },
 		});
 	});
 });
@@ -615,9 +615,14 @@ function fakeDb(rows: UserBook[] = []) {
 			table.set(id, { ...hit, ...patch });
 			return { data: [{ id }], error: null };
 		}),
-		remove: vi.fn(async (id: string) => {
+		/** Deletes only when the row still holds `expected` (#484); 0 rows is not an error. */
+		remove: vi.fn<ShelfDb['remove']>(async (id, expected) => {
+			const hit = table.get(id);
+			if (!hit) return { data: [], error: null };
+			const flags = ['owned', 'read', 'want_to_read', 'favorite'] as const;
+			if (expected && flags.some((f) => hit[f] !== expected[f])) return { data: [], error: null };
 			table.delete(id);
-			return { error: null };
+			return { data: [{ id }], error: null };
 		}),
 	} satisfies ShelfDb;
 	return { db, table };
@@ -692,6 +697,86 @@ describe('createShelfWriter — row gone on the server (#195)', () => {
 		expect(await h.toggle('b1', 'read', 'user-a')).toBe('ok');
 		expect(h.state().has('b1')).toBe(false);
 		expect(h.db.insert).not.toHaveBeenCalled();
+		expect(h.deps.onError).not.toHaveBeenCalled();
+	});
+});
+
+describe('createShelfToggler — delete when another device added flags (#484)', () => {
+	/** Toggler over a fake table whose `readRow` reads that table by (user_id, book_id). */
+	function deleteHarness(local: UserBook[], server: UserBook[]) {
+		const h = writerHarness(local, server);
+		const readRow = vi.fn<ShelfToggleDeps['readRow']>(async (uid, bookId) => ({
+			row: [...h.table.values()].find((r) => r.user_id === uid && r.book_id === bookId) ?? null,
+			error: null,
+		}));
+		h.deps.readRow = readRow;
+		return { ...h, readRow, toggle: createShelfToggler(h.deps) };
+	}
+
+	it('keeps the other device’s flags and adopts the live row', async () => {
+		const local = row({ book_id: 'b1', read: true });
+		const server = row({ book_id: 'b1', read: true, owned: true, favorite: true });
+		const h = deleteHarness([local], [server]);
+
+		expect(await h.toggle('b1', 'read', 'user-a')).toBe('ok');
+		const live = h.table.get(local.id);
+		expect(live).toMatchObject({ owned: true, favorite: true, read: false });
+		expect(h.state().get('b1')).toEqual(live);
+		expect(h.db.insert).not.toHaveBeenCalled();
+		expect(h.deps.onError).not.toHaveBeenCalled();
+	});
+
+	it('deletes only when the server row holds exactly the flag being cleared', async () => {
+		const existing = row({ book_id: 'b1', favorite: true });
+		const h = deleteHarness([existing], [existing]);
+
+		expect(await h.toggle('b1', 'favorite', 'user-a')).toBe('ok');
+		expect(h.db.remove).toHaveBeenCalledWith(existing.id, {
+			owned: false,
+			read: false,
+			want_to_read: false,
+			favorite: true,
+		});
+		expect(h.table.size).toBe(0);
+		expect(h.state().has('b1')).toBe(false);
+		expect(h.db.update).not.toHaveBeenCalled();
+		expect(h.readRow).not.toHaveBeenCalled();
+		expect(h.deps.onError).not.toHaveBeenCalled();
+	});
+
+	it('a row that is truly gone stays removed locally, without a recreate', async () => {
+		const h = deleteHarness([row({ book_id: 'b1', read: true })], []);
+
+		expect(await h.toggle('b1', 'read', 'user-a')).toBe('ok');
+		expect(h.state().has('b1')).toBe(false);
+		expect(h.table.size).toBe(0);
+		expect(h.db.insert).not.toHaveBeenCalled();
+		expect(h.readRow).not.toHaveBeenCalled();
+		expect(h.deps.onError).not.toHaveBeenCalled();
+	});
+
+	it('a failed fallback update restores the pre-tap row and alerts once', async () => {
+		const local = row({ book_id: 'b1', read: true });
+		const server = row({ book_id: 'b1', read: true, owned: true });
+		const h = deleteHarness([local], [server]);
+		h.db.update.mockResolvedValueOnce({ data: null, error: { message: 'network' } });
+
+		expect(await h.toggle('b1', 'read', 'user-a')).toBe('failed');
+		expect(h.state().get('b1')).toEqual(local);
+		expect(h.table.get(local.id)).toEqual(server);
+		expect(h.deps.onError).toHaveBeenCalledTimes(1);
+		expect(h.writes.touchedSince('b1', h.writes.seq())).toBe(false);
+	});
+
+	it('a failed re-read after the fallback still reports ok and keeps the server flags', async () => {
+		const local = row({ book_id: 'b1', read: true });
+		const server = row({ book_id: 'b1', read: true, owned: true });
+		const h = deleteHarness([local], [server]);
+		h.readRow.mockResolvedValueOnce({ row: null, error: { message: 'offline' } });
+
+		expect(await h.toggle('b1', 'read', 'user-a')).toBe('ok');
+		expect(h.table.get(local.id)).toMatchObject({ owned: true, read: false });
+		expect(h.state().has('b1')).toBe(false);
 		expect(h.deps.onError).not.toHaveBeenCalled();
 	});
 });
@@ -970,6 +1055,12 @@ describe('shelf provider wiring (#195)', () => {
 	it('the update returns its matched rows', () => {
 		expect(src).toMatch(
 			/\.update\(\s*patch\s*\)\s*\.eq\(\s*'id',\s*id\s*\)\s*\.select\(\s*'id'\s*\)/,
+		);
+	});
+
+	it('the delete is conditional on the shown flags and returns its matched rows (#484)', () => {
+		expect(src).toMatch(
+			/remove:\s*async\s*\(\s*id,\s*expected\s*\)\s*=>[\s\S]*?\.delete\(\)\s*\.eq\(\s*'id',\s*id\s*\)\s*\.match\(\s*expected\s*\)\s*\.select\(\s*'id'\s*\)/,
 		);
 	});
 
