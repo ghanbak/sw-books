@@ -1,7 +1,7 @@
 import { Link, Stack, useIsPreview, useLocalSearchParams, useRouter } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BookDetailSkeleton } from '@/components/book-detail-skeleton';
@@ -24,6 +24,7 @@ import { useHoloStatus } from '@/lib/holo3d/status';
 import type { Book } from '@/lib/hooks';
 import { useBookEnrichment, useBooks, useUserBooks } from '@/lib/hooks';
 import { displayIsbn } from '@/lib/isbn';
+import { labelColumnLayout } from '@/lib/label-column';
 import { formatPublishedDate } from '@/lib/published-date';
 import { createRequestGuard } from '@/lib/request-guard';
 import { supabase } from '@/lib/supabase';
@@ -33,6 +34,10 @@ import { parseTimeline } from '@/lib/wookieepedia/enrichment-display';
 
 /** Detail hero card width (points); the 3D rig and the fallback face are sized from it. */
 const HERO_CARD_W = 200;
+/** Detail row label column at default text size (points); see `DetailRow`. */
+const DETAIL_LABEL_WIDTH = 80;
+/** Detail row icon size and the spacer that stands in for a missing icon (points). */
+const DETAIL_ICON_SIZE = 14;
 
 export default function BookDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
@@ -294,6 +299,10 @@ function FavoriteHeaderButton({ bookId }: { bookId: string }) {
 /**
  * One VoiceOver stop per row: the icon, label and value are grouped and spoken as
  * "<label>, <value>" (#403). `isbn` spaces the digits so they read one by one.
+ *
+ * Label column (#405, same approach as the book row in #431): 80pt at default text, wider in
+ * step with the font so no label breaks mid-word, and stacked above the value at accessibility
+ * sizes, where a side column would starve the value.
  */
 function DetailRow({
 	icon,
@@ -308,6 +317,9 @@ function DetailRow({
 	mono?: boolean;
 	isbn?: boolean;
 }) {
+	const { fontScale } = useWindowDimensions();
+	const column = labelColumnLayout({ width: DETAIL_LABEL_WIDTH, fontScale });
+	const leading = icon ?? <View style={styles.iconSpacer} />;
 	return (
 		<View
 			style={styles.detailRow}
@@ -315,9 +327,25 @@ function DetailRow({
 			accessibilityRole="text"
 			accessibilityLabel={detailRowLabel(label, value, { isbn })}
 		>
-			{icon ?? <View style={styles.iconSpacer} />}
-			<Text style={styles.detailLabel}>{label}</Text>
-			<Text style={[styles.detailValue, mono && styles.mono]}>{value}</Text>
+			{column.stacked ? (
+				<View style={styles.detailStack}>
+					<View style={styles.detailLabelLine}>
+						{leading}
+						<Text style={[styles.detailLabel, styles.detailLabelStacked]}>{label}</Text>
+					</View>
+					<Text style={[styles.detailValue, styles.detailValueStacked, mono && styles.mono]}>
+						{value}
+					</Text>
+				</View>
+			) : (
+				<>
+					{leading}
+					<Text style={[styles.detailLabel, { width: column.width }]}>{label}</Text>
+					<Text style={[styles.detailValue, styles.detailValueFill, mono && styles.mono]}>
+						{value}
+					</Text>
+				</>
+			)}
 		</View>
 	);
 }
@@ -387,17 +415,36 @@ const styles = StyleSheet.create({
 		borderTopColor: tokens.border.subtle,
 	},
 	iconSpacer: {
-		width: 14,
+		width: DETAIL_ICON_SIZE,
 	},
+	// Width comes from labelColumnLayout at render (#405).
 	detailLabel: {
 		fontSize: 13,
 		color: tokens.text.tertiary,
-		width: 80,
 	},
 	detailValue: {
 		fontSize: 14,
 		color: tokens.text.primary,
+	},
+	detailValueFill: {
 		flex: 1,
+	},
+	// Accessibility sizes: label line (icon + label) over a full-width value.
+	detailStack: {
+		flex: 1,
+		gap: 4,
+	},
+	detailLabelLine: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		gap: 8,
+	},
+	detailLabelStacked: {
+		flexShrink: 1,
+	},
+	detailValueStacked: {
+		// Aligns the value with the label text: icon + row gap.
+		paddingLeft: DETAIL_ICON_SIZE + 8,
 	},
 	mono: {
 		fontSize: 13,
