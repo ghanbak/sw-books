@@ -65,7 +65,8 @@ type UserBookInsert = Database['public']['Tables']['user_books']['Insert'];
 export type ShelfWrite =
 	| { kind: 'insert'; entry: UserBookInsert }
 	| { kind: 'update'; id: string; patch: Partial<Pick<UserBook, ShelfField>> }
-	| { kind: 'delete'; id: string };
+	/** `field`: the last flag being cleared; the delete runs only if the server row still matches. */
+	| { kind: 'delete'; id: string; field: ShelfField };
 
 /**
  * Plan one shelf toggle: the optimistic row to show now (`null` = the book leaves
@@ -100,7 +101,7 @@ export function planToggle(
 	const value = !existing[field];
 	const updated = { ...existing, [field]: value };
 	if (!updated.owned && !updated.read && !updated.want_to_read && !updated.favorite) {
-		return { optimistic: null, write: { kind: 'delete', id: existing.id } };
+		return { optimistic: null, write: { kind: 'delete', id: existing.id, field } };
 	}
 	return {
 		optimistic: updated,
@@ -242,7 +243,10 @@ export function settleInsert(
 	return { ...inserted, owned: inserted.owned || current.owned };
 }
 
-/** `missing`: an update matched no row (PostgREST reports that as success). */
+/**
+ * `missing`: an update or delete matched no row (PostgREST reports that as success).
+ * For a delete it means the row is gone or no longer holds only the cleared flag.
+ */
 export type ShelfWriteResult = {
 	row: UserBook | null;
 	/** `code` is the Postgres error code, when the failure came from the database. */
@@ -260,12 +264,20 @@ export type ShelfDb = {
 		id: string,
 		patch: Partial<Pick<UserBook, ShelfField>>,
 	) => Promise<{ data: { id: string }[] | null; error: { message: string } | null }>;
-	remove: (id: string) => Promise<{ error: { message: string } | null }>;
+	/**
+	 * Delete only while the row holds exactly `expected` (#484), returning the matched
+	 * rows (`.select('id')`), so a row another device added flags to survives.
+	 */
+	remove: (
+		id: string,
+		expected: Record<ShelfField, boolean>,
+	) => Promise<{ data: { id: string }[] | null; error: { message: string } | null }>;
 };
 
 /**
- * Write adapter for `ShelfToggleDeps.write` (#195). Flags an update that matched no
- * row as `missing`. A delete that matched no row is already done.
+ * Write adapter for `ShelfToggleDeps.write` (#195). Flags an update or delete that
+ * matched no row as `missing`. The delete is conditional on the row holding only the
+ * cleared flag (#484); the toggler handles a `missing` delete.
  */
 export function createShelfWriter(db: ShelfDb): ShelfToggleDeps['write'] {
 	return async (write) => {
@@ -274,8 +286,15 @@ export function createShelfWriter(db: ShelfDb): ShelfToggleDeps['write'] {
 			return { row: data, error };
 		}
 		if (write.kind === 'delete') {
-			const { error } = await db.remove(write.id);
-			return { row: null, error };
+			const expected = {
+				owned: false,
+				read: false,
+				want_to_read: false,
+				favorite: false,
+				[write.field]: true,
+			};
+			const { data, error } = await db.remove(write.id, expected);
+			return { row: null, error, missing: !error && (data?.length ?? 0) === 0 };
 		}
 		const { data, error } = await db.update(write.id, write.patch);
 		return { row: null, error, missing: !error && (data?.length ?? 0) === 0 };
@@ -362,6 +381,9 @@ export type ToggleOutcome = 'ok' | 'failed' | 'ignored' | 'stale';
  * the row, the live row is re-read so the next tap targets it (#198, #206). The claim
  * is held across that read; if the read fails, the normal rollback runs and the next
  * tap heals the row the same way.
+ * A delete that matched no row (gone, or another device added flags, #484) falls back to
+ * clearing just the tapped flag; if that update matched a row, the live row is re-read
+ * and adopted so the other device's flags stay. A row that is truly gone stays removed.
  * A write that settles after the user changed touches nothing (`'stale'`).
  */
 export function createShelfToggler(deps: ShelfToggleDeps) {
@@ -384,6 +406,25 @@ export function createShelfToggler(deps: ShelfToggleDeps) {
 				({ row, error } = await deps.write(recreateWrite(optimistic)));
 				if (!deps.isCurrentUser(userId)) return 'stale';
 				if (!error && !row) error = { message: 'Shelf row could not be recreated' };
+			}
+			if (result.missing && write.kind === 'delete') {
+				const cleared = await deps.write({
+					kind: 'update',
+					id: write.id,
+					patch: { [field]: false },
+				});
+				if (!deps.isCurrentUser(userId)) return 'stale';
+				error = cleared.error;
+				// `missing` here: the row is truly gone, so removing it locally was right.
+				if (!error && !cleared.missing) {
+					const live = await readLiveRow(deps, bookId, userId);
+					if (!deps.isCurrentUser(userId)) return 'stale';
+					// A failed re-read leaves the row removed; the next tap heals it (#206).
+					if (live) {
+						deps.writes.adoptFetchedRow(bookId, live);
+						deps.set(bookId, settleInsert(deps.get(bookId), null, live));
+					}
+				}
 			}
 			// A plain insert or a recreate hit UNIQUE(user_id, book_id).
 			const conflicted = error?.code === UNIQUE_VIOLATION ? optimistic : null;

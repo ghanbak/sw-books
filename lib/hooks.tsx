@@ -192,7 +192,8 @@ export function UserBooksProvider({ children }: { children: ReactNode }) {
 						await supabase.from('user_books').insert(entry).select().single(),
 					update: async (id, patch) =>
 						await supabase.from('user_books').update(patch).eq('id', id).select('id'),
-					remove: async (id) => await supabase.from('user_books').delete().eq('id', id),
+					remove: async (id, expected) =>
+						await supabase.from('user_books').delete().eq('id', id).match(expected).select('id'),
 				}),
 				readRow: async (uid, bookId) => {
 					const { data, error } = await supabase
