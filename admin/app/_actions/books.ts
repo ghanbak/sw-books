@@ -1,7 +1,7 @@
 'use server';
 
 import { getAdmin } from '@/lib/auth';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { type DbTarget, getDbTarget, getSupabaseAdmin } from '@/lib/supabase-admin';
 import { type ActionError, dbError } from '@app/action-errors';
 import { createSchema, firstIssueMessage, patchSchema } from '@app/book-schema';
 import { ensureUniqueSlug } from '@app/slug';
@@ -15,6 +15,20 @@ type Result<T> = { ok: true; data: T } | { ok: false; error: ActionError };
 
 /** The `updated_at` the client loaded the row with (ISO timestamptz, or null). */
 const expectedUpdatedAt = z.string().min(1).max(64).nullable();
+
+/**
+ * The DB target cookie is shared by every tab, and switching it refreshes only
+ * the tab that switched. A destructive action therefore takes the target its
+ * page rendered with and refuses when the request resolves to another one, so a
+ * tab still showing Local can't write to Production (#483).
+ */
+async function targetChanged(expected: DbTarget): Promise<ActionError | null> {
+	if (expected === (await getDbTarget())) return null;
+	return {
+		code: 'TARGET_CHANGED',
+		message: 'Database target changed in another tab. Reload first.',
+	};
+}
 
 /**
  * Patch a book. `loadedUpdatedAt` is the row's `updated_at` as the caller loaded
@@ -60,8 +74,10 @@ export async function patchBook(
  * Insert a new catalog book. Slug must be unique; a collision returns a friendly
  * SLUG_TAKEN error with a suggested alternative rather than a raw DB error.
  */
-export async function createBook(raw: unknown): Promise<Result<BookRow>> {
+export async function createBook(raw: unknown, expectedTarget: DbTarget): Promise<Result<BookRow>> {
 	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
+	const changed = await targetChanged(expectedTarget);
+	if (changed) return { ok: false, error: changed };
 	const parsed = createSchema.safeParse(raw);
 	if (!parsed.success) {
 		return {
@@ -111,10 +127,17 @@ export async function createBook(raw: unknown): Promise<Result<BookRow>> {
  * it against the slug fetched by `id` (so a stale/typo'd slug can't delete a
  * different row). `user_books.book_id ON DELETE CASCADE` removes shelf refs —
  * intended for a genuine "this book shouldn't exist" deletion. No undo; recovery
- * is the CSV backup / Supabase PITR.
+ * is the CSV backup / Supabase PITR. `expectedTarget` is the DB target the page
+ * rendered with; a mismatch returns TARGET_CHANGED without reading or writing.
  */
-export async function deleteBook(id: string, typedSlug: string): Promise<Result<{ slug: string }>> {
+export async function deleteBook(
+	id: string,
+	typedSlug: string,
+	expectedTarget: DbTarget,
+): Promise<Result<{ slug: string }>> {
 	if (!(await getAdmin())) return { ok: false, error: { code: 'AUTH', message: 'not authorized' } };
+	const changed = await targetChanged(expectedTarget);
+	if (changed) return { ok: false, error: changed };
 	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: book, error: fetchErr } = await supabaseAdmin
 		.from('books')
