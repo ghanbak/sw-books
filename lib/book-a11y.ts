@@ -3,27 +3,35 @@
  * components only wire them to `accessibilityLabel`. None of these are rendered as text.
  */
 
+import { eraLabel } from '@/lib/timeline';
+
 /**
  * Book row / Timeline hero. An explicit label replaces a Pressable's child text, so the
  * row has to speak its series name and `CanonBadge` itself, in reading order (#271).
  * Callers that don't show the series (the Timeline hero) omit `series_name`.
  * `canon` passes through as stored, as the badge does: the badge's all-caps is styling,
  * and spoken "CANON" can come out spelled.
+ * `timeline_order` appends the era last, as the row's TIMELINE value (#449); null or missing
+ * adds nothing, as the row hides it. Spoken as `eraLabel` shows it ("19 BBY"), matching the
+ * Timeline rail's `accessibilityValue`. The Timeline hero omits it: its rail announces the date.
  */
 export function bookRowLabel({
 	title,
 	author,
 	canon,
 	series_name,
+	timeline_order,
 }: {
 	title: string;
 	author: string[];
 	canon: string;
 	series_name?: string | null;
+	timeline_order?: number | null;
 }): string {
 	let label = author.length > 0 ? `${title} by ${author.join(', ')}` : title;
 	if (series_name) label += `, ${series_name}`;
 	if (canon) label += `, ${canon}`;
+	if (timeline_order != null) label += `, ${eraLabel(timeline_order)}`;
 	return label;
 }
 
