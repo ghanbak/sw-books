@@ -15,6 +15,7 @@ import {
 import { callAction } from '@/lib/call-action';
 import { runResettingSearch } from '@/lib/resetting-search';
 import { candidateIsEmpty, prefillLabel, searchStatusLabel } from '@/lib/search-a11y';
+import type { DbTarget } from '@/lib/supabase-admin';
 import { numOrNull } from '@app/book-schema';
 import { slugify } from '@app/slug';
 import type { BookCandidate, LookupResult } from '@app/sources/types';
@@ -80,7 +81,7 @@ function orNull(value: string): string | null {
 	return t.length > 0 ? t : null;
 }
 
-export function NewBookForm() {
+export function NewBookForm({ dbTarget }: { dbTarget: DbTarget }) {
 	const router = useRouter();
 	const [form, setForm] = useState<FormState>(EMPTY);
 	const [results, setResults] = useState<LookupResult | null>(null);
@@ -139,28 +140,37 @@ export function NewBookForm() {
 		startSave(async () => {
 			const res = await callAction(
 				() =>
-					createBook({
-						title: form.title.trim(),
-						slug,
-						author: splitList(form.author),
-						canon: form.canon,
-						type: form.type,
-						era: orNull(form.era),
-						series_name: orNull(form.series_name),
-						series_order: numOrNull(form.series_order),
-						timeline_order: numOrNull(form.timeline_order),
-						publisher: orNull(form.publisher),
-						date_published: orNull(form.date_published),
-						language: orNull(form.language),
-						isbn: splitList(form.isbn),
-						primary_isbn: orNull(form.primary_isbn),
-						format: splitList(form.format),
-						cover_image: orNull(form.cover_image),
-						synopsis: orNull(form.synopsis),
-					}),
+					createBook(
+						{
+							title: form.title.trim(),
+							slug,
+							author: splitList(form.author),
+							canon: form.canon,
+							type: form.type,
+							era: orNull(form.era),
+							series_name: orNull(form.series_name),
+							series_order: numOrNull(form.series_order),
+							timeline_order: numOrNull(form.timeline_order),
+							publisher: orNull(form.publisher),
+							date_published: orNull(form.date_published),
+							language: orNull(form.language),
+							isbn: splitList(form.isbn),
+							primary_isbn: orNull(form.primary_isbn),
+							format: splitList(form.format),
+							cover_image: orNull(form.cover_image),
+							synopsis: orNull(form.synopsis),
+						},
+						dbTarget,
+					),
 				'Create failed',
 			);
 			if (!res.ok) {
+				if (res.error.code === 'TARGET_CHANGED') {
+					toast.error(res.error.message, {
+						action: { label: 'Reload', onClick: () => router.refresh() },
+					});
+					return;
+				}
 				toast.error(res.error.message);
 				if (res.error.code === 'SLUG_TAKEN') {
 					const suggested = res.error.message.match(/try "([^"]+)"/)?.[1];

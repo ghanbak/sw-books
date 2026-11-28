@@ -148,7 +148,7 @@ type ExportActions = {
 	exportToCsv: () => Promise<Res<{ rows: number }>>;
 	getDriftReport: () => Promise<Res<{ changedRows: unknown[]; summary: { rows: number } }>>;
 };
-type BooksActions = { createBook: (raw: unknown) => Promise<Res> };
+type BooksActions = { createBook: (raw: unknown, expectedTarget: string) => Promise<Res> };
 type EnrichmentLib = {
 	loadEnrichmentContext: (
 		client: unknown,
@@ -281,7 +281,7 @@ describe('createBook slug suggestion sees slugs past the 1000-row cap (#376)', (
 
 	it('suggests a free slug, not one that is already taken', async () => {
 		const { createBook } = await loadBooks();
-		const res = await createBook(input).catch(() => 'rejected' as const);
+		const res = await createBook(input, 'prod').catch(() => 'rejected' as const);
 		expect(res).not.toBe('rejected');
 		expect(res).toMatchObject({ ok: false, error: { code: 'SLUG_TAKEN' } });
 		const message = (res as Extract<Res, { ok: false }>).error.message;
@@ -293,7 +293,7 @@ describe('createBook slug suggestion sees slugs past the 1000-row cap (#376)', (
 	it('reports a failed suggestion read instead of guessing', async () => {
 		db.likeError = { message: 'upstream timeout' };
 		const { createBook } = await loadBooks();
-		const res = await createBook(input).catch(() => 'rejected' as const);
+		const res = await createBook(input, 'prod').catch(() => 'rejected' as const);
 		expect(res).not.toBe('rejected');
 		expect(res).toMatchObject({ ok: false });
 		expect((res as Extract<Res, { ok: false }>).error.code).not.toBe('SLUG_TAKEN');

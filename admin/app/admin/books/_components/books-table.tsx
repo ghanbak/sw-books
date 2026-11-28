@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/table';
 import { callAction } from '@/lib/call-action';
 import { ISSUE_DEFS, type IssueKey } from '@/lib/issues';
+import type { DbTarget } from '@/lib/supabase-admin';
 import {
 	RECHECK_WOOKIEEPEDIA_LABEL,
 	ariaSortFor,
@@ -144,6 +145,8 @@ declare module '@tanstack/react-table' {
 		updateField: (id: string, field: EditableField, value: string | null) => void;
 		removeRow: (id: string) => void;
 		focusAfterRemove: () => void;
+		/** The DB target this page rendered with; destructive actions send it back (#483). */
+		dbTarget: DbTarget;
 	}
 }
 
@@ -151,16 +154,19 @@ function DeleteBookCell({
 	id,
 	slug,
 	title,
+	dbTarget,
 	onDeleted,
 	onFocusAfterDelete,
 }: {
 	id: string;
 	slug: string;
 	title: string;
+	dbTarget: DbTarget;
 	onDeleted: () => void;
 	/** Moves focus once the row is gone; the trigger that Radix would refocus is detached. */
 	onFocusAfterDelete: () => void;
 }) {
+	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const [typed, setTyped] = useState('');
 	const [pending, startDelete] = useTransition();
@@ -216,12 +222,20 @@ function DeleteBookCell({
 						disabled={typed.trim() !== slug || pending}
 						onClick={() =>
 							startDelete(async () => {
-								const res = await callAction(() => deleteBook(id, typed.trim()), 'Delete failed');
+								const res = await callAction(
+									() => deleteBook(id, typed.trim(), dbTarget),
+									'Delete failed',
+								);
 								if (res.ok) {
 									toast.success(`Deleted “${title}”`);
 									deleted.current = true;
 									setOpen(false);
 									onDeleted();
+								} else if (res.error.code === 'TARGET_CHANGED') {
+									setOpen(false);
+									toast.error(res.error.message, {
+										action: { label: 'Reload', onClick: () => router.refresh() },
+									});
 								} else {
 									toast.error(res.error.message);
 								}
@@ -536,6 +550,7 @@ const columns = [
 					id={row.original.id}
 					slug={row.original.slug}
 					title={row.original.title}
+					dbTarget={table.options.meta!.dbTarget}
 					onDeleted={() => table.options.meta?.removeRow(row.original.id)}
 					onFocusAfterDelete={() => table.options.meta?.focusAfterRemove()}
 				/>
@@ -548,10 +563,12 @@ export function BooksTable({
 	rows,
 	counts,
 	enrichment,
+	dbTarget,
 }: {
 	rows: RowWithIssues[];
 	counts: Record<IssueKey, number>;
 	enrichment: EnrichmentSummary;
+	dbTarget: DbTarget;
 }) {
 	const router = useRouter();
 	const [data, setData] = useState<RowWithIssues[]>(rows);
@@ -681,7 +698,7 @@ export function BooksTable({
 		columns,
 		state: { sorting, globalFilter, rowSelection },
 		getRowId: (row) => row.id,
-		meta: { updateField, removeRow, focusAfterRemove },
+		meta: { updateField, removeRow, focusAfterRemove, dbTarget },
 		onSortingChange: setSorting,
 		onGlobalFilterChange: setGlobalFilter,
 		onRowSelectionChange: setRowSelection,
