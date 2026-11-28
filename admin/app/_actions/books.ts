@@ -125,10 +125,13 @@ export async function createBook(raw: unknown, expectedTarget: DbTarget): Promis
 /**
  * Delete a book. Guarded: the caller must type the book's slug, and we compare
  * it against the slug fetched by `id` (so a stale/typo'd slug can't delete a
- * different row). `user_books.book_id ON DELETE CASCADE` removes shelf refs —
- * intended for a genuine "this book shouldn't exist" deletion. No undo; recovery
- * is the CSV backup / Supabase PITR. `expectedTarget` is the DB target the page
- * rendered with; a mismatch returns TARGET_CHANGED without reading or writing.
+ * different row). `user_books.book_id` is ON DELETE RESTRICT (#490), so a book
+ * on anyone's shelf can't be deleted: the 23503 maps to SHELVED with the shelf
+ * count, and a duplicate should go through `mergeBooks` instead. The delete is
+ * the authority; the count is read only after it fails, so it can't race the
+ * check. For an unshelved book there's no undo; recovery is the CSV backup /
+ * Supabase PITR. `expectedTarget` is the DB target the page rendered with; a
+ * mismatch returns TARGET_CHANGED without reading or writing.
  */
 export async function deleteBook(
 	id: string,
@@ -154,7 +157,22 @@ export async function deleteBook(
 	}
 
 	const { error } = await supabaseAdmin.from('books').delete().eq('id', id);
-	if (error) return { ok: false, error: dbError('deleteBook', error) };
+	if (error) {
+		const mapped = dbError('deleteBook', error);
+		if (error.code !== '23503') return { ok: false, error: mapped };
+		const { count, error: countErr } = await supabaseAdmin
+			.from('user_books')
+			.select('id', { count: 'exact', head: true })
+			.eq('book_id', id);
+		if (countErr) dbError('deleteBook:count', countErr);
+		// No count (read failed, or the rows went between the two calls): no number.
+		const n = countErr ? 0 : (count ?? 0);
+		const message =
+			n === 0
+				? 'Shelf entries reference this book; merge instead'
+				: `${n} shelf ${n === 1 ? 'entry references' : 'entries reference'} this book; merge instead`;
+		return { ok: false, error: { code: 'SHELVED', message } };
+	}
 	revalidateTag('books');
 	return { ok: true, data: { slug: book.slug } };
 }

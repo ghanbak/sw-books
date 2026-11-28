@@ -203,8 +203,8 @@ function DeleteBookCell({
 				<AlertDialogHeader>
 					<AlertDialogTitle>Delete “{title}”?</AlertDialogTitle>
 					<AlertDialogDescription>
-						This permanently removes the book and any user shelf entries (cascade). There is no undo
-						— recovery is the CSV backup / Supabase PITR. Type{' '}
+						This permanently removes the book. Books on anyone's shelf can't be deleted; merge them
+						instead. There is no undo — recovery is the CSV backup / Supabase PITR. Type{' '}
 						<code className="font-mono text-foreground">{slug}</code> to confirm.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
