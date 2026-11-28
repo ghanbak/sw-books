@@ -17,6 +17,7 @@ import {
 	signOutAfterAccountDeletion,
 } from '@/lib/account';
 import { useAuth } from '@/lib/auth';
+import { reportAuthError } from '@/lib/auth-error-copy';
 import { runDeleteAccountFlow } from '@/lib/delete-account-flow';
 import { PRIVACY_POLICY_URL, openInAppBrowser } from '@/lib/external-link';
 
@@ -50,7 +51,7 @@ export default function ProfileScreen() {
 	async function handleSignOut() {
 		// Falls back to a local clear when the global revoke fails (offline); see lib/account.
 		const { error } = await signOut();
-		if (error) Alert.alert('Sign-out failed', error.message);
+		if (error) Alert.alert('Sign-out failed', reportAuthError('sign-out', error));
 	}
 
 	async function handleDeleteAccount() {
