@@ -58,6 +58,7 @@ function query() {
 
 vi.mock('../../admin/lib/auth', () => ({ getAdmin: async () => ({ id: 'admin' }) }));
 vi.mock('../../admin/lib/supabase-admin', () => ({
+	getDbTarget: async () => 'prod',
 	getSupabaseAdmin: async () => ({ from: () => query() }),
 }));
 // Root has no `next`. Bare id covers CI (no admin deps); the path covers a
@@ -85,6 +86,7 @@ const bulkPath = resolve(__dirname, '../../admin/app/_actions/bulk.ts');
 type Bulk = {
 	fillEmpty: (
 		slug: string,
+		expectedTarget: string,
 	) => Promise<{ slug: string; status: string; fields?: string[]; message?: string }>;
 };
 const load = async (): Promise<Bulk> => (await import(/* @vite-ignore */ bulkPath)) as Bulk;
@@ -116,7 +118,7 @@ describe('bulk fillEmpty stale-write guard covers the lookup (#384)', () => {
 			Object.assign(db.row ?? {}, { isbn: ['NEW'], primary_isbn: 'NEW', updated_at: T1 });
 		};
 		const { fillEmpty } = await load();
-		const res = await fillEmpty('some-book');
+		const res = await fillEmpty('some-book', 'prod');
 
 		expect(res).toEqual({ slug: 'some-book', status: 'error', message: CONFLICT_ERROR.message });
 		expect(db.writes).toHaveLength(0);
@@ -126,7 +128,7 @@ describe('bulk fillEmpty stale-write guard covers the lookup (#384)', () => {
 
 	it('fills from a lookup anchored on the row it guards on when nothing changed', async () => {
 		const { fillEmpty } = await load();
-		const res = await fillEmpty('some-book');
+		const res = await fillEmpty('some-book', 'prod');
 
 		expect(res).toEqual({ slug: 'some-book', status: 'updated', fields: ['publisher'] });
 		expect(db.lookups).toEqual([{ isbn: 'OLD', title: 'Some Book', author: 'A. Author' }]);
@@ -137,7 +139,7 @@ describe('bulk fillEmpty stale-write guard covers the lookup (#384)', () => {
 	it('probes isbn[0] when primary_isbn is null, and an empty author when there is none', async () => {
 		Object.assign(db.row ?? {}, { primary_isbn: null, isbn: ['FIRST', 'SECOND'], author: [] });
 		const { fillEmpty } = await load();
-		await fillEmpty('some-book');
+		await fillEmpty('some-book', 'prod');
 
 		expect(db.lookups).toEqual([{ isbn: 'FIRST', title: 'Some Book', author: '' }]);
 	});

@@ -23,6 +23,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { callAction } from '@/lib/call-action';
 import { runResettingSearch } from '@/lib/resetting-search';
+import type { DbTarget } from '@/lib/supabase-admin';
 import { cn } from '@/lib/utils';
 import { createSaveGate, serializeSave } from '@app/serial-save';
 import {
@@ -63,7 +64,7 @@ const LABELS: Record<DiffField, string> = {
 	isbn: 'ISBN',
 };
 
-export function DiffView({ book }: { book: BookRow }) {
+export function DiffView({ book, dbTarget }: { book: BookRow; dbTarget: DbTarget }) {
 	const router = useRouter();
 	const [candidates, setCandidates] = useState<LookupResult | null>(null);
 	const [lookupPending, startLookup] = useTransition();
@@ -165,7 +166,7 @@ export function DiffView({ book }: { book: BookRow }) {
 			try {
 				res = await serializeSave(
 					gate,
-					() => patchBook(book.id, book.updated_at, patch),
+					() => patchBook(book.id, book.updated_at, patch, dbTarget),
 					(r) => r.ok,
 				);
 			} catch {
@@ -181,7 +182,7 @@ export function DiffView({ book }: { book: BookRow }) {
 				setReplaceIsbn(false);
 				setConfirmSlug('');
 				startTransition(() => router.refresh());
-			} else if (res.error.code === 'CONFLICT') {
+			} else if (res.error.code === 'CONFLICT' || res.error.code === 'TARGET_CHANGED') {
 				toast.error(res.error.message, {
 					action: { label: 'Reload', onClick: () => router.refresh() },
 				});

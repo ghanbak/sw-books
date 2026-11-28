@@ -275,7 +275,7 @@ describe('diff view lookup wiring (#240)', () => {
 	});
 
 	it('applies the same patch it counted', () => {
-		expect(src).toMatch(/patchBook\(\s*book\.id,\s*book\.updated_at,\s*patch,?\s*\)/);
+		expect(src).toMatch(/patchBook\(\s*book\.id,\s*book\.updated_at,\s*patch,\s*dbTarget,?\s*\)/);
 	});
 
 	it('prunes the selection when new candidates land', () => {

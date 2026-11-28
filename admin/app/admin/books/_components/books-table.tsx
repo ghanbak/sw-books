@@ -145,7 +145,7 @@ declare module '@tanstack/react-table' {
 		updateField: (id: string, field: EditableField, value: string | null) => void;
 		removeRow: (id: string) => void;
 		focusAfterRemove: () => void;
-		/** The DB target this page rendered with; destructive actions send it back (#483). */
+		/** The DB target this page rendered with; every write sends it back (#483, #487). */
 		dbTarget: DbTarget;
 	}
 }
@@ -646,7 +646,7 @@ export function BooksTable({
 					saveQueue,
 					id,
 					loadedAt,
-					(at) => patchBook(id, at, { [field]: value }),
+					(at) => patchBook(id, at, { [field]: value }, dbTarget),
 					(r) => (r.ok ? r.data.updated_at : undefined),
 				),
 			);
@@ -657,7 +657,7 @@ export function BooksTable({
 					prev.map((r) => (r.id === id ? { ...r, [field]: value, updated_at } : r)),
 				);
 				toast.success(`Saved ${field}`);
-			} else if (res.error.code === 'CONFLICT') {
+			} else if (res.error.code === 'CONFLICT' || res.error.code === 'TARGET_CHANGED') {
 				toast.error(res.error.message, {
 					action: { label: 'Reload', onClick: () => router.refresh() },
 				});
@@ -744,8 +744,16 @@ export function BooksTable({
 			},
 			onItemError: (item, error) => console.error(`${label}: ${item.slug} threw`, error),
 			onProgress: (done, total) => setBulk({ label, done, total }),
-			onSettled: ({ updated, failures, total }) => {
+			onSettled: ({ updated, failures, total, stopped }) => {
 				setBulk(null);
+				// Later rows were not tried; refreshing would load the other target's
+				// rows under this tab, so leave that to the Reload action (#487).
+				if (stopped) {
+					toast.error(stopped.message, {
+						action: { label: 'Reload', onClick: () => router.refresh() },
+					});
+					return;
+				}
 				if (failures.length)
 					toast.error(`${label}: ${failures.length} failed (${failures.slice(0, 3).join(', ')}…)`);
 				// Only claim success if something didn't fail outright.
@@ -899,9 +907,14 @@ export function BooksTable({
 							size="sm"
 							disabled={running}
 							onClick={() =>
-								runSequential('Re-fetch covers', selectedRows, (r) => refetchCover(r.slug), {
-									usesGoogleBooks: true,
-								})
+								runSequential(
+									'Re-fetch covers',
+									selectedRows,
+									(r) => refetchCover(r.slug, dbTarget),
+									{
+										usesGoogleBooks: true,
+									},
+								)
 							}
 						>
 							<ImageDown className="size-4" /> Re-fetch covers
@@ -914,7 +927,7 @@ export function BooksTable({
 							size="sm"
 							disabled={running}
 							onClick={() =>
-								runSequential('Fill empty', selectedRows, (r) => fillEmpty(r.slug), {
+								runSequential('Fill empty', selectedRows, (r) => fillEmpty(r.slug, dbTarget), {
 									usesGoogleBooks: true,
 								})
 							}

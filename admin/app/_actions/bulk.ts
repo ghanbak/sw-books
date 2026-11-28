@@ -1,7 +1,8 @@
 'use server';
 
 import { getAdmin } from '@/lib/auth';
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { targetChanged } from '@/lib/db-target-guard';
+import { type DbTarget, getSupabaseAdmin } from '@/lib/supabase-admin';
 import { dbError } from '@app/action-errors';
 import { headCheckCover } from '@app/sources/covers';
 import { fetchVolumes } from '@app/sources/google-books';
@@ -18,6 +19,8 @@ export type CoverResult = {
 	slug: string;
 	status: 'updated' | 'unchanged' | 'not-found' | 'error';
 	url?: string;
+	/** Set with status 'error' when the bulk run should stop (TARGET_CHANGED). */
+	code?: string;
 	message?: string;
 };
 
@@ -25,6 +28,7 @@ export type FillResult = {
 	slug: string;
 	status: 'updated' | 'unchanged' | 'error';
 	fields?: string[];
+	code?: string;
 	message?: string;
 };
 
@@ -35,9 +39,12 @@ type GbCover = {
 };
 
 /** Re-source a cover for one book (OL by ISBN, then Google Books) and persist
- * it if a valid candidate differs from the current cover. */
-export async function refetchCover(slug: string): Promise<CoverResult> {
+ * it if a valid candidate differs from the current cover. `expectedTarget` is
+ * the DB target the page rendered with; a mismatch is refused before the read. */
+export async function refetchCover(slug: string, expectedTarget: DbTarget): Promise<CoverResult> {
 	if (!(await getAdmin())) return { slug, status: 'error', message: 'not authorized' };
+	const changed = await targetChanged(expectedTarget);
+	if (changed) return { slug, status: 'error', ...changed };
 	const supabaseAdmin = await getSupabaseAdmin();
 	const { data: book, error } = await supabaseAdmin
 		.from('books')
@@ -69,14 +76,17 @@ export async function refetchCover(slug: string): Promise<CoverResult> {
 
 	// Guarded on the updated_at read above (and validated by patchSchema): an
 	// edit that lands during the cover probes is not overwritten (#194).
-	const res = await patchBook(book.id, book.updated_at, { cover_image: url });
+	const res = await patchBook(book.id, book.updated_at, { cover_image: url }, expectedTarget);
 	if (!res.ok) return { slug, status: 'error', message: res.error.message };
 	return { slug, status: 'updated', url };
 }
 
-/** Fill only the empty fields of one book from OL/GB candidates. */
-export async function fillEmpty(slug: string): Promise<FillResult> {
+/** Fill only the empty fields of one book from OL/GB candidates. `expectedTarget`
+ * is the DB target the page rendered with; a mismatch is refused before the read. */
+export async function fillEmpty(slug: string, expectedTarget: DbTarget): Promise<FillResult> {
 	if (!(await getAdmin())) return { slug, status: 'error', message: 'not authorized' };
+	const changed = await targetChanged(expectedTarget);
+	if (changed) return { slug, status: 'error', ...changed };
 	// One read, before any lookup: the search, the empty-field check and the
 	// stale-write guard all use this row (#384).
 	const supabaseAdmin = await getSupabaseAdmin();
@@ -114,7 +124,7 @@ export async function fillEmpty(slug: string): Promise<FillResult> {
 	if (Object.keys(patch).length === 0) return { slug, status: 'unchanged' };
 	// Guarded on the updated_at read before the lookup: an edit that lands
 	// during the (slow) lookup or cover probes fails with CONFLICT (#384).
-	const res = await patchBook(book.id, book.updated_at, patch);
+	const res = await patchBook(book.id, book.updated_at, patch, expectedTarget);
 	if (!res.ok) return { slug, status: 'error', message: res.error.message };
 	return { slug, status: 'updated', fields: Object.keys(patch) };
 }
